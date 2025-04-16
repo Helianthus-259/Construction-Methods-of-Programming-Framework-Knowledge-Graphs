@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.ConverterNotFoundException",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.ConverterNotFoundException#getTargetType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.ConverterNotFoundException",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ConversionException",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.Property",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.reflect.AnnotatedElement;\nimport java.lang.reflect.Field;\nimport java.lang.reflect.Method;\nimport java.util.LinkedHashMap;\nimport java.util.Map;\nimport java.util.Objects;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.MethodParameter;\nimport org.springframework.util.ConcurrentReferenceHashMap;\nimport org.springframework.util.ObjectUtils;\nimport org.springframework.util.ReflectionUtils;\nimport org.springframework.util.StringUtils;\n\n/**\n * A description of a JavaBeans Property that allows us to avoid a dependency on\n * {@code java.beans.PropertyDescriptor}. The {@code java.beans} package\n * is not available in a number of environments (for example, Android, Java ME), so this is\n * desirable for portability of Spring's core conversion facility.\n *\n * <p>Used to build a {@link TypeDescriptor} from a property location. The built\n * {@code TypeDescriptor} can then be used to convert from/to the property type.\n *\n * @author Keith Donald\n * @author Phillip Webb\n * @since 3.1\n * @see TypeDescriptor#TypeDescriptor(Property)\n * @see TypeDescriptor#nested(Property, int)\n */\npublic final class Property {\n\n\tprivate static final Map<Property, Annotation[]> annotationCache = new ConcurrentReferenceHashMap<>();\n\n\tprivate final Class<?> objectType;\n\n\tprivate final @Nullable Method readMethod;\n\n\tprivate final @Nullable Method writeMethod;\n\n\tprivate final String name;\n\n\tprivate final MethodParameter methodParameter;\n\n\tprivate Annotation @Nullable [] annotations;\n\n\n\tpublic Property(Class<?> objectType, @Nullable Method readMethod, @Nullable Method writeMethod) {\n\t\tthis(objectType, readMethod, writeMethod, null);\n\t}\n\n\tpublic Property(\n\t\t\tClass<?> objectType, @Nullable Method readMethod, @Nullable Method writeMethod, @Nullable String name) {\n\n\t\tthis.objectType = objectType;\n\t\tthis.readMethod = readMethod;\n\t\tthis.writeMethod = writeMethod;\n\t\tthis.methodParameter = resolveMethodParameter();\n\t\tthis.name = (name != null ? name : resolveName());\n\t}\n\n\n\t/**\n\t * The object declaring this property, either directly or in a superclass the object extends.\n\t */\n\tpublic Class<?> getObjectType() {\n\t\treturn this.objectType;\n\t}\n\n\t/**\n\t * The name of the property: for example, 'foo'.\n\t */\n\tpublic String getName() {\n\t\treturn this.name;\n\t}\n\n\t/**\n\t * The property type: for example, {@code java.lang.String}.\n\t */\n\tpublic Class<?> getType() {\n\t\treturn this.methodParameter.getParameterType();\n\t}\n\n\t/**\n\t * The property getter method: for example, {@code getFoo()}.\n\t */\n\tpublic @Nullable Method getReadMethod() {\n\t\treturn this.readMethod;\n\t}\n\n\t/**\n\t * The property setter method: for example, {@code setFoo(String)}.\n\t */\n\tpublic @Nullable Method getWriteMethod() {\n\t\treturn this.writeMethod;\n\t}\n\n\n\t// Package private\n\n\tMethodParameter getMethodParameter() {\n\t\treturn this.methodParameter;\n\t}\n\n\tAnnotation[] getAnnotations() {\n\t\tif (this.annotations == null) {\n\t\t\tthis.annotations = resolveAnnotations();\n\t\t}\n\t\treturn this.annotations;\n\t}\n\n\n\t// Internal helpers\n\n\tprivate String resolveName() {\n\t\tif (this.readMethod != null) {\n\t\t\tint index = this.readMethod.getName().indexOf(\"get\");\n\t\t\tif (index != -1) {\n\t\t\t\tindex += 3;\n\t\t\t}\n\t\t\telse {\n\t\t\t\tindex = this.readMethod.getName().indexOf(\"is\");\n\t\t\t\tif (index != -1) {\n\t\t\t\t\tindex += 2;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\t// Record-style plain accessor method, for example, name()\n\t\t\t\t\tindex = 0;\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn StringUtils.uncapitalize(this.readMethod.getName().substring(index));\n\t\t}\n\t\telse if (this.writeMethod != null) {\n\t\t\tint index = this.writeMethod.getName().indexOf(\"set\");\n\t\t\tif (index == -1) {\n\t\t\t\tthrow new IllegalArgumentException(\"Not a setter method\");\n\t\t\t}\n\t\t\tindex += 3;\n\t\t\treturn StringUtils.uncapitalize(this.writeMethod.getName().substring(index));\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException(\"Property is neither readable nor writeable\");\n\t\t}\n\t}\n\n\tprivate MethodParameter resolveMethodParameter() {\n\t\tMethodParameter read = resolveReadMethodParameter();\n\t\tMethodParameter write = resolveWriteMethodParameter();\n\t\tif (write == null) {\n\t\t\tif (read == null) {\n\t\t\t\tthrow new IllegalStateException(\"Property is neither readable nor writeable\");\n\t\t\t}\n\t\t\treturn read;\n\t\t}\n\t\tif (read != null) {\n\t\t\tClass<?> readType = read.getParameterType();\n\t\t\tClass<?> writeType = write.getParameterType();\n\t\t\tif (!writeType.equals(readType) && writeType.isAssignableFrom(readType)) {\n\t\t\t\treturn read;\n\t\t\t}\n\t\t}\n\t\treturn write;\n\t}\n\n\tprivate @Nullable MethodParameter resolveReadMethodParameter() {\n\t\tif (getReadMethod() == null) {\n\t\t\treturn null;\n\t\t}\n\t\treturn new MethodParameter(getReadMethod(), -1).withContainingClass(getObjectType());\n\t}\n\n\tprivate @Nullable MethodParameter resolveWriteMethodParameter() {\n\t\tif (getWriteMethod() == null) {\n\t\t\treturn null;\n\t\t}\n\t\treturn new MethodParameter(getWriteMethod(), 0).withContainingClass(getObjectType());\n\t}\n\n\tprivate Annotation[] resolveAnnotations() {\n\t\tAnnotation[] annotations = annotationCache.get(this);\n\t\tif (annotations == null) {\n\t\t\tMap<Class<? extends Annotation>, Annotation> annotationMap = new LinkedHashMap<>();\n\t\t\taddAnnotationsToMap(annotationMap, getReadMethod());\n\t\t\taddAnnotationsToMap(annotationMap, getWriteMethod());\n\t\t\taddAnnotationsToMap(annotationMap, getField());\n\t\t\tannotations = annotationMap.values().toArray(new Annotation[0]);\n\t\t\tannotationCache.put(this, annotations);\n\t\t}\n\t\treturn annotations;\n\t}\n\n\tprivate void addAnnotationsToMap(\n\t\t\tMap<Class<? extends Annotation>, Annotation> annotationMap, @Nullable AnnotatedElement object) {\n\n\t\tif (object != null) {\n\t\t\tfor (Annotation annotation : object.getAnnotations()) {\n\t\t\t\tannotationMap.put(annotation.annotationType(), annotation);\n\t\t\t}\n\t\t}\n\t}\n\n\tprivate @Nullable Field getField() {\n\t\tString name = getName();\n\t\tif (!StringUtils.hasLength(name)) {\n\t\t\treturn null;\n\t\t}\n\t\tField field = null;\n\t\tClass<?> declaringClass = declaringClass();\n\t\tif (declaringClass != null) {\n\t\t\tfield = ReflectionUtils.findField(declaringClass, name);\n\t\t\tif (field == null) {\n\t\t\t\t// Same lenient fallback checking as in CachedIntrospectionResults...\n\t\t\t\tfield = ReflectionUtils.findField(declaringClass, StringUtils.uncapitalize(name));\n\t\t\t\tif (field == null) {\n\t\t\t\t\tfield = ReflectionUtils.findField(declaringClass, StringUtils.capitalize(name));\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn field;\n\t}\n\n\tprivate @Nullable Class<?> declaringClass() {\n\t\tif (getReadMethod() != null) {\n\t\t\treturn getReadMethod().getDeclaringClass();\n\t\t}\n\t\telse if (getWriteMethod() != null) {\n\t\t\treturn getWriteMethod().getDeclaringClass();\n\t\t}\n\t\telse {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof Property that &&\n\t\t\t\tObjectUtils.nullSafeEquals(this.objectType, that.objectType) &&\n\t\t\t\tObjectUtils.nullSafeEquals(this.name, that.name) &&\n\t\t\t\tObjectUtils.nullSafeEquals(this.readMethod, that.readMethod) &&\n\t\t\t\tObjectUtils.nullSafeEquals(this.writeMethod, that.writeMethod)));\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn Objects.hash(this.objectType, this.name);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#annotationCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#annotationCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Property, Annotation[]>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#objectType",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#objectType",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class<?>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#readMethod",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#readMethod",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Method",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#writeMethod",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#writeMethod",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Method",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#name",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#name",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#methodParameter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#methodParameter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MethodParameter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.Property",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.Property#annotations",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.Property#annotations",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Annotation",
+    "tailType": "type"
+  }
+]

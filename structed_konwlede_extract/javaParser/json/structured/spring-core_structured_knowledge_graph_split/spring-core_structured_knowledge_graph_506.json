@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.SymbolTable#labelCount",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.SymbolTable#labelTable",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#labelTable",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "LabelEntry",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.SymbolTable#labelEntries",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#labelEntries",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "LabelEntry",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#copyBootstrapMethods(ClassReader,char[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Read the BootstrapMethods 'bootstrap_methods' array binary content and add them as entries of\r\n * the SymbolTable.\r\n *\r\n * @param classReader the ClassReader whose bootstrap methods must be copied to initialize the\r\n *     SymbolTable.\r\n * @param charBuffer a buffer used to read strings in the constant pool.\r\n */\r\nprivate void copyBootstrapMethods(final ClassReader classReader, final char[] charBuffer) {\r\n    // Find attributOffset of the 'bootstrap_methods' array.\r\n    byte[] inputBytes = classReader.classFileBuffer;\r\n    int currentAttributeOffset = classReader.getFirstAttributeOffset();\r\n    for (int i = classReader.readUnsignedShort(currentAttributeOffset - 2); i > 0; --i) {\r\n        String attributeName = classReader.readUTF8(currentAttributeOffset, charBuffer);\r\n        if (Constants.BOOTSTRAP_METHODS.equals(attributeName)) {\r\n            bootstrapMethodCount = classReader.readUnsignedShort(currentAttributeOffset + 6);\r\n            break;\r\n        }\r\n        currentAttributeOffset += 6 + classReader.readInt(currentAttributeOffset + 2);\r\n    }\r\n    if (bootstrapMethodCount > 0) {\r\n        // Compute the offset and the length of the BootstrapMethods 'bootstrap_methods' array.\r\n        int bootstrapMethodsOffset = currentAttributeOffset + 8;\r\n        int bootstrapMethodsLength = classReader.readInt(currentAttributeOffset + 2) - 2;\r\n        bootstrapMethods = new ByteVector(bootstrapMethodsLength);\r\n        bootstrapMethods.putByteArray(inputBytes, bootstrapMethodsOffset, bootstrapMethodsLength);\r\n        // Add each bootstrap method in the symbol table entries.\r\n        int currentOffset = bootstrapMethodsOffset;\r\n        for (int i = 0; i < bootstrapMethodCount; i++) {\r\n            int offset = currentOffset - bootstrapMethodsOffset;\r\n            int bootstrapMethodRef = classReader.readUnsignedShort(currentOffset);\r\n            currentOffset += 2;\r\n            int numBootstrapArguments = classReader.readUnsignedShort(currentOffset);\r\n            currentOffset += 2;\r\n            int hashCode = classReader.readConst(bootstrapMethodRef, charBuffer).hashCode();\r\n            while (numBootstrapArguments-- > 0) {\r\n                int bootstrapArgument = classReader.readUnsignedShort(currentOffset);\r\n                currentOffset += 2;\r\n                hashCode ^= classReader.readConst(bootstrapArgument, charBuffer).hashCode();\r\n            }\r\n            add(new Entry(i, Symbol.BOOTSTRAP_METHOD_TAG, offset, hashCode & 0x7FFFFFFF));\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#copyBootstrapMethods(ClassReader,char[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#getSource()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the ClassReader from which this SymbolTable was constructed.\r\n *\r\n * @return the ClassReader from which this SymbolTable was constructed, or {@literal null} if it\r\n *     was constructed from scratch.\r\n */\r\nClassReader getSource() {\r\n    return sourceClassReader;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#getSource()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#getMajorVersion()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the major version of the class to which this symbol table belongs.\r\n *\r\n * @return the major version of the class to which this symbol table belongs.\r\n */\r\nint getMajorVersion() {\r\n    return majorVersion;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#getMajorVersion()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#getClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the internal name of the class to which this symbol table belongs.\r\n *\r\n * @return the internal name of the class to which this symbol table belongs.\r\n */\r\nString getClassName() {\r\n    return className;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#getClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#setMajorVersionAndClassName(int,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Sets the major version and the name of the class to which this symbol table belongs. Also adds\r\n * the class name to the constant pool.\r\n *\r\n * @param majorVersion a major ClassFile version number.\r\n * @param className an internal class name.\r\n * @return the constant pool index of a new or already existing Symbol with the given class name.\r\n */\r\nint setMajorVersionAndClassName(final int majorVersion, final String className) {\r\n    this.majorVersion = majorVersion;\r\n    this.className = className;\r\n    return addConstantClass(className).index;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#setMajorVersionAndClassName(int,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#getConstantPoolCount()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the number of items in this symbol table's constant_pool array (plus 1).\r\n *\r\n * @return the number of items in this symbol table's constant_pool array (plus 1).\r\n */\r\nint getConstantPoolCount() {\r\n    return constantPoolCount;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#getConstantPoolCount()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#getConstantPoolLength()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the length in bytes of this symbol table's constant_pool array.\r\n *\r\n * @return the length in bytes of this symbol table's constant_pool array.\r\n */\r\nint getConstantPoolLength() {\r\n    return constantPool.length;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.SymbolTable#getConstantPoolLength()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.SymbolTable#putConstantPool(ByteVector)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Puts this symbol table's constant_pool array in the given ByteVector, preceded by the\r\n * constant_pool_count value.\r\n *\r\n * @param output where the JVMS ClassFile's constant_pool array must be put.\r\n */\r\nvoid putConstantPool(final ByteVector output) {\r\n    output.putShort(constantPoolCount).putByteArray(constantPool.data, 0, constantPool.length);\r\n}",
+    "tailType": "method_code"
+  }
+]

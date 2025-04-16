@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy.UndeclaredThrowableException",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002,2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.proxy;\n\nimport org.springframework.cglib.core.CodeGenerationException;\n\n/**\n * Used by {@link Proxy} as a replacement for <code>java.lang.reflect.UndeclaredThrowableException</code>.\n * @author Juozas Baliuka\n */\n@SuppressWarnings(\"serial\")\npublic class UndeclaredThrowableException extends CodeGenerationException {\n    /**\n     * Creates a new instance of <code>UndeclaredThrowableException</code> without detail message.\n     */\n    public UndeclaredThrowableException(Throwable t) {\n        super(t);\n    }\n\n    public Throwable getUndeclaredThrowable() {\n        return getCause();\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.UndeclaredThrowableException#getUndeclaredThrowable()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Throwable getUndeclaredThrowable() {\r\n    return getCause();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.UndeclaredThrowableException",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.UndeclaredThrowableException#getUndeclaredThrowable()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.UndeclaredThrowableException",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "CodeGenerationException",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.reflect",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.ConstructorDelegate",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorDelegate",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorDelegate",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.reflect;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * @author Chris Nokleberg\n * @version $Id: ConstructorDelegate.java,v 1.20 2006/03/05 02:43:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class ConstructorDelegate {\n    private static final ConstructorKey KEY_FACTORY =\n      (ConstructorKey)KeyFactory.create(ConstructorKey.class, KeyFactory.CLASS_BY_NAME);\n\n    interface ConstructorKey {\n        public Object newInstance(String declaring, String iface);\n    }\n\n    protected ConstructorDelegate() {\n    }\n\n    public static ConstructorDelegate create(Class targetClass, Class iface) {\n        Generator gen = new Generator();\n        gen.setTargetClass(targetClass);\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(ConstructorDelegate.class.getName());\n        private static final Type CONSTRUCTOR_DELEGATE =\n          TypeUtils.parseType(\"org.springframework.cglib.reflect.ConstructorDelegate\");\n\n        private Class iface;\n        private Class targetClass;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        public void setInterface(Class iface) {\n            this.iface = iface;\n        }\n\n        public void setTargetClass(Class targetClass) {\n            this.targetClass = targetClass;\n        }\n\n        public ConstructorDelegate create() {\n            setNamePrefix(targetClass.getName());\n            Object key = KEY_FACTORY.newInstance(iface.getName(), targetClass.getName());\n            return (ConstructorDelegate)super.create(key);\n        }\n\n        @Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n            return targetClass.getClassLoader();\n        }\n\n        @Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n        \treturn ReflectUtils.getProtectionDomain(targetClass);\n        }\n\n        @Override\n\t\tpublic void generateClass(ClassVisitor v) {\n            setNamePrefix(targetClass.getName());\n\n            final Method newInstance = ReflectUtils.findNewInstance(iface);\n            if (!newInstance.getReturnType().isAssignableFrom(targetClass)) {\n                throw new IllegalArgumentException(\"incompatible return type\");\n            }\n            final Constructor constructor;\n            try {\n                constructor = targetClass.getDeclaredConstructor(newInstance.getParameterTypes());\n            } catch (NoSuchMethodException e) {\n                throw new IllegalArgumentException(\"interface does not match any known constructor\");\n            }\n\n            ClassEmitter ce = new ClassEmitter(v);\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           CONSTRUCTOR_DELEGATE,\n                           new Type[]{ Type.getType(iface) },\n                           Constants.SOURCE_FILE);\n            Type declaring = Type.getType(constructor.getDeclaringClass());\n            EmitUtils.null_constructor(ce);\n            CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC,\n                                            ReflectUtils.getSignature(newInstance),\n                                            ReflectUtils.getExceptionTypes(newInstance));\n            e.new_instance(declaring);\n            e.dup();\n            e.load_args();\n            e.invoke_constructor(declaring, ReflectUtils.getSignature(constructor));\n            e.return_value();\n            e.end_method();\n            ce.end_class();\n        }\n\n        @Override\n\t\tprotected Object firstInstance(Class type) {\n            return ReflectUtils.newInstance(type);\n        }\n\n        @Override\n\t\tprotected Object nextInstance(Object instance) {\n            return instance;\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorDelegate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.ConstructorDelegate#KEY_FACTORY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorDelegate#KEY_FACTORY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConstructorKey",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorDelegate#create(Class,Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static ConstructorDelegate create(Class targetClass, Class iface) {\r\n    Generator gen = new Generator();\r\n    gen.setTargetClass(targetClass);\r\n    gen.setInterface(iface);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.ConstructorDelegate#create(Class,Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.ConstructorKey",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorKey",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.reflect;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * @author Chris Nokleberg\n * @version $Id: ConstructorDelegate.java,v 1.20 2006/03/05 02:43:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class ConstructorDelegate {\n    private static final ConstructorKey KEY_FACTORY =\n      (ConstructorKey)KeyFactory.create(ConstructorKey.class, KeyFactory.CLASS_BY_NAME);\n\n    interface ConstructorKey {\n        public Object newInstance(String declaring, String iface);\n    }\n\n    protected ConstructorDelegate() {\n    }\n\n    public static ConstructorDelegate create(Class targetClass, Class iface) {\n        Generator gen = new Generator();\n        gen.setTargetClass(targetClass);\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(ConstructorDelegate.class.getName());\n        private static final Type CONSTRUCTOR_DELEGATE =\n          TypeUtils.parseType(\"org.springframework.cglib.reflect.ConstructorDelegate\");\n\n        private Class iface;\n        private Class targetClass;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        public void setInterface(Class iface) {\n            this.iface = iface;\n        }\n\n        public void setTargetClass(Class targetClass) {\n            this.targetClass = targetClass;\n        }\n\n        public ConstructorDelegate create() {\n            setNamePrefix(targetClass.getName());\n            Object key = KEY_FACTORY.newInstance(iface.getName(), targetClass.getName());\n            return (ConstructorDelegate)super.create(key);\n        }\n\n        @Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n            return targetClass.getClassLoader();\n        }\n\n        @Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n        \treturn ReflectUtils.getProtectionDomain(targetClass);\n        }\n\n        @Override\n\t\tpublic void generateClass(ClassVisitor v) {\n            setNamePrefix(targetClass.getName());\n\n            final Method newInstance = ReflectUtils.findNewInstance(iface);\n            if (!newInstance.getReturnType().isAssignableFrom(targetClass)) {\n                throw new IllegalArgumentException(\"incompatible return type\");\n            }\n            final Constructor constructor;\n            try {\n                constructor = targetClass.getDeclaredConstructor(newInstance.getParameterTypes());\n            } catch (NoSuchMethodException e) {\n                throw new IllegalArgumentException(\"interface does not match any known constructor\");\n            }\n\n            ClassEmitter ce = new ClassEmitter(v);\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           CONSTRUCTOR_DELEGATE,\n                           new Type[]{ Type.getType(iface) },\n                           Constants.SOURCE_FILE);\n            Type declaring = Type.getType(constructor.getDeclaringClass());\n            EmitUtils.null_constructor(ce);\n            CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC,\n                                            ReflectUtils.getSignature(newInstance),\n                                            ReflectUtils.getExceptionTypes(newInstance));\n            e.new_instance(declaring);\n            e.dup();\n            e.load_args();\n            e.invoke_constructor(declaring, ReflectUtils.getSignature(constructor));\n            e.return_value();\n            e.end_method();\n            ce.end_class();\n        }\n\n        @Override\n\t\tprotected Object firstInstance(Class type) {\n            return ReflectUtils.newInstance(type);\n        }\n\n        @Override\n\t\tprotected Object nextInstance(Object instance) {\n            return instance;\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorKey#newInstance(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Object newInstance(String declaring, String iface);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.ConstructorKey",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.ConstructorKey#newInstance(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.Generator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.reflect;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * @author Chris Nokleberg\n * @version $Id: ConstructorDelegate.java,v 1.20 2006/03/05 02:43:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class ConstructorDelegate {\n    private static final ConstructorKey KEY_FACTORY =\n      (ConstructorKey)KeyFactory.create(ConstructorKey.class, KeyFactory.CLASS_BY_NAME);\n\n    interface ConstructorKey {\n        public Object newInstance(String declaring, String iface);\n    }\n\n    protected ConstructorDelegate() {\n    }\n\n    public static ConstructorDelegate create(Class targetClass, Class iface) {\n        Generator gen = new Generator();\n        gen.setTargetClass(targetClass);\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(ConstructorDelegate.class.getName());\n        private static final Type CONSTRUCTOR_DELEGATE =\n          TypeUtils.parseType(\"org.springframework.cglib.reflect.ConstructorDelegate\");\n\n        private Class iface;\n        private Class targetClass;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        public void setInterface(Class iface) {\n            this.iface = iface;\n        }\n\n        public void setTargetClass(Class targetClass) {\n            this.targetClass = targetClass;\n        }\n\n        public ConstructorDelegate create() {\n            setNamePrefix(targetClass.getName());\n            Object key = KEY_FACTORY.newInstance(iface.getName(), targetClass.getName());\n            return (ConstructorDelegate)super.create(key);\n        }\n\n        @Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n            return targetClass.getClassLoader();\n        }\n\n        @Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n        \treturn ReflectUtils.getProtectionDomain(targetClass);\n        }\n\n        @Override\n\t\tpublic void generateClass(ClassVisitor v) {\n            setNamePrefix(targetClass.getName());\n\n            final Method newInstance = ReflectUtils.findNewInstance(iface);\n            if (!newInstance.getReturnType().isAssignableFrom(targetClass)) {\n                throw new IllegalArgumentException(\"incompatible return type\");\n            }\n            final Constructor constructor;\n            try {\n                constructor = targetClass.getDeclaredConstructor(newInstance.getParameterTypes());\n            } catch (NoSuchMethodException e) {\n                throw new IllegalArgumentException(\"interface does not match any known constructor\");\n            }\n\n            ClassEmitter ce = new ClassEmitter(v);\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           CONSTRUCTOR_DELEGATE,\n                           new Type[]{ Type.getType(iface) },\n                           Constants.SOURCE_FILE);\n            Type declaring = Type.getType(constructor.getDeclaringClass());\n            EmitUtils.null_constructor(ce);\n            CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC,\n                                            ReflectUtils.getSignature(newInstance),\n                                            ReflectUtils.getExceptionTypes(newInstance));\n            e.new_instance(declaring);\n            e.dup();\n            e.load_args();\n            e.invoke_constructor(declaring, ReflectUtils.getSignature(constructor));\n            e.return_value();\n            e.end_method();\n            ce.end_class();\n        }\n\n        @Override\n\t\tprotected Object firstInstance(Class type) {\n            return ReflectUtils.newInstance(type);\n        }\n\n        @Override\n\t\tprotected Object nextInstance(Object instance) {\n            return instance;\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.Generator#SOURCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#SOURCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  }
+]

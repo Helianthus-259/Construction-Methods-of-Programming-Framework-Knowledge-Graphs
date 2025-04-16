@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.CompositePropertySource#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.CompositePropertySource",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "EnumerablePropertySource",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.env",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Map;\n\n/**\n * Configuration interface to be implemented by most if not all {@link Environment} types.\n * Provides facilities for setting active and default profiles and manipulating underlying\n * property sources. Allows clients to set and validate required properties, customize the\n * conversion service and more through the {@link ConfigurablePropertyResolver}\n * superinterface.\n *\n * <h2>Manipulating property sources</h2>\n * <p>Property sources may be removed, reordered, or replaced; and additional\n * property sources may be added using the {@link MutablePropertySources}\n * instance returned from {@link #getPropertySources()}. The following examples\n * are against the {@link StandardEnvironment} implementation of\n * {@code ConfigurableEnvironment}, but are generally applicable to any implementation,\n * though particular default property sources may differ.\n *\n * <h4>Example: adding a new property source with highest search priority</h4>\n * <pre class=\"code\">\n * ConfigurableEnvironment environment = new StandardEnvironment();\n * MutablePropertySources propertySources = environment.getPropertySources();\n * Map&lt;String, Object&gt; myMap = new HashMap&lt;&gt;();\n * myMap.put(\"xyz\", \"myValue\");\n * propertySources.addFirst(new MapPropertySource(\"MY_MAP\", myMap));\n * </pre>\n *\n * <h4>Example: removing the default system properties property source</h4>\n * <pre class=\"code\">\n * MutablePropertySources propertySources = environment.getPropertySources();\n * propertySources.remove(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME)\n * </pre>\n *\n * <h4>Example: mocking the system environment for testing purposes</h4>\n * <pre class=\"code\">\n * MutablePropertySources propertySources = environment.getPropertySources();\n * MockPropertySource mockEnvVars = new MockPropertySource().withProperty(\"xyz\", \"myValue\");\n * propertySources.replace(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, mockEnvVars);\n * </pre>\n *\n * When an {@link Environment} is being used by an {@code ApplicationContext}, it is\n * important that any such {@code PropertySource} manipulations be performed\n * <em>before</em> the context's {@link\n * org.springframework.context.support.AbstractApplicationContext#refresh() refresh()}\n * method is called. This ensures that all property sources are available during the\n * container bootstrap process, including use by {@linkplain\n * org.springframework.context.support.PropertySourcesPlaceholderConfigurer property\n * placeholder configurers}.\n *\n * @author Chris Beams\n * @since 3.1\n * @see StandardEnvironment\n * @see org.springframework.context.ConfigurableApplicationContext#getEnvironment\n */\npublic interface ConfigurableEnvironment extends Environment, ConfigurablePropertyResolver {\n\n\t/**\n\t * Specify the set of profiles active for this {@code Environment}. Profiles are\n\t * evaluated during container bootstrap to determine whether bean definitions\n\t * should be registered with the container.\n\t * <p>Any existing active profiles will be replaced with the given arguments; call\n\t * with zero arguments to clear the current set of active profiles. Use\n\t * {@link #addActiveProfile} to add a profile while preserving the existing set.\n\t * @throws IllegalArgumentException if any profile is null, empty or whitespace-only\n\t * @see #addActiveProfile\n\t * @see #setDefaultProfiles\n\t * @see org.springframework.context.annotation.Profile\n\t * @see AbstractEnvironment#ACTIVE_PROFILES_PROPERTY_NAME\n\t */\n\tvoid setActiveProfiles(String... profiles);\n\n\t/**\n\t * Add a profile to the current set of active profiles.\n\t * @throws IllegalArgumentException if the profile is null, empty or whitespace-only\n\t * @see #setActiveProfiles\n\t */\n\tvoid addActiveProfile(String profile);\n\n\t/**\n\t * Specify the set of profiles to be made active by default if no other profiles\n\t * are explicitly made active through {@link #setActiveProfiles}.\n\t * @throws IllegalArgumentException if any profile is null, empty or whitespace-only\n\t * @see AbstractEnvironment#DEFAULT_PROFILES_PROPERTY_NAME\n\t */\n\tvoid setDefaultProfiles(String... profiles);\n\n\t/**\n\t * Return the {@link PropertySources} for this {@code Environment} in mutable form,\n\t * allowing for manipulation of the set of {@link PropertySource} objects that should\n\t * be searched when resolving properties against this {@code Environment} object.\n\t * The various {@link MutablePropertySources} methods such as\n\t * {@link MutablePropertySources#addFirst addFirst},\n\t * {@link MutablePropertySources#addLast addLast},\n\t * {@link MutablePropertySources#addBefore addBefore} and\n\t * {@link MutablePropertySources#addAfter addAfter} allow for fine-grained control\n\t * over property source ordering. This is useful, for example, in ensuring that\n\t * certain user-defined property sources have search precedence over default property\n\t * sources such as the set of system properties or the set of system environment\n\t * variables.\n\t * @see AbstractEnvironment#customizePropertySources\n\t */\n\tMutablePropertySources getPropertySources();\n\n\t/**\n\t * Return the value of {@link System#getProperties()}.\n\t * <p>Note that most {@code Environment} implementations will include this system\n\t * properties map as a default {@link PropertySource} to be searched. Therefore, it is\n\t * recommended that this method not be used directly unless bypassing other property\n\t * sources is expressly intended.\n\t */\n\tMap<String, Object> getSystemProperties();\n\n\t/**\n\t * Return the value of {@link System#getenv()}.\n\t * <p>Note that most {@link Environment} implementations will include this system\n\t * environment map as a default {@link PropertySource} to be searched. Therefore, it\n\t * is recommended that this method not be used directly unless bypassing other\n\t * property sources is expressly intended.\n\t */\n\tMap<String, Object> getSystemEnvironment();\n\n\t/**\n\t * Append the given parent environment's active profiles, default profiles and\n\t * property sources to this (child) environment's respective collections of each.\n\t * <p>For any identically-named {@code PropertySource} instance existing in both\n\t * parent and child, the child instance is to be preserved and the parent instance\n\t * discarded. This has the effect of allowing overriding of property sources by the\n\t * child as well as avoiding redundant searches through common property source types,\n\t * for example, system environment and system properties.\n\t * <p>Active and default profile names are also filtered for duplicates, to avoid\n\t * confusion and redundant storage.\n\t * <p>The parent environment remains unmodified in any case. Note that any changes to\n\t * the parent environment occurring after the call to {@code merge} will not be\n\t * reflected in the child. Therefore, care should be taken to configure parent\n\t * property sources and profile information prior to calling {@code merge}.\n\t * @param parent the environment to merge with\n\t * @since 3.1.2\n\t * @see org.springframework.context.support.AbstractApplicationContext#setParent\n\t */\n\tvoid merge(ConfigurableEnvironment parent);\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#setActiveProfiles(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Specify the set of profiles active for this {@code Environment}. Profiles are\r\n * evaluated during container bootstrap to determine whether bean definitions\r\n * should be registered with the container.\r\n * <p>Any existing active profiles will be replaced with the given arguments; call\r\n * with zero arguments to clear the current set of active profiles. Use\r\n * {@link #addActiveProfile} to add a profile while preserving the existing set.\r\n * @throws IllegalArgumentException if any profile is null, empty or whitespace-only\r\n * @see #addActiveProfile\r\n * @see #setDefaultProfiles\r\n * @see org.springframework.context.annotation.Profile\r\n * @see AbstractEnvironment#ACTIVE_PROFILES_PROPERTY_NAME\r\n */\r\nvoid setActiveProfiles(String... profiles);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#setActiveProfiles(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#addActiveProfile(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add a profile to the current set of active profiles.\r\n * @throws IllegalArgumentException if the profile is null, empty or whitespace-only\r\n * @see #setActiveProfiles\r\n */\r\nvoid addActiveProfile(String profile);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#addActiveProfile(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#setDefaultProfiles(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Specify the set of profiles to be made active by default if no other profiles\r\n * are explicitly made active through {@link #setActiveProfiles}.\r\n * @throws IllegalArgumentException if any profile is null, empty or whitespace-only\r\n * @see AbstractEnvironment#DEFAULT_PROFILES_PROPERTY_NAME\r\n */\r\nvoid setDefaultProfiles(String... profiles);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#setDefaultProfiles(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#getPropertySources()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the {@link PropertySources} for this {@code Environment} in mutable form,\r\n * allowing for manipulation of the set of {@link PropertySource} objects that should\r\n * be searched when resolving properties against this {@code Environment} object.\r\n * The various {@link MutablePropertySources} methods such as\r\n * {@link MutablePropertySources#addFirst addFirst},\r\n * {@link MutablePropertySources#addLast addLast},\r\n * {@link MutablePropertySources#addBefore addBefore} and\r\n * {@link MutablePropertySources#addAfter addAfter} allow for fine-grained control\r\n * over property source ordering. This is useful, for example, in ensuring that\r\n * certain user-defined property sources have search precedence over default property\r\n * sources such as the set of system properties or the set of system environment\r\n * variables.\r\n * @see AbstractEnvironment#customizePropertySources\r\n */\r\nMutablePropertySources getPropertySources();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#getPropertySources()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#getSystemProperties()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the value of {@link System#getProperties()}.\r\n * <p>Note that most {@code Environment} implementations will include this system\r\n * properties map as a default {@link PropertySource} to be searched. Therefore, it is\r\n * recommended that this method not be used directly unless bypassing other property\r\n * sources is expressly intended.\r\n */\r\nMap<String, Object> getSystemProperties();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#getSystemProperties()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#getSystemEnvironment()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the value of {@link System#getenv()}.\r\n * <p>Note that most {@link Environment} implementations will include this system\r\n * environment map as a default {@link PropertySource} to be searched. Therefore, it\r\n * is recommended that this method not be used directly unless bypassing other\r\n * property sources is expressly intended.\r\n */\r\nMap<String, Object> getSystemEnvironment();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#getSystemEnvironment()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment#merge(ConfigurableEnvironment)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Append the given parent environment's active profiles, default profiles and\r\n * property sources to this (child) environment's respective collections of each.\r\n * <p>For any identically-named {@code PropertySource} instance existing in both\r\n * parent and child, the child instance is to be preserved and the parent instance\r\n * discarded. This has the effect of allowing overriding of property sources by the\r\n * child as well as avoiding redundant searches through common property source types,\r\n * for example, system environment and system properties.\r\n * <p>Active and default profile names are also filtered for duplicates, to avoid\r\n * confusion and redundant storage.\r\n * <p>The parent environment remains unmodified in any case. Note that any changes to\r\n * the parent environment occurring after the call to {@code merge} will not be\r\n * reflected in the child. Therefore, care should be taken to configure parent\r\n * property sources and profile information prior to calling {@code merge}.\r\n * @param parent the environment to merge with\r\n * @since 3.1.2\r\n * @see org.springframework.context.support.AbstractApplicationContext#setParent\r\n */\r\nvoid merge(ConfigurableEnvironment parent);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ConfigurableEnvironment#merge(ConfigurableEnvironment)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ConfigurableEnvironment",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Environment",
+    "tailType": "class"
+  }
+]

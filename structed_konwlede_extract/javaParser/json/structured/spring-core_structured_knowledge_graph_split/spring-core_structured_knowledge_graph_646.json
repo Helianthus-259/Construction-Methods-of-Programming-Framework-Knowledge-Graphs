@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData#primaryConstructorArgTypes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.EnhancerFactoryData#primaryConstructor",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData#primaryConstructor",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Constructor",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData#newInstance(Class[],Object[],Callback[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Creates proxy instance for given argument types, and assigns the callbacks.\r\n * Ideally, for each proxy class, just one set of argument types should be used,\r\n * otherwise it would have to spend time on constructor lookup.\r\n * Technically, it is a re-implementation of {@link Enhancer#createUsingReflection(Class)},\r\n * with \"cache {@link #setThreadCallbacks} and {@link #primaryConstructor}\"\r\n * @param argumentTypes constructor argument types\r\n * @param arguments constructor arguments\r\n * @param callbacks callbacks to set for the new instance\r\n * @return newly created proxy\r\n * @see #createUsingReflection(Class)\r\n */\r\npublic Object newInstance(Class[] argumentTypes, Object[] arguments, Callback[] callbacks) {\r\n    setThreadCallbacks(callbacks);\r\n    try {\r\n        // Explicit reference equality is added here just in case Arrays.equals does not have one\r\n        if (primaryConstructorArgTypes == argumentTypes || Arrays.equals(primaryConstructorArgTypes, argumentTypes)) {\r\n            // If we have relevant Constructor instance at hand, just call it\r\n            // This skips \"get constructors\" machinery\r\n            return ReflectUtils.newInstance(primaryConstructor, arguments);\r\n        }\r\n        // Take a slow path if observing unexpected argument types\r\n        return ReflectUtils.newInstance(generatedClass, argumentTypes, arguments);\r\n    } finally {\r\n        // clear thread callbacks to allow them to be gc'd\r\n        setThreadCallbacks(null);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.EnhancerFactoryData#newInstance(Class[],Object[],Callback[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData#setThreadCallbacks(Callback[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void setThreadCallbacks(Callback[] callbacks) {\r\n    try {\r\n        setThreadCallbacks.invoke(generatedClass, (Object) callbacks);\r\n    } catch (IllegalAccessException e) {\r\n        throw new CodeGenerationException(e);\r\n    } catch (InvocationTargetException e) {\r\n        throw new CodeGenerationException(e.getTargetException());\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.EnhancerFactoryData",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.EnhancerFactoryData#setThreadCallbacks(Callback[])",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.Factory",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002,2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.proxy;\n\n/**\n * All enhanced instances returned by the {@link Enhancer} class implement this interface.\n * Using this interface for new instances is faster than going through the <code>Enhancer</code>\n * interface or using reflection. In addition, to intercept methods called during\n * object construction you <b>must</b> use these methods instead of reflection.\n * @author Juozas Baliuka <a href=\"mailto:baliuka@mwm.lt\">baliuka@mwm.lt</a>\n * @version $Id: Factory.java,v 1.13 2004/06/24 21:15:20 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic interface Factory {\n    /**\n     * Creates new instance of the same type, using the no-arg constructor.\n     * The class of this object must have been created using a single Callback type.\n     * If multiple callbacks are required an exception will be thrown.\n     * @param callback the new interceptor to use\n     * @return new instance of the same type\n     */\n    Object newInstance(Callback callback);\n\n    /**\n     * Creates new instance of the same type, using the no-arg constructor.\n     * @param callbacks the new callbacks(s) to use\n     * @return new instance of the same type\n     */\n    Object newInstance(Callback[] callbacks);\n\n    /**\n     * Creates a new instance of the same type, using the constructor\n     * matching the given signature.\n     * @param types the constructor argument types\n     * @param args the constructor arguments\n     * @param callbacks the new interceptor(s) to use\n     * @return new instance of the same type\n     */\n    Object newInstance(Class[] types, Object[] args, Callback[] callbacks);\n\n    /**\n     * Return the <code>Callback</code> implementation at the specified index.\n     * @param index the callback index\n     * @return the callback implementation\n     */\n    Callback getCallback(int index);\n\n    /**\n     * Set the callback for this object for the given type.\n     * @param index the callback index to replace\n     * @param callback the new callback\n     */\n    void setCallback(int index, Callback callback);\n\n    /**\n     * Replace all of the callbacks for this object at once.\n     * @param callbacks the new callbacks(s) to use\n     */\n    void setCallbacks(Callback[] callbacks);\n\n    /**\n     * Get the current set of callbacks for ths object.\n     * @return a new array instance\n     */\n    Callback[] getCallbacks();\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory#newInstance(Callback)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Creates new instance of the same type, using the no-arg constructor.\r\n * The class of this object must have been created using a single Callback type.\r\n * If multiple callbacks are required an exception will be thrown.\r\n * @param callback the new interceptor to use\r\n * @return new instance of the same type\r\n */\r\nObject newInstance(Callback callback);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Factory#newInstance(Callback)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory#newInstance(Callback[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Creates new instance of the same type, using the no-arg constructor.\r\n * @param callbacks the new callbacks(s) to use\r\n * @return new instance of the same type\r\n */\r\nObject newInstance(Callback[] callbacks);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Factory#newInstance(Callback[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory#newInstance(Class[],Object[],Callback[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Creates a new instance of the same type, using the constructor\r\n * matching the given signature.\r\n * @param types the constructor argument types\r\n * @param args the constructor arguments\r\n * @param callbacks the new interceptor(s) to use\r\n * @return new instance of the same type\r\n */\r\nObject newInstance(Class[] types, Object[] args, Callback[] callbacks);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Factory#newInstance(Class[],Object[],Callback[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory#getCallback(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the <code>Callback</code> implementation at the specified index.\r\n * @param index the callback index\r\n * @return the callback implementation\r\n */\r\nCallback getCallback(int index);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Factory#getCallback(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Factory#setCallback(int,Callback)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Set the callback for this object for the given type.\r\n * @param index the callback index to replace\r\n * @param callback the new callback\r\n */\r\nvoid setCallback(int index, Callback callback);",
+    "tailType": "method_code"
+  }
+]

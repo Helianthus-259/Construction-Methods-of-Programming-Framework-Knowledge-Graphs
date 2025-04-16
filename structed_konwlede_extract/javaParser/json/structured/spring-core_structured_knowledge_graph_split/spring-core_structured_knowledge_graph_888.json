@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support.MapEntry",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.CollectionFactory;\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.convert.converter.ConditionalGenericConverter;\n\n/**\n * Converts a Map to another Map.\n *\n * <p>First, creates a new Map of the requested targetType with a size equal to the\n * size of the source Map. Then copies each element in the source map to the target map.\n * Will perform a conversion from the source map's parameterized K,V types to the target\n * map's parameterized types K,V if necessary.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n */\nfinal class MapToMapConverter implements ConditionalGenericConverter {\n\n\tprivate final ConversionService conversionService;\n\n\n\tpublic MapToMapConverter(ConversionService conversionService) {\n\t\tthis.conversionService = conversionService;\n\t}\n\n\n\t@Override\n\tpublic Set<ConvertiblePair> getConvertibleTypes() {\n\t\treturn Collections.singleton(new ConvertiblePair(Map.class, Map.class));\n\t}\n\n\t@Override\n\tpublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\treturn canConvertKey(sourceType, targetType) && canConvertValue(sourceType, targetType);\n\t}\n\n\t@Override\n\tpublic @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tif (source == null) {\n\t\t\treturn null;\n\t\t}\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tMap<Object, Object> sourceMap = (Map<Object, Object>) source;\n\n\t\t// Shortcut if possible...\n\t\tboolean copyRequired = !targetType.getType().isInstance(source);\n\t\tif (!copyRequired && sourceMap.isEmpty()) {\n\t\t\treturn sourceMap;\n\t\t}\n\t\tTypeDescriptor keyDesc = targetType.getMapKeyTypeDescriptor();\n\t\tTypeDescriptor valueDesc = targetType.getMapValueTypeDescriptor();\n\n\t\tList<MapEntry> targetEntries = new ArrayList<>(sourceMap.size());\n\t\tfor (Map.Entry<Object, Object> entry : sourceMap.entrySet()) {\n\t\t\tObject sourceKey = entry.getKey();\n\t\t\tObject sourceValue = entry.getValue();\n\t\t\tObject targetKey = convertKey(sourceKey, sourceType, keyDesc);\n\t\t\tObject targetValue = convertValue(sourceValue, sourceType, valueDesc);\n\t\t\ttargetEntries.add(new MapEntry(targetKey, targetValue));\n\t\t\tif (sourceKey != targetKey || sourceValue != targetValue) {\n\t\t\t\tcopyRequired = true;\n\t\t\t}\n\t\t}\n\t\tif (!copyRequired) {\n\t\t\treturn sourceMap;\n\t\t}\n\n\t\tMap<Object, Object> targetMap = CollectionFactory.createMap(targetType.getType(),\n\t\t\t\t(keyDesc != null ? keyDesc.getType() : null), sourceMap.size());\n\n\t\tfor (MapEntry entry : targetEntries) {\n\t\t\tentry.addToMap(targetMap);\n\t\t}\n\t\treturn targetMap;\n\t}\n\n\n\t// internal helpers\n\n\tprivate boolean canConvertKey(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\treturn ConversionUtils.canConvertElements(sourceType.getMapKeyTypeDescriptor(),\n\t\t\t\ttargetType.getMapKeyTypeDescriptor(), this.conversionService);\n\t}\n\n\tprivate boolean canConvertValue(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\treturn ConversionUtils.canConvertElements(sourceType.getMapValueTypeDescriptor(),\n\t\t\t\ttargetType.getMapValueTypeDescriptor(), this.conversionService);\n\t}\n\n\tprivate @Nullable Object convertKey(Object sourceKey, TypeDescriptor sourceType, @Nullable TypeDescriptor targetType) {\n\t\tif (targetType == null) {\n\t\t\treturn sourceKey;\n\t\t}\n\t\treturn this.conversionService.convert(sourceKey, sourceType.getMapKeyTypeDescriptor(sourceKey), targetType);\n\t}\n\n\tprivate @Nullable Object convertValue(Object sourceValue, TypeDescriptor sourceType, @Nullable TypeDescriptor targetType) {\n\t\tif (targetType == null) {\n\t\t\treturn sourceValue;\n\t\t}\n\t\treturn this.conversionService.convert(sourceValue, sourceType.getMapValueTypeDescriptor(sourceValue), targetType);\n\t}\n\n\n\tprivate static class MapEntry {\n\n\t\tprivate final @Nullable Object key;\n\n\t\tprivate final @Nullable Object value;\n\n\t\tpublic MapEntry(@Nullable Object key, @Nullable Object value) {\n\t\t\tthis.key = key;\n\t\t\tthis.value = value;\n\t\t}\n\n\t\tpublic void addToMap(Map<Object, Object> map) {\n\t\t\tmap.put(this.key, this.value);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapEntry",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapEntry#key",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapEntry#key",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapEntry",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapEntry#value",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapEntry#value",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapEntry#addToMap(Map<Object,Object>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void addToMap(Map<Object, Object> map) {\r\n    map.put(this.key, this.value);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapEntry",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.MapEntry#addToMap(Map<Object,Object>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.NumberToCharacterConverter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToCharacterConverter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2012 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport org.springframework.core.convert.converter.Converter;\n\n/**\n * Converts from any JDK-standard Number implementation to a Character.\n *\n * @author Keith Donald\n * @since 3.0\n * @see java.lang.Character\n * @see java.lang.Short\n * @see java.lang.Integer\n * @see java.lang.Long\n * @see java.math.BigInteger\n * @see java.lang.Float\n * @see java.lang.Double\n * @see java.math.BigDecimal\n */\nfinal class NumberToCharacterConverter implements Converter<Number, Character> {\n\n\t@Override\n\tpublic Character convert(Number source) {\n\t\treturn (char) source.shortValue();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToCharacterConverter#convert(Number)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Character convert(Number source) {\r\n    return (char) source.shortValue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToCharacterConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.NumberToCharacterConverter#convert(Number)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToCharacterConverter#convert(Number)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.NumberToNumberConverterFactory",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToNumberConverterFactory",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2020 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.convert.converter.ConditionalConverter;\nimport org.springframework.core.convert.converter.Converter;\nimport org.springframework.core.convert.converter.ConverterFactory;\nimport org.springframework.util.NumberUtils;\n\n/**\n * Converts from any JDK-standard Number implementation to any other JDK-standard Number implementation.\n *\n * <p>Support Number classes including Byte, Short, Integer, Float, Double, Long, BigInteger, BigDecimal. This class\n * delegates to {@link NumberUtils#convertNumberToTargetClass(Number, Class)} to perform the conversion.\n *\n * @author Keith Donald\n * @since 3.0\n * @see java.lang.Byte\n * @see java.lang.Short\n * @see java.lang.Integer\n * @see java.lang.Long\n * @see java.math.BigInteger\n * @see java.lang.Float\n * @see java.lang.Double\n * @see java.math.BigDecimal\n * @see NumberUtils\n */\nfinal class NumberToNumberConverterFactory implements ConverterFactory<Number, Number>, ConditionalConverter {\n\n\t@Override\n\tpublic <T extends Number> Converter<Number, T> getConverter(Class<T> targetType) {\n\t\treturn new NumberToNumber<>(targetType);\n\t}\n\n\t@Override\n\tpublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\treturn !sourceType.equals(targetType);\n\t}\n\n\n\tprivate static final class NumberToNumber<T extends Number> implements Converter<Number, T> {\n\n\t\tprivate final Class<T> targetType;\n\n\t\tNumberToNumber(Class<T> targetType) {\n\t\t\tthis.targetType = targetType;\n\t\t}\n\n\t\t@Override\n\t\tpublic T convert(Number source) {\n\t\t\treturn NumberUtils.convertNumberToTargetClass(source, this.targetType);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToNumberConverterFactory#getConverter(Class<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic <T extends Number> Converter<Number, T> getConverter(Class<T> targetType) {\r\n    return new NumberToNumber<>(targetType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToNumberConverterFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.NumberToNumberConverterFactory#getConverter(Class<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToNumberConverterFactory#getConverter(Class<T>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.NumberToNumberConverterFactory#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return !sourceType.equals(targetType);\r\n}",
+    "tailType": "method_code"
+  }
+]

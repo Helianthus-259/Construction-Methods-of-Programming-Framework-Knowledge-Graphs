@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParser",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParser",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\n/**\n * Parses a {@code String[]} of command line arguments in order to populate a\n * {@link CommandLineArgs} object.\n *\n * <h3>Working with option arguments</h3>\n * <p>Option arguments must adhere to the exact syntax:\n *\n * <pre class=\"code\">--optName[=optValue]</pre>\n *\n * <p>That is, options must be prefixed with \"{@code --}\" and may or may not\n * specify a value. If a value is specified, the name and value must be separated\n * <em>without spaces</em> by an equals sign (\"=\"). The value may optionally be\n * an empty string. If an option is present multiple times with different values\n * &mdash; for example, {@code --foo=bar --foo=baz} &mdash; all supplied values\n * will be stored for the option.\n *\n * <h4>Valid examples of option arguments</h4>\n * <pre class=\"code\">\n * --foo\n * --foo=\n * --foo=\"\"\n * --foo=bar\n * --foo=\"bar then baz\"\n * --foo=bar,baz,biz\n * --foo=bar --foo=baz --foo=biz</pre>\n *\n * <h4>Invalid examples of option arguments</h4>\n * <pre class=\"code\">\n * -foo\n * --foo bar\n * --foo = bar</pre>\n *\n * <h3>End of option arguments</h3>\n * <p>This parser supports the POSIX \"end of options\" delimiter, meaning that any\n * {@code \"--\"} (empty option name) in the command line signals that all remaining\n * arguments are non-option arguments. For example, {@code \"--opt1=ignored\"},\n * {@code \"--opt2\"}, and {@code \"filename\"} in the following command line are\n * considered non-option arguments.\n * <pre class=\"code\">\n * --foo=bar -- --opt1=ignored -opt2 filename</pre>\n *\n * <h3>Working with non-option arguments</h3>\n * <p>Any arguments following the \"end of options\" delimiter ({@code --}) or\n * specified without the \"{@code --}\" option prefix will be considered as\n * \"non-option arguments\" and made available through the\n * {@link CommandLineArgs#getNonOptionArgs()} method.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @author Brian Clozel\n * @since 3.1\n * @see SimpleCommandLinePropertySource\n */\nclass SimpleCommandLineArgsParser {\n\n\t/**\n\t * Parse the given {@code String} array based on the rules described {@linkplain\n\t * SimpleCommandLineArgsParser above}, returning a fully-populated\n\t * {@link CommandLineArgs} object.\n\t * @param args command line arguments, typically from a {@code main()} method\n\t */\n\tpublic CommandLineArgs parse(String... args) {\n\t\tCommandLineArgs commandLineArgs = new CommandLineArgs();\n\t\tboolean endOfOptions = false;\n\t\tfor (String arg : args) {\n\t\t\tif (!endOfOptions && arg.startsWith(\"--\")) {\n\t\t\t\tString optionText = arg.substring(2);\n\t\t\t\tint indexOfEqualsSign = optionText.indexOf('=');\n\t\t\t\tif (indexOfEqualsSign > -1) {\n\t\t\t\t\tString optionName = optionText.substring(0, indexOfEqualsSign);\n\t\t\t\t\tString optionValue = optionText.substring(indexOfEqualsSign + 1);\n\t\t\t\t\tif (optionName.isEmpty()) {\n\t\t\t\t\t\tthrow new IllegalArgumentException(\"Invalid argument syntax: \" + arg);\n\t\t\t\t\t}\n\t\t\t\t\tcommandLineArgs.addOptionArg(optionName, optionValue);\n\t\t\t\t}\n\t\t\t\telse if (!optionText.isEmpty()){\n\t\t\t\t\tcommandLineArgs.addOptionArg(optionText, null);\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\t// '--' End of options delimiter, all remaining args are non-option arguments\n\t\t\t\t\tendOfOptions = true;\n\t\t\t\t}\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcommandLineArgs.addNonOptionArg(arg);\n\t\t\t}\n\t\t}\n\t\treturn commandLineArgs;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParser#parse(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Parse the given {@code String} array based on the rules described {@linkplain\r\n * SimpleCommandLineArgsParser above}, returning a fully-populated\r\n * {@link CommandLineArgs} object.\r\n * @param args command line arguments, typically from a {@code main()} method\r\n */\r\npublic CommandLineArgs parse(String... args) {\r\n    CommandLineArgs commandLineArgs = new CommandLineArgs();\r\n    boolean endOfOptions = false;\r\n    for (String arg : args) {\r\n        if (!endOfOptions && arg.startsWith(\"--\")) {\r\n            String optionText = arg.substring(2);\r\n            int indexOfEqualsSign = optionText.indexOf('=');\r\n            if (indexOfEqualsSign > -1) {\r\n                String optionName = optionText.substring(0, indexOfEqualsSign);\r\n                String optionValue = optionText.substring(indexOfEqualsSign + 1);\r\n                if (optionName.isEmpty()) {\r\n                    throw new IllegalArgumentException(\"Invalid argument syntax: \" + arg);\r\n                }\r\n                commandLineArgs.addOptionArg(optionName, optionValue);\r\n            } else if (!optionText.isEmpty()) {\r\n                commandLineArgs.addOptionArg(optionText, null);\r\n            } else {\r\n                // '--' End of options delimiter, all remaining args are non-option arguments\r\n                endOfOptions = true;\r\n            }\r\n        } else {\r\n            commandLineArgs.addNonOptionArg(arg);\r\n        }\r\n    }\r\n    return commandLineArgs;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParser#parse(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.env",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.SimpleCommandLinePropertySource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.List;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.StringUtils;\n\n/**\n * {@link CommandLinePropertySource} implementation backed by an instance of\n * {@link CommandLineArgs}.\n *\n * <h3>Purpose</h3>\n * <p>This {@code CommandLinePropertySource} implementation aims to provide the simplest\n * possible approach to parsing command line arguments. As with all {@code\n * CommandLinePropertySource} implementations, command line arguments are broken into two\n * distinct groups: <em>option arguments</em> and <em>non-option arguments</em>, as\n * described below <em>(some sections copied from Javadoc for\n * {@link SimpleCommandLineArgsParser})</em>:\n *\n * <h3>Working with option arguments</h3>\n * <p>Option arguments must adhere to the exact syntax:\n *\n * <pre class=\"code\">--optName[=optValue]</pre>\n *\n * <p>That is, options must be prefixed with \"{@code --}\" and may or may not\n * specify a value. If a value is specified, the name and value must be separated\n * <em>without spaces</em> by an equals sign (\"=\"). The value may optionally be\n * an empty string. If an option is present multiple times with different values\n * &mdash; for example, {@code --foo=bar --foo=baz} &mdash; all supplied values\n * will be stored for the option.\n *\n * <h4>Valid examples of option arguments</h4>\n * <pre class=\"code\">\n * --foo\n * --foo=\n * --foo=\"\"\n * --foo=bar\n * --foo=\"bar then baz\"\n * --foo=bar,baz,biz\n * --foo=bar --foo=baz --foo=biz</pre>\n *\n * <h4>Invalid examples of option arguments</h4>\n * <pre class=\"code\">\n * -foo\n * --foo bar\n * --foo = bar</pre>\n *\n * <h3>End of option arguments</h3>\n * <p>The underlying parser supports the POSIX \"end of options\" delimiter, meaning\n * that any {@code \"--\"} (empty option name) in the command line signals that all\n * remaining arguments are non-option arguments. For example, {@code \"--opt1=ignored\"},\n * {@code \"--opt2\"}, and {@code \"filename\"} in the following command line are\n * considered non-option arguments.\n * <pre class=\"code\">\n * --foo=bar -- --opt1=ignored -opt2 filename</pre>\n *\n * <h3>Working with non-option arguments</h3>\n * <p>Any arguments following the \"end of options\" delimiter ({@code --}) or\n * specified without the \"{@code --}\" option prefix will be considered as\n * \"non-option arguments\" and made available through the\n * {@link CommandLineArgs#getNonOptionArgs()} method.\n *\n * <h3>Typical usage</h3>\n * <pre class=\"code\">\n * public static void main(String[] args) {\n *     PropertySource&lt;?&gt; ps = new SimpleCommandLinePropertySource(args);\n *     // ...\n * }</pre>\n *\n * See {@link CommandLinePropertySource} for complete general usage examples.\n *\n * <h3>Beyond the basics</h3>\n *\n * <p>When more fully-featured command line parsing is necessary, consider\n * implementing your own {@code CommandLinePropertySource} against the command line\n * parsing library of your choice.\n *\n * @author Chris Beams\n * @since 3.1\n * @see CommandLinePropertySource\n */\npublic class SimpleCommandLinePropertySource extends CommandLinePropertySource<CommandLineArgs> {\n\n\t/**\n\t * Create a new {@code SimpleCommandLinePropertySource} having the default name\n\t * and backed by the given {@code String[]} of command line arguments.\n\t * @see CommandLinePropertySource#COMMAND_LINE_PROPERTY_SOURCE_NAME\n\t * @see CommandLinePropertySource#CommandLinePropertySource(Object)\n\t */\n\tpublic SimpleCommandLinePropertySource(String... args) {\n\t\tsuper(new SimpleCommandLineArgsParser().parse(args));\n\t}\n\n\t/**\n\t * Create a new {@code SimpleCommandLinePropertySource} having the given name\n\t * and backed by the given {@code String[]} of command line arguments.\n\t */\n\tpublic SimpleCommandLinePropertySource(String name, String[] args) {\n\t\tsuper(name, new SimpleCommandLineArgsParser().parse(args));\n\t}\n\n\t/**\n\t * Get the property names for the option arguments.\n\t */\n\t@Override\n\tpublic String[] getPropertyNames() {\n\t\treturn StringUtils.toStringArray(this.source.getOptionNames());\n\t}\n\n\t@Override\n\tprotected boolean containsOption(String name) {\n\t\treturn this.source.containsOption(name);\n\t}\n\n\t@Override\n\tprotected @Nullable List<String> getOptionValues(String name) {\n\t\treturn this.source.getOptionValues(name);\n\t}\n\n\t@Override\n\tprotected List<String> getNonOptionArgs() {\n\t\treturn this.source.getNonOptionArgs();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getPropertyNames()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the property names for the option arguments.\r\n */\r\n@Override\r\npublic String[] getPropertyNames() {\r\n    return StringUtils.toStringArray(this.source.getOptionNames());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLinePropertySource#getPropertyNames()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getPropertyNames()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#containsOption(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected boolean containsOption(String name) {\r\n    return this.source.containsOption(name);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLinePropertySource#containsOption(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#containsOption(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getOptionValues(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\nprotected List<String> getOptionValues(String name) {\r\n    return this.source.getOptionValues(name);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLinePropertySource#getOptionValues(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getOptionValues(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getOptionValues(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getNonOptionArgs()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected List<String> getNonOptionArgs() {\r\n    return this.source.getNonOptionArgs();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLinePropertySource#getNonOptionArgs()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySource#getNonOptionArgs()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

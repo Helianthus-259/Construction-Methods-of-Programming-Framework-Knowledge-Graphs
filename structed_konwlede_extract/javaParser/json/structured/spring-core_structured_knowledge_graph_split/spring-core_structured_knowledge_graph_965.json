@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#checkWriteOptions(OpenOption[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Set<OpenOption> checkWriteOptions(OpenOption[] options) {\r\n    int length = options.length;\r\n    Set<OpenOption> result = CollectionUtils.newHashSet(length > 0 ? length : 2);\r\n    if (length == 0) {\r\n        result.add(StandardOpenOption.CREATE);\r\n        result.add(StandardOpenOption.TRUNCATE_EXISTING);\r\n    } else {\r\n        for (OpenOption opt : options) {\r\n            if (opt == StandardOpenOption.READ) {\r\n                throw new IllegalArgumentException(\"READ not allowed\");\r\n            }\r\n            result.add(opt);\r\n        }\r\n    }\r\n    result.add(StandardOpenOption.WRITE);\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#checkWriteOptions(OpenOption[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#closeChannel(Channel)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static void closeChannel(@Nullable Channel channel) {\r\n    if (channel != null && channel.isOpen()) {\r\n        try {\r\n            channel.close();\r\n        } catch (IOException ignored) ;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#closeChannel(Channel)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#outputStreamPublisher(Consumer<OutputStream>,DataBufferFactory,Executor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@code Publisher<DataBuffer>} based on bytes written to a\r\n * {@code OutputStream}.\r\n * <ul>\r\n * <li>The parameter {@code outputStreamConsumer} is invoked once per\r\n * subscription of the returned {@code Publisher}, when the first\r\n * item is\r\n * {@linkplain Subscription#request(long) requested}.</li>\r\n * <li>{@link OutputStream#write(byte[], int, int) OutputStream.write()}\r\n * invocations made by {@code outputStreamConsumer} are buffered until they\r\n * exceed the default chunk size of 1024, or when the stream is\r\n * {@linkplain OutputStream#flush() flushed} and then result in a\r\n * {@linkplain Subscriber#onNext(Object) published} item\r\n * if there is {@linkplain Subscription#request(long) demand}.</li>\r\n * <li>If there is <em>no demand</em>, {@code OutputStream.write()} will block\r\n * until there is.</li>\r\n * <li>If the subscription is {@linkplain Subscription#cancel() cancelled},\r\n * {@code OutputStream.write()} will throw a {@code IOException}.</li>\r\n * <li>The subscription is\r\n * {@linkplain Subscriber#onComplete() completed} when\r\n * {@code outputStreamHandler} completes.</li>\r\n * <li>Any exceptions thrown from {@code outputStreamHandler} will\r\n * be dispatched to the {@linkplain Subscriber#onError(Throwable) Subscriber}.\r\n * </ul>\r\n * @param consumer invoked when the first buffer is requested\r\n * @param executor used to invoke the {@code outputStreamHandler}\r\n * @return a {@code Publisher<DataBuffer>} based on bytes written by\r\n * {@code outputStreamHandler}\r\n * @since 6.1\r\n */\r\npublic static Publisher<DataBuffer> outputStreamPublisher(Consumer<OutputStream> consumer, DataBufferFactory bufferFactory, Executor executor) {\r\n    return new OutputStreamPublisher<>(consumer::accept, new DataBufferMapper(bufferFactory), executor, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#outputStreamPublisher(Consumer<OutputStream>,DataBufferFactory,Executor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#outputStreamPublisher(Consumer<OutputStream>,DataBufferFactory,Executor,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Variant of {@link #outputStreamPublisher(Consumer, DataBufferFactory, Executor)}\r\n * providing control over the chunk sizes to be produced by the publisher.\r\n * @since 6.1\r\n */\r\npublic static Publisher<DataBuffer> outputStreamPublisher(Consumer<OutputStream> consumer, DataBufferFactory bufferFactory, Executor executor, int chunkSize) {\r\n    return new OutputStreamPublisher<>(consumer::accept, new DataBufferMapper(bufferFactory), executor, chunkSize);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#outputStreamPublisher(Consumer<OutputStream>,DataBufferFactory,Executor,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#subscriberInputStream(Publisher<T>,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Subscribe to given {@link Publisher} of {@code DataBuffer}s, and return an\r\n * {@link InputStream} to consume the byte content with.\r\n * <p>Byte buffers are stored in a queue. The {@code demand} constructor value\r\n * determines the number of buffers requested initially. When storage falls\r\n * below a {@code (demand - (demand >> 2))} limit, a request is made to refill\r\n * the queue.\r\n * <p>The {@code InputStream} terminates after an onError or onComplete signal,\r\n * and stored buffers are read. If the {@code InputStream} is closed,\r\n * the {@link Flow.Subscription} is cancelled, and stored buffers released.\r\n * @param publisher the source of {@code DataBuffer}s\r\n * @param demand the number of buffers to request initially, and buffer\r\n * internally on an ongoing basis.\r\n * @return an {@link InputStream} backed by the {@link Publisher}\r\n */\r\npublic static <T extends DataBuffer> InputStream subscriberInputStream(Publisher<T> publisher, int demand) {\r\n    Assert.notNull(publisher, \"Publisher must not be null\");\r\n    Assert.isTrue(demand > 0, \"maxBufferCount must be > 0\");\r\n    SubscriberInputStream subscriber = new SubscriberInputStream(demand);\r\n    publisher.subscribe(subscriber);\r\n    return subscriber;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#subscriberInputStream(Publisher<T>,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#takeUntilByteCount(Publisher<T>,long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "//---------------------------------------------------------------------\r\n// Various\r\n//---------------------------------------------------------------------\r\n/**\r\n * Relay buffers from the given {@link Publisher} until the total\r\n * {@linkplain DataBuffer#readableByteCount() byte count} reaches\r\n * the given maximum byte count, or until the publisher is complete.\r\n * @param publisher the publisher to filter\r\n * @param maxByteCount the maximum byte count\r\n * @return a flux whose maximum byte count is {@code maxByteCount}\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\npublic static <T extends DataBuffer> Flux<T> takeUntilByteCount(Publisher<T> publisher, long maxByteCount) {\r\n    Assert.notNull(publisher, \"Publisher must not be null\");\r\n    Assert.isTrue(maxByteCount >= 0, \"'maxByteCount' must be >= 0\");\r\n    return Flux.defer(() -> {\r\n        AtomicLong countDown = new AtomicLong(maxByteCount);\r\n        return Flux.from(publisher).map(buffer -> {\r\n            long remainder = countDown.addAndGet(-buffer.readableByteCount());\r\n            if (remainder < 0) {\r\n                int index = buffer.readableByteCount() + (int) remainder;\r\n                DataBuffer split = buffer.split(index);\r\n                release(buffer);\r\n                return (T) split;\r\n            } else {\r\n                return buffer;\r\n            }\r\n        }).takeUntil(buffer -> countDown.get() <= 0);\r\n    });\r\n    // No doOnDiscard as operators used do not cache (and drop) buffers\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#takeUntilByteCount(Publisher<T>,long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#takeUntilByteCount(Publisher<T>,long)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#skipUntilByteCount(Publisher<T>,long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Skip buffers from the given {@link Publisher} until the total\r\n * {@linkplain DataBuffer#readableByteCount() byte count} reaches\r\n * the given maximum byte count, or until the publisher is complete.\r\n * @param publisher the publisher to filter\r\n * @param maxByteCount the maximum byte count\r\n * @return a flux with the remaining part of the given publisher\r\n */\r\npublic static <T extends DataBuffer> Flux<T> skipUntilByteCount(Publisher<T> publisher, long maxByteCount) {\r\n    Assert.notNull(publisher, \"Publisher must not be null\");\r\n    Assert.isTrue(maxByteCount >= 0, \"'maxByteCount' must be >= 0\");\r\n    return Flux.defer(() -> {\r\n        AtomicLong countDown = new AtomicLong(maxByteCount);\r\n        return Flux.from(publisher).skipUntil(buffer -> {\r\n            long remainder = countDown.addAndGet(-buffer.readableByteCount());\r\n            return remainder < 0;\r\n        }).map(buffer -> {\r\n            long remainder = countDown.get();\r\n            if (remainder < 0) {\r\n                countDown.set(0);\r\n                int start = buffer.readableByteCount() + (int) remainder;\r\n                DataBuffer split = buffer.split(start);\r\n                release(split);\r\n                return buffer;\r\n            } else {\r\n                return buffer;\r\n            }\r\n        });\r\n    }).doOnDiscard(DataBuffer.class, DataBufferUtils::release);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#skipUntilByteCount(Publisher<T>,long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#retain(T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retain the given data buffer, if it is a {@link PooledDataBuffer}.\r\n * @param dataBuffer the data buffer to retain\r\n * @return the retained buffer\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\npublic static <T extends DataBuffer> T retain(T dataBuffer) {\r\n    if (dataBuffer instanceof PooledDataBuffer pooledDataBuffer) {\r\n        return (T) pooledDataBuffer.retain();\r\n    } else {\r\n        return dataBuffer;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#retain(T)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#retain(T)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#touch(T,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Associate the given hint with the data buffer if it is a pooled buffer\r\n * and supports leak tracking.\r\n * @param dataBuffer the data buffer to attach the hint to\r\n * @param hint the hint to attach\r\n * @return the input buffer\r\n * @since 5.3.2\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\npublic static <T extends DataBuffer> T touch(T dataBuffer, Object hint) {\r\n    if (dataBuffer instanceof TouchableDataBuffer touchableDataBuffer) {\r\n        return (T) touchableDataBuffer.touch(hint);\r\n    } else {\r\n        return dataBuffer;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#touch(T,Object)",
+    "tailType": "method"
+  }
+]

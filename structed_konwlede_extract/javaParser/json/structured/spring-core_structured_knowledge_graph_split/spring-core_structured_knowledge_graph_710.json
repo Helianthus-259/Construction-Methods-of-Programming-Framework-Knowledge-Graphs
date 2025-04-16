@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy#TRANSFORM_FILTER",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy#TRANSFORM_FILTER",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MethodFilter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy#transform(ClassGenerator)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected ClassGenerator transform(ClassGenerator cg) throws Exception {\r\n    ClassTransformer tr = new UndeclaredThrowableTransformer(wrapper);\r\n    tr = new MethodFilterTransformer(TRANSFORM_FILTER, tr);\r\n    return new TransformingClassGenerator(cg, tr);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy#transform(ClassGenerator)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy#transform(ClassGenerator)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableStrategy",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "DefaultGeneratorStrategy",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.transform.impl",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.transform.impl;\n\nimport java.lang.reflect.Constructor;\n\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.Block;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\nimport org.springframework.cglib.transform.ClassEmitterTransformer;\n\n@SuppressWarnings(\"rawtypes\")\npublic class UndeclaredThrowableTransformer extends ClassEmitterTransformer {\n\n    private final Type wrapper;\n\n    public UndeclaredThrowableTransformer(Class wrapper) {\n        this.wrapper = Type.getType(wrapper);\n        boolean found = false;\n        Constructor[] cstructs = wrapper.getConstructors();\n        for (Constructor cstruct : cstructs) {\n            Class[] types = cstruct.getParameterTypes();\n            if (types.length == 1 && types[0].equals(Throwable.class)) {\n                found = true;\n                break;\n            }\n        }\n        if (!found) {\n\t\t\tthrow new IllegalArgumentException(wrapper + \" does not have a single-arg constructor that takes a Throwable\");\n\t\t}\n    }\n\n    @Override\n    public CodeEmitter begin_method(int access, final Signature sig, final Type[] exceptions) {\n        CodeEmitter e = super.begin_method(access, sig, exceptions);\n        if (TypeUtils.isAbstract(access) || sig.equals(Constants.SIG_STATIC)) {\n            return e;\n        }\n        return new CodeEmitter(e) {\n\t        private final boolean isConstructor = Constants.CONSTRUCTOR_NAME.equals(sig.getName());\n            private Block handler = begin_block();\n\t        private boolean callToSuperSeen;\n\t        @Override\n\t        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {\n\t\t        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);\n\t\t        if (isConstructor && !callToSuperSeen && Constants.CONSTRUCTOR_NAME.equals(name)) {\n\t\t\t        // we start the entry in the exception table after the call to super\n\t\t\t        handler = begin_block();\n\t\t\t        callToSuperSeen = true;\n\t\t        }\n\t        }\n            @Override\n            public void visitMaxs(int maxStack, int maxLocals) {\n                handler.end();\n                EmitUtils.wrap_undeclared_throwable(this, handler, exceptions, wrapper);\n                super.visitMaxs(maxStack, maxLocals);\n            }\n        };\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer#wrapper",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer#wrapper",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer#begin_method(int,Signature,Type[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic CodeEmitter begin_method(int access, final Signature sig, final Type[] exceptions) {\r\n    CodeEmitter e = super.begin_method(access, sig, exceptions);\r\n    if (TypeUtils.isAbstract(access) || sig.equals(Constants.SIG_STATIC)) {\r\n        return e;\r\n    }\r\n    return new CodeEmitter(e) {\r\n\r\n        private final boolean isConstructor = Constants.CONSTRUCTOR_NAME.equals(sig.getName());\r\n\r\n        private Block handler = begin_block();\r\n\r\n        private boolean callToSuperSeen;\r\n\r\n        @Override\r\n        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {\r\n            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);\r\n            if (isConstructor && !callToSuperSeen && Constants.CONSTRUCTOR_NAME.equals(name)) {\r\n                // we start the entry in the exception table after the call to super\r\n                handler = begin_block();\r\n                callToSuperSeen = true;\r\n            }\r\n        }\r\n\r\n        @Override\r\n        public void visitMaxs(int maxStack, int maxLocals) {\r\n            handler.end();\r\n            EmitUtils.wrap_undeclared_throwable(this, handler, exceptions, wrapper);\r\n            super.visitMaxs(maxStack, maxLocals);\r\n        }\r\n    };\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer#begin_method(int,Signature,Type[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer#begin_method(int,Signature,Type[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.UndeclaredThrowableTransformer",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ClassEmitterTransformer",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.transform",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.transform",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.transform.MethodFilter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.transform.MethodFilter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.transform;\n\npublic interface MethodFilter {\n    // TODO: pass class name too?\n    boolean accept(int access, String name, String desc, String signature, String[] exceptions);\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.MethodFilter#accept(int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// TODO: pass class name too?\r\nboolean accept(int access, String name, String desc, String signature, String[] exceptions);",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.Block",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Block#getCodeEmitter()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Block#end()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void end() {\r\n    if (end != null) {\r\n        throw new IllegalStateException(\"end of label already set\");\r\n    }\r\n    end = e.mark();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Block",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Block#end()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Block#getStart()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Label getStart() {\r\n    return start;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Block",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Block#getStart()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Block#getEnd()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Label getEnd() {\r\n    return end;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Block",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Block#getEnd()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.ClassEmitter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.core;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.FieldVisitor;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Type;\n\n/**\n * @author Juozas Baliuka, Chris Nokleberg\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class ClassEmitter extends ClassTransformer {\n    private ClassInfo classInfo;\n    private Map fieldInfo;\n\n    private static int hookCounter;\n    private MethodVisitor rawStaticInit;\n    private CodeEmitter staticInit;\n    private CodeEmitter staticHook;\n    private Signature staticHookSig;\n\n    public ClassEmitter(ClassVisitor cv) {\n        setTarget(cv);\n    }\n\n    public ClassEmitter() {\n        super(Constants.ASM_API);\n    }\n\n    @Override\n\tpublic void setTarget(ClassVisitor cv) {\n        this.cv = cv;\n        fieldInfo = new HashMap();\n\n        // just to be safe\n        staticInit = staticHook = null;\n        staticHookSig = null;\n    }\n\n    synchronized private static int getNextHook() {\n        return ++hookCounter;\n    }\n\n    public ClassInfo getClassInfo() {\n        return classInfo;\n    }\n\n    public void begin_class(int version, final int access, String className, final Type superType, final Type[] interfaces, String source) {\n        final Type classType = Type.getType(\"L\" + className.replace('.', '/') + \";\");\n        classInfo = new ClassInfo() {\n            @Override\n\t\t\tpublic Type getType() {\n                return classType;\n            }\n            @Override\n\t\t\tpublic Type getSuperType() {\n                return (superType != null) ? superType : Constants.TYPE_OBJECT;\n            }\n            @Override\n\t\t\tpublic Type[] getInterfaces() {\n                return interfaces;\n            }\n            @Override\n\t\t\tpublic int getModifiers() {\n                return access;\n            }\n        };\n        cv.visit(version,\n                 access,\n                 classInfo.getType().getInternalName(),\n                 null,\n                 classInfo.getSuperType().getInternalName(),\n                 TypeUtils.toInternalNames(interfaces));\n        if (source != null) {\n\t\t\tcv.visitSource(source, null);\n\t\t}\n        init();\n    }\n\n    public CodeEmitter getStaticHook() {\n         if (TypeUtils.isInterface(getAccess())) {\n             throw new IllegalStateException(\"static hook is invalid for this class\");\n         }\n         if (staticHook == null) {\n             staticHookSig = new Signature(\"CGLIB$STATICHOOK\" + getNextHook(), \"()V\");\n             staticHook = begin_method(Constants.ACC_STATIC,\n                                       staticHookSig,\n                                       null);\n             if (staticInit != null) {\n                 staticInit.invoke_static_this(staticHookSig);\n             }\n         }\n         return staticHook;\n    }\n\n    protected void init() {\n    }\n\n    public int getAccess() {\n        return classInfo.getModifiers();\n    }\n\n    public Type getClassType() {\n        return classInfo.getType();\n    }\n\n    public Type getSuperType() {\n        return classInfo.getSuperType();\n    }\n\n    public void end_class() {\n        if (staticHook != null && staticInit == null) {\n            // force creation of static init\n            begin_static();\n        }\n        if (staticInit != null) {\n            staticHook.return_value();\n            staticHook.end_method();\n            rawStaticInit.visitInsn(Constants.RETURN);\n            rawStaticInit.visitMaxs(0, 0);\n            staticInit = staticHook = null;\n            staticHookSig = null;\n        }\n        cv.visitEnd();\n    }\n\n    public CodeEmitter begin_method(int access, Signature sig, Type[] exceptions) {\n        if (classInfo == null) {\n\t\t\tthrow new IllegalStateException(\"classInfo is null! \" + this);\n\t\t}\n        MethodVisitor v = cv.visitMethod(access,\n                                         sig.getName(),\n                                         sig.getDescriptor(),\n                                         null,\n                                         TypeUtils.toInternalNames(exceptions));\n        if (sig.equals(Constants.SIG_STATIC) && !TypeUtils.isInterface(getAccess())) {\n            rawStaticInit = v;\n            MethodVisitor wrapped = new MethodVisitor(Constants.ASM_API, v) {\n                @Override\n\t\t\t\tpublic void visitMaxs(int maxStack, int maxLocals) {\n                    // ignore\n                }\n                @Override\n\t\t\t\tpublic void visitInsn(int insn) {\n                    if (insn != Constants.RETURN) {\n                        super.visitInsn(insn);\n                    }\n                }\n            };\n            staticInit = new CodeEmitter(this, wrapped, access, sig, exceptions);\n            if (staticHook == null) {\n                // force static hook creation\n                getStaticHook();\n            } else {\n                staticInit.invoke_static_this(staticHookSig);\n            }\n            return staticInit;\n        } else if (sig.equals(staticHookSig)) {\n            return new CodeEmitter(this, v, access, sig, exceptions) {\n                @Override\n\t\t\t\tpublic boolean isStaticHook() {\n                    return true;\n                }\n            };\n        } else {\n            return new CodeEmitter(this, v, access, sig, exceptions);\n        }\n    }\n\n    public CodeEmitter begin_static() {\n        return begin_method(Constants.ACC_STATIC, Constants.SIG_STATIC, null);\n    }\n\n    public void declare_field(int access, String name, Type type, Object value) {\n        FieldInfo existing = (FieldInfo)fieldInfo.get(name);\n        FieldInfo info = new FieldInfo(access, name, type, value);\n        if (existing != null) {\n            if (!info.equals(existing)) {\n                throw new IllegalArgumentException(\"Field \\\"\" + name + \"\\\" has been declared differently\");\n            }\n        } else {\n            fieldInfo.put(name, info);\n            cv.visitField(access, name, type.getDescriptor(), null, value);\n        }\n    }\n\n    // TODO: make public?\n    boolean isFieldDeclared(String name) {\n        return fieldInfo.get(name) != null;\n    }\n\n    FieldInfo getFieldInfo(String name) {\n        FieldInfo field = (FieldInfo)fieldInfo.get(name);\n        if (field == null) {\n            throw new IllegalArgumentException(\"Field \" + name + \" is not declared in \" + getClassType().getClassName());\n        }\n        return field;\n    }\n\n    static class FieldInfo {\n        int access;\n        String name;\n        Type type;\n        Object value;\n\n        public FieldInfo(int access, String name, Type type, Object value) {\n            this.access = access;\n            this.name = name;\n            this.type = type;\n            this.value = value;\n        }\n\n        @Override\n\t\tpublic boolean equals(Object o) {\n            if (o == null) {\n\t\t\t\treturn false;\n\t\t\t}\n            if (!(o instanceof FieldInfo other)) {\n\t\t\t\treturn false;\n\t\t\t}\n            if (access != other.access ||\n                !name.equals(other.name) ||\n                !type.equals(other.type)) {\n                return false;\n            }\n            if ((value == null) ^ (other.value == null)) {\n\t\t\t\treturn false;\n\t\t\t}\n            if (value != null && !value.equals(other.value)) {\n\t\t\t\treturn false;\n\t\t\t}\n            return true;\n        }\n\n        @Override\n\t\tpublic int hashCode() {\n            return access ^ name.hashCode() ^ type.hashCode() ^ ((value == null) ? 0 : value.hashCode());\n        }\n    }\n\n    @Override\n\tpublic void visit(int version,\n                      int access,\n                      String name,\n                      String signature,\n                      String superName,\n                      String[] interfaces) {\n        begin_class(version,\n                    access,\n                    name.replace('/', '.'),\n                    TypeUtils.fromInternalName(superName),\n                    TypeUtils.fromInternalNames(interfaces),\n                    null); // TODO\n    }\n\n    @Override\n\tpublic void visitEnd() {\n        end_class();\n    }\n\n    @Override\n\tpublic FieldVisitor visitField(int access,\n                                   String name,\n                                   String desc,\n                                   String signature,\n                                   Object value) {\n        declare_field(access, name, Type.getType(desc), value);\n        return null; // TODO\n    }\n\n    @Override\n\tpublic MethodVisitor visitMethod(int access,\n                                     String name,\n                                     String desc,\n                                     String signature,\n                                     String[] exceptions) {\n        return begin_method(access,\n                            new Signature(name, desc),\n                            TypeUtils.fromInternalNames(exceptions));\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassEmitter#classInfo",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#classInfo",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ClassInfo",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassEmitter#fieldInfo",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#fieldInfo",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassEmitter#hookCounter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#hookCounter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassEmitter#rawStaticInit",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#rawStaticInit",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MethodVisitor",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassEmitter#staticInit",
+    "tailType": "field"
+  }
+]

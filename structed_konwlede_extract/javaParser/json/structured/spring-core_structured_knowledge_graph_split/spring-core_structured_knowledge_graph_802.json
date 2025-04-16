@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.NoRepeatableContainers",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Repeatable;\nimport java.lang.reflect.Method;\nimport java.util.Map;\nimport java.util.Objects;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.lang.Contract;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ConcurrentReferenceHashMap;\nimport org.springframework.util.ObjectUtils;\n\n/**\n * Strategy used to determine annotations that act as containers for other\n * annotations. The {@link #standardRepeatables()} method provides a default\n * strategy that respects Java's {@link Repeatable @Repeatable} support and\n * should be suitable for most situations.\n *\n * <p>The {@link #of} method can be used to register relationships for\n * annotations that do not wish to use {@link Repeatable @Repeatable}.\n *\n * <p>To completely disable repeatable support use {@link #none()}.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 5.2\n */\npublic abstract class RepeatableContainers {\n\n\tstatic final Map<Class<? extends Annotation>, Object> cache = new ConcurrentReferenceHashMap<>();\n\n\tprivate final @Nullable RepeatableContainers parent;\n\n\n\tprivate RepeatableContainers(@Nullable RepeatableContainers parent) {\n\t\tthis.parent = parent;\n\t}\n\n\n\t/**\n\t * Add an additional explicit relationship between a container and\n\t * repeatable annotation.\n\t * <p>WARNING: the arguments supplied to this method are in the reverse order\n\t * of those supplied to {@link #of(Class, Class)}.\n\t * @param container the container annotation type\n\t * @param repeatable the repeatable annotation type\n\t * @return a new {@link RepeatableContainers} instance\n\t */\n\tpublic RepeatableContainers and(Class<? extends Annotation> container,\n\t\t\tClass<? extends Annotation> repeatable) {\n\n\t\treturn new ExplicitRepeatableContainer(this, repeatable, container);\n\t}\n\n\tAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\n\t\tif (this.parent == null) {\n\t\t\treturn null;\n\t\t}\n\t\treturn this.parent.findRepeatedAnnotations(annotation);\n\t}\n\n\n\t@Override\n\t@Contract(\"null -> false\")\n\tpublic boolean equals(@Nullable Object other) {\n\t\tif (other == this) {\n\t\t\treturn true;\n\t\t}\n\t\tif (other == null || getClass() != other.getClass()) {\n\t\t\treturn false;\n\t\t}\n\t\treturn ObjectUtils.nullSafeEquals(this.parent, ((RepeatableContainers) other).parent);\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn Objects.hashCode(this.parent);\n\t}\n\n\n\t/**\n\t * Create a {@link RepeatableContainers} instance that searches using Java's\n\t * {@link Repeatable @Repeatable} annotation.\n\t * @return a {@link RepeatableContainers} instance\n\t */\n\tpublic static RepeatableContainers standardRepeatables() {\n\t\treturn StandardRepeatableContainers.INSTANCE;\n\t}\n\n\t/**\n\t * Create a {@link RepeatableContainers} instance that uses predefined\n\t * repeatable and container types.\n\t * <p>WARNING: the arguments supplied to this method are in the reverse order\n\t * of those supplied to {@link #and(Class, Class)}.\n\t * @param repeatable the repeatable annotation type\n\t * @param container the container annotation type or {@code null}. If specified,\n\t * this annotation must declare a {@code value} attribute returning an array\n\t * of repeatable annotations. If not specified, the container will be\n\t * deduced by inspecting the {@code @Repeatable} annotation on\n\t * {@code repeatable}.\n\t * @return a {@link RepeatableContainers} instance\n\t * @throws IllegalArgumentException if the supplied container type is\n\t * {@code null} and the annotation type is not a repeatable annotation\n\t * @throws AnnotationConfigurationException if the supplied container type\n\t * is not a properly configured container for a repeatable annotation\n\t */\n\tpublic static RepeatableContainers of(\n\t\t\tClass<? extends Annotation> repeatable, @Nullable Class<? extends Annotation> container) {\n\n\t\treturn new ExplicitRepeatableContainer(null, repeatable, container);\n\t}\n\n\t/**\n\t * Create a {@link RepeatableContainers} instance that does not support any\n\t * repeatable annotations.\n\t * @return a {@link RepeatableContainers} instance\n\t */\n\tpublic static RepeatableContainers none() {\n\t\treturn NoRepeatableContainers.INSTANCE;\n\t}\n\n\n\t/**\n\t * Standard {@link RepeatableContainers} implementation that searches using\n\t * Java's {@link Repeatable @Repeatable} annotation.\n\t */\n\tprivate static class StandardRepeatableContainers extends RepeatableContainers {\n\n\t\tprivate static final Object NONE = new Object();\n\n\t\tprivate static final StandardRepeatableContainers INSTANCE = new StandardRepeatableContainers();\n\n\t\tStandardRepeatableContainers() {\n\t\t\tsuper(null);\n\t\t}\n\n\t\t@Override\n\t\tAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\n\t\t\tMethod method = getRepeatedAnnotationsMethod(annotation.annotationType());\n\t\t\tif (method != null) {\n\t\t\t\treturn (Annotation[]) AnnotationUtils.invokeAnnotationMethod(method, annotation);\n\t\t\t}\n\t\t\treturn super.findRepeatedAnnotations(annotation);\n\t\t}\n\n\t\tprivate static @Nullable Method getRepeatedAnnotationsMethod(Class<? extends Annotation> annotationType) {\n\t\t\tObject result = cache.computeIfAbsent(annotationType,\n\t\t\t\t\tStandardRepeatableContainers::computeRepeatedAnnotationsMethod);\n\t\t\treturn (result != NONE ? (Method) result : null);\n\t\t}\n\n\t\tprivate static Object computeRepeatedAnnotationsMethod(Class<? extends Annotation> annotationType) {\n\t\t\tAttributeMethods methods = AttributeMethods.forAnnotationType(annotationType);\n\t\t\tMethod method = methods.get(MergedAnnotation.VALUE);\n\t\t\tif (method != null) {\n\t\t\t\tClass<?> returnType = method.getReturnType();\n\t\t\t\tif (returnType.isArray()) {\n\t\t\t\t\tClass<?> componentType = returnType.componentType();\n\t\t\t\t\tif (Annotation.class.isAssignableFrom(componentType) &&\n\t\t\t\t\t\t\tcomponentType.isAnnotationPresent(Repeatable.class)) {\n\t\t\t\t\t\treturn method;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn NONE;\n\t\t}\n\t}\n\n\n\t/**\n\t * A single explicit mapping.\n\t */\n\tprivate static class ExplicitRepeatableContainer extends RepeatableContainers {\n\n\t\tprivate final Class<? extends Annotation> repeatable;\n\n\t\tprivate final Class<? extends Annotation> container;\n\n\t\tprivate final Method valueMethod;\n\n\t\tExplicitRepeatableContainer(@Nullable RepeatableContainers parent,\n\t\t\t\tClass<? extends Annotation> repeatable, @Nullable Class<? extends Annotation> container) {\n\n\t\t\tsuper(parent);\n\t\t\tAssert.notNull(repeatable, \"Repeatable must not be null\");\n\t\t\tif (container == null) {\n\t\t\t\tcontainer = deduceContainer(repeatable);\n\t\t\t}\n\t\t\tMethod valueMethod = AttributeMethods.forAnnotationType(container).get(MergedAnnotation.VALUE);\n\t\t\ttry {\n\t\t\t\tif (valueMethod == null) {\n\t\t\t\t\tthrow new NoSuchMethodException(\"No value method found\");\n\t\t\t\t}\n\t\t\t\tClass<?> returnType = valueMethod.getReturnType();\n\t\t\t\tif (!returnType.isArray() || returnType.componentType() != repeatable) {\n\t\t\t\t\tthrow new AnnotationConfigurationException(\n\t\t\t\t\t\t\t\"Container type [%s] must declare a 'value' attribute for an array of type [%s]\"\n\t\t\t\t\t\t\t\t.formatted(container.getName(), repeatable.getName()));\n\t\t\t\t}\n\t\t\t}\n\t\t\tcatch (AnnotationConfigurationException ex) {\n\t\t\t\tthrow ex;\n\t\t\t}\n\t\t\tcatch (Throwable ex) {\n\t\t\t\tthrow new AnnotationConfigurationException(\n\t\t\t\t\t\t\"Invalid declaration of container type [%s] for repeatable annotation [%s]\"\n\t\t\t\t\t\t\t.formatted(container.getName(), repeatable.getName()), ex);\n\t\t\t}\n\t\t\tthis.repeatable = repeatable;\n\t\t\tthis.container = container;\n\t\t\tthis.valueMethod = valueMethod;\n\t\t}\n\n\t\tprivate Class<? extends Annotation> deduceContainer(Class<? extends Annotation> repeatable) {\n\t\t\tRepeatable annotation = repeatable.getAnnotation(Repeatable.class);\n\t\t\tAssert.notNull(annotation, () -> \"Annotation type must be a repeatable annotation: \" +\n\t\t\t\t\t\t\"failed to resolve container type for \" + repeatable.getName());\n\t\t\treturn annotation.value();\n\t\t}\n\n\t\t@Override\n\t\tAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\n\t\t\tif (this.container.isAssignableFrom(annotation.annotationType())) {\n\t\t\t\treturn (Annotation[]) AnnotationUtils.invokeAnnotationMethod(this.valueMethod, annotation);\n\t\t\t}\n\t\t\treturn super.findRepeatedAnnotations(annotation);\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean equals(@Nullable Object other) {\n\t\t\tif (!super.equals(other)) {\n\t\t\t\treturn false;\n\t\t\t}\n\t\t\tExplicitRepeatableContainer otherErc = (ExplicitRepeatableContainer) other;\n\t\t\treturn (this.container.equals(otherErc.container) && this.repeatable.equals(otherErc.repeatable));\n\t\t}\n\n\t\t@Override\n\t\tpublic int hashCode() {\n\t\t\tint hashCode = super.hashCode();\n\t\t\thashCode = 31 * hashCode + this.container.hashCode();\n\t\t\thashCode = 31 * hashCode + this.repeatable.hashCode();\n\t\t\treturn hashCode;\n\t\t}\n\t}\n\n\n\t/**\n\t * No repeatable containers.\n\t */\n\tprivate static class NoRepeatableContainers extends RepeatableContainers {\n\n\t\tprivate static final NoRepeatableContainers INSTANCE = new NoRepeatableContainers();\n\n\t\tNoRepeatableContainers() {\n\t\t\tsuper(null);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.NoRepeatableContainers",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.NoRepeatableContainers#INSTANCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.NoRepeatableContainers#INSTANCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "NoRepeatableContainers",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.NoRepeatableContainers",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "RepeatableContainers",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.reflect.AnnotatedElement;\nimport java.lang.reflect.Array;\nimport java.lang.reflect.InvocationHandler;\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Proxy;\nimport java.util.Map;\nimport java.util.NoSuchElementException;\nimport java.util.concurrent.ConcurrentHashMap;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.ObjectUtils;\nimport org.springframework.util.ReflectionUtils;\n\n/**\n * {@link InvocationHandler} for an {@link Annotation} that Spring has\n * <em>synthesized</em> (i.e. wrapped in a dynamic proxy) with additional\n * functionality such as attribute alias handling.\n *\n * @author Sam Brannen\n * @author Phillip Webb\n * @since 5.2\n * @param <A> the annotation type\n * @see Annotation\n * @see AnnotationUtils#synthesizeAnnotation(Annotation, AnnotatedElement)\n */\nfinal class SynthesizedMergedAnnotationInvocationHandler<A extends Annotation> implements InvocationHandler {\n\n\tprivate final MergedAnnotation<?> annotation;\n\n\tprivate final Class<A> type;\n\n\tprivate final AttributeMethods attributes;\n\n\tprivate final Map<String, Object> valueCache = new ConcurrentHashMap<>(8);\n\n\tprivate volatile @Nullable Integer hashCode;\n\n\tprivate volatile @Nullable String string;\n\n\n\tprivate SynthesizedMergedAnnotationInvocationHandler(MergedAnnotation<A> annotation, Class<A> type) {\n\t\tAssert.notNull(annotation, \"MergedAnnotation must not be null\");\n\t\tAssert.notNull(type, \"Type must not be null\");\n\t\tAssert.isTrue(type.isAnnotation(), \"Type must be an annotation\");\n\t\tthis.annotation = annotation;\n\t\tthis.type = type;\n\t\tthis.attributes = AttributeMethods.forAnnotationType(type);\n\t}\n\n\n\t@Override\n\tpublic Object invoke(Object proxy, Method method, Object[] args) {\n\t\tif (this.attributes.indexOf(method.getName()) != -1) {\n\t\t\treturn getAttributeValue(method);\n\t\t}\n\t\tif (method.getParameterCount() == 0) {\n\t\t\tswitch (method.getName()) {\n\t\t\t\tcase \"annotationType\": return this.type;\n\t\t\t\tcase \"hashCode\": return annotationHashCode();\n\t\t\t\tcase \"toString\": return annotationToString();\n\t\t\t}\n\t\t}\n\t\tif (ReflectionUtils.isEqualsMethod(method)) {\n\t\t\treturn annotationEquals(args[0]);\n\t\t}\n\t\tthrow new AnnotationConfigurationException(String.format(\n\t\t\t\t\"Method [%s] is unsupported for synthesized annotation type [%s]\", method, this.type));\n\t}\n\n\t/**\n\t * See {@link Annotation#equals(Object)} for a definition of the required algorithm.\n\t * @param other the other object to compare against\n\t */\n\tprivate boolean annotationEquals(Object other) {\n\t\tif (this == other) {\n\t\t\treturn true;\n\t\t}\n\t\tif (!this.type.isInstance(other)) {\n\t\t\treturn false;\n\t\t}\n\t\tfor (int i = 0; i < this.attributes.size(); i++) {\n\t\t\tMethod attribute = this.attributes.get(i);\n\t\t\tObject thisValue = getAttributeValue(attribute);\n\t\t\tObject otherValue = AnnotationUtils.invokeAnnotationMethod(attribute, other);\n\t\t\tif (!ObjectUtils.nullSafeEquals(thisValue, otherValue)) {\n\t\t\t\treturn false;\n\t\t\t}\n\t\t}\n\t\treturn true;\n\t}\n\n\t/**\n\t * See {@link Annotation#hashCode()} for a definition of the required algorithm.\n\t */\n\tprivate int annotationHashCode() {\n\t\tInteger hashCode = this.hashCode;\n\t\tif (hashCode == null) {\n\t\t\thashCode = computeHashCode();\n\t\t\tthis.hashCode = hashCode;\n\t\t}\n\t\treturn hashCode;\n\t}\n\n\tprivate Integer computeHashCode() {\n\t\tint hashCode = 0;\n\t\tfor (int i = 0; i < this.attributes.size(); i++) {\n\t\t\tMethod attribute = this.attributes.get(i);\n\t\t\tObject value = getAttributeValue(attribute);\n\t\t\thashCode += (127 * attribute.getName().hashCode()) ^ ObjectUtils.nullSafeHashCode(value);\n\t\t}\n\t\treturn hashCode;\n\t}\n\n\tprivate String annotationToString() {\n\t\tString string = this.string;\n\t\tif (string == null) {\n\t\t\tStringBuilder builder = new StringBuilder(\"@\").append(getName(this.type)).append('(');\n\t\t\tfor (int i = 0; i < this.attributes.size(); i++) {\n\t\t\t\tMethod attribute = this.attributes.get(i);\n\t\t\t\tif (i > 0) {\n\t\t\t\t\tbuilder.append(\", \");\n\t\t\t\t}\n\t\t\t\tbuilder.append(attribute.getName());\n\t\t\t\tbuilder.append('=');\n\t\t\t\tbuilder.append(toString(getAttributeValue(attribute)));\n\t\t\t}\n\t\t\tbuilder.append(')');\n\t\t\tstring = builder.toString();\n\t\t\tthis.string = string;\n\t\t}\n\t\treturn string;\n\t}\n\n\t/**\n\t * This method currently does not address the following issues which we may\n\t * choose to address at a later point in time.\n\t *\n\t * <ul>\n\t * <li>non-ASCII, non-visible, and non-printable characters within a character\n\t * or String literal are not escaped.</li>\n\t * <li>formatting for float and double values does not take into account whether\n\t * a value is not a number (NaN) or infinite.</li>\n\t * </ul>\n\t * @param value the attribute value to format\n\t * @return the formatted string representation\n\t */\n\tprivate String toString(Object value) {\n\t\tif (value instanceof String str) {\n\t\t\treturn '\"' + str + '\"';\n\t\t}\n\t\tif (value instanceof Character) {\n\t\t\treturn '\\'' + value.toString() + '\\'';\n\t\t}\n\t\tif (value instanceof Byte) {\n\t\t\treturn String.format(\"(byte) 0x%02X\", value);\n\t\t}\n\t\tif (value instanceof Long longValue) {\n\t\t\treturn Long.toString(longValue) + 'L';\n\t\t}\n\t\tif (value instanceof Float floatValue) {\n\t\t\treturn Float.toString(floatValue) + 'f';\n\t\t}\n\t\tif (value instanceof Double doubleValue) {\n\t\t\treturn Double.toString(doubleValue) + 'd';\n\t\t}\n\t\tif (value instanceof Enum<?> e) {\n\t\t\treturn e.name();\n\t\t}\n\t\tif (value instanceof Class<?> clazz) {\n\t\t\treturn getName(clazz) + \".class\";\n\t\t}\n\t\tif (value.getClass().isArray()) {\n\t\t\tStringBuilder builder = new StringBuilder(\"{\");\n\t\t\tfor (int i = 0; i < Array.getLength(value); i++) {\n\t\t\t\tif (i > 0) {\n\t\t\t\t\tbuilder.append(\", \");\n\t\t\t\t}\n\t\t\t\tbuilder.append(toString(Array.get(value, i)));\n\t\t\t}\n\t\t\tbuilder.append('}');\n\t\t\treturn builder.toString();\n\t\t}\n\t\treturn String.valueOf(value);\n\t}\n\n\tprivate Object getAttributeValue(Method method) {\n\t\tObject value = this.valueCache.computeIfAbsent(method.getName(), attributeName -> {\n\t\t\tClass<?> type = ClassUtils.resolvePrimitiveIfNecessary(method.getReturnType());\n\t\t\treturn this.annotation.getValue(attributeName, type).orElseThrow(\n\t\t\t\t\t() -> new NoSuchElementException(\"No value found for attribute named '\" + attributeName +\n\t\t\t\t\t\t\t\"' in merged annotation \" + getName(this.annotation.getType())));\n\t\t});\n\n\t\t// Clone non-empty arrays so that users cannot alter the contents of values in our cache.\n\t\tif (value.getClass().isArray() && Array.getLength(value) > 0) {\n\t\t\tvalue = cloneArray(value);\n\t\t}\n\n\t\treturn value;\n\t}\n\n\t/**\n\t * Clone the provided array, ensuring that the original component type is retained.\n\t * @param array the array to clone\n\t */\n\tprivate Object cloneArray(Object array) {\n\t\tif (array instanceof boolean[] booleans) {\n\t\t\treturn booleans.clone();\n\t\t}\n\t\tif (array instanceof byte[] bytes) {\n\t\t\treturn bytes.clone();\n\t\t}\n\t\tif (array instanceof char[] chars) {\n\t\t\treturn chars.clone();\n\t\t}\n\t\tif (array instanceof double[] doubles) {\n\t\t\treturn doubles.clone();\n\t\t}\n\t\tif (array instanceof float[] floats) {\n\t\t\treturn floats.clone();\n\t\t}\n\t\tif (array instanceof int[] ints) {\n\t\t\treturn ints.clone();\n\t\t}\n\t\tif (array instanceof long[] longs) {\n\t\t\treturn longs.clone();\n\t\t}\n\t\tif (array instanceof short[] shorts) {\n\t\t\treturn shorts.clone();\n\t\t}\n\n\t\t// else\n\t\treturn ((Object[]) array).clone();\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tstatic <A extends Annotation> A createProxy(MergedAnnotation<A> annotation, Class<A> type) {\n\t\tClassLoader classLoader = type.getClassLoader();\n\t\tClass<?>[] interfaces = new Class<?>[] {type};\n\t\tInvocationHandler handler = new SynthesizedMergedAnnotationInvocationHandler<>(annotation, type);\n\t\treturn (A) Proxy.newProxyInstance(classLoader, interfaces, handler);\n\t}\n\n\tprivate static String getName(Class<?> clazz) {\n\t\tString canonicalName = clazz.getCanonicalName();\n\t\treturn (canonicalName != null ? canonicalName : clazz.getName());\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#annotation",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#annotation",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MergedAnnotation<?>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#type",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#type",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class<A>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#attributes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#attributes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AttributeMethods",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#valueCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#valueCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, Object>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#hashCode",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#hashCode",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Integer",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#string",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#string",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#invoke(Object,Method,Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Object invoke(Object proxy, Method method, Object[] args) {\r\n    if (this.attributes.indexOf(method.getName()) != -1) {\r\n        return getAttributeValue(method);\r\n    }\r\n    if (method.getParameterCount() == 0) {\r\n        switch(method.getName()) {\r\n            case \"annotationType\":\r\n                return this.type;\r\n            case \"hashCode\":\r\n                return annotationHashCode();\r\n            case \"toString\":\r\n                return annotationToString();\r\n        }\r\n    }\r\n    if (ReflectionUtils.isEqualsMethod(method)) {\r\n        return annotationEquals(args[0]);\r\n    }\r\n    throw new AnnotationConfigurationException(String.format(\"Method [%s] is unsupported for synthesized annotation type [%s]\", method, this.type));\r\n}",
+    "tailType": "method_code"
+  }
+]

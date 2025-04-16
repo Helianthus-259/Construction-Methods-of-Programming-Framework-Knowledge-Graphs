@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#string_switch_hash(CodeEmitter,String[],ObjectSwitchCallback,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#load_class_this(CodeEmitter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void load_class_this(CodeEmitter e) {\r\n    load_class_helper(e, e.getClassEmitter().getClassType());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#load_class_this(CodeEmitter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#load_class(CodeEmitter,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void load_class(CodeEmitter e, Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        if (type == Type.VOID_TYPE) {\r\n            throw new IllegalArgumentException(\"cannot load void type\");\r\n        }\r\n        e.getstatic(TypeUtils.getBoxedType(type), \"TYPE\", Constants.TYPE_CLASS);\r\n    } else {\r\n        load_class_helper(e, type);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#load_class(CodeEmitter,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#load_class_helper(CodeEmitter,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void load_class_helper(CodeEmitter e, final Type type) {\r\n    if (e.isStaticHook()) {\r\n        // have to fall back on non-optimized load\r\n        e.push(TypeUtils.emulateClassGetName(type));\r\n        e.invoke_static(Constants.TYPE_CLASS, FOR_NAME);\r\n    } else {\r\n        ClassEmitter ce = e.getClassEmitter();\r\n        String typeName = TypeUtils.emulateClassGetName(type);\r\n        // TODO: can end up with duplicated field names when using chained transformers; incorporate static hook # somehow\r\n        String fieldName = \"CGLIB$load_class$\" + TypeUtils.escapeType(typeName);\r\n        if (!ce.isFieldDeclared(fieldName)) {\r\n            ce.declare_field(Constants.PRIVATE_FINAL_STATIC, fieldName, Constants.TYPE_CLASS, null);\r\n            CodeEmitter hook = ce.getStaticHook();\r\n            hook.push(typeName);\r\n            hook.invoke_static(Constants.TYPE_CLASS, FOR_NAME);\r\n            hook.putstatic(ce.getClassType(), fieldName, Constants.TYPE_CLASS);\r\n        }\r\n        e.getfield(fieldName);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#load_class_helper(CodeEmitter,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#push_array(CodeEmitter,Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void push_array(CodeEmitter e, Object[] array) {\r\n    e.push(array.length);\r\n    e.newarray(Type.getType(remapComponentType(array.getClass().componentType())));\r\n    for (int i = 0; i < array.length; i++) {\r\n        e.dup();\r\n        e.push(i);\r\n        push_object(e, array[i]);\r\n        e.aastore();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#push_array(CodeEmitter,Object[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#remapComponentType(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Class remapComponentType(Class componentType) {\r\n    if (componentType.equals(Type.class)) {\r\n        return Class.class;\r\n    }\r\n    return componentType;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#remapComponentType(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#push_object(CodeEmitter,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void push_object(CodeEmitter e, Object obj) {\r\n    if (obj == null) {\r\n        e.aconst_null();\r\n    } else {\r\n        if (obj.getClass().isArray()) {\r\n            push_array(e, (Object[]) obj);\r\n        } else if (obj instanceof String text) {\r\n            e.push(text);\r\n        } else if (obj instanceof Type type) {\r\n            load_class(e, type);\r\n        } else if (obj instanceof Class<?> clazz) {\r\n            load_class(e, Type.getType(clazz));\r\n        } else if (obj instanceof BigInteger) {\r\n            e.new_instance(Constants.TYPE_BIG_INTEGER);\r\n            e.dup();\r\n            e.push(obj.toString());\r\n            e.invoke_constructor(Constants.TYPE_BIG_INTEGER);\r\n        } else if (obj instanceof BigDecimal) {\r\n            e.new_instance(Constants.TYPE_BIG_DECIMAL);\r\n            e.dup();\r\n            e.push(obj.toString());\r\n            e.invoke_constructor(Constants.TYPE_BIG_DECIMAL);\r\n        } else {\r\n            throw new IllegalArgumentException(\"unknown type: \" + obj.getClass());\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#push_object(CodeEmitter,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_code(CodeEmitter,Type,int,Customizer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * @deprecated use {@link #hash_code(CodeEmitter, Type, int, CustomizerRegistry)} instead\r\n */\r\n@Deprecated\r\npublic static void hash_code(CodeEmitter e, Type type, int multiplier, final Customizer customizer) {\r\n    hash_code(e, type, multiplier, CustomizerRegistry.singleton(customizer));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#hash_code(CodeEmitter,Type,int,Customizer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_code(CodeEmitter,Type,int,Customizer)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_code(CodeEmitter,Type,int,CustomizerRegistry)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void hash_code(CodeEmitter e, Type type, int multiplier, final CustomizerRegistry registry) {\r\n    if (TypeUtils.isArray(type)) {\r\n        hash_array(e, type, multiplier, registry);\r\n    } else {\r\n        e.swap(Type.INT_TYPE, type);\r\n        e.push(multiplier);\r\n        e.math(CodeEmitter.MUL, Type.INT_TYPE);\r\n        e.swap(type, Type.INT_TYPE);\r\n        if (TypeUtils.isPrimitive(type)) {\r\n            hash_primitive(e, type);\r\n        } else {\r\n            hash_object(e, type, registry);\r\n        }\r\n        e.math(CodeEmitter.ADD, Type.INT_TYPE);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#hash_code(CodeEmitter,Type,int,CustomizerRegistry)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_array(CodeEmitter,Type,int,CustomizerRegistry)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void hash_array(final CodeEmitter e, Type type, final int multiplier, final CustomizerRegistry registry) {\r\n    Label skip = e.make_label();\r\n    Label end = e.make_label();\r\n    e.dup();\r\n    e.ifnull(skip);\r\n    EmitUtils.process_array(e, type, type1 -> hash_code(e, type1, multiplier, registry));\r\n    e.goTo(end);\r\n    e.mark(skip);\r\n    e.pop();\r\n    e.mark(end);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#hash_array(CodeEmitter,Type,int,CustomizerRegistry)",
+    "tailType": "method"
+  }
+]

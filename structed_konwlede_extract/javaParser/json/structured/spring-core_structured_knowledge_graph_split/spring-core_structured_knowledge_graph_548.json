@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Modifier;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.Block;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.Local;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nclass BulkBeanEmitter extends ClassEmitter {\n    private static final Signature GET_PROPERTY_VALUES =\n      TypeUtils.parseSignature(\"void getPropertyValues(Object, Object[])\");\n    private static final Signature SET_PROPERTY_VALUES =\n      TypeUtils.parseSignature(\"void setPropertyValues(Object, Object[])\");\n    private static final Signature CSTRUCT_EXCEPTION =\n      TypeUtils.parseConstructor(\"Throwable, int\");\n    private static final Type BULK_BEAN =\n      TypeUtils.parseType(\"org.springframework.cglib.beans.BulkBean\");\n    private static final Type BULK_BEAN_EXCEPTION =\n      TypeUtils.parseType(\"org.springframework.cglib.beans.BulkBeanException\");\n\n    public BulkBeanEmitter(ClassVisitor v,\n                           String className,\n                           Class target,\n                           String[] getterNames,\n                           String[] setterNames,\n                           Class[] types) {\n        super(v);\n\n        Method[] getters = new Method[getterNames.length];\n        Method[] setters = new Method[setterNames.length];\n        validate(target, getterNames, setterNames, types, getters, setters);\n\n        begin_class(Constants.V1_8, Constants.ACC_PUBLIC, className, BULK_BEAN, null, Constants.SOURCE_FILE);\n        EmitUtils.null_constructor(this);\n        generateGet(target, getters);\n        generateSet(target, setters);\n        end_class();\n    }\n\n    private void generateGet(final Class target, final Method[] getters) {\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, GET_PROPERTY_VALUES, null);\n        if (getters.length > 0) {\n            e.load_arg(0);\n            e.checkcast(Type.getType(target));\n            Local bean = e.make_local();\n            e.store_local(bean);\n            for (int i = 0; i < getters.length; i++) {\n                if (getters[i] != null) {\n                    MethodInfo getter = ReflectUtils.getMethodInfo(getters[i]);\n                    e.load_arg(1);\n                    e.push(i);\n                    e.load_local(bean);\n                    e.invoke(getter);\n                    e.box(getter.getSignature().getReturnType());\n                    e.aastore();\n                }\n            }\n        }\n        e.return_value();\n        e.end_method();\n    }\n\n    private void generateSet(final Class target, final Method[] setters) {\n        // setPropertyValues\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, SET_PROPERTY_VALUES, null);\n        if (setters.length > 0) {\n            Local index = e.make_local(Type.INT_TYPE);\n            e.push(0);\n            e.store_local(index);\n            e.load_arg(0);\n            e.checkcast(Type.getType(target));\n            e.load_arg(1);\n            Block handler = e.begin_block();\n            int lastIndex = 0;\n            for (int i = 0; i < setters.length; i++) {\n                if (setters[i] != null) {\n                    MethodInfo setter = ReflectUtils.getMethodInfo(setters[i]);\n                    int diff = i - lastIndex;\n                    if (diff > 0) {\n                        e.iinc(index, diff);\n                        lastIndex = i;\n                    }\n                    e.dup2();\n                    e.aaload(i);\n                    e.unbox(setter.getSignature().getArgumentTypes()[0]);\n                    e.invoke(setter);\n                }\n            }\n            handler.end();\n            e.return_value();\n            e.catch_exception(handler, Constants.TYPE_THROWABLE);\n            e.new_instance(BULK_BEAN_EXCEPTION);\n            e.dup_x1();\n            e.swap();\n            e.load_local(index);\n            e.invoke_constructor(BULK_BEAN_EXCEPTION, CSTRUCT_EXCEPTION);\n            e.athrow();\n        } else {\n            e.return_value();\n        }\n        e.end_method();\n    }\n\n    private static void validate(Class target,\n                                 String[] getters,\n                                 String[] setters,\n                                 Class[] types,\n                                 Method[] getters_out,\n                                 Method[] setters_out) {\n        int i = -1;\n        if (setters.length != types.length || getters.length != types.length) {\n            throw new BulkBeanException(\"accessor array length must be equal type array length\", i);\n        }\n        try {\n            for (i = 0; i < types.length; i++) {\n                if (getters[i] != null) {\n                    Method method = ReflectUtils.findDeclaredMethod(target, getters[i], null);\n                    if (method.getReturnType() != types[i]) {\n                        throw new BulkBeanException(\"Specified type \" + types[i] +\n                                                    \" does not match declared type \" + method.getReturnType(), i);\n                    }\n                    if (Modifier.isPrivate(method.getModifiers())) {\n                        throw new BulkBeanException(\"Property is private\", i);\n                    }\n                    getters_out[i] = method;\n                }\n                if (setters[i] != null) {\n                    Method method = ReflectUtils.findDeclaredMethod(target, setters[i], new Class[]{ types[i] });\n                    if (Modifier.isPrivate(method.getModifiers()) ){\n                        throw new BulkBeanException(\"Property is private\", i);\n                    }\n                    setters_out[i] = method;\n                }\n            }\n        } catch (NoSuchMethodException e) {\n            throw new BulkBeanException(\"Cannot find specified property\", i);\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#GET_PROPERTY_VALUES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#GET_PROPERTY_VALUES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#SET_PROPERTY_VALUES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#SET_PROPERTY_VALUES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#CSTRUCT_EXCEPTION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#CSTRUCT_EXCEPTION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#BULK_BEAN",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#BULK_BEAN",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#BULK_BEAN_EXCEPTION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#BULK_BEAN_EXCEPTION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#generateGet(Class,Method[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void generateGet(final Class target, final Method[] getters) {\r\n    CodeEmitter e = begin_method(Constants.ACC_PUBLIC, GET_PROPERTY_VALUES, null);\r\n    if (getters.length > 0) {\r\n        e.load_arg(0);\r\n        e.checkcast(Type.getType(target));\r\n        Local bean = e.make_local();\r\n        e.store_local(bean);\r\n        for (int i = 0; i < getters.length; i++) {\r\n            if (getters[i] != null) {\r\n                MethodInfo getter = ReflectUtils.getMethodInfo(getters[i]);\r\n                e.load_arg(1);\r\n                e.push(i);\r\n                e.load_local(bean);\r\n                e.invoke(getter);\r\n                e.box(getter.getSignature().getReturnType());\r\n                e.aastore();\r\n            }\r\n        }\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#generateGet(Class,Method[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#generateSet(Class,Method[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void generateSet(final Class target, final Method[] setters) {\r\n    // setPropertyValues\r\n    CodeEmitter e = begin_method(Constants.ACC_PUBLIC, SET_PROPERTY_VALUES, null);\r\n    if (setters.length > 0) {\r\n        Local index = e.make_local(Type.INT_TYPE);\r\n        e.push(0);\r\n        e.store_local(index);\r\n        e.load_arg(0);\r\n        e.checkcast(Type.getType(target));\r\n        e.load_arg(1);\r\n        Block handler = e.begin_block();\r\n        int lastIndex = 0;\r\n        for (int i = 0; i < setters.length; i++) {\r\n            if (setters[i] != null) {\r\n                MethodInfo setter = ReflectUtils.getMethodInfo(setters[i]);\r\n                int diff = i - lastIndex;\r\n                if (diff > 0) {\r\n                    e.iinc(index, diff);\r\n                    lastIndex = i;\r\n                }\r\n                e.dup2();\r\n                e.aaload(i);\r\n                e.unbox(setter.getSignature().getArgumentTypes()[0]);\r\n                e.invoke(setter);\r\n            }\r\n        }\r\n        handler.end();\r\n        e.return_value();\r\n        e.catch_exception(handler, Constants.TYPE_THROWABLE);\r\n        e.new_instance(BULK_BEAN_EXCEPTION);\r\n        e.dup_x1();\r\n        e.swap();\r\n        e.load_local(index);\r\n        e.invoke_constructor(BULK_BEAN_EXCEPTION, CSTRUCT_EXCEPTION);\r\n        e.athrow();\r\n    } else {\r\n        e.return_value();\r\n    }\r\n    e.end_method();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#generateSet(Class,Method[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter#validate(Class,String[],String[],Class[],Method[],Method[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void validate(Class target, String[] getters, String[] setters, Class[] types, Method[] getters_out, Method[] setters_out) {\r\n    int i = -1;\r\n    if (setters.length != types.length || getters.length != types.length) {\r\n        throw new BulkBeanException(\"accessor array length must be equal type array length\", i);\r\n    }\r\n    try {\r\n        for (i = 0; i < types.length; i++) {\r\n            if (getters[i] != null) {\r\n                Method method = ReflectUtils.findDeclaredMethod(target, getters[i], null);\r\n                if (method.getReturnType() != types[i]) {\r\n                    throw new BulkBeanException(\"Specified type \" + types[i] + \" does not match declared type \" + method.getReturnType(), i);\r\n                }\r\n                if (Modifier.isPrivate(method.getModifiers())) {\r\n                    throw new BulkBeanException(\"Property is private\", i);\r\n                }\r\n                getters_out[i] = method;\r\n            }\r\n            if (setters[i] != null) {\r\n                Method method = ReflectUtils.findDeclaredMethod(target, setters[i], new Class[] { types[i] });\r\n                if (Modifier.isPrivate(method.getModifiers())) {\r\n                    throw new BulkBeanException(\"Property is private\", i);\r\n                }\r\n                setters_out[i] = method;\r\n            }\r\n        }\r\n    } catch (NoSuchMethodException e) {\r\n        throw new BulkBeanException(\"Cannot find specified property\", i);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBeanEmitter#validate(Class,String[],String[],Class[],Method[],Method[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanEmitter",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ClassEmitter",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.testfixture",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.testfixture",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.testfixture.TimeStamped",
+    "tailType": "class"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.Local",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Local#getIndex()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local#getType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Type getType() {\r\n    return type;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Local#getType()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.LocalVariablesSorter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/***\n * ASM: a very small and fast Java bytecode manipulation framework\n * Copyright (c) 2000-2005 INRIA, France Telecom\n * All rights reserved.\n *\n * Redistribution and use in source and binary forms, with or without\n * modification, are permitted provided that the following conditions\n * are met:\n * 1. Redistributions of source code must retain the above copyright\n *    notice, this list of conditions and the following disclaimer.\n * 2. Redistributions in binary form must reproduce the above copyright\n *    notice, this list of conditions and the following disclaimer in the\n *    documentation and/or other materials provided with the distribution.\n * 3. Neither the name of the copyright holders nor the names of its\n *    contributors may be used to endorse or promote products derived from\n *    this software without specific prior written permission.\n *\n * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\n * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\n * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE\n * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE\n * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR\n * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF\n * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS\n * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN\n * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)\n * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF\n * THE POSSIBILITY OF SUCH DAMAGE.\n */\npackage org.springframework.cglib.core;\n\nimport org.springframework.asm.Label;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Opcodes;\nimport org.springframework.asm.Type;\n\n/**\n * A {@link MethodVisitor} that renumbers local variables in their order of\n * appearance. This adapter allows one to easily add new local variables to a\n * method.\n *\n * @author Chris Nokleberg\n * @author Eric Bruneton\n */\npublic class LocalVariablesSorter extends MethodVisitor {\n\n    /**\n     * Mapping from old to new local variable indexes. A local variable at index\n     * i of size 1 is remapped to 'mapping[2*i]', while a local variable at\n     * index i of size 2 is remapped to 'mapping[2*i+1]'.\n     */\n    private static class State\n    {\n        int[] mapping = new int[40];\n        int nextLocal;\n    }\n\n    protected final int firstLocal;\n    private final State state;\n\n    public LocalVariablesSorter(\n        final int access,\n        final String desc,\n        final MethodVisitor mv)\n    {\n        super(Constants.ASM_API, mv);\n        state = new State();\n        Type[] args = Type.getArgumentTypes(desc);\n        state.nextLocal = ((Opcodes.ACC_STATIC & access) != 0) ? 0 : 1;\n        for (Type arg : args) {\n            state.nextLocal += arg.getSize();\n        }\n        firstLocal = state.nextLocal;\n    }\n\n    public LocalVariablesSorter(LocalVariablesSorter lvs) {\n        super(Constants.ASM_API, lvs.mv);\n        state = lvs.state;\n        firstLocal = lvs.firstLocal;\n    }\n\n    @Override\n\tpublic void visitVarInsn(final int opcode, final int var) {\n        int size = switch (opcode) {\n\t\t\tcase Opcodes.LLOAD, Opcodes.LSTORE, Opcodes.DLOAD, Opcodes.DSTORE -> 2;\n\t\t\tdefault -> 1;\n\t\t};\n        mv.visitVarInsn(opcode, remap(var, size));\n    }\n\n    @Override\n\tpublic void visitIincInsn(final int var, final int increment) {\n        mv.visitIincInsn(remap(var, 1), increment);\n    }\n\n    @Override\n\tpublic void visitMaxs(final int maxStack, final int maxLocals) {\n        mv.visitMaxs(maxStack, state.nextLocal);\n    }\n\n    @Override\n\tpublic void visitLocalVariable(\n        final String name,\n        final String desc,\n        final String signature,\n        final Label start,\n        final Label end,\n        final int index)\n    {\n        mv.visitLocalVariable(name, desc, signature, start, end, remap(index));\n    }\n\n    // -------------\n\n    protected int newLocal(final int size) {\n        int var = state.nextLocal;\n        state.nextLocal += size;\n        return var;\n    }\n\n    private int remap(final int var, final int size) {\n        if (var < firstLocal) {\n            return var;\n        }\n        int key = 2 * var + size - 1;\n        int length = state.mapping.length;\n        if (key >= length) {\n            int[] newMapping = new int[Math.max(2 * length, key + 1)];\n            System.arraycopy(state.mapping, 0, newMapping, 0, length);\n            state.mapping = newMapping;\n        }\n        int value = state.mapping[key];\n        if (value == 0) {\n            value = state.nextLocal + 1;\n            state.mapping[key] = value;\n            state.nextLocal += size;\n        }\n        return value - 1;\n    }\n\n    private int remap(final int var) {\n        if (var < firstLocal) {\n            return var;\n        }\n        int key = 2 * var;\n        int value = key < state.mapping.length ? state.mapping[key] : 0;\n        if (value == 0) {\n            value = key + 1 < state.mapping.length ? state.mapping[key + 1] : 0;\n        }\n        if (value == 0) {\n            throw new IllegalStateException(\"Unknown local variable \" + var);\n        }\n        return value - 1;\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.LocalVariablesSorter#firstLocal",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#firstLocal",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.LocalVariablesSorter#state",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#state",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "State",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitVarInsn(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitVarInsn(final int opcode, final int var) {\r\n    int size = switch(opcode) {\r\n        case Opcodes.LLOAD, Opcodes.LSTORE, Opcodes.DLOAD, Opcodes.DSTORE ->\r\n            2;\r\n        default ->\r\n            1;\r\n    };\r\n    mv.visitVarInsn(opcode, remap(var, size));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.LocalVariablesSorter#visitVarInsn(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitVarInsn(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitIincInsn(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitIincInsn(final int var, final int increment) {\r\n    mv.visitIincInsn(remap(var, 1), increment);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.LocalVariablesSorter#visitIincInsn(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitIincInsn(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitMaxs(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitMaxs(final int maxStack, final int maxLocals) {\r\n    mv.visitMaxs(maxStack, state.nextLocal);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.LocalVariablesSorter#visitMaxs(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitMaxs(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.LocalVariablesSorter#visitLocalVariable(String,String,String,Label,Label,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitLocalVariable(final String name, final String desc, final String signature, final Label start, final Label end, final int index) {\r\n    mv.visitLocalVariable(name, desc, signature, start, end, remap(index));\r\n}",
+    "tailType": "method_code"
+  }
+]

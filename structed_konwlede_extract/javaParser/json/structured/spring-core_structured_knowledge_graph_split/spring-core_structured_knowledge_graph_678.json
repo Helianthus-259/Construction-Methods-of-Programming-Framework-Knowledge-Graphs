@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastMethod#getExceptionTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod#getExceptionTypes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod#invoke(Object,Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Object invoke(Object obj, Object[] args) throws InvocationTargetException {\r\n    return fc.invoke(index, obj, args);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastMethod#invoke(Object,Object[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod#getJavaMethod()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Method getJavaMethod() {\r\n    return (Method) member;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastMethod#getJavaMethod()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastMethod",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "FastMember",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.reflect",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.MethodDelegate",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.reflect;\n\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n// TODO: don't require exact match for return type\n\n/**\n * <b>DOCUMENTATION FROM APACHE AVALON DELEGATE CLASS</b>\n *\n * <p>\n * Delegates are a typesafe pointer to another method.  Since Java does not\n * have language support for such a construct, this utility will construct\n * a proxy that forwards method calls to any method with the same signature.\n * This utility is inspired in part by the C# delegate mechanism.  We\n * implemented it in a Java-centric manner.\n * </p>\n *\n * <h2>Delegate</h2>\n * <p>\n *   Any interface with one method can become the interface for a delegate.\n *   Consider the example below:\n * </p>\n *\n * <pre>\n *   public interface MainDelegate {\n *       int main(String[] args);\n *   }\n * </pre>\n *\n * <p>\n *   The interface above is an example of an interface that can become a\n *   delegate.  It has only one method, and the interface is public.  In\n *   order to create a delegate for that method, all we have to do is\n *   call <code>MethodDelegate.create(this, \"alternateMain\", MainDelegate.class)</code>.\n *   The following program will show how to use it:\n * </p>\n *\n * <pre>\n *   public class Main {\n *       public static int main( String[] args ) {\n *           Main newMain = new Main();\n *           MainDelegate start = (MainDelegate)\n *               MethodDelegate.create(newMain, \"alternateMain\", MainDelegate.class);\n *           return start.main( args );\n *       }\n *\n *       public int alternateMain( String[] args ) {\n *           for (int i = 0; i &lt; args.length; i++) {\n *               System.out.println( args[i] );\n *           }\n *           return args.length;\n *       }\n *   }\n * </pre>\n *\n * <p>\n *   By themselves, delegates don't do much.  Their true power lies in the fact that\n *   they can be treated like objects, and passed to other methods.  In fact that is\n *   one of the key building blocks of building Intelligent Agents which in tern are\n *   the foundation of artificial intelligence.  In the above program, we could have\n *   easily created the delegate to match the static <code>main</code> method by\n *   substituting the delegate creation call with this:\n *   <code>MethodDelegate.createStatic(getClass(), \"main\", MainDelegate.class)</code>.\n * </p>\n * <p>\n *   Another key use for Delegates is to register event listeners.  It is much easier\n *   to have all the code for your events separated out into methods instead of individual\n *   classes.  One of the ways Java gets around that is to create anonymous classes.\n *   They are particularly troublesome because many Debuggers do not know what to do\n *   with them.  Anonymous classes tend to duplicate alot of code as well.  We can\n *   use any interface with one declared method to forward events to any method that\n *   matches the signature (although the method name can be different).\n * </p>\n *\n * <h3>Equality</h3>\n *  The criteria that we use to test if two delegates are equal are:\n *   <ul>\n *     <li>\n *       They both refer to the same instance.  That is, the <code>instance</code>\n *       parameter passed to the newDelegate method was the same for both. The\n *       instances are compared with the identity equality operator, <code>==</code>.\n *     </li>\n *     <li>They refer to the same method as resolved by <code>Method.equals</code>.</li>\n *   </ul>\n *\n * @version $Id: MethodDelegate.java,v 1.25 2006/03/05 02:43:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class MethodDelegate {\n    private static final MethodDelegateKey KEY_FACTORY =\n      (MethodDelegateKey)KeyFactory.create(MethodDelegateKey.class, KeyFactory.CLASS_BY_NAME);\n\n    protected Object target;\n    protected String eqMethod;\n\n    interface MethodDelegateKey {\n        Object newInstance(Class delegateClass, String methodName, Class iface);\n    }\n\n    public static MethodDelegate createStatic(Class targetClass, String methodName, Class iface) {\n        Generator gen = new Generator();\n        gen.setTargetClass(targetClass);\n        gen.setMethodName(methodName);\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    public static MethodDelegate create(Object target, String methodName, Class iface) {\n        Generator gen = new Generator();\n        gen.setTarget(target);\n        gen.setMethodName(methodName);\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    @Override\n    public boolean equals(Object obj) {\n        MethodDelegate other = (MethodDelegate)obj;\n        return (other != null && target == other.target) && eqMethod.equals(other.eqMethod);\n    }\n\n    @Override\n    public int hashCode() {\n        return target.hashCode() ^ eqMethod.hashCode();\n    }\n\n    public Object getTarget() {\n        return target;\n    }\n\n    abstract public MethodDelegate newInstance(Object target);\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(MethodDelegate.class.getName());\n        private static final Type METHOD_DELEGATE =\n          TypeUtils.parseType(\"org.springframework.cglib.reflect.MethodDelegate\");\n        private static final Signature NEW_INSTANCE =\n          new Signature(\"newInstance\", METHOD_DELEGATE, new Type[]{ Constants.TYPE_OBJECT });\n\n        private Object target;\n        private Class targetClass;\n        private String methodName;\n        private Class iface;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        public void setTarget(Object target) {\n            this.target = target;\n            this.targetClass = target.getClass();\n        }\n\n        public void setTargetClass(Class targetClass) {\n            this.targetClass = targetClass;\n        }\n\n        public void setMethodName(String methodName) {\n            this.methodName = methodName;\n        }\n\n        public void setInterface(Class iface) {\n            this.iface = iface;\n        }\n\n        @Override\n        protected ClassLoader getDefaultClassLoader() {\n            return targetClass.getClassLoader();\n        }\n\n        @Override\n        protected ProtectionDomain getProtectionDomain() {\n            return ReflectUtils.getProtectionDomain(targetClass);\n        }\n\n        public MethodDelegate create() {\n            setNamePrefix(targetClass.getName());\n            Object key = KEY_FACTORY.newInstance(targetClass, methodName, iface);\n            return (MethodDelegate)super.create(key);\n        }\n\n        @Override\n        protected Object firstInstance(Class type) {\n            return ((MethodDelegate)ReflectUtils.newInstance(type)).newInstance(target);\n        }\n\n        @Override\n        protected Object nextInstance(Object instance) {\n            return ((MethodDelegate)instance).newInstance(target);\n        }\n\n        @Override\n        public void generateClass(ClassVisitor v) throws NoSuchMethodException {\n            Method proxy = ReflectUtils.findInterfaceMethod(iface);\n            final Method method = targetClass.getMethod(methodName, proxy.getParameterTypes());\n            if (!proxy.getReturnType().isAssignableFrom(method.getReturnType())) {\n                throw new IllegalArgumentException(\"incompatible return types\");\n            }\n\n            MethodInfo methodInfo = ReflectUtils.getMethodInfo(method);\n\n            boolean isStatic = TypeUtils.isStatic(methodInfo.getModifiers());\n            if ((target == null) ^ isStatic) {\n                throw new IllegalArgumentException(\"Static method \" + (isStatic ? \"not \" : \"\") + \"expected\");\n            }\n\n            ClassEmitter ce = new ClassEmitter(v);\n            CodeEmitter e;\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           METHOD_DELEGATE,\n                           new Type[]{ Type.getType(iface) },\n                           Constants.SOURCE_FILE);\n            ce.declare_field(Constants.PRIVATE_FINAL_STATIC, \"eqMethod\", Constants.TYPE_STRING, null);\n            EmitUtils.null_constructor(ce);\n\n            // generate proxied method\n            MethodInfo proxied = ReflectUtils.getMethodInfo(iface.getDeclaredMethods()[0]);\n            int modifiers = Constants.ACC_PUBLIC;\n            if ((proxied.getModifiers() & Constants.ACC_VARARGS) == Constants.ACC_VARARGS) {\n                modifiers |= Constants.ACC_VARARGS;\n            }\n            e = EmitUtils.begin_method(ce, proxied, modifiers);\n            e.load_this();\n            e.super_getfield(\"target\", Constants.TYPE_OBJECT);\n            e.checkcast(methodInfo.getClassInfo().getType());\n            e.load_args();\n            e.invoke(methodInfo);\n            e.return_value();\n            e.end_method();\n\n            // newInstance\n            e = ce.begin_method(Constants.ACC_PUBLIC, NEW_INSTANCE, null);\n            e.new_instance_this();\n            e.dup();\n            e.dup2();\n            e.invoke_constructor_this();\n            e.getfield(\"eqMethod\");\n            e.super_putfield(\"eqMethod\", Constants.TYPE_STRING);\n            e.load_arg(0);\n            e.super_putfield(\"target\", Constants.TYPE_OBJECT);\n            e.return_value();\n            e.end_method();\n\n            // static initializer\n            e = ce.begin_static();\n            e.push(methodInfo.getSignature().toString());\n            e.putfield(\"eqMethod\");\n            e.return_value();\n            e.end_method();\n\n            ce.end_class();\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.MethodDelegate#KEY_FACTORY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate#KEY_FACTORY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MethodDelegateKey",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.MethodDelegate#target",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate#target",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.MethodDelegate#eqMethod",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate#eqMethod",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate#createStatic(Class,String,Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static MethodDelegate createStatic(Class targetClass, String methodName, Class iface) {\r\n    Generator gen = new Generator();\r\n    gen.setTargetClass(targetClass);\r\n    gen.setMethodName(methodName);\r\n    gen.setInterface(iface);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MethodDelegate#createStatic(Class,String,Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MethodDelegate#create(Object,String,Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static MethodDelegate create(Object target, String methodName, Class iface) {\r\n    Generator gen = new Generator();\r\n    gen.setTarget(target);\r\n    gen.setMethodName(methodName);\r\n    gen.setInterface(iface);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  }
+]

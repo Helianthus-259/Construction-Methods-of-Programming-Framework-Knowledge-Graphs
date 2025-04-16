@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.AbstractEnvironment#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String toString() {\r\n    return getClass().getSimpleName() + \" {activeProfiles=\" + this.activeProfiles + \", defaultProfiles=\" + this.defaultProfiles + \", propertySources=\" + this.propertySources + \"}\";\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.AbstractEnvironment#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractEnvironment#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.env",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Collections;\nimport java.util.LinkedHashSet;\nimport java.util.Set;\n\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.support.ConfigurableConversionService;\nimport org.springframework.core.convert.support.DefaultConversionService;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.PropertyPlaceholderHelper;\nimport org.springframework.util.SystemPropertyUtils;\n\n/**\n * Abstract base class for resolving properties against any underlying source.\n *\n * @author Chris Beams\n * @author Juergen Hoeller\n * @since 3.1\n */\npublic abstract class AbstractPropertyResolver implements ConfigurablePropertyResolver {\n\n\tprotected final Log logger = LogFactory.getLog(getClass());\n\n\tprivate volatile @Nullable ConfigurableConversionService conversionService;\n\n\tprivate @Nullable PropertyPlaceholderHelper nonStrictHelper;\n\n\tprivate @Nullable PropertyPlaceholderHelper strictHelper;\n\n\tprivate boolean ignoreUnresolvableNestedPlaceholders = false;\n\n\tprivate String placeholderPrefix = SystemPropertyUtils.PLACEHOLDER_PREFIX;\n\n\tprivate String placeholderSuffix = SystemPropertyUtils.PLACEHOLDER_SUFFIX;\n\n\tprivate @Nullable String valueSeparator = SystemPropertyUtils.VALUE_SEPARATOR;\n\n\tprivate @Nullable Character escapeCharacter = SystemPropertyUtils.ESCAPE_CHARACTER;\n\n\tprivate final Set<String> requiredProperties = new LinkedHashSet<>();\n\n\n\t@Override\n\tpublic ConfigurableConversionService getConversionService() {\n\t\t// Need to provide an independent DefaultConversionService, not the\n\t\t// shared DefaultConversionService used by PropertySourcesPropertyResolver.\n\t\tConfigurableConversionService cs = this.conversionService;\n\t\tif (cs == null) {\n\t\t\tsynchronized (this) {\n\t\t\t\tcs = this.conversionService;\n\t\t\t\tif (cs == null) {\n\t\t\t\t\tcs = new DefaultConversionService();\n\t\t\t\t\tthis.conversionService = cs;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn cs;\n\t}\n\n\t@Override\n\tpublic void setConversionService(ConfigurableConversionService conversionService) {\n\t\tAssert.notNull(conversionService, \"ConversionService must not be null\");\n\t\tthis.conversionService = conversionService;\n\t}\n\n\t/**\n\t * Set the prefix that placeholders replaced by this resolver must begin with.\n\t * <p>The default is \"${\".\n\t * @see org.springframework.util.SystemPropertyUtils#PLACEHOLDER_PREFIX\n\t */\n\t@Override\n\tpublic void setPlaceholderPrefix(String placeholderPrefix) {\n\t\tAssert.notNull(placeholderPrefix, \"'placeholderPrefix' must not be null\");\n\t\tthis.placeholderPrefix = placeholderPrefix;\n\t}\n\n\t/**\n\t * Set the suffix that placeholders replaced by this resolver must end with.\n\t * <p>The default is \"}\".\n\t * @see org.springframework.util.SystemPropertyUtils#PLACEHOLDER_SUFFIX\n\t */\n\t@Override\n\tpublic void setPlaceholderSuffix(String placeholderSuffix) {\n\t\tAssert.notNull(placeholderSuffix, \"'placeholderSuffix' must not be null\");\n\t\tthis.placeholderSuffix = placeholderSuffix;\n\t}\n\n\t/**\n\t * Specify the separating character between the placeholders replaced by this\n\t * resolver and their associated default value, or {@code null} if no such\n\t * special character should be processed as a value separator.\n\t * <p>The default is \":\".\n\t * @see org.springframework.util.SystemPropertyUtils#VALUE_SEPARATOR\n\t */\n\t@Override\n\tpublic void setValueSeparator(@Nullable String valueSeparator) {\n\t\tthis.valueSeparator = valueSeparator;\n\t}\n\n\t/**\n\t * Specify the escape character to use to ignore placeholder prefix\n\t * or value separator, or {@code null} if no escaping should take\n\t * place.\n\t * <p>The default is \"\\\".\n\t * @since 6.2\n\t * @see org.springframework.util.SystemPropertyUtils#ESCAPE_CHARACTER\n\t */\n\t@Override\n\tpublic void setEscapeCharacter(@Nullable Character escapeCharacter) {\n\t\tthis.escapeCharacter = escapeCharacter;\n\t}\n\n\t/**\n\t * Set whether to throw an exception when encountering an unresolvable placeholder\n\t * nested within the value of a given property. A {@code false} value indicates strict\n\t * resolution, i.e. that an exception will be thrown. A {@code true} value indicates\n\t * that unresolvable nested placeholders should be passed through in their unresolved\n\t * ${...} form.\n\t * <p>The default is {@code false}.\n\t * @since 3.2\n\t */\n\t@Override\n\tpublic void setIgnoreUnresolvableNestedPlaceholders(boolean ignoreUnresolvableNestedPlaceholders) {\n\t\tthis.ignoreUnresolvableNestedPlaceholders = ignoreUnresolvableNestedPlaceholders;\n\t}\n\n\t@Override\n\tpublic void setRequiredProperties(String... requiredProperties) {\n\t\tCollections.addAll(this.requiredProperties, requiredProperties);\n\t}\n\n\t@Override\n\tpublic void validateRequiredProperties() {\n\t\tMissingRequiredPropertiesException ex = new MissingRequiredPropertiesException();\n\t\tfor (String key : this.requiredProperties) {\n\t\t\tif (this.getProperty(key) == null) {\n\t\t\t\tex.addMissingRequiredProperty(key);\n\t\t\t}\n\t\t}\n\t\tif (!ex.getMissingRequiredProperties().isEmpty()) {\n\t\t\tthrow ex;\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean containsProperty(String key) {\n\t\treturn (getProperty(key) != null);\n\t}\n\n\t@Override\n\tpublic @Nullable String getProperty(String key) {\n\t\treturn getProperty(key, String.class);\n\t}\n\n\t@Override\n\tpublic String getProperty(String key, String defaultValue) {\n\t\tString value = getProperty(key);\n\t\treturn (value != null ? value : defaultValue);\n\t}\n\n\t@Override\n\tpublic <T> T getProperty(String key, Class<T> targetType, T defaultValue) {\n\t\tT value = getProperty(key, targetType);\n\t\treturn (value != null ? value : defaultValue);\n\t}\n\n\t@Override\n\tpublic String getRequiredProperty(String key) throws IllegalStateException {\n\t\tString value = getProperty(key);\n\t\tif (value == null) {\n\t\t\tthrow new IllegalStateException(\"Required key '\" + key + \"' not found\");\n\t\t}\n\t\treturn value;\n\t}\n\n\t@Override\n\tpublic <T> T getRequiredProperty(String key, Class<T> valueType) throws IllegalStateException {\n\t\tT value = getProperty(key, valueType);\n\t\tif (value == null) {\n\t\t\tthrow new IllegalStateException(\"Required key '\" + key + \"' not found\");\n\t\t}\n\t\treturn value;\n\t}\n\n\t@Override\n\tpublic String resolvePlaceholders(String text) {\n\t\tif (this.nonStrictHelper == null) {\n\t\t\tthis.nonStrictHelper = createPlaceholderHelper(true);\n\t\t}\n\t\treturn doResolvePlaceholders(text, this.nonStrictHelper);\n\t}\n\n\t@Override\n\tpublic String resolveRequiredPlaceholders(String text) throws IllegalArgumentException {\n\t\tif (this.strictHelper == null) {\n\t\t\tthis.strictHelper = createPlaceholderHelper(false);\n\t\t}\n\t\treturn doResolvePlaceholders(text, this.strictHelper);\n\t}\n\n\t/**\n\t * Resolve placeholders within the given string, deferring to the value of\n\t * {@link #setIgnoreUnresolvableNestedPlaceholders} to determine whether any\n\t * unresolvable placeholders should raise an exception or be ignored.\n\t * <p>Invoked from {@link #getProperty} and its variants, implicitly resolving\n\t * nested placeholders. In contrast, {@link #resolvePlaceholders} and\n\t * {@link #resolveRequiredPlaceholders} do <i>not</i> delegate\n\t * to this method but rather perform their own handling of unresolvable\n\t * placeholders, as specified by each of those methods.\n\t * @since 3.2\n\t * @see #setIgnoreUnresolvableNestedPlaceholders\n\t */\n\tprotected String resolveNestedPlaceholders(String value) {\n\t\tif (value.isEmpty()) {\n\t\t\treturn value;\n\t\t}\n\t\treturn (this.ignoreUnresolvableNestedPlaceholders ?\n\t\t\t\tresolvePlaceholders(value) : resolveRequiredPlaceholders(value));\n\t}\n\n\tprivate PropertyPlaceholderHelper createPlaceholderHelper(boolean ignoreUnresolvablePlaceholders) {\n\t\treturn new PropertyPlaceholderHelper(this.placeholderPrefix, this.placeholderSuffix,\n\t\t\t\tthis.valueSeparator, this.escapeCharacter, ignoreUnresolvablePlaceholders);\n\t}\n\n\tprivate String doResolvePlaceholders(String text, PropertyPlaceholderHelper helper) {\n\t\treturn helper.replacePlaceholders(text, this::getPropertyAsRawString);\n\t}\n\n\t/**\n\t * Convert the given value to the specified target type, if necessary.\n\t * @param value the original property value\n\t * @param targetType the specified target type for property retrieval\n\t * @return the converted value, or the original value if no conversion\n\t * is necessary\n\t * @since 4.3.5\n\t */\n\t@SuppressWarnings(\"unchecked\")\n\tprotected <T> @Nullable T convertValueIfNecessary(Object value, @Nullable Class<T> targetType) {\n\t\tif (targetType == null) {\n\t\t\treturn (T) value;\n\t\t}\n\t\tConversionService conversionServiceToUse = this.conversionService;\n\t\tif (conversionServiceToUse == null) {\n\t\t\t// Avoid initialization of shared DefaultConversionService if\n\t\t\t// no standard type conversion is needed in the first place...\n\t\t\tif (ClassUtils.isAssignableValue(targetType, value)) {\n\t\t\t\treturn (T) value;\n\t\t\t}\n\t\t\tconversionServiceToUse = DefaultConversionService.getSharedInstance();\n\t\t}\n\t\treturn conversionServiceToUse.convert(value, targetType);\n\t}\n\n\n\t/**\n\t * Retrieve the specified property as a raw String,\n\t * i.e. without resolution of nested placeholders.\n\t * @param key the property name to resolve\n\t * @return the property value or {@code null} if none found\n\t */\n\tprotected abstract @Nullable String getPropertyAsRawString(String key);\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#logger",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#logger",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Log",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#conversionService",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#conversionService",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConfigurableConversionService",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#nonStrictHelper",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#nonStrictHelper",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "PropertyPlaceholderHelper",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#strictHelper",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#strictHelper",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "PropertyPlaceholderHelper",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#ignoreUnresolvableNestedPlaceholders",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#ignoreUnresolvableNestedPlaceholders",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#placeholderPrefix",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#placeholderPrefix",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.AbstractPropertyResolver#placeholderSuffix",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.AbstractPropertyResolver#placeholderSuffix",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  }
+]

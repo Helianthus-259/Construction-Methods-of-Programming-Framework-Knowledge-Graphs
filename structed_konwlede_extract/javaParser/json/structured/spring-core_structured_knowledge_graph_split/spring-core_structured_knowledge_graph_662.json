@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy.MixinBeanEmitter#getInterfaces(Class[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinBeanEmitter#getMethods(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Method[] getMethods(Class type) {\r\n    return ReflectUtils.getPropertyMethods(ReflectUtils.getBeanProperties(type), true, true);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinBeanEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.MixinBeanEmitter#getMethods(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinBeanEmitter#getMethods(Class)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinBeanEmitter",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "MixinEmitter",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.MixinEmitter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.proxy;\n\nimport java.lang.reflect.Method;\nimport java.util.HashSet;\nimport java.util.Set;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.MethodWrapper;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * @author Chris Nokleberg\n * @version $Id: MixinEmitter.java,v 1.9 2006/08/27 21:04:37 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nclass MixinEmitter extends ClassEmitter {\n    private static final String FIELD_NAME = \"CGLIB$DELEGATES\";\n    private static final Signature CSTRUCT_OBJECT_ARRAY =\n      TypeUtils.parseConstructor(\"Object[]\");\n    private static final Type MIXIN =\n      TypeUtils.parseType(\"org.springframework.cglib.proxy.Mixin\");\n    private static final Signature NEW_INSTANCE =\n      new Signature(\"newInstance\", MIXIN, new Type[]{ Constants.TYPE_OBJECT_ARRAY });\n\n    public MixinEmitter(ClassVisitor v, String className, Class[] classes, int[] route) {\n        super(v);\n\n        begin_class(Constants.V1_8,\n                    Constants.ACC_PUBLIC,\n                    className,\n                    MIXIN,\n                    TypeUtils.getTypes(getInterfaces(classes)),\n                    Constants.SOURCE_FILE);\n        EmitUtils.null_constructor(this);\n        EmitUtils.factory_method(this, NEW_INSTANCE);\n\n        declare_field(Constants.ACC_PRIVATE, FIELD_NAME, Constants.TYPE_OBJECT_ARRAY, null);\n\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT_ARRAY, null);\n        e.load_this();\n        e.super_invoke_constructor();\n        e.load_this();\n        e.load_arg(0);\n        e.putfield(FIELD_NAME);\n        e.return_value();\n        e.end_method();\n\n        Set unique = new HashSet();\n        for (int i = 0; i < classes.length; i++) {\n            Method[] methods = getMethods(classes[i]);\n            for (Method method : methods) {\n                if (unique.add(MethodWrapper.create(method))) {\n                    MethodInfo methodInfo = ReflectUtils.getMethodInfo(method);\n                    int modifiers = Constants.ACC_PUBLIC;\n                    if ((methodInfo.getModifiers() & Constants.ACC_VARARGS) == Constants.ACC_VARARGS) {\n                        modifiers |= Constants.ACC_VARARGS;\n                    }\n                    e = EmitUtils.begin_method(this, methodInfo, modifiers);\n                    e.load_this();\n                    e.getfield(FIELD_NAME);\n                    e.aaload((route != null) ? route[i] : i);\n                    e.checkcast(methodInfo.getClassInfo().getType());\n                    e.load_args();\n                    e.invoke(methodInfo);\n                    e.return_value();\n                    e.end_method();\n                }\n            }\n        }\n\n        end_class();\n    }\n\n    protected Class[] getInterfaces(Class[] classes) {\n        return classes;\n    }\n\n    protected Method[] getMethods(Class type) {\n        return type.getMethods();\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.MixinEmitter#FIELD_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter#FIELD_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.MixinEmitter#CSTRUCT_OBJECT_ARRAY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter#CSTRUCT_OBJECT_ARRAY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.MixinEmitter#MIXIN",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter#MIXIN",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.MixinEmitter#NEW_INSTANCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter#NEW_INSTANCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter#getInterfaces(Class[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "protected Class[] getInterfaces(Class[] classes) {\r\n    return classes;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.MixinEmitter#getInterfaces(Class[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.MixinEmitter#getMethods(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "protected Method[] getMethods(Class type) {\r\n    return type.getMethods();\r\n}",
+    "tailType": "method_code"
+  }
+]

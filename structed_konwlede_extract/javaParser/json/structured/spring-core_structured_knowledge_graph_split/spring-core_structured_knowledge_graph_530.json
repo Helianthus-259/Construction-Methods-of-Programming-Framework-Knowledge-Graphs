@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.beans.BeanCopier#CONVERT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopier#create(Class,Class,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static BeanCopier create(Class source, Class target, boolean useConverter) {\r\n    Generator gen = new Generator();\r\n    gen.setSource(source);\r\n    gen.setTarget(target);\r\n    gen.setUseConverter(useConverter);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopier",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BeanCopier#create(Class,Class,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopier#copy(Object,Object,Converter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "abstract public void copy(Object from, Object to, Converter converter);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopier",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BeanCopier#copy(Object,Object,Converter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.beans.BeanCopierKey",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopierKey",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.beans.PropertyDescriptor;\nimport java.security.ProtectionDomain;\nimport java.util.HashMap;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.Converter;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.Local;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * @author Chris Nokleberg\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class BeanCopier\n{\n\tprivate static final BeanCopierKey KEY_FACTORY =\n\t  (BeanCopierKey)KeyFactory.create(BeanCopierKey.class);\n\tprivate static final Type CONVERTER =\n\t  TypeUtils.parseType(\"org.springframework.cglib.core.Converter\");\n\tprivate static final Type BEAN_COPIER =\n\t  TypeUtils.parseType(\"org.springframework.cglib.beans.BeanCopier\");\n\tprivate static final Signature COPY =\n\t  new Signature(\"copy\", Type.VOID_TYPE, new Type[]{ Constants.TYPE_OBJECT, Constants.TYPE_OBJECT, CONVERTER });\n\tprivate static final Signature CONVERT =\n\t  TypeUtils.parseSignature(\"Object convert(Object, Class, Object)\");\n\n\tinterface BeanCopierKey {\n\t\tpublic Object newInstance(String source, String target, boolean useConverter);\n\t}\n\n\tpublic static BeanCopier create(Class source, Class target, boolean useConverter) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setSource(source);\n\t\tgen.setTarget(target);\n\t\tgen.setUseConverter(useConverter);\n\t\treturn gen.create();\n\t}\n\n\tabstract public void copy(Object from, Object to, Converter converter);\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\t\tprivate static final Source SOURCE = new Source(BeanCopier.class.getName());\n\t\tprivate Class source;\n\t\tprivate Class target;\n\t\tprivate boolean useConverter;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\tpublic void setSource(Class source) {\n\t\t\tthis.source = source;\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(source);\n\t\t\tsetNamePrefix(source.getName());\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\tpublic void setTarget(Class target) {\n\t\t\tthis.target = target;\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(target);\n\t\t\tsetNamePrefix(target.getName());\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\tpublic void setUseConverter(boolean useConverter) {\n\t\t\tthis.useConverter = useConverter;\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn source.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(source);\n\t\t}\n\n\t\tpublic BeanCopier create() {\n\t\t\tObject key = KEY_FACTORY.newInstance(source.getName(), target.getName(), useConverter);\n\t\t\treturn (BeanCopier)super.create(key);\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) {\n\t\t\tType sourceType = Type.getType(source);\n\t\t\tType targetType = Type.getType(target);\n\t\t\tClassEmitter ce = new ClassEmitter(v);\n\t\t\tce.begin_class(Constants.V1_8,\n\t\t\t\t\t\t   Constants.ACC_PUBLIC,\n\t\t\t\t\t\t   getClassName(),\n\t\t\t\t\t\t   BEAN_COPIER,\n\t\t\t\t\t\t   null,\n\t\t\t\t\t\t   Constants.SOURCE_FILE);\n\n\t\t\tEmitUtils.null_constructor(ce);\n\t\t\tCodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, COPY, null);\n\t\t\tPropertyDescriptor[] getters = ReflectUtils.getBeanGetters(source);\n\t\t\tPropertyDescriptor[] setters = ReflectUtils.getBeanSetters(target);\n\n\t\t\tMap names = new HashMap();\n\t\t\tfor (PropertyDescriptor getter : getters) {\n\t\t\t\tnames.put(getter.getName(), getter);\n\t\t\t}\n\t\t\tLocal targetLocal = e.make_local();\n\t\t\tLocal sourceLocal = e.make_local();\n\t\t\tif (useConverter) {\n\t\t\t\te.load_arg(1);\n\t\t\t\te.checkcast(targetType);\n\t\t\t\te.store_local(targetLocal);\n\t\t\t\te.load_arg(0);\n\t\t\t\te.checkcast(sourceType);\n\t\t\t\te.store_local(sourceLocal);\n\t\t\t} else {\n\t\t\t\te.load_arg(1);\n\t\t\t\te.checkcast(targetType);\n\t\t\t\te.load_arg(0);\n\t\t\t\te.checkcast(sourceType);\n\t\t\t}\n\t\t\tfor (PropertyDescriptor setter : setters) {\n\t\t\t\tPropertyDescriptor getter = (PropertyDescriptor)names.get(setter.getName());\n\t\t\t\tif (getter != null) {\n\t\t\t\t\tMethodInfo read = ReflectUtils.getMethodInfo(getter.getReadMethod());\n\t\t\t\t\tMethodInfo write = ReflectUtils.getMethodInfo(setter.getWriteMethod());\n\t\t\t\t\tif (useConverter) {\n\t\t\t\t\t\tType setterType = write.getSignature().getArgumentTypes()[0];\n\t\t\t\t\t\te.load_local(targetLocal);\n\t\t\t\t\t\te.load_arg(2);\n\t\t\t\t\t\te.load_local(sourceLocal);\n\t\t\t\t\t\te.invoke(read);\n\t\t\t\t\t\te.box(read.getSignature().getReturnType());\n\t\t\t\t\t\tEmitUtils.load_class(e, setterType);\n\t\t\t\t\t\te.push(write.getSignature().getName());\n\t\t\t\t\t\te.invoke_interface(CONVERTER, CONVERT);\n\t\t\t\t\t\te.unbox_or_zero(setterType);\n\t\t\t\t\t\te.invoke(write);\n\t\t\t\t\t} else if (compatible(getter, setter)) {\n\t\t\t\t\t\te.dup2();\n\t\t\t\t\t\te.invoke(read);\n\t\t\t\t\t\te.invoke(write);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\te.return_value();\n\t\t\te.end_method();\n\t\t\tce.end_class();\n\t\t}\n\n\t\tprivate static boolean compatible(PropertyDescriptor getter, PropertyDescriptor setter) {\n\t\t\t// TODO: allow automatic widening conversions?\n\t\t\treturn setter.getPropertyType().isAssignableFrom(getter.getPropertyType());\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\treturn ReflectUtils.newInstance(type);\n\t\t}\n\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn instance;\n\t\t}\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopierKey#newInstance(String,String,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Object newInstance(String source, String target, boolean useConverter);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanCopierKey",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BeanCopierKey#newInstance(String,String,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.beans.Generator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.beans.PropertyDescriptor;\nimport java.security.ProtectionDomain;\nimport java.util.HashMap;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.Converter;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.Local;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * @author Chris Nokleberg\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class BeanCopier\n{\n\tprivate static final BeanCopierKey KEY_FACTORY =\n\t  (BeanCopierKey)KeyFactory.create(BeanCopierKey.class);\n\tprivate static final Type CONVERTER =\n\t  TypeUtils.parseType(\"org.springframework.cglib.core.Converter\");\n\tprivate static final Type BEAN_COPIER =\n\t  TypeUtils.parseType(\"org.springframework.cglib.beans.BeanCopier\");\n\tprivate static final Signature COPY =\n\t  new Signature(\"copy\", Type.VOID_TYPE, new Type[]{ Constants.TYPE_OBJECT, Constants.TYPE_OBJECT, CONVERTER });\n\tprivate static final Signature CONVERT =\n\t  TypeUtils.parseSignature(\"Object convert(Object, Class, Object)\");\n\n\tinterface BeanCopierKey {\n\t\tpublic Object newInstance(String source, String target, boolean useConverter);\n\t}\n\n\tpublic static BeanCopier create(Class source, Class target, boolean useConverter) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setSource(source);\n\t\tgen.setTarget(target);\n\t\tgen.setUseConverter(useConverter);\n\t\treturn gen.create();\n\t}\n\n\tabstract public void copy(Object from, Object to, Converter converter);\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\t\tprivate static final Source SOURCE = new Source(BeanCopier.class.getName());\n\t\tprivate Class source;\n\t\tprivate Class target;\n\t\tprivate boolean useConverter;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\tpublic void setSource(Class source) {\n\t\t\tthis.source = source;\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(source);\n\t\t\tsetNamePrefix(source.getName());\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\tpublic void setTarget(Class target) {\n\t\t\tthis.target = target;\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(target);\n\t\t\tsetNamePrefix(target.getName());\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\tpublic void setUseConverter(boolean useConverter) {\n\t\t\tthis.useConverter = useConverter;\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn source.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(source);\n\t\t}\n\n\t\tpublic BeanCopier create() {\n\t\t\tObject key = KEY_FACTORY.newInstance(source.getName(), target.getName(), useConverter);\n\t\t\treturn (BeanCopier)super.create(key);\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) {\n\t\t\tType sourceType = Type.getType(source);\n\t\t\tType targetType = Type.getType(target);\n\t\t\tClassEmitter ce = new ClassEmitter(v);\n\t\t\tce.begin_class(Constants.V1_8,\n\t\t\t\t\t\t   Constants.ACC_PUBLIC,\n\t\t\t\t\t\t   getClassName(),\n\t\t\t\t\t\t   BEAN_COPIER,\n\t\t\t\t\t\t   null,\n\t\t\t\t\t\t   Constants.SOURCE_FILE);\n\n\t\t\tEmitUtils.null_constructor(ce);\n\t\t\tCodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, COPY, null);\n\t\t\tPropertyDescriptor[] getters = ReflectUtils.getBeanGetters(source);\n\t\t\tPropertyDescriptor[] setters = ReflectUtils.getBeanSetters(target);\n\n\t\t\tMap names = new HashMap();\n\t\t\tfor (PropertyDescriptor getter : getters) {\n\t\t\t\tnames.put(getter.getName(), getter);\n\t\t\t}\n\t\t\tLocal targetLocal = e.make_local();\n\t\t\tLocal sourceLocal = e.make_local();\n\t\t\tif (useConverter) {\n\t\t\t\te.load_arg(1);\n\t\t\t\te.checkcast(targetType);\n\t\t\t\te.store_local(targetLocal);\n\t\t\t\te.load_arg(0);\n\t\t\t\te.checkcast(sourceType);\n\t\t\t\te.store_local(sourceLocal);\n\t\t\t} else {\n\t\t\t\te.load_arg(1);\n\t\t\t\te.checkcast(targetType);\n\t\t\t\te.load_arg(0);\n\t\t\t\te.checkcast(sourceType);\n\t\t\t}\n\t\t\tfor (PropertyDescriptor setter : setters) {\n\t\t\t\tPropertyDescriptor getter = (PropertyDescriptor)names.get(setter.getName());\n\t\t\t\tif (getter != null) {\n\t\t\t\t\tMethodInfo read = ReflectUtils.getMethodInfo(getter.getReadMethod());\n\t\t\t\t\tMethodInfo write = ReflectUtils.getMethodInfo(setter.getWriteMethod());\n\t\t\t\t\tif (useConverter) {\n\t\t\t\t\t\tType setterType = write.getSignature().getArgumentTypes()[0];\n\t\t\t\t\t\te.load_local(targetLocal);\n\t\t\t\t\t\te.load_arg(2);\n\t\t\t\t\t\te.load_local(sourceLocal);\n\t\t\t\t\t\te.invoke(read);\n\t\t\t\t\t\te.box(read.getSignature().getReturnType());\n\t\t\t\t\t\tEmitUtils.load_class(e, setterType);\n\t\t\t\t\t\te.push(write.getSignature().getName());\n\t\t\t\t\t\te.invoke_interface(CONVERTER, CONVERT);\n\t\t\t\t\t\te.unbox_or_zero(setterType);\n\t\t\t\t\t\te.invoke(write);\n\t\t\t\t\t} else if (compatible(getter, setter)) {\n\t\t\t\t\t\te.dup2();\n\t\t\t\t\t\te.invoke(read);\n\t\t\t\t\t\te.invoke(write);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\te.return_value();\n\t\t\te.end_method();\n\t\t\tce.end_class();\n\t\t}\n\n\t\tprivate static boolean compatible(PropertyDescriptor getter, PropertyDescriptor setter) {\n\t\t\t// TODO: allow automatic widening conversions?\n\t\t\treturn setter.getPropertyType().isAssignableFrom(getter.getPropertyType());\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\treturn ReflectUtils.newInstance(type);\n\t\t}\n\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn instance;\n\t\t}\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#SOURCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#SOURCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#source",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#source",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#target",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#target",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#useConverter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#useConverter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#setSource(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void setSource(Class source) {\r\n    this.source = source;\r\n    // SPRING PATCH BEGIN\r\n    setContextClass(source);\r\n    setNamePrefix(source.getName());\r\n    // SPRING PATCH END\r\n}",
+    "tailType": "method_code"
+  }
+]

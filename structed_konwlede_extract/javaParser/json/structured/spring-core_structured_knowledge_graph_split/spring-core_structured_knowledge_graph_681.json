@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.Generator#getDefaultClassLoader()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#getDefaultClassLoader()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#getProtectionDomain()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return ReflectUtils.getProtectionDomain(targetClass);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.Generator#getProtectionDomain()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#getProtectionDomain()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#create()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public MethodDelegate create() {\r\n    setNamePrefix(targetClass.getName());\r\n    Object key = KEY_FACTORY.newInstance(targetClass, methodName, iface);\r\n    return (MethodDelegate) super.create(key);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.Generator#create()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#firstInstance(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Object firstInstance(Class type) {\r\n    return ((MethodDelegate) ReflectUtils.newInstance(type)).newInstance(target);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.Generator#firstInstance(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#firstInstance(Class)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#nextInstance(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Object nextInstance(Object instance) {\r\n    return ((MethodDelegate) instance).newInstance(target);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.Generator#nextInstance(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#nextInstance(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#generateClass(ClassVisitor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void generateClass(ClassVisitor v) throws NoSuchMethodException {\r\n    Method proxy = ReflectUtils.findInterfaceMethod(iface);\r\n    final Method method = targetClass.getMethod(methodName, proxy.getParameterTypes());\r\n    if (!proxy.getReturnType().isAssignableFrom(method.getReturnType())) {\r\n        throw new IllegalArgumentException(\"incompatible return types\");\r\n    }\r\n    MethodInfo methodInfo = ReflectUtils.getMethodInfo(method);\r\n    boolean isStatic = TypeUtils.isStatic(methodInfo.getModifiers());\r\n    if ((target == null) ^ isStatic) {\r\n        throw new IllegalArgumentException(\"Static method \" + (isStatic ? \"not \" : \"\") + \"expected\");\r\n    }\r\n    ClassEmitter ce = new ClassEmitter(v);\r\n    CodeEmitter e;\r\n    ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), METHOD_DELEGATE, new Type[] { Type.getType(iface) }, Constants.SOURCE_FILE);\r\n    ce.declare_field(Constants.PRIVATE_FINAL_STATIC, \"eqMethod\", Constants.TYPE_STRING, null);\r\n    EmitUtils.null_constructor(ce);\r\n    // generate proxied method\r\n    MethodInfo proxied = ReflectUtils.getMethodInfo(iface.getDeclaredMethods()[0]);\r\n    int modifiers = Constants.ACC_PUBLIC;\r\n    if ((proxied.getModifiers() & Constants.ACC_VARARGS) == Constants.ACC_VARARGS) {\r\n        modifiers |= Constants.ACC_VARARGS;\r\n    }\r\n    e = EmitUtils.begin_method(ce, proxied, modifiers);\r\n    e.load_this();\r\n    e.super_getfield(\"target\", Constants.TYPE_OBJECT);\r\n    e.checkcast(methodInfo.getClassInfo().getType());\r\n    e.load_args();\r\n    e.invoke(methodInfo);\r\n    e.return_value();\r\n    e.end_method();\r\n    // newInstance\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, NEW_INSTANCE, null);\r\n    e.new_instance_this();\r\n    e.dup();\r\n    e.dup2();\r\n    e.invoke_constructor_this();\r\n    e.getfield(\"eqMethod\");\r\n    e.super_putfield(\"eqMethod\", Constants.TYPE_STRING);\r\n    e.load_arg(0);\r\n    e.super_putfield(\"target\", Constants.TYPE_OBJECT);\r\n    e.return_value();\r\n    e.end_method();\r\n    // static initializer\r\n    e = ce.begin_static();\r\n    e.push(methodInfo.getSignature().toString());\r\n    e.putfield(\"eqMethod\");\r\n    e.return_value();\r\n    e.end_method();\r\n    ce.end_class();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.Generator#generateClass(ClassVisitor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#generateClass(ClassVisitor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractClassGenerator",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.reflect",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  }
+]

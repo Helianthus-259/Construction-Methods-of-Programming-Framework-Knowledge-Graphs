@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.internal.Function#apply(K)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "V apply(K key);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.Function",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.internal.Function#apply(K)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core.internal",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "package org.springframework.cglib.core.internal;\n\nimport java.util.concurrent.ConcurrentHashMap;\nimport java.util.concurrent.ConcurrentMap;\nimport java.util.concurrent.ExecutionException;\nimport java.util.concurrent.FutureTask;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class LoadingCache<K, KK, V> {\n    protected final ConcurrentMap<KK, Object> map;\n    protected final Function<K, V> loader;\n    protected final Function<K, KK> keyMapper;\n\n    public static final Function IDENTITY = key -> key;\n\n    public LoadingCache(Function<K, KK> keyMapper, Function<K, V> loader) {\n        this.keyMapper = keyMapper;\n        this.loader = loader;\n        this.map = new ConcurrentHashMap<>();\n    }\n\n    @SuppressWarnings(\"unchecked\")\n    public static <K> Function<K, K> identity() {\n        return IDENTITY;\n    }\n\n    public V get(K key) {\n        final KK cacheKey = keyMapper.apply(key);\n        Object v = map.get(cacheKey);\n        if (v != null && !(v instanceof FutureTask)) {\n            return (V) v;\n        }\n\n        return createEntry(key, cacheKey, v);\n    }\n\n    /**\n     * Loads entry to the cache.\n     * If entry is missing, put {@link FutureTask} first so other competing thread might wait for the result.\n     * @param key original key that would be used to load the instance\n     * @param cacheKey key that would be used to store the entry in internal map\n     * @param v null or {@link FutureTask<V>}\n     * @return newly created instance\n     */\n    protected V createEntry(final K key, KK cacheKey, Object v) {\n        FutureTask<V> task;\n        boolean creator = false;\n        if (v != null) {\n            // Another thread is already loading an instance\n            task = (FutureTask<V>) v;\n        } else {\n            task = new FutureTask<>(() -> loader.apply(key));\n            Object prevTask = map.putIfAbsent(cacheKey, task);\n            if (prevTask == null) {\n                // creator does the load\n                creator = true;\n                task.run();\n            } else if (prevTask instanceof FutureTask) {\n                task = (FutureTask<V>) prevTask;\n            } else {\n                return (V) prevTask;\n            }\n        }\n\n        V result;\n        try {\n            result = task.get();\n        } catch (InterruptedException e) {\n            throw new IllegalStateException(\"Interrupted while loading cache item\", e);\n        } catch (ExecutionException e) {\n            Throwable cause = e.getCause();\n            if (cause instanceof RuntimeException runtimeException) {\n                throw runtimeException;\n            }\n            throw new IllegalStateException(\"Unable to load cache item\", cause);\n        }\n        if (creator) {\n            map.put(cacheKey, result);\n        }\n        return result;\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#map",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#map",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConcurrentMap<KK, Object>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#loader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#loader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#keyMapper",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#keyMapper",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<K, KK>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#IDENTITY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#IDENTITY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#identity()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@SuppressWarnings(\"unchecked\")\r\npublic static <K> Function<K, K> identity() {\r\n    return IDENTITY;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#identity()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#identity()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#get(K)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public V get(K key) {\r\n    final KK cacheKey = keyMapper.apply(key);\r\n    Object v = map.get(cacheKey);\r\n    if (v != null && !(v instanceof FutureTask)) {\r\n        return (V) v;\r\n    }\r\n    return createEntry(key, cacheKey, v);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#get(K)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache#createEntry(K,KK,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Loads entry to the cache.\r\n * If entry is missing, put {@link FutureTask} first so other competing thread might wait for the result.\r\n * @param key original key that would be used to load the instance\r\n * @param cacheKey key that would be used to store the entry in internal map\r\n * @param v null or {@link FutureTask<V>}\r\n * @return newly created instance\r\n */\r\nprotected V createEntry(final K key, KK cacheKey, Object v) {\r\n    FutureTask<V> task;\r\n    boolean creator = false;\r\n    if (v != null) {\r\n        // Another thread is already loading an instance\r\n        task = (FutureTask<V>) v;\r\n    } else {\r\n        task = new FutureTask<>(() -> loader.apply(key));\r\n        Object prevTask = map.putIfAbsent(cacheKey, task);\r\n        if (prevTask == null) {\r\n            // creator does the load\r\n            creator = true;\r\n            task.run();\r\n        } else if (prevTask instanceof FutureTask) {\r\n            task = (FutureTask<V>) prevTask;\r\n        } else {\r\n            return (V) prevTask;\r\n        }\r\n    }\r\n    V result;\r\n    try {\r\n        result = task.get();\r\n    } catch (InterruptedException e) {\r\n        throw new IllegalStateException(\"Interrupted while loading cache item\", e);\r\n    } catch (ExecutionException e) {\r\n        Throwable cause = e.getCause();\r\n        if (cause instanceof RuntimeException runtimeException) {\r\n            throw runtimeException;\r\n        }\r\n        throw new IllegalStateException(\"Unable to load cache item\", cause);\r\n    }\r\n    if (creator) {\r\n        map.put(cacheKey, result);\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  }
+]

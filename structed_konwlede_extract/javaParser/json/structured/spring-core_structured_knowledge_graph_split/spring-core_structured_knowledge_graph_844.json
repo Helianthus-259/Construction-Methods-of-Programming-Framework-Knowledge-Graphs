@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.ResourceEncoder#bufferSize",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder#bufferSize",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder#canEncode(ResolvableType,MimeType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return (super.canEncode(elementType, mimeType) && Resource.class.isAssignableFrom(clazz));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceEncoder#canEncode(ResolvableType,MimeType)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder#canEncode(ResolvableType,MimeType)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder#encode(Resource,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Flux<DataBuffer> encode(Resource resource, DataBufferFactory bufferFactory, ResolvableType type, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing [\" + resource + \"]\");\r\n    }\r\n    return DataBufferUtils.read(resource, bufferFactory, this.bufferSize);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceEncoder#encode(Resource,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder#encode(Resource,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceEncoder",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractSingleValueEncoder",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.codec",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.codec",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoder",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2020 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.codec;\n\nimport java.io.IOException;\nimport java.nio.charset.StandardCharsets;\nimport java.util.Map;\nimport java.util.OptionalLong;\n\nimport org.jspecify.annotations.Nullable;\nimport org.reactivestreams.Publisher;\nimport reactor.core.publisher.Flux;\nimport reactor.core.publisher.Mono;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.core.io.InputStreamResource;\nimport org.springframework.core.io.Resource;\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferFactory;\nimport org.springframework.core.io.buffer.DataBufferUtils;\nimport org.springframework.core.io.support.ResourceRegion;\nimport org.springframework.util.Assert;\nimport org.springframework.util.MimeType;\nimport org.springframework.util.MimeTypeUtils;\nimport org.springframework.util.StreamUtils;\n\n/**\n * Encoder for {@link ResourceRegion ResourceRegions}.\n *\n * @author Brian Clozel\n * @since 5.0\n */\npublic class ResourceRegionEncoder extends AbstractEncoder<ResourceRegion> {\n\n\t/**\n\t * The default buffer size used by the encoder.\n\t */\n\tpublic static final int DEFAULT_BUFFER_SIZE = StreamUtils.BUFFER_SIZE;\n\n\t/**\n\t * The hint key that contains the boundary string.\n\t */\n\tpublic static final String BOUNDARY_STRING_HINT = ResourceRegionEncoder.class.getName() + \".boundaryString\";\n\n\tprivate final int bufferSize;\n\n\n\tpublic ResourceRegionEncoder() {\n\t\tthis(DEFAULT_BUFFER_SIZE);\n\t}\n\n\tpublic ResourceRegionEncoder(int bufferSize) {\n\t\tsuper(MimeTypeUtils.APPLICATION_OCTET_STREAM, MimeTypeUtils.ALL);\n\t\tAssert.isTrue(bufferSize > 0, \"'bufferSize' must be larger than 0\");\n\t\tthis.bufferSize = bufferSize;\n\t}\n\n\t@Override\n\tpublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\n\t\treturn super.canEncode(elementType, mimeType)\n\t\t\t\t&& ResourceRegion.class.isAssignableFrom(elementType.toClass());\n\t}\n\n\t@Override\n\tpublic Flux<DataBuffer> encode(Publisher<? extends ResourceRegion> input,\n\t\t\tDataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType,\n\t\t\t@Nullable Map<String, Object> hints) {\n\n\t\tAssert.notNull(input, \"'inputStream' must not be null\");\n\t\tAssert.notNull(bufferFactory, \"'bufferFactory' must not be null\");\n\t\tAssert.notNull(elementType, \"'elementType' must not be null\");\n\n\t\tif (input instanceof Mono) {\n\t\t\treturn Mono.from(input)\n\t\t\t\t\t.flatMapMany(region -> {\n\t\t\t\t\t\tif (!region.getResource().isReadable()) {\n\t\t\t\t\t\t\treturn Flux.error(new EncodingException(\n\t\t\t\t\t\t\t\t\t\"Resource \" + region.getResource() + \" is not readable\"));\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn writeResourceRegion(region, bufferFactory, hints);\n\t\t\t\t\t});\n\t\t}\n\t\telse {\n\t\t\tfinal String boundaryString = Hints.getRequiredHint(hints, BOUNDARY_STRING_HINT);\n\t\t\tbyte[] startBoundary = toAsciiBytes(\"\\r\\n--\" + boundaryString + \"\\r\\n\");\n\t\t\tbyte[] contentType = mimeType != null ? toAsciiBytes(\"Content-Type: \" + mimeType + \"\\r\\n\") : new byte[0];\n\n\t\t\treturn Flux.from(input)\n\t\t\t\t\t.concatMap(region -> {\n\t\t\t\t\t\tif (!region.getResource().isReadable()) {\n\t\t\t\t\t\t\treturn Flux.error(new EncodingException(\n\t\t\t\t\t\t\t\t\t\"Resource \" + region.getResource() + \" is not readable\"));\n\t\t\t\t\t\t}\n\t\t\t\t\t\tFlux<DataBuffer> prefix = Flux.just(\n\t\t\t\t\t\t\t\tbufferFactory.wrap(startBoundary),\n\t\t\t\t\t\t\t\tbufferFactory.wrap(contentType),\n\t\t\t\t\t\t\t\tbufferFactory.wrap(getContentRangeHeader(region))); // only wrapping, no allocation\n\n\t\t\t\t\t\treturn prefix.concatWith(writeResourceRegion(region, bufferFactory, hints));\n\t\t\t\t\t})\n\t\t\t\t\t.concatWithValues(getRegionSuffix(bufferFactory, boundaryString));\n\t\t}\n\t\t// No doOnDiscard (no caching after DataBufferUtils#read)\n\t}\n\n\tprivate Flux<DataBuffer> writeResourceRegion(\n\t\t\tResourceRegion region, DataBufferFactory bufferFactory, @Nullable Map<String, Object> hints) {\n\n\t\tResource resource = region.getResource();\n\t\tlong position = region.getPosition();\n\t\tlong count = region.getCount();\n\n\t\tif (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\n\t\t\tlogger.debug(Hints.getLogPrefix(hints) +\n\t\t\t\t\t\"Writing region \" + position + \"-\" + (position + count) + \" of [\" + resource + \"]\");\n\t\t}\n\n\t\tFlux<DataBuffer> in = DataBufferUtils.read(resource, position, bufferFactory, this.bufferSize);\n\t\tif (logger.isDebugEnabled()) {\n\t\t\tin = in.doOnNext(buffer -> Hints.touchDataBuffer(buffer, hints, logger));\n\t\t}\n\t\treturn DataBufferUtils.takeUntilByteCount(in, count);\n\t}\n\n\tprivate DataBuffer getRegionSuffix(DataBufferFactory bufferFactory, String boundaryString) {\n\t\tbyte[] endBoundary = toAsciiBytes(\"\\r\\n--\" + boundaryString + \"--\");\n\t\treturn bufferFactory.wrap(endBoundary);\n\t}\n\n\tprivate byte[] toAsciiBytes(String in) {\n\t\treturn in.getBytes(StandardCharsets.US_ASCII);\n\t}\n\n\tprivate byte[] getContentRangeHeader(ResourceRegion region) {\n\t\tlong start = region.getPosition();\n\t\tlong end = start + region.getCount() - 1;\n\t\tOptionalLong contentLength = contentLength(region.getResource());\n\t\tif (contentLength.isPresent()) {\n\t\t\tlong length = contentLength.getAsLong();\n\t\t\treturn toAsciiBytes(\"Content-Range: bytes \" + start + '-' + end + '/' + length + \"\\r\\n\\r\\n\");\n\t\t}\n\t\telse {\n\t\t\treturn toAsciiBytes(\"Content-Range: bytes \" + start + '-' + end + \"\\r\\n\\r\\n\");\n\t\t}\n\t}\n\n\t/**\n\t * Determine, if possible, the contentLength of the given resource without reading it.\n\t * @param resource the resource instance\n\t * @return the contentLength of the resource\n\t */\n\tprivate OptionalLong contentLength(Resource resource) {\n\t\t// Don't try to determine contentLength on InputStreamResource - cannot be read afterwards...\n\t\t// Note: custom InputStreamResource subclasses could provide a pre-calculated content length!\n\t\tif (InputStreamResource.class != resource.getClass()) {\n\t\t\ttry {\n\t\t\t\treturn OptionalLong.of(resource.contentLength());\n\t\t\t}\n\t\t\tcatch (IOException ignored) {\n\t\t\t}\n\t\t}\n\t\treturn OptionalLong.empty();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoder#DEFAULT_BUFFER_SIZE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder#DEFAULT_BUFFER_SIZE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoder#BOUNDARY_STRING_HINT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder#BOUNDARY_STRING_HINT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoder#bufferSize",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder#bufferSize",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder#canEncode(ResolvableType,MimeType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return super.canEncode(elementType, mimeType) && ResourceRegion.class.isAssignableFrom(elementType.toClass());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoder#canEncode(ResolvableType,MimeType)",
+    "tailType": "method"
+  }
+]

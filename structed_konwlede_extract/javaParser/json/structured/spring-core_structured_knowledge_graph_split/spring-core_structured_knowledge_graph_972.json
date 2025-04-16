@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#bufferSize",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#bufferSize",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#position",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#position",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AtomicLong",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#state",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#state",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AtomicReference<State>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#request(long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Invoked when Reactive Streams consumer signals demand.\r\n */\r\npublic void request(long n) {\r\n    tryRead();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#request(long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#cancel()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Invoked when Reactive Streams consumer cancels.\r\n */\r\npublic void cancel() {\r\n    this.state.getAndSet(State.DISPOSED);\r\n    // According java.nio.channels.AsynchronousChannel \"if an I/O operation is outstanding\r\n    // on the channel and the channel's close method is invoked, then the I/O operation\r\n    // fails with the exception AsynchronousCloseException\". That should invoke the failed\r\n    // callback below and the current DataBuffer should be released.\r\n    closeChannel(this.channel);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#cancel()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#tryRead()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void tryRead() {\r\n    if (this.sink.requestedFromDownstream() > 0 && this.state.compareAndSet(State.IDLE, State.READING)) {\r\n        read();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#tryRead()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#read()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void read() {\r\n    DataBuffer dataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);\r\n    DataBuffer.ByteBufferIterator iterator = dataBuffer.writableByteBuffers();\r\n    Assert.state(iterator.hasNext(), \"No ByteBuffer available\");\r\n    ByteBuffer byteBuffer = iterator.next();\r\n    Attachment attachment = new Attachment(dataBuffer, iterator);\r\n    this.channel.read(byteBuffer, this.position.get(), attachment, this);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#read()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#completed(Integer,Attachment)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void completed(Integer read, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    DataBuffer dataBuffer = attachment.dataBuffer();\r\n    if (this.state.get() == State.DISPOSED) {\r\n        release(dataBuffer);\r\n        closeChannel(this.channel);\r\n        return;\r\n    }\r\n    if (read == -1) {\r\n        release(dataBuffer);\r\n        closeChannel(this.channel);\r\n        this.state.set(State.DISPOSED);\r\n        this.sink.complete();\r\n        return;\r\n    }\r\n    this.position.addAndGet(read);\r\n    dataBuffer.writePosition(read);\r\n    this.sink.next(dataBuffer);\r\n    // Stay in READING mode if there is demand\r\n    if (this.sink.requestedFromDownstream() > 0) {\r\n        read();\r\n        return;\r\n    }\r\n    // Release READING mode and then try again in case of concurrent \"request\"\r\n    if (this.state.compareAndSet(State.READING, State.IDLE)) {\r\n        tryRead();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#completed(Integer,Attachment)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#completed(Integer,Attachment)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#failed(Throwable,Attachment)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void failed(Throwable ex, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    release(attachment.dataBuffer());\r\n    closeChannel(this.channel);\r\n    this.state.set(State.DISPOSED);\r\n    this.sink.error(ex);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.ReadCompletionHandler#failed(Throwable,Attachment)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.ReadCompletionHandler#failed(Throwable,Attachment)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

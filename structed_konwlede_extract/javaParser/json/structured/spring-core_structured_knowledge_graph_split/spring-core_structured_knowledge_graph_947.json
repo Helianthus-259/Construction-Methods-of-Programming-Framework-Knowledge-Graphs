@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.GenericTypeResolver",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.Method;\nimport java.lang.reflect.ParameterizedType;\nimport java.lang.reflect.Type;\nimport java.lang.reflect.TypeVariable;\nimport java.lang.reflect.WildcardType;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.Map;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ConcurrentReferenceHashMap;\n\n/**\n * Helper class for resolving generic types against type variables.\n *\n * <p>Mainly intended for usage within the framework, resolving method\n * parameter types even when they are declared generically.\n *\n * @author Juergen Hoeller\n * @author Rob Harrop\n * @author Sam Brannen\n * @author Phillip Webb\n * @author Yanming Zhou\n * @since 2.5.2\n */\npublic final class GenericTypeResolver {\n\n\t/** Cache from Class to TypeVariable Map. */\n\t@SuppressWarnings(\"rawtypes\")\n\tprivate static final Map<Class<?>, Map<TypeVariable, Type>> typeVariableCache = new ConcurrentReferenceHashMap<>();\n\n\n\tprivate GenericTypeResolver() {\n\t}\n\n\n\t/**\n\t * Determine the target type for the given generic parameter type.\n\t * @param methodParameter the method parameter specification\n\t * @param implementationClass the class to resolve type variables against\n\t * @return the corresponding generic parameter or return type\n\t * @deprecated since 5.2 in favor of {@code methodParameter.withContainingClass(implementationClass).getParameterType()}\n\t */\n\t@Deprecated\n\tpublic static Class<?> resolveParameterType(MethodParameter methodParameter, Class<?> implementationClass) {\n\t\tAssert.notNull(methodParameter, \"MethodParameter must not be null\");\n\t\tAssert.notNull(implementationClass, \"Class must not be null\");\n\t\tmethodParameter.setContainingClass(implementationClass);\n\t\treturn methodParameter.getParameterType();\n\t}\n\n\t/**\n\t * Determine the target type for the generic return type of the given method,\n\t * where formal type variables are declared on the given class.\n\t * @param method the method to introspect\n\t * @param clazz the class to resolve type variables against\n\t * @return the corresponding generic parameter or return type\n\t */\n\tpublic static Class<?> resolveReturnType(Method method, Class<?> clazz) {\n\t\tAssert.notNull(method, \"Method must not be null\");\n\t\tAssert.notNull(clazz, \"Class must not be null\");\n\t\treturn ResolvableType.forMethodReturnType(method, clazz).resolve(method.getReturnType());\n\t}\n\n\t/**\n\t * Resolve the single type argument of the given generic type against the given\n\t * target method which is assumed to return the given type or an implementation\n\t * of it.\n\t * @param method the target method to check the return type of\n\t * @param genericType the generic interface or superclass to resolve the type argument from\n\t * @return the resolved parameter type of the method return type, or {@code null}\n\t * if not resolvable or if the single argument is of type {@link WildcardType}.\n\t */\n\tpublic static @Nullable Class<?> resolveReturnTypeArgument(Method method, Class<?> genericType) {\n\t\tAssert.notNull(method, \"Method must not be null\");\n\t\tResolvableType resolvableType = ResolvableType.forMethodReturnType(method).as(genericType);\n\t\tif (!resolvableType.hasGenerics() || resolvableType.getType() instanceof WildcardType) {\n\t\t\treturn null;\n\t\t}\n\t\treturn getSingleGeneric(resolvableType);\n\t}\n\n\t/**\n\t * Resolve the single type argument of the given generic type against\n\t * the given target class which is assumed to implement the given type\n\t * and possibly declare a concrete type for its type variable.\n\t * @param clazz the target class to check against\n\t * @param genericType the generic interface or superclass to resolve the type argument from\n\t * @return the resolved type of the argument, or {@code null} if not resolvable\n\t */\n\tpublic static @Nullable Class<?> resolveTypeArgument(Class<?> clazz, Class<?> genericType) {\n\t\tResolvableType resolvableType = ResolvableType.forClass(clazz).as(genericType);\n\t\tif (!resolvableType.hasGenerics()) {\n\t\t\treturn null;\n\t\t}\n\t\treturn getSingleGeneric(resolvableType);\n\t}\n\n\tprivate static @Nullable Class<?> getSingleGeneric(ResolvableType resolvableType) {\n\t\tAssert.isTrue(resolvableType.getGenerics().length == 1,\n\t\t\t\t() -> \"Expected 1 type argument on generic interface [\" + resolvableType +\n\t\t\t\t\"] but found \" + resolvableType.getGenerics().length);\n\t\treturn resolvableType.getGeneric().resolve();\n\t}\n\n\n\t/**\n\t * Resolve the type arguments of the given generic type against the given\n\t * target class which is assumed to implement or extend from the given type\n\t * and possibly declare concrete types for its type variables.\n\t * @param clazz the target class to check against\n\t * @param genericType the generic interface or superclass to resolve the type argument from\n\t * @return the resolved type of each argument, with the array size matching the\n\t * number of actual type arguments, or {@code null} if not resolvable\n\t */\n\tpublic static Class<?> @Nullable [] resolveTypeArguments(Class<?> clazz, Class<?> genericType) {\n\t\tResolvableType type = ResolvableType.forClass(clazz).as(genericType);\n\t\tif (!type.hasGenerics() || !type.hasResolvableGenerics()) {\n\t\t\treturn null;\n\t\t}\n\t\treturn type.resolveGenerics(Object.class);\n\t}\n\n\t/**\n\t * Resolve the given generic type against the given context class,\n\t * substituting type variables as far as possible.\n\t * <p>As of 6.2, this method resolves type variables recursively.\n\t * @param genericType the (potentially) generic type\n\t * @param contextClass a context class for the target type, for example a class\n\t * in which the target type appears in a method signature (can be {@code null})\n\t * @return the resolved type (possibly the given generic type as-is)\n\t * @since 5.0\n\t */\n\tpublic static Type resolveType(Type genericType, @Nullable Class<?> contextClass) {\n\t\tif (contextClass != null) {\n\t\t\tif (genericType instanceof TypeVariable<?> typeVariable) {\n\t\t\t\tResolvableType resolvedTypeVariable = resolveVariable(\n\t\t\t\t\t\ttypeVariable, ResolvableType.forClass(contextClass));\n\t\t\t\tif (resolvedTypeVariable != ResolvableType.NONE) {\n\t\t\t\t\tClass<?> resolved = resolvedTypeVariable.resolve();\n\t\t\t\t\tif (resolved != null) {\n\t\t\t\t\t\treturn resolved;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\telse if (genericType instanceof ParameterizedType parameterizedType) {\n\t\t\t\tResolvableType resolvedType = ResolvableType.forType(genericType);\n\t\t\t\tif (resolvedType.hasUnresolvableGenerics()) {\n\t\t\t\t\tResolvableType[] generics = new ResolvableType[parameterizedType.getActualTypeArguments().length];\n\t\t\t\t\tType[] typeArguments = parameterizedType.getActualTypeArguments();\n\t\t\t\t\tResolvableType contextType = ResolvableType.forClass(contextClass);\n\t\t\t\t\tfor (int i = 0; i < typeArguments.length; i++) {\n\t\t\t\t\t\tType typeArgument = typeArguments[i];\n\t\t\t\t\t\tif (typeArgument instanceof TypeVariable<?> typeVariable) {\n\t\t\t\t\t\t\tResolvableType resolvedTypeArgument = resolveVariable(typeVariable, contextType);\n\t\t\t\t\t\t\tif (resolvedTypeArgument != ResolvableType.NONE) {\n\t\t\t\t\t\t\t\tgenerics[i] = resolvedTypeArgument;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\telse {\n\t\t\t\t\t\t\t\tgenerics[i] = ResolvableType.forType(typeArgument);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\telse if (typeArgument instanceof ParameterizedType) {\n\t\t\t\t\t\t\tgenerics[i] = ResolvableType.forType(resolveType(typeArgument, contextClass));\n\t\t\t\t\t\t}\n\t\t\t\t\t\telse {\n\t\t\t\t\t\t\tgenerics[i] = ResolvableType.forType(typeArgument);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tClass<?> rawClass = resolvedType.getRawClass();\n\t\t\t\t\tif (rawClass != null) {\n\t\t\t\t\t\treturn ResolvableType.forClassWithGenerics(rawClass, generics).getType();\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn genericType;\n\t}\n\n\tprivate static ResolvableType resolveVariable(TypeVariable<?> typeVariable, ResolvableType contextType) {\n\t\tResolvableType resolvedType;\n\t\tif (contextType.hasGenerics()) {\n\t\t\tResolvableType.VariableResolver variableResolver = contextType.asVariableResolver();\n\t\t\tif (variableResolver == null) {\n\t\t\t\treturn ResolvableType.NONE;\n\t\t\t}\n\t\t\tresolvedType = variableResolver.resolveVariable(typeVariable);\n\t\t\tif (resolvedType != null) {\n\t\t\t\treturn resolvedType;\n\t\t\t}\n\t\t}\n\n\t\tResolvableType superType = contextType.getSuperType();\n\t\tif (superType != ResolvableType.NONE) {\n\t\t\tresolvedType = resolveVariable(typeVariable, superType);\n\t\t\tif (resolvedType != ResolvableType.NONE) {\n\t\t\t\treturn resolvedType;\n\t\t\t}\n\t\t}\n\t\tfor (ResolvableType ifc : contextType.getInterfaces()) {\n\t\t\tresolvedType = resolveVariable(typeVariable, ifc);\n\t\t\tif (resolvedType != ResolvableType.NONE) {\n\t\t\t\treturn resolvedType;\n\t\t\t}\n\t\t}\n\t\treturn ResolvableType.forVariableBounds(typeVariable);\n\t}\n\n\t/**\n\t * Resolve the specified generic type against the given TypeVariable map.\n\t * <p>Used by Spring Data.\n\t * @param genericType the generic type to resolve\n\t * @param map the TypeVariable Map to resolved against\n\t * @return the type if it resolves to a Class, or {@code Object.class} otherwise\n\t */\n\t@SuppressWarnings(\"rawtypes\")\n\tpublic static Class<?> resolveType(Type genericType, Map<TypeVariable, Type> map) {\n\t\treturn ResolvableType.forType(genericType, new TypeVariableMapVariableResolver(map)).toClass();\n\t}\n\n\t/**\n\t * Build a mapping of {@link TypeVariable#getName TypeVariable names} to\n\t * {@link Class concrete classes} for the specified {@link Class}.\n\t * Searches all supertypes, enclosing types and interfaces.\n\t * @see #resolveType(Type, Map)\n\t */\n\t@SuppressWarnings(\"rawtypes\")\n\tpublic static Map<TypeVariable, Type> getTypeVariableMap(Class<?> clazz) {\n\t\tMap<TypeVariable, Type> typeVariableMap = typeVariableCache.get(clazz);\n\t\tif (typeVariableMap == null) {\n\t\t\ttypeVariableMap = new HashMap<>();\n\t\t\tbuildTypeVariableMap(ResolvableType.forClass(clazz), typeVariableMap);\n\t\t\ttypeVariableCache.put(clazz, Collections.unmodifiableMap(typeVariableMap));\n\t\t}\n\t\treturn typeVariableMap;\n\t}\n\n\t@SuppressWarnings(\"rawtypes\")\n\tprivate static void buildTypeVariableMap(ResolvableType type, Map<TypeVariable, Type> typeVariableMap) {\n\t\tif (type != ResolvableType.NONE) {\n\t\t\tClass<?> resolved = type.resolve();\n\t\t\tif (resolved != null && type.getType() instanceof ParameterizedType) {\n\t\t\t\tTypeVariable<?>[] variables = resolved.getTypeParameters();\n\t\t\t\tfor (int i = 0; i < variables.length; i++) {\n\t\t\t\t\tResolvableType generic = type.getGeneric(i);\n\t\t\t\t\twhile (generic.getType() instanceof TypeVariable<?>) {\n\t\t\t\t\t\tgeneric = generic.resolveType();\n\t\t\t\t\t}\n\t\t\t\t\tif (generic != ResolvableType.NONE) {\n\t\t\t\t\t\ttypeVariableMap.put(variables[i], generic.getType());\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tbuildTypeVariableMap(type.getSuperType(), typeVariableMap);\n\t\t\tfor (ResolvableType interfaceType : type.getInterfaces()) {\n\t\t\t\tbuildTypeVariableMap(interfaceType, typeVariableMap);\n\t\t\t}\n\t\t\tif (resolved != null && resolved.isMemberClass()) {\n\t\t\t\tbuildTypeVariableMap(ResolvableType.forClass(resolved.getEnclosingClass()), typeVariableMap);\n\t\t\t}\n\t\t}\n\t}\n\n\n\t@SuppressWarnings({\"serial\", \"rawtypes\"})\n\tprivate static class TypeVariableMapVariableResolver implements ResolvableType.VariableResolver {\n\n\t\tprivate final Map<TypeVariable, Type> typeVariableMap;\n\n\t\tpublic TypeVariableMapVariableResolver(Map<TypeVariable, Type> typeVariableMap) {\n\t\t\tthis.typeVariableMap = typeVariableMap;\n\t\t}\n\n\t\t@Override\n\t\tpublic @Nullable ResolvableType resolveVariable(TypeVariable<?> variable) {\n\t\t\tType type = this.typeVariableMap.get(variable);\n\t\t\treturn (type != null ? ResolvableType.forType(type) : null);\n\t\t}\n\n\t\t@Override\n\t\tpublic Object getSource() {\n\t\t\treturn this.typeVariableMap;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.GenericTypeResolver#typeVariableCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#typeVariableCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Class<?>, Map<TypeVariable, Type>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveParameterType(MethodParameter,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the target type for the given generic parameter type.\r\n * @param methodParameter the method parameter specification\r\n * @param implementationClass the class to resolve type variables against\r\n * @return the corresponding generic parameter or return type\r\n * @deprecated since 5.2 in favor of {@code methodParameter.withContainingClass(implementationClass).getParameterType()}\r\n */\r\n@Deprecated\r\npublic static Class<?> resolveParameterType(MethodParameter methodParameter, Class<?> implementationClass) {\r\n    Assert.notNull(methodParameter, \"MethodParameter must not be null\");\r\n    Assert.notNull(implementationClass, \"Class must not be null\");\r\n    methodParameter.setContainingClass(implementationClass);\r\n    return methodParameter.getParameterType();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.GenericTypeResolver#resolveParameterType(MethodParameter,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveParameterType(MethodParameter,Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveReturnType(Method,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the target type for the generic return type of the given method,\r\n * where formal type variables are declared on the given class.\r\n * @param method the method to introspect\r\n * @param clazz the class to resolve type variables against\r\n * @return the corresponding generic parameter or return type\r\n */\r\npublic static Class<?> resolveReturnType(Method method, Class<?> clazz) {\r\n    Assert.notNull(method, \"Method must not be null\");\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    return ResolvableType.forMethodReturnType(method, clazz).resolve(method.getReturnType());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.GenericTypeResolver#resolveReturnType(Method,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveReturnTypeArgument(Method,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the single type argument of the given generic type against the given\r\n * target method which is assumed to return the given type or an implementation\r\n * of it.\r\n * @param method the target method to check the return type of\r\n * @param genericType the generic interface or superclass to resolve the type argument from\r\n * @return the resolved parameter type of the method return type, or {@code null}\r\n * if not resolvable or if the single argument is of type {@link WildcardType}.\r\n */\r\n@Nullable\r\npublic static Class<?> resolveReturnTypeArgument(Method method, Class<?> genericType) {\r\n    Assert.notNull(method, \"Method must not be null\");\r\n    ResolvableType resolvableType = ResolvableType.forMethodReturnType(method).as(genericType);\r\n    if (!resolvableType.hasGenerics() || resolvableType.getType() instanceof WildcardType) {\r\n        return null;\r\n    }\r\n    return getSingleGeneric(resolvableType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.GenericTypeResolver#resolveReturnTypeArgument(Method,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveReturnTypeArgument(Method,Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveTypeArgument(Class<?>,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the single type argument of the given generic type against\r\n * the given target class which is assumed to implement the given type\r\n * and possibly declare a concrete type for its type variable.\r\n * @param clazz the target class to check against\r\n * @param genericType the generic interface or superclass to resolve the type argument from\r\n * @return the resolved type of the argument, or {@code null} if not resolvable\r\n */\r\n@Nullable\r\npublic static Class<?> resolveTypeArgument(Class<?> clazz, Class<?> genericType) {\r\n    ResolvableType resolvableType = ResolvableType.forClass(clazz).as(genericType);\r\n    if (!resolvableType.hasGenerics()) {\r\n        return null;\r\n    }\r\n    return getSingleGeneric(resolvableType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.GenericTypeResolver#resolveTypeArgument(Class<?>,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveTypeArgument(Class<?>,Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#getSingleGeneric(ResolvableType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate static Class<?> getSingleGeneric(ResolvableType resolvableType) {\r\n    Assert.isTrue(resolvableType.getGenerics().length == 1, () -> \"Expected 1 type argument on generic interface [\" + resolvableType + \"] but found \" + resolvableType.getGenerics().length);\r\n    return resolvableType.getGeneric().resolve();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.GenericTypeResolver#getSingleGeneric(ResolvableType)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#getSingleGeneric(ResolvableType)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.GenericTypeResolver#resolveTypeArguments(Class<?>,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the type arguments of the given generic type against the given\r\n * target class which is assumed to implement or extend from the given type\r\n * and possibly declare concrete types for its type variables.\r\n * @param clazz the target class to check against\r\n * @param genericType the generic interface or superclass to resolve the type argument from\r\n * @return the resolved type of each argument, with the array size matching the\r\n * number of actual type arguments, or {@code null} if not resolvable\r\n */\r\npublic static Class<?> @Nullable [] resolveTypeArguments(Class<?> clazz, Class<?> genericType) {\r\n    ResolvableType type = ResolvableType.forClass(clazz).as(genericType);\r\n    if (!type.hasGenerics() || !type.hasResolvableGenerics()) {\r\n        return null;\r\n    }\r\n    return type.resolveGenerics(Object.class);\r\n}",
+    "tailType": "method_code"
+  }
+]

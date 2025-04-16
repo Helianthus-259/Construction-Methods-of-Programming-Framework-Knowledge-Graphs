@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.beans",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.core;\n\nimport java.lang.ref.WeakReference;\nimport java.security.ProtectionDomain;\nimport java.util.HashSet;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.WeakHashMap;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.cglib.core.internal.Function;\nimport org.springframework.cglib.core.internal.LoadingCache;\n\n/**\n * Abstract class for all code-generating CGLIB utilities.\n * In addition to caching generated classes for performance, it provides hooks for\n * customizing the <code>ClassLoader</code>, name of the generated class, and transformations\n * applied before generation.\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class AbstractClassGenerator<T> implements ClassGenerator {\n\n\tprivate static final ThreadLocal CURRENT = new ThreadLocal();\n\n\tprivate static volatile Map<ClassLoader, ClassLoaderData> CACHE = new WeakHashMap<>();\n\n\tprivate static final boolean DEFAULT_USE_CACHE =\n\t\t\tBoolean.parseBoolean(System.getProperty(\"cglib.useCache\", \"true\"));\n\n\tprivate static final boolean inNativeImage;\n\n\tstatic {\n\t\tString imageCode = System.getProperty(\"org.graalvm.nativeimage.imagecode\");\n\t\tinNativeImage = \"buildtime\".equals(imageCode) || \"runtime\".equals(imageCode);\n\t}\n\n\n\tprivate GeneratorStrategy strategy = DefaultGeneratorStrategy.INSTANCE;\n\n\tprivate NamingPolicy namingPolicy = DefaultNamingPolicy.INSTANCE;\n\n\tprivate Source source;\n\n\tprivate ClassLoader classLoader;\n\n\tprivate Class contextClass;\n\n\tprivate String namePrefix;\n\n\tprivate Object key;\n\n\tprivate boolean useCache = DEFAULT_USE_CACHE;\n\n\tprivate String className;\n\n\tprivate boolean attemptLoad;\n\n\n\tprotected static class ClassLoaderData {\n\n\t\tprivate final Set<String> reservedClassNames = new HashSet<>();\n\n\t\t/**\n\t\t * {@link AbstractClassGenerator} here holds \"cache key\" (for example, {@link org.springframework.cglib.proxy.Enhancer}\n\t\t * configuration), and the value is the generated class plus some additional values\n\t\t * (see {@link #unwrapCachedValue(Object)}.\n\t\t * <p>The generated classes can be reused as long as their classloader is reachable.</p>\n\t\t * <p>Note: the only way to access a class is to find it through generatedClasses cache, thus\n\t\t * the key should not expire as long as the class itself is alive (its classloader is alive).</p>\n\t\t */\n\t\tprivate final LoadingCache<AbstractClassGenerator, Object, Object> generatedClasses;\n\n\t\t/**\n\t\t * Note: ClassLoaderData object is stored as a value of {@code WeakHashMap<ClassLoader, ...>} thus\n\t\t * this classLoader reference should be weak otherwise it would make classLoader strongly reachable\n\t\t * and alive forever.\n\t\t * Reference queue is not required since the cleanup is handled by {@link WeakHashMap}.\n\t\t */\n\t\tprivate final WeakReference<ClassLoader> classLoader;\n\n\t\tprivate final Predicate uniqueNamePredicate = this.reservedClassNames::contains;\n\n\t\tprivate static final Function<AbstractClassGenerator, Object> GET_KEY = gen -> gen.key;\n\n\t\tpublic ClassLoaderData(ClassLoader classLoader) {\n\t\t\tif (classLoader == null) {\n\t\t\t\tthrow new IllegalArgumentException(\"classLoader == null is not yet supported\");\n\t\t\t}\n\t\t\tthis.classLoader = new WeakReference<>(classLoader);\n\t\t\tFunction<AbstractClassGenerator, Object> load = gen -> {\n\t\t\t\tClass klass = gen.generate(ClassLoaderData.this);\n\t\t\t\treturn gen.wrapCachedClass(klass);\n\t\t\t};\n\t\t\tgeneratedClasses = new LoadingCache<>(GET_KEY, load);\n\t\t}\n\n\t\tpublic ClassLoader getClassLoader() {\n\t\t\treturn classLoader.get();\n\t\t}\n\n\t\tpublic void reserveName(String name) {\n\t\t\treservedClassNames.add(name);\n\t\t}\n\n\t\tpublic Predicate getUniqueNamePredicate() {\n\t\t\treturn uniqueNamePredicate;\n\t\t}\n\n\t\tpublic Object get(AbstractClassGenerator gen, boolean useCache) {\n\t\t\tif (!useCache) {\n\t\t\t\treturn gen.generate(ClassLoaderData.this);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tObject cachedValue = generatedClasses.get(gen);\n\t\t\t\treturn gen.unwrapCachedValue(cachedValue);\n\t\t\t}\n\t\t}\n\t}\n\n\n\tprotected T wrapCachedClass(Class klass) {\n\t\treturn (T) new WeakReference(klass);\n\t}\n\n\tprotected Object unwrapCachedValue(T cached) {\n\t\treturn ((WeakReference) cached).get();\n\t}\n\n\n\tprotected static class Source {\n\n\t\tString name;\n\n\t\tpublic Source(String name) {\n\t\t\tthis.name = name;\n\t\t}\n\t}\n\n\n\tprotected AbstractClassGenerator(Source source) {\n\t\tthis.source = source;\n\t}\n\n\tprotected void setNamePrefix(String namePrefix) {\n\t\tthis.namePrefix = namePrefix;\n\t}\n\n\tfinal protected String getClassName() {\n\t\treturn className;\n\t}\n\n\tprivate void setClassName(String className) {\n\t\tthis.className = className;\n\t}\n\n\tprivate String generateClassName(Predicate nameTestPredicate) {\n\t\treturn namingPolicy.getClassName(namePrefix, source.name, key, nameTestPredicate);\n\t}\n\n\t/**\n\t * Set the <code>ClassLoader</code> in which the class will be generated.\n\t * Concrete subclasses of <code>AbstractClassGenerator</code> (such as <code>Enhancer</code>)\n\t * will try to choose an appropriate default if this is unset.\n\t * <p>\n\t * Classes are cached per-<code>ClassLoader</code> using a <code>WeakHashMap</code>, to allow\n\t * the generated classes to be removed when the associated loader is garbage collected.\n\t * @param classLoader the loader to generate the new class with, or null to use the default\n\t */\n\tpublic void setClassLoader(ClassLoader classLoader) {\n\t\tthis.classLoader = classLoader;\n\t}\n\n\t// SPRING PATCH BEGIN\n\tpublic void setContextClass(Class contextClass) {\n\t\tthis.contextClass = contextClass;\n\t}\n\t// SPRING PATCH END\n\n\t/**\n\t * Override the default naming policy.\n\t * @param namingPolicy the custom policy, or null to use the default\n\t * @see DefaultNamingPolicy\n\t */\n\tpublic void setNamingPolicy(NamingPolicy namingPolicy) {\n\t\tif (namingPolicy == null) {\n\t\t\tnamingPolicy = DefaultNamingPolicy.INSTANCE;\n\t\t}\n\t\tthis.namingPolicy = namingPolicy;\n\t}\n\n\t/**\n\t * @see #setNamingPolicy\n\t */\n\tpublic NamingPolicy getNamingPolicy() {\n\t\treturn namingPolicy;\n\t}\n\n\t/**\n\t * Whether use and update the static cache of generated classes\n\t * for a class with the same properties. Default is <code>true</code>.\n\t */\n\tpublic void setUseCache(boolean useCache) {\n\t\tthis.useCache = useCache;\n\t}\n\n\t/**\n\t * @see #setUseCache\n\t */\n\tpublic boolean getUseCache() {\n\t\treturn useCache;\n\t}\n\n\t/**\n\t * If set, CGLIB will attempt to load classes from the specified\n\t * <code>ClassLoader</code> before generating them. Because generated\n\t * class names are not guaranteed to be unique, the default is <code>false</code>.\n\t */\n\tpublic void setAttemptLoad(boolean attemptLoad) {\n\t\tthis.attemptLoad = attemptLoad;\n\t}\n\n\tpublic boolean getAttemptLoad() {\n\t\treturn attemptLoad;\n\t}\n\n\t/**\n\t * Set the strategy to use to create the bytecode from this generator.\n\t * By default an instance of {@link DefaultGeneratorStrategy} is used.\n\t */\n\tpublic void setStrategy(GeneratorStrategy strategy) {\n\t\tif (strategy == null) {\n\t\t\tstrategy = DefaultGeneratorStrategy.INSTANCE;\n\t\t}\n\t\tthis.strategy = strategy;\n\t}\n\n\t/**\n\t * @see #setStrategy\n\t */\n\tpublic GeneratorStrategy getStrategy() {\n\t\treturn strategy;\n\t}\n\n\t/**\n\t * Used internally by CGLIB. Returns the <code>AbstractClassGenerator</code>\n\t * that is being used to generate a class in the current thread.\n\t */\n\tpublic static AbstractClassGenerator getCurrent() {\n\t\treturn (AbstractClassGenerator) CURRENT.get();\n\t}\n\n\tpublic ClassLoader getClassLoader() {\n\t\tClassLoader t = classLoader;\n\t\tif (t == null) {\n\t\t\tt = getDefaultClassLoader();\n\t\t}\n\t\tif (t == null) {\n\t\t\tt = getClass().getClassLoader();\n\t\t}\n\t\tif (t == null) {\n\t\t\tt = Thread.currentThread().getContextClassLoader();\n\t\t}\n\t\tif (t == null) {\n\t\t\tthrow new IllegalStateException(\"Cannot determine classloader\");\n\t\t}\n\t\treturn t;\n\t}\n\n\tabstract protected ClassLoader getDefaultClassLoader();\n\n\t/**\n\t * Returns the protection domain to use when defining the class.\n\t * <p>\n\t * Default implementation returns <code>null</code> for using a default protection domain. Sub-classes may\n\t * override to use a more specific protection domain.\n\t * </p>\n\t * @return the protection domain (<code>null</code> for using a default)\n\t */\n\tprotected ProtectionDomain getProtectionDomain() {\n\t\treturn null;\n\t}\n\n\tprotected Object create(Object key) {\n\t\ttry {\n\t\t\tClassLoader loader = getClassLoader();\n\t\t\tMap<ClassLoader, ClassLoaderData> cache = CACHE;\n\t\t\tClassLoaderData data = cache.get(loader);\n\t\t\tif (data == null) {\n\t\t\t\tsynchronized (AbstractClassGenerator.class) {\n\t\t\t\t\tcache = CACHE;\n\t\t\t\t\tdata = cache.get(loader);\n\t\t\t\t\tif (data == null) {\n\t\t\t\t\t\tMap<ClassLoader, ClassLoaderData> newCache = new WeakHashMap<>(cache);\n\t\t\t\t\t\tdata = new ClassLoaderData(loader);\n\t\t\t\t\t\tnewCache.put(loader, data);\n\t\t\t\t\t\tCACHE = newCache;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tthis.key = key;\n\t\t\tObject obj = data.get(this, getUseCache());\n\t\t\tif (obj instanceof Class<?> clazz) {\n\t\t\t\treturn firstInstance(clazz);\n\t\t\t}\n\t\t\treturn nextInstance(obj);\n\t\t}\n\t\tcatch (RuntimeException | Error ex) {\n\t\t\tthrow ex;\n\t\t}\n\t\tcatch (Exception ex) {\n\t\t\tthrow new CodeGenerationException(ex);\n\t\t}\n\t}\n\n\tprotected Class generate(ClassLoaderData data) {\n\t\tClass gen;\n\t\tObject save = CURRENT.get();\n\t\tCURRENT.set(this);\n\t\ttry {\n\t\t\tClassLoader classLoader = data.getClassLoader();\n\t\t\tif (classLoader == null) {\n\t\t\t\tthrow new IllegalStateException(\"ClassLoader is null while trying to define class \" +\n\t\t\t\t\t\tgetClassName() + \". It seems that the loader has been expired from a weak reference somehow. \" +\n\t\t\t\t\t\t\"Please file an issue at cglib's issue tracker.\");\n\t\t\t}\n\t\t\tsynchronized (classLoader) {\n\t\t\t\tString name = generateClassName(data.getUniqueNamePredicate());\n\t\t\t\tdata.reserveName(name);\n\t\t\t\tthis.setClassName(name);\n\t\t\t}\n\t\t\tif (attemptLoad) {\n\t\t\t\ttry {\n\t\t\t\t\t// SPRING PATCH BEGIN\n\t\t\t\t\tsynchronized (classLoader) { // just in case\n\t\t\t\t\t\tgen = ReflectUtils.loadClass(getClassName(), classLoader);\n\t\t\t\t\t}\n\t\t\t\t\t// SPRING PATCH END\n\t\t\t\t\treturn gen;\n\t\t\t\t}\n\t\t\t\tcatch (ClassNotFoundException e) {\n\t\t\t\t\t// ignore\n\t\t\t\t}\n\t\t\t}\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tif (inNativeImage) {\n\t\t\t\tthrow new UnsupportedOperationException(\"CGLIB runtime enhancement not supported on native image. \" +\n\t\t\t\t\t\t\"Make sure to include a pre-generated class on the classpath instead: \" + getClassName());\n\t\t\t}\n\t\t\t// SPRING PATCH END\n\t\t\tbyte[] b = strategy.generate(this);\n\t\t\tString className = ClassNameReader.getClassName(new ClassReader(b));\n\t\t\tProtectionDomain protectionDomain = getProtectionDomain();\n\t\t\tsynchronized (classLoader) { // just in case\n\t\t\t\t// SPRING PATCH BEGIN\n\t\t\t\tgen = ReflectUtils.defineClass(className, b, classLoader, protectionDomain, contextClass);\n\t\t\t\t// SPRING PATCH END\n\t\t\t}\n\t\t\treturn gen;\n\t\t}\n\t\tcatch (RuntimeException | Error ex) {\n\t\t\tthrow ex;\n\t\t}\n\t\tcatch (Exception ex) {\n\t\t\tthrow new CodeGenerationException(ex);\n\t\t}\n\t\tfinally {\n\t\t\tCURRENT.set(save);\n\t\t}\n\t}\n\n\tabstract protected Object firstInstance(Class type) throws Exception;\n\n\tabstract protected Object nextInstance(Object instance) throws Exception;\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#CURRENT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#CURRENT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ThreadLocal",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#CACHE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#CACHE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<ClassLoader, ClassLoaderData>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#DEFAULT_USE_CACHE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#DEFAULT_USE_CACHE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#inNativeImage",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#inNativeImage",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#strategy",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#strategy",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "GeneratorStrategy",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#namingPolicy",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#namingPolicy",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "NamingPolicy",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#source",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator#source",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.AbstractClassGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.AbstractClassGenerator#classLoader",
+    "tailType": "field"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream#resolveProxyClass(String[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Class<?> resolveProxyClass(String[] interfaces) throws IOException, ClassNotFoundException {\r\n    if (!this.acceptProxyClasses) {\r\n        throw new NotSerializableException(\"Not allowed to accept serialized proxy classes\");\r\n    }\r\n    if (this.classLoader != null) {\r\n        // Use the specified ClassLoader to resolve local proxy classes.\r\n        Class<?>[] resolvedInterfaces = new Class<?>[interfaces.length];\r\n        for (int i = 0; i < interfaces.length; i++) {\r\n            try {\r\n                resolvedInterfaces[i] = ClassUtils.forName(interfaces[i], this.classLoader);\r\n            } catch (ClassNotFoundException ex) {\r\n                resolvedInterfaces[i] = resolveFallbackIfPossible(interfaces[i], ex);\r\n            }\r\n        }\r\n        try {\r\n            return ClassUtils.createCompositeInterface(resolvedInterfaces, this.classLoader);\r\n        } catch (IllegalArgumentException ex) {\r\n            throw new ClassNotFoundException(null, ex);\r\n        }\r\n    } else {\r\n        // Use ObjectInputStream's default ClassLoader...\r\n        try {\r\n            return super.resolveProxyClass(interfaces);\r\n        } catch (ClassNotFoundException ex) {\r\n            Class<?>[] resolvedInterfaces = new Class<?>[interfaces.length];\r\n            for (int i = 0; i < interfaces.length; i++) {\r\n                resolvedInterfaces[i] = resolveFallbackIfPossible(interfaces[i], ex);\r\n            }\r\n            return ClassUtils.createCompositeInterface(resolvedInterfaces, getFallbackClassLoader());\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ConfigurableObjectInputStream#resolveProxyClass(String[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream#resolveProxyClass(String[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream#resolveFallbackIfPossible(String,ClassNotFoundException)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given class name against a fallback class loader.\r\n * <p>The default implementation simply rethrows the original exception,\r\n * since there is no fallback available.\r\n * @param className the class name to resolve\r\n * @param ex the original exception thrown when attempting to load the class\r\n * @return the newly resolved class (never {@code null})\r\n */\r\nprotected Class<?> resolveFallbackIfPossible(String className, ClassNotFoundException ex) throws IOException, ClassNotFoundException {\r\n    throw ex;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ConfigurableObjectInputStream#resolveFallbackIfPossible(String,ClassNotFoundException)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream#getFallbackClassLoader()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the fallback ClassLoader to use when no ClassLoader was specified\r\n * and ObjectInputStream's own default class loader failed.\r\n * <p>The default implementation simply returns {@code null}, indicating\r\n * that no specific fallback is available.\r\n */\r\n@Nullable\r\nprotected ClassLoader getFallbackClassLoader() throws IOException {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ConfigurableObjectInputStream#getFallbackClassLoader()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream#getFallbackClassLoader()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.ConfigurableObjectInputStream",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ObjectInputStream",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.Constants",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.Constants",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.Constants",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.Field;\nimport java.util.HashMap;\nimport java.util.HashSet;\nimport java.util.Locale;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ReflectionUtils;\n\n/**\n * This class can be used to parse other classes containing constant definitions\n * in public static final members. The {@code asXXXX} methods of this class\n * allow these constant values to be accessed via their string names.\n *\n * <p>Consider class Foo containing {@code public static final int CONSTANT1 = 66;}\n * An instance of this class wrapping {@code Foo.class} will return the constant value\n * of 66 from its {@code asNumber} method given the argument {@code \"CONSTANT1\"}.\n *\n * <p>This class is ideal for use in PropertyEditors, enabling them to\n * recognize the same names as the constants themselves, and freeing them\n * from maintaining their own mapping.\n *\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @since 16.03.2003\n * @deprecated since 6.1 with no replacement; use an enum, map, or similar custom\n * solution instead\n */\n@Deprecated(since = \"6.1\")\npublic class Constants {\n\n\t/** The name of the introspected class. */\n\tprivate final String className;\n\n\t/** Map from String field name to object value. */\n\tprivate final Map<String, Object> fieldCache = new HashMap<>();\n\n\n\t/**\n\t * Create a new Constants converter class wrapping the given class.\n\t * <p>All <b>public</b> static final variables will be exposed, whatever their type.\n\t * @param clazz the class to analyze\n\t * @throws IllegalArgumentException if the supplied {@code clazz} is {@code null}\n\t */\n\tpublic Constants(Class<?> clazz) {\n\t\tAssert.notNull(clazz, \"Class must not be null\");\n\t\tthis.className = clazz.getName();\n\t\tField[] fields = clazz.getFields();\n\t\tfor (Field field : fields) {\n\t\t\tif (ReflectionUtils.isPublicStaticFinal(field)) {\n\t\t\t\tString name = field.getName();\n\t\t\t\ttry {\n\t\t\t\t\tObject value = field.get(null);\n\t\t\t\t\tthis.fieldCache.put(name, value);\n\t\t\t\t}\n\t\t\t\tcatch (IllegalAccessException ex) {\n\t\t\t\t\t// just leave this field and continue\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\n\n\t/**\n\t * Return the name of the analyzed class.\n\t */\n\tpublic final String getClassName() {\n\t\treturn this.className;\n\t}\n\n\t/**\n\t * Return the number of constants exposed.\n\t */\n\tpublic final int getSize() {\n\t\treturn this.fieldCache.size();\n\t}\n\n\t/**\n\t * Exposes the field cache to subclasses:\n\t * a Map from String field name to object value.\n\t */\n\tprotected final Map<String, Object> getFieldCache() {\n\t\treturn this.fieldCache;\n\t}\n\n\n\t/**\n\t * Return a constant value cast to a Number.\n\t * @param code the name of the field (never {@code null})\n\t * @return the Number value\n\t * @throws ConstantException if the field name wasn't found\n\t * or if the type wasn't compatible with Number\n\t * @see #asObject\n\t */\n\tpublic Number asNumber(String code) throws ConstantException {\n\t\tObject obj = asObject(code);\n\t\tif (!(obj instanceof Number number)) {\n\t\t\tthrow new ConstantException(this.className, code, \"not a Number\");\n\t\t}\n\t\treturn number;\n\t}\n\n\t/**\n\t * Return a constant value as a String.\n\t * @param code the name of the field (never {@code null})\n\t * @return the String value\n\t * Works even if it's not a string (invokes {@code toString()}).\n\t * @throws ConstantException if the field name wasn't found\n\t * @see #asObject\n\t */\n\tpublic String asString(String code) throws ConstantException {\n\t\treturn asObject(code).toString();\n\t}\n\n\t/**\n\t * Parse the given String (upper or lower case accepted) and return\n\t * the appropriate value if it's the name of a constant field in the\n\t * class that we're analyzing.\n\t * @param code the name of the field (never {@code null})\n\t * @return the Object value\n\t * @throws ConstantException if there's no such field\n\t */\n\tpublic Object asObject(String code) throws ConstantException {\n\t\tAssert.notNull(code, \"Code must not be null\");\n\t\tString codeToUse = code.toUpperCase(Locale.ENGLISH);\n\t\tObject val = this.fieldCache.get(codeToUse);\n\t\tif (val == null) {\n\t\t\tthrow new ConstantException(this.className, codeToUse, \"not found\");\n\t\t}\n\t\treturn val;\n\t}\n\n\n\t/**\n\t * Return all names of the given group of constants.\n\t * <p>Note that this method assumes that constants are named\n\t * in accordance with the standard Java convention for constant\n\t * values (i.e. all uppercase). The supplied {@code namePrefix}\n\t * will be uppercased (in a locale-insensitive fashion) prior to\n\t * the main logic of this method kicking in.\n\t * @param namePrefix prefix of the constant names to search (may be {@code null})\n\t * @return the set of constant names\n\t */\n\tpublic Set<String> getNames(@Nullable String namePrefix) {\n\t\tString prefixToUse = (namePrefix != null ? namePrefix.trim().toUpperCase(Locale.ENGLISH) : \"\");\n\t\tSet<String> names = new HashSet<>();\n\t\tfor (String code : this.fieldCache.keySet()) {\n\t\t\tif (code.startsWith(prefixToUse)) {\n\t\t\t\tnames.add(code);\n\t\t\t}\n\t\t}\n\t\treturn names;\n\t}\n\n\t/**\n\t * Return all names of the group of constants for the\n\t * given bean property name.\n\t * @param propertyName the name of the bean property\n\t * @return the set of values\n\t * @see #propertyToConstantNamePrefix\n\t */\n\tpublic Set<String> getNamesForProperty(String propertyName) {\n\t\treturn getNames(propertyToConstantNamePrefix(propertyName));\n\t}\n\n\t/**\n\t * Return all names of the given group of constants.\n\t * <p>Note that this method assumes that constants are named\n\t * in accordance with the standard Java convention for constant\n\t * values (i.e. all uppercase). The supplied {@code nameSuffix}\n\t * will be uppercased (in a locale-insensitive fashion) prior to\n\t * the main logic of this method kicking in.\n\t * @param nameSuffix suffix of the constant names to search (may be {@code null})\n\t * @return the set of constant names\n\t */\n\tpublic Set<String> getNamesForSuffix(@Nullable String nameSuffix) {\n\t\tString suffixToUse = (nameSuffix != null ? nameSuffix.trim().toUpperCase(Locale.ENGLISH) : \"\");\n\t\tSet<String> names = new HashSet<>();\n\t\tfor (String code : this.fieldCache.keySet()) {\n\t\t\tif (code.endsWith(suffixToUse)) {\n\t\t\t\tnames.add(code);\n\t\t\t}\n\t\t}\n\t\treturn names;\n\t}\n\n\n\t/**\n\t * Return all values of the given group of constants.\n\t * <p>Note that this method assumes that constants are named\n\t * in accordance with the standard Java convention for constant\n\t * values (i.e. all uppercase). The supplied {@code namePrefix}\n\t * will be uppercased (in a locale-insensitive fashion) prior to\n\t * the main logic of this method kicking in.\n\t * @param namePrefix prefix of the constant names to search (may be {@code null})\n\t * @return the set of values\n\t */\n\tpublic Set<Object> getValues(@Nullable String namePrefix) {\n\t\tString prefixToUse = (namePrefix != null ? namePrefix.trim().toUpperCase(Locale.ENGLISH) : \"\");\n\t\tSet<Object> values = new HashSet<>();\n\t\tthis.fieldCache.forEach((code, value) -> {\n\t\t\tif (code.startsWith(prefixToUse)) {\n\t\t\t\tvalues.add(value);\n\t\t\t}\n\t\t});\n\t\treturn values;\n\t}\n\n\t/**\n\t * Return all values of the group of constants for the\n\t * given bean property name.\n\t * @param propertyName the name of the bean property\n\t * @return the set of values\n\t * @see #propertyToConstantNamePrefix\n\t */\n\tpublic Set<Object> getValuesForProperty(String propertyName) {\n\t\treturn getValues(propertyToConstantNamePrefix(propertyName));\n\t}\n\n\t/**\n\t * Return all values of the given group of constants.\n\t * <p>Note that this method assumes that constants are named\n\t * in accordance with the standard Java convention for constant\n\t * values (i.e. all uppercase). The supplied {@code nameSuffix}\n\t * will be uppercased (in a locale-insensitive fashion) prior to\n\t * the main logic of this method kicking in.\n\t * @param nameSuffix suffix of the constant names to search (may be {@code null})\n\t * @return the set of values\n\t */\n\tpublic Set<Object> getValuesForSuffix(@Nullable String nameSuffix) {\n\t\tString suffixToUse = (nameSuffix != null ? nameSuffix.trim().toUpperCase(Locale.ENGLISH) : \"\");\n\t\tSet<Object> values = new HashSet<>();\n\t\tthis.fieldCache.forEach((code, value) -> {\n\t\t\tif (code.endsWith(suffixToUse)) {\n\t\t\t\tvalues.add(value);\n\t\t\t}\n\t\t});\n\t\treturn values;\n\t}\n\n\n\t/**\n\t * Look up the given value within the given group of constants.\n\t * <p>Will return the first match.\n\t * @param value constant value to look up\n\t * @param namePrefix prefix of the constant names to search (may be {@code null})\n\t * @return the name of the constant field\n\t * @throws ConstantException if the value wasn't found\n\t */\n\tpublic String toCode(Object value, @Nullable String namePrefix) throws ConstantException {\n\t\tString prefixToUse = (namePrefix != null ? namePrefix.trim().toUpperCase(Locale.ENGLISH) : \"\");\n\t\tfor (Map.Entry<String, Object> entry : this.fieldCache.entrySet()) {\n\t\t\tif (entry.getKey().startsWith(prefixToUse) && entry.getValue().equals(value)) {\n\t\t\t\treturn entry.getKey();\n\t\t\t}\n\t\t}\n\t\tthrow new ConstantException(this.className, prefixToUse, value);\n\t}\n\n\t/**\n\t * Look up the given value within the group of constants for\n\t * the given bean property name. Will return the first match.\n\t * @param value constant value to look up\n\t * @param propertyName the name of the bean property\n\t * @return the name of the constant field\n\t * @throws ConstantException if the value wasn't found\n\t * @see #propertyToConstantNamePrefix\n\t */\n\tpublic String toCodeForProperty(Object value, String propertyName) throws ConstantException {\n\t\treturn toCode(value, propertyToConstantNamePrefix(propertyName));\n\t}\n\n\t/**\n\t * Look up the given value within the given group of constants.\n\t * <p>Will return the first match.\n\t * @param value constant value to look up\n\t * @param nameSuffix suffix of the constant names to search (may be {@code null})\n\t * @return the name of the constant field\n\t * @throws ConstantException if the value wasn't found\n\t */\n\tpublic String toCodeForSuffix(Object value, @Nullable String nameSuffix) throws ConstantException {\n\t\tString suffixToUse = (nameSuffix != null ? nameSuffix.trim().toUpperCase(Locale.ENGLISH) : \"\");\n\t\tfor (Map.Entry<String, Object> entry : this.fieldCache.entrySet()) {\n\t\t\tif (entry.getKey().endsWith(suffixToUse) && entry.getValue().equals(value)) {\n\t\t\t\treturn entry.getKey();\n\t\t\t}\n\t\t}\n\t\tthrow new ConstantException(this.className, suffixToUse, value);\n\t}\n\n\n\t/**\n\t * Convert the given bean property name to a constant name prefix.\n\t * <p>Uses a common naming idiom: turning all lower case characters to\n\t * upper case, and prepending upper case characters with an underscore.\n\t * <p>Example: \"imageSize\" &rarr; \"IMAGE_SIZE\"<br>\n\t * Example: \"imagesize\" &rarr; \"IMAGESIZE\".<br>\n\t * Example: \"ImageSize\" &rarr; \"_IMAGE_SIZE\".<br>\n\t * Example: \"IMAGESIZE\" &rarr; \"_I_M_A_G_E_S_I_Z_E\"\n\t * @param propertyName the name of the bean property\n\t * @return the corresponding constant name prefix\n\t * @see #getValuesForProperty\n\t * @see #toCodeForProperty\n\t */\n\tpublic String propertyToConstantNamePrefix(String propertyName) {\n\t\tStringBuilder parsedPrefix = new StringBuilder();\n\t\tfor (int i = 0; i < propertyName.length(); i++) {\n\t\t\tchar c = propertyName.charAt(i);\n\t\t\tif (Character.isUpperCase(c)) {\n\t\t\t\tparsedPrefix.append('_');\n\t\t\t\tparsedPrefix.append(c);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tparsedPrefix.append(Character.toUpperCase(c));\n\t\t\t}\n\t\t}\n\t\treturn parsedPrefix.toString();\n\t}\n\n\n\t/**\n\t * Exception thrown when the {@link Constants} class is asked for\n\t * an invalid constant name.\n\t */\n\t@SuppressWarnings(\"serial\")\n\tpublic static class ConstantException extends IllegalArgumentException {\n\n\t\t/**\n\t\t * Thrown when an invalid constant name is requested.\n\t\t * @param className name of the class containing the constant definitions\n\t\t * @param field invalid constant name\n\t\t * @param message description of the problem\n\t\t */\n\t\tpublic ConstantException(String className, String field, String message) {\n\t\t\tsuper(\"Field '\" + field + \"' \" + message + \" in class [\" + className + \"]\");\n\t\t}\n\n\t\t/**\n\t\t * Thrown when an invalid constant value is looked up.\n\t\t * @param className name of the class containing the constant definitions\n\t\t * @param namePrefix prefix of the searched constant names\n\t\t * @param value the looked up constant value\n\t\t */\n\t\tpublic ConstantException(String className, String namePrefix, Object value) {\n\t\t\tsuper(\"No '\" + namePrefix + \"' field with value '\" + value + \"' found in class [\" + className + \"]\");\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.Constants",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.Constants#className",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.Constants#className",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.Constants",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.Constants#fieldCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.Constants#fieldCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, Object>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.Constants#getClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the name of the analyzed class.\r\n */\r\npublic final String getClassName() {\r\n    return this.className;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Constants",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Constants#getClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Constants#getSize()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the number of constants exposed.\r\n */\r\npublic final int getSize() {\r\n    return this.fieldCache.size();\r\n}",
+    "tailType": "method_code"
+  }
+]

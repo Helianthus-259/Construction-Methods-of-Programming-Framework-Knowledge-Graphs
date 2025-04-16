@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_object(CodeEmitter,Type,CustomizerRegistry)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void hash_object(CodeEmitter e, Type type, CustomizerRegistry registry) {\r\n    // (f == null) ? 0 : f.hashCode();\r\n    Label skip = e.make_label();\r\n    Label end = e.make_label();\r\n    e.dup();\r\n    e.ifnull(skip);\r\n    boolean customHashCode = false;\r\n    for (HashCodeCustomizer customizer : registry.get(HashCodeCustomizer.class)) {\r\n        if (customizer.customize(e, type)) {\r\n            customHashCode = true;\r\n            break;\r\n        }\r\n    }\r\n    if (!customHashCode) {\r\n        for (Customizer customizer : registry.get(Customizer.class)) {\r\n            customizer.customize(e, type);\r\n        }\r\n        e.invoke_virtual(Constants.TYPE_OBJECT, HASH_CODE);\r\n    }\r\n    e.goTo(end);\r\n    e.mark(skip);\r\n    e.pop();\r\n    e.push(0);\r\n    e.mark(end);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#hash_object(CodeEmitter,Type,CustomizerRegistry)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_primitive(CodeEmitter,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void hash_primitive(CodeEmitter e, Type type) {\r\n    switch(type.getSort()) {\r\n        case Type.BOOLEAN:\r\n            // f ? 0 : 1\r\n            e.push(1);\r\n            e.math(CodeEmitter.XOR, Type.INT_TYPE);\r\n            break;\r\n        case Type.FLOAT:\r\n            // Float.floatToIntBits(f)\r\n            e.invoke_static(Constants.TYPE_FLOAT, FLOAT_TO_INT_BITS);\r\n            break;\r\n        case Type.DOUBLE:\r\n            // Double.doubleToLongBits(f), hash_code(Long.TYPE)\r\n            e.invoke_static(Constants.TYPE_DOUBLE, DOUBLE_TO_LONG_BITS);\r\n        // fall through\r\n        case Type.LONG:\r\n            hash_long(e);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#hash_primitive(CodeEmitter,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#hash_long(CodeEmitter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void hash_long(CodeEmitter e) {\r\n    // (int)(f ^ (f >>> 32))\r\n    e.dup2();\r\n    e.push(32);\r\n    e.math(CodeEmitter.USHR, Type.LONG_TYPE);\r\n    e.math(CodeEmitter.XOR, Type.LONG_TYPE);\r\n    e.cast_numeric(Type.LONG_TYPE, Type.INT_TYPE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#hash_long(CodeEmitter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#not_equals(CodeEmitter,Type,Label,Customizer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "//     public static void not_equals(CodeEmitter e, Type type, Label notEquals) {\r\n//         not_equals(e, type, notEquals, null);\r\n//     }\r\n/**\r\n * @deprecated use {@link #not_equals(CodeEmitter, Type, Label, CustomizerRegistry)} instead\r\n */\r\n@Deprecated\r\npublic static void not_equals(CodeEmitter e, Type type, final Label notEquals, final Customizer customizer) {\r\n    not_equals(e, type, notEquals, CustomizerRegistry.singleton(customizer));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#not_equals(CodeEmitter,Type,Label,Customizer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#not_equals(CodeEmitter,Type,Label,Customizer)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#not_equals(CodeEmitter,Type,Label,CustomizerRegistry)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Branches to the specified label if the top two items on the stack\r\n * are not equal. The items must both be of the specified\r\n * class. Equality is determined by comparing primitive values\r\n * directly and by invoking the <code>equals</code> method for\r\n * Objects. Arrays are recursively processed in the same manner.\r\n */\r\npublic static void not_equals(final CodeEmitter e, Type type, final Label notEquals, final CustomizerRegistry registry) {\r\n    (new ProcessArrayCallback() {\r\n\r\n        @Override\r\n        public void processElement(Type type) {\r\n            not_equals_helper(e, type, notEquals, registry, this);\r\n        }\r\n    }).processElement(type);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#not_equals(CodeEmitter,Type,Label,CustomizerRegistry)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#not_equals_helper(CodeEmitter,Type,Label,CustomizerRegistry,ProcessArrayCallback)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void not_equals_helper(CodeEmitter e, Type type, Label notEquals, CustomizerRegistry registry, ProcessArrayCallback callback) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        e.if_cmp(type, CodeEmitter.NE, notEquals);\r\n    } else {\r\n        Label end = e.make_label();\r\n        nullcmp(e, notEquals, end);\r\n        if (TypeUtils.isArray(type)) {\r\n            Label checkContents = e.make_label();\r\n            e.dup2();\r\n            e.arraylength();\r\n            e.swap();\r\n            e.arraylength();\r\n            e.if_icmp(CodeEmitter.EQ, checkContents);\r\n            e.pop2();\r\n            e.goTo(notEquals);\r\n            e.mark(checkContents);\r\n            EmitUtils.process_arrays(e, type, callback);\r\n        } else {\r\n            List<Customizer> customizers = registry.get(Customizer.class);\r\n            if (!customizers.isEmpty()) {\r\n                for (Customizer customizer : customizers) {\r\n                    customizer.customize(e, type);\r\n                }\r\n                e.swap();\r\n                for (Customizer customizer : customizers) {\r\n                    customizer.customize(e, type);\r\n                }\r\n            }\r\n            e.invoke_virtual(Constants.TYPE_OBJECT, EQUALS);\r\n            e.if_jump(CodeEmitter.EQ, notEquals);\r\n        }\r\n        e.mark(end);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#not_equals_helper(CodeEmitter,Type,Label,CustomizerRegistry,ProcessArrayCallback)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#nullcmp(CodeEmitter,Label,Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * If both objects on the top of the stack are non-null, does nothing.\r\n * If one is null, or both are null, both are popped off and execution\r\n * branches to the respective label.\r\n * @param oneNull label to branch to if only one of the objects is null\r\n * @param bothNull label to branch to if both of the objects are null\r\n */\r\nprivate static void nullcmp(CodeEmitter e, Label oneNull, Label bothNull) {\r\n    e.dup2();\r\n    Label nonNull = e.make_label();\r\n    Label oneNullHelper = e.make_label();\r\n    Label end = e.make_label();\r\n    e.ifnonnull(nonNull);\r\n    e.ifnonnull(oneNullHelper);\r\n    e.pop2();\r\n    e.goTo(bothNull);\r\n    e.mark(nonNull);\r\n    e.ifnull(oneNullHelper);\r\n    e.goTo(end);\r\n    e.mark(oneNullHelper);\r\n    e.pop2();\r\n    e.goTo(oneNull);\r\n    e.mark(end);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#nullcmp(CodeEmitter,Label,Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#append_string(CodeEmitter,Type,ArrayDelimiters,Customizer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/*\r\n    public static void to_string(CodeEmitter e,\r\n                                 Type type,\r\n                                 ArrayDelimiters delims,\r\n                                 CustomizerRegistry registry) {\r\n        e.new_instance(Constants.TYPE_STRING_BUFFER);\r\n        e.dup();\r\n        e.invoke_constructor(Constants.TYPE_STRING_BUFFER);\r\n        e.swap();\r\n        append_string(e, type, delims, registry);\r\n        e.invoke_virtual(Constants.TYPE_STRING_BUFFER, TO_STRING);\r\n    }\r\n    */\r\n/**\r\n * @deprecated use {@link #append_string(CodeEmitter, Type, ArrayDelimiters, CustomizerRegistry)} instead\r\n */\r\n@Deprecated\r\npublic static void append_string(final CodeEmitter e, Type type, final ArrayDelimiters delims, final Customizer customizer) {\r\n    append_string(e, type, delims, CustomizerRegistry.singleton(customizer));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#append_string(CodeEmitter,Type,ArrayDelimiters,Customizer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#append_string(CodeEmitter,Type,ArrayDelimiters,Customizer)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils#append_string(CodeEmitter,Type,ArrayDelimiters,CustomizerRegistry)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void append_string(final CodeEmitter e, Type type, final ArrayDelimiters delims, final CustomizerRegistry registry) {\r\n    final ArrayDelimiters d = (delims != null) ? delims : DEFAULT_DELIMITERS;\r\n    ProcessArrayCallback callback = new ProcessArrayCallback() {\r\n\r\n        @Override\r\n        public void processElement(Type type) {\r\n            append_string_helper(e, type, d, registry, this);\r\n            e.push(d.inside);\r\n            e.invoke_virtual(Constants.TYPE_STRING_BUFFER, APPEND_STRING);\r\n        }\r\n    };\r\n    append_string_helper(e, type, d, registry, callback);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.EmitUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.EmitUtils#append_string(CodeEmitter,Type,ArrayDelimiters,CustomizerRegistry)",
+    "tailType": "method"
+  }
+]

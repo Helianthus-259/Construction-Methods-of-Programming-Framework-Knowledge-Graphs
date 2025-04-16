@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.DefaultNamingPolicy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DefaultNamingPolicy#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultNamingPolicy#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultNamingPolicy#equals(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean equals(Object o) {\r\n    return (o instanceof DefaultNamingPolicy defaultNamingPolicy) && defaultNamingPolicy.getTag().equals(getTag());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultNamingPolicy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DefaultNamingPolicy#equals(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultNamingPolicy#equals(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.DuplicatesPredicate",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.core;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.lang.reflect.Method;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.HashSet;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Opcodes;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class DuplicatesPredicate implements Predicate {\n  private final Set unique;\n  private final Set rejected;\n\n  /**\n   * Constructs a DuplicatesPredicate that will allow subclass bridge methods to be preferred over\n   * superclass non-bridge methods.\n   */\n  public DuplicatesPredicate() {\n    unique = new HashSet();\n    rejected = Collections.emptySet();\n  }\n\n  /**\n   * Constructs a DuplicatesPredicate that prefers using superclass non-bridge methods despite a\n   * subclass method with the same signature existing (if the subclass is a bridge method).\n   */\n  public DuplicatesPredicate(List allMethods) {\n    rejected = new HashSet();\n    unique = new HashSet();\n\n    // Traverse through the methods and capture ones that are bridge\n    // methods when a subsequent method (from a non-interface superclass)\n    // has the same signature but isn't a bridge. Record these so that\n    // we avoid using them when filtering duplicates.\n    Map scanned = new HashMap();\n    Map suspects = new HashMap();\n    for (Object o : allMethods) {\n      Method method = (Method) o;\n      Object sig = MethodWrapper.create(method);\n      Method existing = (Method) scanned.get(sig);\n      if (existing == null) {\n        scanned.put(sig, method);\n      } else if (!suspects.containsKey(sig) && existing.isBridge() && !method.isBridge()) {\n        // TODO: this currently only will capture a single bridge. it will not work\n        // if there's Child.bridge1 Middle.bridge2 Parent.concrete.  (we'd offer the 2nd bridge).\n        // no idea if that's even possible tho...\n        suspects.put(sig, existing);\n      }\n    }\n\n    if (!suspects.isEmpty()) {\n      Set classes = new HashSet();\n      UnnecessaryBridgeFinder finder = new UnnecessaryBridgeFinder(rejected);\n      for (Object o : suspects.values()) {\n        Method m = (Method) o;\n        classes.add(m.getDeclaringClass());\n        finder.addSuspectMethod(m);\n      }\n      for (Object o : classes) {\n        Class c = (Class) o;\n        try {\n          ClassLoader cl = getClassLoader(c);\n          if (cl == null) {\n            continue;\n          }\n          InputStream is = cl.getResourceAsStream(c.getName().replace('.', '/') + \".class\");\n          if (is == null) {\n            continue;\n          }\n          try {\n            new ClassReader(is).accept(finder, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\n          } finally {\n            is.close();\n          }\n        } catch (IOException ignored) {\n        }\n      }\n    }\n  }\n\n  @Override\n  public boolean evaluate(Object arg) {\n    return !rejected.contains(arg) && unique.add(MethodWrapper.create((Method) arg));\n  }\n\n  private static ClassLoader getClassLoader(Class c) {\n    ClassLoader cl = c.getClassLoader();\n    if (cl == null) {\n      cl = DuplicatesPredicate.class.getClassLoader();\n    }\n    if (cl == null) {\n      cl = Thread.currentThread().getContextClassLoader();\n    }\n    return cl;\n  }\n\n  private static class UnnecessaryBridgeFinder extends ClassVisitor {\n    private final Set rejected;\n\n    private Signature currentMethodSig = null;\n    private Map methods = new HashMap();\n\n    UnnecessaryBridgeFinder(Set rejected) {\n      super(Constants.ASM_API);\n      this.rejected = rejected;\n    }\n\n    void addSuspectMethod(Method m) {\n      methods.put(ReflectUtils.getSignature(m), m);\n    }\n\n    @Override\n    public void visit(\n        int version,\n        int access,\n        String name,\n        String signature,\n        String superName,\n        String[] interfaces) {}\n\n    @Override\n    public MethodVisitor visitMethod(\n        int access, String name, String desc, String signature, String[] exceptions) {\n      Signature sig = new Signature(name, desc);\n      final Method currentMethod = (Method) methods.remove(sig);\n      if (currentMethod != null) {\n        currentMethodSig = sig;\n        return new MethodVisitor(Constants.ASM_API) {\n          @Override\n          public void visitMethodInsn(\n              int opcode, String owner, String name, String desc, boolean itf) {\n            if (opcode == Opcodes.INVOKESPECIAL && currentMethodSig != null) {\n              Signature target = new Signature(name, desc);\n              if (target.equals(currentMethodSig)) {\n                rejected.add(currentMethod);\n              }\n              currentMethodSig = null;\n            }\n          }\n        };\n      } else {\n        return null;\n      }\n    }\n  }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DuplicatesPredicate#unique",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate#unique",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Set",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DuplicatesPredicate#rejected",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate#rejected",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Set",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate#evaluate(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean evaluate(Object arg) {\r\n    return !rejected.contains(arg) && unique.add(MethodWrapper.create((Method) arg));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DuplicatesPredicate#evaluate(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate#evaluate(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate#getClassLoader(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static ClassLoader getClassLoader(Class c) {\r\n    ClassLoader cl = c.getClassLoader();\r\n    if (cl == null) {\r\n        cl = DuplicatesPredicate.class.getClassLoader();\r\n    }\r\n    if (cl == null) {\r\n        cl = Thread.currentThread().getContextClassLoader();\r\n    }\r\n    return cl;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DuplicatesPredicate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DuplicatesPredicate#getClassLoader(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.UnnecessaryBridgeFinder",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.UnnecessaryBridgeFinder",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.core;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.lang.reflect.Method;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.HashSet;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Opcodes;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class DuplicatesPredicate implements Predicate {\n  private final Set unique;\n  private final Set rejected;\n\n  /**\n   * Constructs a DuplicatesPredicate that will allow subclass bridge methods to be preferred over\n   * superclass non-bridge methods.\n   */\n  public DuplicatesPredicate() {\n    unique = new HashSet();\n    rejected = Collections.emptySet();\n  }\n\n  /**\n   * Constructs a DuplicatesPredicate that prefers using superclass non-bridge methods despite a\n   * subclass method with the same signature existing (if the subclass is a bridge method).\n   */\n  public DuplicatesPredicate(List allMethods) {\n    rejected = new HashSet();\n    unique = new HashSet();\n\n    // Traverse through the methods and capture ones that are bridge\n    // methods when a subsequent method (from a non-interface superclass)\n    // has the same signature but isn't a bridge. Record these so that\n    // we avoid using them when filtering duplicates.\n    Map scanned = new HashMap();\n    Map suspects = new HashMap();\n    for (Object o : allMethods) {\n      Method method = (Method) o;\n      Object sig = MethodWrapper.create(method);\n      Method existing = (Method) scanned.get(sig);\n      if (existing == null) {\n        scanned.put(sig, method);\n      } else if (!suspects.containsKey(sig) && existing.isBridge() && !method.isBridge()) {\n        // TODO: this currently only will capture a single bridge. it will not work\n        // if there's Child.bridge1 Middle.bridge2 Parent.concrete.  (we'd offer the 2nd bridge).\n        // no idea if that's even possible tho...\n        suspects.put(sig, existing);\n      }\n    }\n\n    if (!suspects.isEmpty()) {\n      Set classes = new HashSet();\n      UnnecessaryBridgeFinder finder = new UnnecessaryBridgeFinder(rejected);\n      for (Object o : suspects.values()) {\n        Method m = (Method) o;\n        classes.add(m.getDeclaringClass());\n        finder.addSuspectMethod(m);\n      }\n      for (Object o : classes) {\n        Class c = (Class) o;\n        try {\n          ClassLoader cl = getClassLoader(c);\n          if (cl == null) {\n            continue;\n          }\n          InputStream is = cl.getResourceAsStream(c.getName().replace('.', '/') + \".class\");\n          if (is == null) {\n            continue;\n          }\n          try {\n            new ClassReader(is).accept(finder, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\n          } finally {\n            is.close();\n          }\n        } catch (IOException ignored) {\n        }\n      }\n    }\n  }\n\n  @Override\n  public boolean evaluate(Object arg) {\n    return !rejected.contains(arg) && unique.add(MethodWrapper.create((Method) arg));\n  }\n\n  private static ClassLoader getClassLoader(Class c) {\n    ClassLoader cl = c.getClassLoader();\n    if (cl == null) {\n      cl = DuplicatesPredicate.class.getClassLoader();\n    }\n    if (cl == null) {\n      cl = Thread.currentThread().getContextClassLoader();\n    }\n    return cl;\n  }\n\n  private static class UnnecessaryBridgeFinder extends ClassVisitor {\n    private final Set rejected;\n\n    private Signature currentMethodSig = null;\n    private Map methods = new HashMap();\n\n    UnnecessaryBridgeFinder(Set rejected) {\n      super(Constants.ASM_API);\n      this.rejected = rejected;\n    }\n\n    void addSuspectMethod(Method m) {\n      methods.put(ReflectUtils.getSignature(m), m);\n    }\n\n    @Override\n    public void visit(\n        int version,\n        int access,\n        String name,\n        String signature,\n        String superName,\n        String[] interfaces) {}\n\n    @Override\n    public MethodVisitor visitMethod(\n        int access, String name, String desc, String signature, String[] exceptions) {\n      Signature sig = new Signature(name, desc);\n      final Method currentMethod = (Method) methods.remove(sig);\n      if (currentMethod != null) {\n        currentMethodSig = sig;\n        return new MethodVisitor(Constants.ASM_API) {\n          @Override\n          public void visitMethodInsn(\n              int opcode, String owner, String name, String desc, boolean itf) {\n            if (opcode == Opcodes.INVOKESPECIAL && currentMethodSig != null) {\n              Signature target = new Signature(name, desc);\n              if (target.equals(currentMethodSig)) {\n                rejected.add(currentMethod);\n              }\n              currentMethodSig = null;\n            }\n          }\n        };\n      } else {\n        return null;\n      }\n    }\n  }\n}\n",
+    "tailType": "class_code"
+  }
+]

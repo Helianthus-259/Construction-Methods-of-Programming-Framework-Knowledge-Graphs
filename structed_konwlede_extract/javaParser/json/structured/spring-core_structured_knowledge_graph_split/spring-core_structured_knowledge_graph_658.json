@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.Mixin",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.proxy;\n\nimport java.security.ProtectionDomain;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassesKey;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ReflectUtils;\n\n/**\n * <code>Mixin</code> allows\n * multiple objects to be combined into a single larger object. The\n * methods in the generated object simply call the original methods in the\n * underlying \"delegate\" objects.\n * @author Chris Nokleberg\n * @version $Id: Mixin.java,v 1.7 2005/09/27 11:42:27 baliuka Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class Mixin {\n    private static final MixinKey KEY_FACTORY =\n      (MixinKey)KeyFactory.create(MixinKey.class, KeyFactory.CLASS_BY_NAME);\n    private static final Map ROUTE_CACHE = Collections.synchronizedMap(new HashMap());\n\n    public static final int STYLE_INTERFACES = 0;\n    public static final int STYLE_BEANS = 1;\n    public static final int STYLE_EVERYTHING = 2;\n\n    interface MixinKey {\n        public Object newInstance(int style, String[] classes, int[] route);\n    }\n\n    abstract public Mixin newInstance(Object[] delegates);\n\n    /**\n     * Helper method to create an interface mixin. For finer control over the\n     * generated instance, use a new instance of <code>Mixin</code>\n     * instead of this static method.\n     * TODO\n     */\n    public static Mixin create(Object[] delegates) {\n        Generator gen = new Generator();\n        gen.setDelegates(delegates);\n        return gen.create();\n    }\n\n    /**\n     * Helper method to create an interface mixin. For finer control over the\n     * generated instance, use a new instance of <code>Mixin</code>\n     * instead of this static method.\n     * TODO\n     */\n    public static Mixin create(Class[] interfaces, Object[] delegates) {\n        Generator gen = new Generator();\n        gen.setClasses(interfaces);\n        gen.setDelegates(delegates);\n        return gen.create();\n    }\n\n\n    public static Mixin createBean(Object[] beans) {\n\n        return createBean(null, beans);\n\n    }\n    /**\n     * Helper method to create a bean mixin. For finer control over the\n     * generated instance, use a new instance of <code>Mixin</code>\n     * instead of this static method.\n     * TODO\n     */\n    public static Mixin createBean(ClassLoader loader,Object[] beans) {\n        Generator gen = new Generator();\n        gen.setStyle(STYLE_BEANS);\n        gen.setDelegates(beans);\n        gen.setClassLoader(loader);\n        return gen.create();\n    }\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(Mixin.class.getName());\n\n        private Class[] classes;\n        private Object[] delegates;\n        private int style = STYLE_INTERFACES;\n\n        private int[] route;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        @Override\n        protected ClassLoader getDefaultClassLoader() {\n            return classes[0].getClassLoader(); // is this right?\n        }\n\n        @Override\n        protected ProtectionDomain getProtectionDomain() {\n            return ReflectUtils.getProtectionDomain(classes[0]);\n        }\n\n        public void setStyle(int style) {\n            switch (style) {\n            case STYLE_INTERFACES:\n            case STYLE_BEANS:\n            case STYLE_EVERYTHING:\n                this.style = style;\n                break;\n            default:\n                throw new IllegalArgumentException(\"Unknown mixin style: \" + style);\n            }\n        }\n\n        public void setClasses(Class[] classes) {\n            this.classes = classes;\n        }\n\n        public void setDelegates(Object[] delegates) {\n            this.delegates = delegates;\n        }\n\n        public Mixin create() {\n            if (classes == null && delegates == null) {\n                throw new IllegalStateException(\"Either classes or delegates must be set\");\n            }\n            switch (style) {\n            case STYLE_INTERFACES:\n                if (classes == null) {\n                    Route r = route(delegates);\n                    classes = r.classes;\n                    route = r.route;\n                }\n                break;\n            case STYLE_BEANS:\n                // fall-through\n            case STYLE_EVERYTHING:\n                if (classes == null) {\n                    classes = ReflectUtils.getClasses(delegates);\n                } else {\n                    if (delegates != null) {\n                        Class[] temp = ReflectUtils.getClasses(delegates);\n                        if (classes.length != temp.length) {\n                            throw new IllegalStateException(\"Specified classes are incompatible with delegates\");\n                        }\n                        for (int i = 0; i < classes.length; i++) {\n                            if (!classes[i].isAssignableFrom(temp[i])) {\n                                throw new IllegalStateException(\"Specified class \" + classes[i] + \" is incompatible with delegate class \" + temp[i] + \" (index \" + i + \")\");\n                            }\n                        }\n                    }\n                }\n            }\n            setNamePrefix(classes[ReflectUtils.findPackageProtected(classes)].getName());\n\n            return (Mixin)super.create(KEY_FACTORY.newInstance(style, ReflectUtils.getNames( classes ), route));\n        }\n\n        @Override\n        public void generateClass(ClassVisitor v) {\n            switch (style) {\n            case STYLE_INTERFACES:\n                new MixinEmitter(v, getClassName(), classes, route);\n                break;\n            case STYLE_BEANS:\n                new MixinBeanEmitter(v, getClassName(), classes);\n                break;\n            case STYLE_EVERYTHING:\n                new MixinEverythingEmitter(v, getClassName(), classes);\n                break;\n            }\n        }\n\n        @Override\n        protected Object firstInstance(Class type) {\n            return ((Mixin)ReflectUtils.newInstance(type)).newInstance(delegates);\n        }\n\n        @Override\n        protected Object nextInstance(Object instance) {\n            return ((Mixin)instance).newInstance(delegates);\n        }\n    }\n\n    public static Class[] getClasses(Object[] delegates) {\n        return route(delegates).classes.clone();\n    }\n\n//     public static int[] getRoute(Object[] delegates) {\n//         return (int[])route(delegates).route.clone();\n//     }\n\n    private static Route route(Object[] delegates) {\n        Object key = ClassesKey.create(delegates);\n        Route route = (Route)ROUTE_CACHE.get(key);\n        if (route == null) {\n            ROUTE_CACHE.put(key, route = new Route(delegates));\n        }\n        return route;\n    }\n\n    private static class Route\n    {\n        private Class[] classes;\n        private int[] route;\n\n        Route(Object[] delegates) {\n            Map map = new HashMap();\n            ArrayList collect = new ArrayList();\n            for (int i = 0; i < delegates.length; i++) {\n                Class delegate = delegates[i].getClass();\n                collect.clear();\n                ReflectUtils.addAllInterfaces(delegate, collect);\n                for (Iterator it = collect.iterator(); it.hasNext();) {\n                    Class iface = (Class)it.next();\n                    if (!map.containsKey(iface)) {\n                        map.put(iface, i);\n                    }\n                }\n            }\n            classes = new Class[map.size()];\n            route = new int[map.size()];\n            int index = 0;\n            for (Iterator it = map.keySet().iterator(); it.hasNext();) {\n                Class key = (Class)it.next();\n                classes[index] = key;\n                route[index] = ((Integer)map.get(key));\n                index++;\n            }\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.Mixin#KEY_FACTORY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#KEY_FACTORY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MixinKey",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.Mixin#ROUTE_CACHE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#ROUTE_CACHE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.Mixin#STYLE_INTERFACES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#STYLE_INTERFACES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.Mixin#STYLE_BEANS",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#STYLE_BEANS",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.Mixin#STYLE_EVERYTHING",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#STYLE_EVERYTHING",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#newInstance(Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "abstract public Mixin newInstance(Object[] delegates);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Mixin#newInstance(Object[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#create(Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Helper method to create an interface mixin. For finer control over the\r\n * generated instance, use a new instance of <code>Mixin</code>\r\n * instead of this static method.\r\n * TODO\r\n */\r\npublic static Mixin create(Object[] delegates) {\r\n    Generator gen = new Generator();\r\n    gen.setDelegates(delegates);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Mixin#create(Object[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin#create(Class[],Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Helper method to create an interface mixin. For finer control over the\r\n * generated instance, use a new instance of <code>Mixin</code>\r\n * instead of this static method.\r\n * TODO\r\n */\r\npublic static Mixin create(Class[] interfaces, Object[] delegates) {\r\n    Generator gen = new Generator();\r\n    gen.setClasses(interfaces);\r\n    gen.setDelegates(delegates);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Mixin",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Mixin#create(Class[],Object[])",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.ClassInfo#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String toString() {\r\n    // TODO: include modifiers, superType, interfaces\r\n    return getType().getClassName();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassInfo",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassInfo#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassInfo#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.core;\n\n/**\n * CGLIB GeneratorStrategy variant which exposes the application ClassLoader\n * as current thread context ClassLoader for the time of class generation.\n * The ASM ClassWriter in Spring's ASM variant will pick it up when doing\n * common superclass resolution.\n *\n * @author Juergen Hoeller\n * @since 5.2\n */\npublic class ClassLoaderAwareGeneratorStrategy extends DefaultGeneratorStrategy {\n\n\tprivate final ClassLoader classLoader;\n\n\tprivate final GeneratorStrategy delegate;\n\n\n\t/**\n\t * Create a default GeneratorStrategy, exposing the given ClassLoader.\n\t * @param classLoader the ClassLoader to expose as current thread context ClassLoader\n\t */\n\tpublic ClassLoaderAwareGeneratorStrategy(ClassLoader classLoader) {\n\t\tthis.classLoader = classLoader;\n\t\tthis.delegate = super::generate;\n\t}\n\n\t/**\n\t * Create a decorator for the given GeneratorStrategy delegate, exposing the given ClassLoader.\n\t * @param classLoader the ClassLoader to expose as current thread context ClassLoader\n\t * @since 6.2\n\t */\n\tpublic ClassLoaderAwareGeneratorStrategy(ClassLoader classLoader, GeneratorStrategy delegate) {\n\t\tthis.classLoader = classLoader;\n\t\tthis.delegate = delegate;\n\t}\n\n\n\t@Override\n\tpublic byte[] generate(ClassGenerator cg) throws Exception {\n\t\tif (this.classLoader == null) {\n\t\t\treturn this.delegate.generate(cg);\n\t\t}\n\n\t\tThread currentThread = Thread.currentThread();\n\t\tClassLoader threadContextClassLoader;\n\t\ttry {\n\t\t\tthreadContextClassLoader = currentThread.getContextClassLoader();\n\t\t}\n\t\tcatch (Throwable ex) {\n\t\t\t// Cannot access thread context ClassLoader - falling back...\n\t\t\treturn this.delegate.generate(cg);\n\t\t}\n\n\t\tboolean overrideClassLoader = !this.classLoader.equals(threadContextClassLoader);\n\t\tif (overrideClassLoader) {\n\t\t\tcurrentThread.setContextClassLoader(this.classLoader);\n\t\t}\n\t\ttry {\n\t\t\treturn this.delegate.generate(cg);\n\t\t}\n\t\tfinally {\n\t\t\tif (overrideClassLoader) {\n\t\t\t\t// Reset original thread context ClassLoader.\n\t\t\t\tcurrentThread.setContextClassLoader(threadContextClassLoader);\n\t\t\t}\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#classLoader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#classLoader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ClassLoader",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#delegate",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#delegate",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "GeneratorStrategy",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#generate(ClassGenerator)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic byte[] generate(ClassGenerator cg) throws Exception {\r\n    if (this.classLoader == null) {\r\n        return this.delegate.generate(cg);\r\n    }\r\n    Thread currentThread = Thread.currentThread();\r\n    ClassLoader threadContextClassLoader;\r\n    try {\r\n        threadContextClassLoader = currentThread.getContextClassLoader();\r\n    } catch (Throwable ex) {\r\n        // Cannot access thread context ClassLoader - falling back...\r\n        return this.delegate.generate(cg);\r\n    }\r\n    boolean overrideClassLoader = !this.classLoader.equals(threadContextClassLoader);\r\n    if (overrideClassLoader) {\r\n        currentThread.setContextClassLoader(this.classLoader);\r\n    }\r\n    try {\r\n        return this.delegate.generate(cg);\r\n    } finally {\r\n        if (overrideClassLoader) {\r\n            // Reset original thread context ClassLoader.\r\n            currentThread.setContextClassLoader(threadContextClassLoader);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#generate(ClassGenerator)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#generate(ClassGenerator)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "DefaultGeneratorStrategy",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.ClassNameReader",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassNameReader",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassNameReader",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.core;\n\nimport java.util.ArrayList;\nimport java.util.List;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.asm.ClassVisitor;\n\n// TODO: optimize (ClassReader buffers entire class before accept)\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class ClassNameReader {\n\n\tprivate ClassNameReader() {\n\t}\n\n\tprivate static final EarlyExitException EARLY_EXIT = new EarlyExitException();\n\n\t@SuppressWarnings(\"serial\")\n\tprivate static class EarlyExitException extends RuntimeException {\n\t}\n\n\tpublic static String getClassName(ClassReader r) {\n\t\treturn getClassInfo(r)[0];\n\t}\n\n    public static String[] getClassInfo(ClassReader r) {\n        final List<String> array = new ArrayList<>();\n        try {\n            r.accept(new ClassVisitor(Constants.ASM_API, null) {\n                @Override\n                public void visit(int version,\n                                  int access,\n                                  String name,\n                                  String signature,\n                                  String superName,\n                                  String[] interfaces) {\n                    array.add(name.replace('/', '.'));\n                    if (superName != null) {\n                       array.add(superName.replace('/', '.'));\n                    }\n                    for (String element : interfaces) {\n                       array.add(element.replace('/', '.'));\n                    }\n\n                    throw EARLY_EXIT;\n                }\n            }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);\n        } catch (EarlyExitException e) { }\n\n        return array.toArray(new String[0]);\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassNameReader",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.ClassNameReader#EARLY_EXIT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassNameReader#EARLY_EXIT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "EarlyExitException",
+    "tailType": "type"
+  }
+]

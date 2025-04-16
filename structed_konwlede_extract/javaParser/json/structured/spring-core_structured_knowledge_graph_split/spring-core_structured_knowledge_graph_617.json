@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#addAllInterfaces(Class,List)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static List addAllInterfaces(Class type, List list) {\r\n    Class superclass = type.getSuperclass();\r\n    if (superclass != null) {\r\n        list.addAll(Arrays.asList(type.getInterfaces()));\r\n        addAllInterfaces(superclass, list);\r\n    }\r\n    return list;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#addAllInterfaces(Class,List)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#findInterfaceMethod(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Method findInterfaceMethod(Class iface) {\r\n    if (!iface.isInterface()) {\r\n        throw new IllegalArgumentException(iface + \" is not an interface\");\r\n    }\r\n    Method[] methods = iface.getDeclaredMethods();\r\n    if (methods.length != 1) {\r\n        throw new IllegalArgumentException(\"expecting exactly 1 method in \" + iface);\r\n    }\r\n    return methods[0];\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#findInterfaceMethod(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#setGeneratedClassHandler(BiConsumer<String,byte[]>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// SPRING PATCH BEGIN\r\npublic static void setGeneratedClassHandler(BiConsumer<String, byte[]> handler) {\r\n    generatedClassHandler = handler;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#setGeneratedClassHandler(BiConsumer<String,byte[]>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Class defineClass(String className, byte[] b, ClassLoader loader) throws Exception {\r\n    return defineClass(className, b, loader, null, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Class defineClass(String className, byte[] b, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {\r\n    return defineClass(className, b, loader, protectionDomain, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@SuppressWarnings({ \"deprecation\", \"serial\" })\r\npublic static Class defineClass(String className, byte[] b, ClassLoader loader, ProtectionDomain protectionDomain, Class<?> contextClass) throws Exception {\r\n    Class c = null;\r\n    Throwable t = THROWABLE;\r\n    BiConsumer<String, byte[]> handlerToUse = generatedClassHandler;\r\n    if (handlerToUse != null) {\r\n        handlerToUse.accept(className, b);\r\n    }\r\n    // Preferred option: JDK 9+ Lookup.defineClass API if ClassLoader matches\r\n    if (contextClass != null && contextClass.getClassLoader() == loader) {\r\n        try {\r\n            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(contextClass, MethodHandles.lookup());\r\n            c = lookup.defineClass(b);\r\n        } catch (LinkageError | IllegalArgumentException ex) {\r\n            // in case of plain LinkageError (class already defined)\r\n            // or IllegalArgumentException (class in different package):\r\n            // fall through to traditional ClassLoader.defineClass below\r\n            t = ex;\r\n        } catch (Throwable ex) {\r\n            throw new CodeGenerationException(ex);\r\n        }\r\n    }\r\n    // Direct defineClass attempt on the target Classloader\r\n    if (c == null) {\r\n        if (protectionDomain == null) {\r\n            protectionDomain = PROTECTION_DOMAIN;\r\n        }\r\n        // Look for publicDefineClass(String name, byte[] b, ProtectionDomain protectionDomain)\r\n        try {\r\n            Method publicDefineClass = loader.getClass().getMethod(\"publicDefineClass\", String.class, byte[].class, ProtectionDomain.class);\r\n            c = (Class) publicDefineClass.invoke(loader, className, b, protectionDomain);\r\n        } catch (InvocationTargetException ex) {\r\n            if (!(ex.getTargetException() instanceof UnsupportedOperationException)) {\r\n                throw new CodeGenerationException(ex.getTargetException());\r\n            }\r\n            // in case of UnsupportedOperationException, fall through\r\n            t = ex.getTargetException();\r\n        } catch (Throwable ex) {\r\n            // publicDefineClass method not available -> fall through\r\n            t = ex;\r\n        }\r\n        // Classic option: protected ClassLoader.defineClass method\r\n        if (c == null && classLoaderDefineClassMethod != null) {\r\n            Object[] args = new Object[] { className, b, 0, b.length, protectionDomain };\r\n            try {\r\n                if (!classLoaderDefineClassMethod.isAccessible()) {\r\n                    classLoaderDefineClassMethod.setAccessible(true);\r\n                }\r\n                c = (Class) classLoaderDefineClassMethod.invoke(loader, args);\r\n            } catch (InvocationTargetException ex) {\r\n                throw new CodeGenerationException(ex.getTargetException());\r\n            } catch (InaccessibleObjectException ex) {\r\n                // setAccessible failed with JDK 9+ InaccessibleObjectException -> fall through\r\n                // Avoid through JVM startup with --add-opens=java.base/java.lang=ALL-UNNAMED\r\n                t = ex;\r\n            } catch (Throwable ex) {\r\n                throw new CodeGenerationException(ex);\r\n            }\r\n        }\r\n    }\r\n    // Fallback option: JDK 9+ Lookup.defineClass API even if ClassLoader does not match\r\n    if (c == null && contextClass != null && contextClass.getClassLoader() != loader) {\r\n        try {\r\n            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(contextClass, MethodHandles.lookup());\r\n            c = lookup.defineClass(b);\r\n        } catch (LinkageError | IllegalAccessException ex) {\r\n            throw new CodeGenerationException(ex) {\r\n\r\n                @Override\r\n                public String getMessage() {\r\n                    return \"ClassLoader mismatch for [\" + contextClass.getName() + \"]: JVM should be started with --add-opens=java.base/java.lang=ALL-UNNAMED \" + \"for ClassLoader.defineClass to be accessible on \" + loader.getClass().getName() + \"; consider co-locating the affected class in that target ClassLoader instead.\";\r\n                }\r\n            };\r\n        } catch (Throwable ex) {\r\n            throw new CodeGenerationException(ex);\r\n        }\r\n    }\r\n    // No defineClass variant available at all?\r\n    if (c == null) {\r\n        throw new CodeGenerationException(t) {\r\n\r\n            @Override\r\n            public String getMessage() {\r\n                return \"No compatible defineClass mechanism detected: \" + \"JVM should be started with --add-opens=java.base/java.lang=ALL-UNNAMED \" + \"for ClassLoader.defineClass to be accessible. On the module path, \" + \"you may not be able to define this CGLIB-generated class at all.\";\r\n            }\r\n        };\r\n    }\r\n    // Force static initializers to run.\r\n    Class.forName(className, true, loader);\r\n    return c;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain,Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#setLoadedClassHandler(Consumer<Class<?>>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static void setLoadedClassHandler(Consumer<Class<?>> loadedClassHandler) {\r\n    ReflectUtils.loadedClassHandler = loadedClassHandler;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#setLoadedClassHandler(Consumer<Class<?>>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#loadClass(String,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Class<?> loadClass(String className, ClassLoader classLoader) throws ClassNotFoundException {\r\n    // Force static initializers to run.\r\n    Class<?> clazz = Class.forName(className, true, classLoader);\r\n    Consumer<Class<?>> handlerToUse = loadedClassHandler;\r\n    if (handlerToUse != null) {\r\n        handlerToUse.accept(clazz);\r\n    }\r\n    return clazz;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#loadClass(String,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#findPackageProtected(Class[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// SPRING PATCH END\r\npublic static int findPackageProtected(Class[] classes) {\r\n    for (int i = 0; i < classes.length; i++) {\r\n        if (!Modifier.isPublic(classes[i].getModifiers())) {\r\n            return i;\r\n        }\r\n    }\r\n    return 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ReflectUtils#findPackageProtected(Class[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ReflectUtils#getMethodInfo(Member,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static MethodInfo getMethodInfo(final Member member, final int modifiers) {\r\n    final Signature sig = getSignature(member);\r\n    return new MethodInfo() {\r\n\r\n        private ClassInfo ci;\r\n\r\n        @Override\r\n        public ClassInfo getClassInfo() {\r\n            if (ci == null) {\r\n                ci = ReflectUtils.getClassInfo(member.getDeclaringClass());\r\n            }\r\n            return ci;\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return modifiers;\r\n        }\r\n\r\n        @Override\r\n        public Signature getSignature() {\r\n            return sig;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getExceptionTypes() {\r\n            return ReflectUtils.getExceptionTypes(member);\r\n        }\r\n    };\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#isCompatibleReturnType(Class<?>,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#processAliases()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void processAliases() {\r\n    List<Method> aliases = new ArrayList<>();\r\n    for (int i = 0; i < this.attributes.size(); i++) {\r\n        aliases.clear();\r\n        aliases.add(this.attributes.get(i));\r\n        collectAliases(aliases);\r\n        if (aliases.size() > 1) {\r\n            processAliases(i, aliases);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#processAliases()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#collectAliases(List<Method>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void collectAliases(List<Method> aliases) {\r\n    AnnotationTypeMapping mapping = this;\r\n    while (mapping != null) {\r\n        int size = aliases.size();\r\n        for (int j = 0; j < size; j++) {\r\n            List<Method> additional = mapping.aliasedBy.get(aliases.get(j));\r\n            if (additional != null) {\r\n                aliases.addAll(additional);\r\n            }\r\n        }\r\n        mapping = mapping.source;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#collectAliases(List<Method>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#processAliases(int,List<Method>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void processAliases(int attributeIndex, List<Method> aliases) {\r\n    int rootAttributeIndex = getFirstRootAttributeIndex(aliases);\r\n    AnnotationTypeMapping mapping = this;\r\n    while (mapping != null) {\r\n        if (rootAttributeIndex != -1 && mapping != this.root) {\r\n            for (int i = 0; i < mapping.attributes.size(); i++) {\r\n                if (aliases.contains(mapping.attributes.get(i))) {\r\n                    mapping.aliasMappings[i] = rootAttributeIndex;\r\n                }\r\n            }\r\n        }\r\n        mapping.mirrorSets.updateFrom(aliases);\r\n        mapping.claimedAliases.addAll(aliases);\r\n        if (mapping.annotation != null) {\r\n            int[] resolvedMirrors = mapping.mirrorSets.resolve(null, mapping.annotation, AnnotationUtils::invokeAnnotationMethod);\r\n            for (int i = 0; i < mapping.attributes.size(); i++) {\r\n                if (aliases.contains(mapping.attributes.get(i))) {\r\n                    this.annotationValueMappings[attributeIndex] = resolvedMirrors[i];\r\n                    this.annotationValueSource[attributeIndex] = mapping;\r\n                }\r\n            }\r\n        }\r\n        mapping = mapping.source;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#processAliases(int,List<Method>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#getFirstRootAttributeIndex(Collection<Method>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private int getFirstRootAttributeIndex(Collection<Method> aliases) {\r\n    AttributeMethods rootAttributes = this.root.getAttributes();\r\n    for (int i = 0; i < rootAttributes.size(); i++) {\r\n        if (aliases.contains(rootAttributes.get(i))) {\r\n            return i;\r\n        }\r\n    }\r\n    return -1;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#getFirstRootAttributeIndex(Collection<Method>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#addConventionMappings()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void addConventionMappings() {\r\n    if (this.distance == 0) {\r\n        return;\r\n    }\r\n    AttributeMethods rootAttributes = this.root.getAttributes();\r\n    int[] mappings = this.conventionMappings;\r\n    Set<String> conventionMappedAttributes = new HashSet<>();\r\n    for (int i = 0; i < mappings.length; i++) {\r\n        String name = this.attributes.get(i).getName();\r\n        int mapped = rootAttributes.indexOf(name);\r\n        if (!MergedAnnotation.VALUE.equals(name) && mapped != -1 && !isExplicitAttributeOverride(name)) {\r\n            conventionMappedAttributes.add(name);\r\n            mappings[i] = mapped;\r\n            MirrorSet mirrors = getMirrorSets().getAssigned(i);\r\n            if (mirrors != null) {\r\n                for (int j = 0; j < mirrors.size(); j++) {\r\n                    mappings[mirrors.getAttributeIndex(j)] = mapped;\r\n                }\r\n            }\r\n        }\r\n    }\r\n    String rootAnnotationTypeName = this.root.annotationType.getName();\r\n    String cacheKey = rootAnnotationTypeName + '-' + this.annotationType.getName();\r\n    // We want to avoid duplicate log warnings as much as possible, without full synchronization,\r\n    // and we intentionally invoke add() before checking if any convention-based overrides were\r\n    // actually encountered in order to ensure that we add a \"tracked\" entry for the current cache\r\n    // key in any case.\r\n    // In addition, we do NOT want to log warnings for custom Java Bean Validation constraint\r\n    // annotations that are meta-annotated with other constraint annotations -- for example,\r\n    // @org.hibernate.validator.constraints.URL which overrides attributes in\r\n    // @jakarta.validation.constraints.Pattern.\r\n    if (conventionBasedOverrideCheckCache.add(cacheKey) && !conventionMappedAttributes.isEmpty() && Arrays.stream(this.annotationType.getAnnotations()).noneMatch(isBeanValidationConstraint) && logger.isWarnEnabled()) {\r\n        logger.warn(\"\"\"\r\n            Support for convention-based annotation attribute overrides is deprecated \\\r\n            and will be removed in Spring Framework 7.0. Please annotate the following \\\r\n            attributes in @%s with appropriate @AliasFor declarations: %s\"\"\".formatted(rootAnnotationTypeName, conventionMappedAttributes));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#addConventionMappings()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#isExplicitAttributeOverride(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine if the given annotation attribute in the {@linkplain #getRoot()\r\n * root annotation} is an explicit annotation attribute override for an\r\n * attribute in a meta-annotation, explicit in the sense that the override\r\n * is declared via {@link AliasFor @AliasFor}.\r\n * <p>If the named attribute does not exist in the root annotation, this\r\n * method returns {@code false}.\r\n * @param name the name of the annotation attribute to check\r\n * @since 6.0\r\n */\r\nprivate boolean isExplicitAttributeOverride(String name) {\r\n    Method attribute = this.root.getAttributes().get(name);\r\n    if (attribute != null) {\r\n        AliasFor aliasFor = AnnotationsScanner.getDeclaredAnnotation(attribute, AliasFor.class);\r\n        return ((aliasFor != null) && (aliasFor.annotation() != Annotation.class) && (aliasFor.annotation() != this.root.annotationType));\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#isExplicitAttributeOverride(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#addConventionAnnotationValues()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void addConventionAnnotationValues() {\r\n    for (int i = 0; i < this.attributes.size(); i++) {\r\n        Method attribute = this.attributes.get(i);\r\n        boolean isValueAttribute = MergedAnnotation.VALUE.equals(attribute.getName());\r\n        AnnotationTypeMapping mapping = this;\r\n        while (mapping != null && mapping.distance > 0) {\r\n            int mapped = mapping.getAttributes().indexOf(attribute.getName());\r\n            if (mapped != -1 && isBetterConventionAnnotationValue(i, isValueAttribute, mapping)) {\r\n                this.annotationValueMappings[i] = mapped;\r\n                this.annotationValueSource[i] = mapping;\r\n            }\r\n            mapping = mapping.source;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#addConventionAnnotationValues()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#isBetterConventionAnnotationValue(int,boolean,AnnotationTypeMapping)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private boolean isBetterConventionAnnotationValue(int index, boolean isValueAttribute, AnnotationTypeMapping mapping) {\r\n    if (this.annotationValueMappings[index] == -1) {\r\n        return true;\r\n    }\r\n    int existingDistance = this.annotationValueSource[index].distance;\r\n    return !isValueAttribute && existingDistance > mapping.distance;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#isBetterConventionAnnotationValue(int,boolean,AnnotationTypeMapping)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#computeSynthesizableFlag(Set<Class<? extends Annotation>>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@SuppressWarnings(\"unchecked\")\r\nprivate boolean computeSynthesizableFlag(Set<Class<? extends Annotation>> visitedAnnotationTypes) {\r\n    // Track that we have visited the current annotation type.\r\n    visitedAnnotationTypes.add(this.annotationType);\r\n    // Uses @AliasFor for local aliases?\r\n    for (int index : this.aliasMappings) {\r\n        if (index != -1) {\r\n            return true;\r\n        }\r\n    }\r\n    // Uses @AliasFor for attribute overrides in meta-annotations?\r\n    if (!this.aliasedBy.isEmpty()) {\r\n        return true;\r\n    }\r\n    // Uses convention-based attribute overrides in meta-annotations?\r\n    for (int index : this.conventionMappings) {\r\n        if (index != -1) {\r\n            return true;\r\n        }\r\n    }\r\n    // Has nested annotations or arrays of annotations that are synthesizable?\r\n    if (getAttributes().hasNestedAnnotation()) {\r\n        AttributeMethods attributeMethods = getAttributes();\r\n        for (int i = 0; i < attributeMethods.size(); i++) {\r\n            Method method = attributeMethods.get(i);\r\n            Class<?> type = method.getReturnType();\r\n            if (type.isAnnotation() || (type.isArray() && type.componentType().isAnnotation())) {\r\n                Class<? extends Annotation> annotationType = (Class<? extends Annotation>) (type.isAnnotation() ? type : type.componentType());\r\n                // Ensure we have not yet visited the current nested annotation type, in order\r\n                // to avoid infinite recursion for JVM languages other than Java that support\r\n                // recursive annotation definitions.\r\n                if (visitedAnnotationTypes.add(annotationType)) {\r\n                    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(annotationType, visitedAnnotationTypes).get(0);\r\n                    if (mapping.isSynthesizable()) {\r\n                        return true;\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMapping#computeSynthesizableFlag(Set<Class<? extends Annotation>>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMapping#computeSynthesizableFlag(Set<Class<? extends Annotation>>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  }
+]

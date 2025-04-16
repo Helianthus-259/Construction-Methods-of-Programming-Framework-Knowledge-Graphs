@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory#wrap(ByteBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Wrap the given {@link ByteBuffer} in a {@code DataBuffer}. Unlike\r\n * {@linkplain #allocateBuffer(int) allocating}, wrapping does not use new memory.\r\n * @param byteBuffer the NIO byte buffer to wrap\r\n * @return the wrapped buffer\r\n */\r\nDataBuffer wrap(ByteBuffer byteBuffer);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferFactory#wrap(ByteBuffer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory#wrap(byte[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Wrap the given {@code byte} array in a {@code DataBuffer}. Unlike\r\n * {@linkplain #allocateBuffer(int) allocating}, wrapping does not use new memory.\r\n * @param bytes the byte array to wrap\r\n * @return the wrapped buffer\r\n */\r\nDataBuffer wrap(byte[] bytes);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferFactory#wrap(byte[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory#join(List<? extends DataBuffer>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a new {@code DataBuffer} composed of the {@code dataBuffers} elements joined together.\r\n * Depending on the implementation, the returned buffer may be a single buffer containing all\r\n * data of the provided buffers, or it may be a true composite that contains references to the\r\n * buffers.\r\n * <p>Note that the given data buffers do <strong>not</strong> have to be released, as they are\r\n * released as part of the returned composite.\r\n * @param dataBuffers the data buffers to be composed\r\n * @return a buffer that is composed of the {@code dataBuffers} argument\r\n * @since 5.0.3\r\n */\r\nDataBuffer join(List<? extends DataBuffer> dataBuffers);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferFactory#join(List<? extends DataBuffer>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory#isDirect()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Indicates whether this factory allocates direct buffers (i.e. non-heap,\r\n * native memory).\r\n * @return {@code true} if this factory allocates direct buffers;\r\n * {@code false} otherwise\r\n * @since 6.0\r\n */\r\nboolean isDirect();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferFactory#isDirect()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.buffer;\n\nimport java.io.IOException;\nimport java.io.InputStream;\n\nimport org.springframework.util.Assert;\n\n/**\n * An {@link InputStream} that reads from a {@link DataBuffer}.\n *\n * @author Arjen Poutsma\n * @since 6.0\n * @see DataBuffer#asInputStream(boolean)\n */\nfinal class DataBufferInputStream extends InputStream {\n\n\tprivate final DataBuffer dataBuffer;\n\n\tprivate final int end;\n\n\tprivate final boolean releaseOnClose;\n\n\tprivate boolean closed;\n\n\tprivate int mark;\n\n\n\tpublic DataBufferInputStream(DataBuffer dataBuffer, boolean releaseOnClose) {\n\t\tAssert.notNull(dataBuffer, \"DataBuffer must not be null\");\n\t\tthis.dataBuffer = dataBuffer;\n\t\tint start = this.dataBuffer.readPosition();\n\t\tthis.end = start + this.dataBuffer.readableByteCount();\n\t\tthis.mark = start;\n\t\tthis.releaseOnClose = releaseOnClose;\n\t}\n\n\t@Override\n\tpublic int read() throws IOException {\n\t\tcheckClosed();\n\t\tif (available() == 0) {\n\t\t\treturn -1;\n\t\t}\n\t\treturn this.dataBuffer.read() & 0xFF;\n\t}\n\n\t@Override\n\tpublic int read(byte[] b, int off, int len) throws IOException {\n\t\tcheckClosed();\n\t\tint available = available();\n\t\tif (available == 0) {\n\t\t\treturn -1;\n\t\t}\n\t\tlen = Math.min(available, len);\n\t\tthis.dataBuffer.read(b, off, len);\n\t\treturn len;\n\t}\n\n\t@Override\n\tpublic boolean markSupported() {\n\t\treturn true;\n\t}\n\n\t@Override\n\tpublic void mark(int readLimit) {\n\t\tAssert.isTrue(readLimit > 0, \"readLimit must be greater than 0\");\n\t\tthis.mark = this.dataBuffer.readPosition();\n\t}\n\n\t@Override\n\tpublic int available() {\n\t\treturn Math.max(0, this.end - this.dataBuffer.readPosition());\n\t}\n\n\t@Override\n\tpublic void reset() {\n\t\tthis.dataBuffer.readPosition(this.mark);\n\t}\n\n\t@Override\n\tpublic void close() {\n\t\tif (this.closed) {\n\t\t\treturn;\n\t\t}\n\t\tif (this.releaseOnClose) {\n\t\t\tDataBufferUtils.release(this.dataBuffer);\n\t\t}\n\t\tthis.closed = true;\n\t}\n\n\tprivate void checkClosed() throws IOException {\n\t\tif (this.closed) {\n\t\t\tthrow new IOException(\"DataBufferInputStream is closed\");\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#dataBuffer",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream#dataBuffer",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DataBuffer",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#end",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream#end",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#releaseOnClose",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream#releaseOnClose",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#closed",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream#closed",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#mark",
+    "tailType": "field"
+  }
+]

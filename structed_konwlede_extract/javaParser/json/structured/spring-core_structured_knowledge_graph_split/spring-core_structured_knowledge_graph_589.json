@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#superName",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#visit(int,int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n    className = name.replace('/', '.');\r\n    this.superName = superName.replace('/', '.');\r\n    super.visit(version, access, name, signature, superName, interfaces);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#visit(int,int,String,String,String,String[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#visit(int,int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#getClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public String getClassName() {\r\n    return className;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#getClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#getSuperName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public String getSuperName() {\r\n    return superName;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#getSuperName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#toByteArray()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public byte[] toByteArray() {\r\n    byte[] b = ((ClassWriter) DebuggingClassWriter.super.cv).toByteArray();\r\n    if (debugLocation != null) {\r\n        String dirs = className.replace('.', File.separatorChar);\r\n        try {\r\n            new File(debugLocation + File.separatorChar + dirs).getParentFile().mkdirs();\r\n            File file = new File(new File(debugLocation), dirs + \".class\");\r\n            OutputStream out = new BufferedOutputStream(new FileOutputStream(file));\r\n            try {\r\n                out.write(b);\r\n            } finally {\r\n                out.close();\r\n            }\r\n            if (traceCtor != null) {\r\n                file = new File(new File(debugLocation), dirs + \".asm\");\r\n                out = new BufferedOutputStream(new FileOutputStream(file));\r\n                try {\r\n                    ClassReader cr = new ClassReader(b);\r\n                    PrintWriter pw = new PrintWriter(new OutputStreamWriter(out));\r\n                    ClassVisitor tcv = (ClassVisitor) traceCtor.newInstance(new Object[] { null, pw });\r\n                    cr.accept(tcv, 0);\r\n                    pw.flush();\r\n                } finally {\r\n                    out.close();\r\n                }\r\n            }\r\n        } catch (Exception e) {\r\n            throw new CodeGenerationException(e);\r\n        }\r\n    }\r\n    return b;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#toByteArray()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ClassVisitor",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.DefaultGeneratorStrategy",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.core;\n\nimport org.springframework.asm.ClassWriter;\n\npublic class DefaultGeneratorStrategy implements GeneratorStrategy {\n    public static final DefaultGeneratorStrategy INSTANCE = new DefaultGeneratorStrategy();\n\n    @Override\n\tpublic byte[] generate(ClassGenerator cg) throws Exception {\n        DebuggingClassWriter cw = getClassVisitor();\n        transform(cg).generateClass(cw);\n        return transform(cw.toByteArray());\n    }\n\n    protected DebuggingClassWriter getClassVisitor() throws Exception {\n      return new DebuggingClassWriter(ClassWriter.COMPUTE_FRAMES);\n    }\n\n    protected final ClassWriter getClassWriter() {\n\t// Cause compile / runtime errors for people who implemented the old\n\t// interface without using @Override\n\tthrow new UnsupportedOperationException(\"You are calling \" +\n\t\t\"getClassWriter, which no longer exists in this cglib version.\");\n    }\n\n    protected byte[] transform(byte[] b) throws Exception {\n        return b;\n    }\n\n    protected ClassGenerator transform(ClassGenerator cg) throws Exception {\n        return cg;\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DefaultGeneratorStrategy#INSTANCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy#INSTANCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DefaultGeneratorStrategy",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy#generate(ClassGenerator)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic byte[] generate(ClassGenerator cg) throws Exception {\r\n    DebuggingClassWriter cw = getClassVisitor();\r\n    transform(cg).generateClass(cw);\r\n    return transform(cw.toByteArray());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.DefaultGeneratorStrategy#generate(ClassGenerator)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy#generate(ClassGenerator)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.DefaultGeneratorStrategy#getClassVisitor()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "protected DebuggingClassWriter getClassVisitor() throws Exception {\r\n    return new DebuggingClassWriter(ClassWriter.COMPUTE_FRAMES);\r\n}",
+    "tailType": "method_code"
+  }
+]

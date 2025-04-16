@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.RepeatableContainers#of(Class<? extends Annotation>,Class<? extends Annotation>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a {@link RepeatableContainers} instance that uses predefined\r\n * repeatable and container types.\r\n * <p>WARNING: the arguments supplied to this method are in the reverse order\r\n * of those supplied to {@link #and(Class, Class)}.\r\n * @param repeatable the repeatable annotation type\r\n * @param container the container annotation type or {@code null}. If specified,\r\n * this annotation must declare a {@code value} attribute returning an array\r\n * of repeatable annotations. If not specified, the container will be\r\n * deduced by inspecting the {@code @Repeatable} annotation on\r\n * {@code repeatable}.\r\n * @return a {@link RepeatableContainers} instance\r\n * @throws IllegalArgumentException if the supplied container type is\r\n * {@code null} and the annotation type is not a repeatable annotation\r\n * @throws AnnotationConfigurationException if the supplied container type\r\n * is not a properly configured container for a repeatable annotation\r\n */\r\npublic static RepeatableContainers of(Class<? extends Annotation> repeatable, @Nullable Class<? extends Annotation> container) {\r\n    return new ExplicitRepeatableContainer(null, repeatable, container);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.RepeatableContainers",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.RepeatableContainers#of(Class<? extends Annotation>,Class<? extends Annotation>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.RepeatableContainers#none()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a {@link RepeatableContainers} instance that does not support any\r\n * repeatable annotations.\r\n * @return a {@link RepeatableContainers} instance\r\n */\r\npublic static RepeatableContainers none() {\r\n    return NoRepeatableContainers.INSTANCE;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.RepeatableContainers",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.RepeatableContainers#none()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Repeatable;\nimport java.lang.reflect.Method;\nimport java.util.Map;\nimport java.util.Objects;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.lang.Contract;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ConcurrentReferenceHashMap;\nimport org.springframework.util.ObjectUtils;\n\n/**\n * Strategy used to determine annotations that act as containers for other\n * annotations. The {@link #standardRepeatables()} method provides a default\n * strategy that respects Java's {@link Repeatable @Repeatable} support and\n * should be suitable for most situations.\n *\n * <p>The {@link #of} method can be used to register relationships for\n * annotations that do not wish to use {@link Repeatable @Repeatable}.\n *\n * <p>To completely disable repeatable support use {@link #none()}.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 5.2\n */\npublic abstract class RepeatableContainers {\n\n\tstatic final Map<Class<? extends Annotation>, Object> cache = new ConcurrentReferenceHashMap<>();\n\n\tprivate final @Nullable RepeatableContainers parent;\n\n\n\tprivate RepeatableContainers(@Nullable RepeatableContainers parent) {\n\t\tthis.parent = parent;\n\t}\n\n\n\t/**\n\t * Add an additional explicit relationship between a container and\n\t * repeatable annotation.\n\t * <p>WARNING: the arguments supplied to this method are in the reverse order\n\t * of those supplied to {@link #of(Class, Class)}.\n\t * @param container the container annotation type\n\t * @param repeatable the repeatable annotation type\n\t * @return a new {@link RepeatableContainers} instance\n\t */\n\tpublic RepeatableContainers and(Class<? extends Annotation> container,\n\t\t\tClass<? extends Annotation> repeatable) {\n\n\t\treturn new ExplicitRepeatableContainer(this, repeatable, container);\n\t}\n\n\tAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\n\t\tif (this.parent == null) {\n\t\t\treturn null;\n\t\t}\n\t\treturn this.parent.findRepeatedAnnotations(annotation);\n\t}\n\n\n\t@Override\n\t@Contract(\"null -> false\")\n\tpublic boolean equals(@Nullable Object other) {\n\t\tif (other == this) {\n\t\t\treturn true;\n\t\t}\n\t\tif (other == null || getClass() != other.getClass()) {\n\t\t\treturn false;\n\t\t}\n\t\treturn ObjectUtils.nullSafeEquals(this.parent, ((RepeatableContainers) other).parent);\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn Objects.hashCode(this.parent);\n\t}\n\n\n\t/**\n\t * Create a {@link RepeatableContainers} instance that searches using Java's\n\t * {@link Repeatable @Repeatable} annotation.\n\t * @return a {@link RepeatableContainers} instance\n\t */\n\tpublic static RepeatableContainers standardRepeatables() {\n\t\treturn StandardRepeatableContainers.INSTANCE;\n\t}\n\n\t/**\n\t * Create a {@link RepeatableContainers} instance that uses predefined\n\t * repeatable and container types.\n\t * <p>WARNING: the arguments supplied to this method are in the reverse order\n\t * of those supplied to {@link #and(Class, Class)}.\n\t * @param repeatable the repeatable annotation type\n\t * @param container the container annotation type or {@code null}. If specified,\n\t * this annotation must declare a {@code value} attribute returning an array\n\t * of repeatable annotations. If not specified, the container will be\n\t * deduced by inspecting the {@code @Repeatable} annotation on\n\t * {@code repeatable}.\n\t * @return a {@link RepeatableContainers} instance\n\t * @throws IllegalArgumentException if the supplied container type is\n\t * {@code null} and the annotation type is not a repeatable annotation\n\t * @throws AnnotationConfigurationException if the supplied container type\n\t * is not a properly configured container for a repeatable annotation\n\t */\n\tpublic static RepeatableContainers of(\n\t\t\tClass<? extends Annotation> repeatable, @Nullable Class<? extends Annotation> container) {\n\n\t\treturn new ExplicitRepeatableContainer(null, repeatable, container);\n\t}\n\n\t/**\n\t * Create a {@link RepeatableContainers} instance that does not support any\n\t * repeatable annotations.\n\t * @return a {@link RepeatableContainers} instance\n\t */\n\tpublic static RepeatableContainers none() {\n\t\treturn NoRepeatableContainers.INSTANCE;\n\t}\n\n\n\t/**\n\t * Standard {@link RepeatableContainers} implementation that searches using\n\t * Java's {@link Repeatable @Repeatable} annotation.\n\t */\n\tprivate static class StandardRepeatableContainers extends RepeatableContainers {\n\n\t\tprivate static final Object NONE = new Object();\n\n\t\tprivate static final StandardRepeatableContainers INSTANCE = new StandardRepeatableContainers();\n\n\t\tStandardRepeatableContainers() {\n\t\t\tsuper(null);\n\t\t}\n\n\t\t@Override\n\t\tAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\n\t\t\tMethod method = getRepeatedAnnotationsMethod(annotation.annotationType());\n\t\t\tif (method != null) {\n\t\t\t\treturn (Annotation[]) AnnotationUtils.invokeAnnotationMethod(method, annotation);\n\t\t\t}\n\t\t\treturn super.findRepeatedAnnotations(annotation);\n\t\t}\n\n\t\tprivate static @Nullable Method getRepeatedAnnotationsMethod(Class<? extends Annotation> annotationType) {\n\t\t\tObject result = cache.computeIfAbsent(annotationType,\n\t\t\t\t\tStandardRepeatableContainers::computeRepeatedAnnotationsMethod);\n\t\t\treturn (result != NONE ? (Method) result : null);\n\t\t}\n\n\t\tprivate static Object computeRepeatedAnnotationsMethod(Class<? extends Annotation> annotationType) {\n\t\t\tAttributeMethods methods = AttributeMethods.forAnnotationType(annotationType);\n\t\t\tMethod method = methods.get(MergedAnnotation.VALUE);\n\t\t\tif (method != null) {\n\t\t\t\tClass<?> returnType = method.getReturnType();\n\t\t\t\tif (returnType.isArray()) {\n\t\t\t\t\tClass<?> componentType = returnType.componentType();\n\t\t\t\t\tif (Annotation.class.isAssignableFrom(componentType) &&\n\t\t\t\t\t\t\tcomponentType.isAnnotationPresent(Repeatable.class)) {\n\t\t\t\t\t\treturn method;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn NONE;\n\t\t}\n\t}\n\n\n\t/**\n\t * A single explicit mapping.\n\t */\n\tprivate static class ExplicitRepeatableContainer extends RepeatableContainers {\n\n\t\tprivate final Class<? extends Annotation> repeatable;\n\n\t\tprivate final Class<? extends Annotation> container;\n\n\t\tprivate final Method valueMethod;\n\n\t\tExplicitRepeatableContainer(@Nullable RepeatableContainers parent,\n\t\t\t\tClass<? extends Annotation> repeatable, @Nullable Class<? extends Annotation> container) {\n\n\t\t\tsuper(parent);\n\t\t\tAssert.notNull(repeatable, \"Repeatable must not be null\");\n\t\t\tif (container == null) {\n\t\t\t\tcontainer = deduceContainer(repeatable);\n\t\t\t}\n\t\t\tMethod valueMethod = AttributeMethods.forAnnotationType(container).get(MergedAnnotation.VALUE);\n\t\t\ttry {\n\t\t\t\tif (valueMethod == null) {\n\t\t\t\t\tthrow new NoSuchMethodException(\"No value method found\");\n\t\t\t\t}\n\t\t\t\tClass<?> returnType = valueMethod.getReturnType();\n\t\t\t\tif (!returnType.isArray() || returnType.componentType() != repeatable) {\n\t\t\t\t\tthrow new AnnotationConfigurationException(\n\t\t\t\t\t\t\t\"Container type [%s] must declare a 'value' attribute for an array of type [%s]\"\n\t\t\t\t\t\t\t\t.formatted(container.getName(), repeatable.getName()));\n\t\t\t\t}\n\t\t\t}\n\t\t\tcatch (AnnotationConfigurationException ex) {\n\t\t\t\tthrow ex;\n\t\t\t}\n\t\t\tcatch (Throwable ex) {\n\t\t\t\tthrow new AnnotationConfigurationException(\n\t\t\t\t\t\t\"Invalid declaration of container type [%s] for repeatable annotation [%s]\"\n\t\t\t\t\t\t\t.formatted(container.getName(), repeatable.getName()), ex);\n\t\t\t}\n\t\t\tthis.repeatable = repeatable;\n\t\t\tthis.container = container;\n\t\t\tthis.valueMethod = valueMethod;\n\t\t}\n\n\t\tprivate Class<? extends Annotation> deduceContainer(Class<? extends Annotation> repeatable) {\n\t\t\tRepeatable annotation = repeatable.getAnnotation(Repeatable.class);\n\t\t\tAssert.notNull(annotation, () -> \"Annotation type must be a repeatable annotation: \" +\n\t\t\t\t\t\t\"failed to resolve container type for \" + repeatable.getName());\n\t\t\treturn annotation.value();\n\t\t}\n\n\t\t@Override\n\t\tAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\n\t\t\tif (this.container.isAssignableFrom(annotation.annotationType())) {\n\t\t\t\treturn (Annotation[]) AnnotationUtils.invokeAnnotationMethod(this.valueMethod, annotation);\n\t\t\t}\n\t\t\treturn super.findRepeatedAnnotations(annotation);\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean equals(@Nullable Object other) {\n\t\t\tif (!super.equals(other)) {\n\t\t\t\treturn false;\n\t\t\t}\n\t\t\tExplicitRepeatableContainer otherErc = (ExplicitRepeatableContainer) other;\n\t\t\treturn (this.container.equals(otherErc.container) && this.repeatable.equals(otherErc.repeatable));\n\t\t}\n\n\t\t@Override\n\t\tpublic int hashCode() {\n\t\t\tint hashCode = super.hashCode();\n\t\t\thashCode = 31 * hashCode + this.container.hashCode();\n\t\t\thashCode = 31 * hashCode + this.repeatable.hashCode();\n\t\t\treturn hashCode;\n\t\t}\n\t}\n\n\n\t/**\n\t * No repeatable containers.\n\t */\n\tprivate static class NoRepeatableContainers extends RepeatableContainers {\n\n\t\tprivate static final NoRepeatableContainers INSTANCE = new NoRepeatableContainers();\n\n\t\tNoRepeatableContainers() {\n\t\t\tsuper(null);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainers#NONE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#NONE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainers#INSTANCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#INSTANCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "StandardRepeatableContainers",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#findRepeatedAnnotations(Annotation)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nAnnotation @Nullable [] findRepeatedAnnotations(Annotation annotation) {\r\n    Method method = getRepeatedAnnotationsMethod(annotation.annotationType());\r\n    if (method != null) {\r\n        return (Annotation[]) AnnotationUtils.invokeAnnotationMethod(method, annotation);\r\n    }\r\n    return super.findRepeatedAnnotations(annotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainers#findRepeatedAnnotations(Annotation)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#findRepeatedAnnotations(Annotation)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#getRepeatedAnnotationsMethod(Class<? extends Annotation>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate static Method getRepeatedAnnotationsMethod(Class<? extends Annotation> annotationType) {\r\n    Object result = cache.computeIfAbsent(annotationType, StandardRepeatableContainers::computeRepeatedAnnotationsMethod);\r\n    return (result != NONE ? (Method) result : null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainers#getRepeatedAnnotationsMethod(Class<? extends Annotation>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#getRepeatedAnnotationsMethod(Class<? extends Annotation>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers#computeRepeatedAnnotationsMethod(Class<? extends Annotation>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Object computeRepeatedAnnotationsMethod(Class<? extends Annotation> annotationType) {\r\n    AttributeMethods methods = AttributeMethods.forAnnotationType(annotationType);\r\n    Method method = methods.get(MergedAnnotation.VALUE);\r\n    if (method != null) {\r\n        Class<?> returnType = method.getReturnType();\r\n        if (returnType.isArray()) {\r\n            Class<?> componentType = returnType.componentType();\r\n            if (Annotation.class.isAssignableFrom(componentType) && componentType.isAnnotationPresent(Repeatable.class)) {\r\n                return method;\r\n            }\r\n        }\r\n    }\r\n    return NONE;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainers#computeRepeatedAnnotationsMethod(Class<? extends Annotation>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainers",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "RepeatableContainers",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.ExplicitRepeatableContainer",
+    "tailType": "class"
+  }
+]

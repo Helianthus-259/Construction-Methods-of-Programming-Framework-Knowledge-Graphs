@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.Symbol#owner",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Symbol",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Symbol#name",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Symbol#name",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Symbol",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Symbol#value",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Symbol#value",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Symbol",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Symbol#data",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Symbol#data",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "long",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Symbol",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Symbol#info",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Symbol#info",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Symbol#getArgumentsAndReturnSizes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the result {@link Type#getArgumentsAndReturnSizes} on {@link #value}.\r\n *\r\n * @return the result {@link Type#getArgumentsAndReturnSizes} on {@link #value} (memoized in\r\n *     {@link #info} for efficiency). This should only be used for {@link\r\n *     #CONSTANT_METHODREF_TAG}, {@link #CONSTANT_INTERFACE_METHODREF_TAG} and {@link\r\n *     #CONSTANT_INVOKE_DYNAMIC_TAG} symbols.\r\n */\r\nint getArgumentsAndReturnSizes() {\r\n    if (info == 0) {\r\n        info = Type.getArgumentsAndReturnSizes(value);\r\n    }\r\n    return info;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Symbol",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Symbol#getArgumentsAndReturnSizes()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.testfixture.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.testfixture.io.buffer;\n\nimport java.nio.ByteBuffer;\nimport java.time.Duration;\nimport java.time.Instant;\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.concurrent.atomic.AtomicBoolean;\n\nimport io.netty.buffer.PooledByteBufAllocator;\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\n\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferFactory;\nimport org.springframework.core.io.buffer.DefaultDataBufferFactory;\nimport org.springframework.core.io.buffer.NettyDataBufferFactory;\nimport org.springframework.util.Assert;\n\n/**\n * Implementation of the {@code DataBufferFactory} interface that keeps track of\n * memory leaks.\n * <p>Useful for unit tests that handle data buffers. Simply inherit from\n * {@link AbstractLeakCheckingTests} or call {@link #checkForLeaks()} in\n * a JUnit <em>after</em> method yourself, and any buffers that have not been\n * released will result in an {@link AssertionError}.\n *\n * @author Arjen Poutsma\n * @see LeakAwareDataBufferFactory\n */\npublic class LeakAwareDataBufferFactory implements DataBufferFactory {\n\n\tprivate static final Log logger = LogFactory.getLog(LeakAwareDataBufferFactory.class);\n\n\n\tprivate final DataBufferFactory delegate;\n\n\tprivate final List<LeakAwareDataBuffer> created = new ArrayList<>();\n\n\tprivate final AtomicBoolean trackCreated = new AtomicBoolean(true);\n\n\n\t/**\n\t * Creates a new {@code LeakAwareDataBufferFactory} by wrapping a\n\t * {@link DefaultDataBufferFactory}.\n\t */\n\tpublic LeakAwareDataBufferFactory() {\n\t\tthis(new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT));\n\t}\n\n\t/**\n\t * Creates a new {@code LeakAwareDataBufferFactory} by wrapping the given delegate.\n\t * @param delegate the delegate buffer factory to wrap.\n\t */\n\tpublic LeakAwareDataBufferFactory(DataBufferFactory delegate) {\n\t\tAssert.notNull(delegate, \"Delegate must not be null\");\n\t\tthis.delegate = delegate;\n\t}\n\n\n\t/**\n\t * Checks whether all the data buffers allocated by this factory have also been released.\n\t * If not, then an {@link AssertionError} is thrown. Typically used from a JUnit <em>after</em>\n\t * method.\n\t */\n\tpublic void checkForLeaks() {\n\t\tcheckForLeaks(Duration.ofSeconds(0));\n\t}\n\n\t/**\n\t * Variant of {@link #checkForLeaks()} with the option to wait for buffer release.\n\t * @param timeout how long to wait for buffers to be released; 0 for no waiting\n\t */\n\tpublic void checkForLeaks(Duration timeout) {\n\t\tthis.trackCreated.set(false);\n\t\tInstant start = Instant.now();\n\t\twhile (true) {\n\t\t\tif (this.created.stream().noneMatch(LeakAwareDataBuffer::isAllocated)) {\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tif (Instant.now().isBefore(start.plus(timeout))) {\n\t\t\t\ttry {\n\t\t\t\t\tThread.sleep(50);\n\t\t\t\t}\n\t\t\t\tcatch (InterruptedException ex) {\n\t\t\t\t\t// ignore\n\t\t\t\t}\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tList<AssertionError> errors = this.created.stream()\n\t\t\t\t\t.filter(LeakAwareDataBuffer::isAllocated)\n\t\t\t\t\t.map(LeakAwareDataBuffer::leakError)\n\t\t\t\t\t.toList();\n\n\t\t\terrors.forEach(it -> logger.error(\"Leaked error: \", it));\n\t\t\tthrow new AssertionError(errors.size() + \" buffer leaks detected (see logs above)\");\n\t\t}\n\t}\n\n\t@Override\n\t@Deprecated\n\tpublic DataBuffer allocateBuffer() {\n\t\treturn createLeakAwareDataBuffer(this.delegate.allocateBuffer());\n\t}\n\n\t@Override\n\tpublic DataBuffer allocateBuffer(int initialCapacity) {\n\t\treturn createLeakAwareDataBuffer(this.delegate.allocateBuffer(initialCapacity));\n\t}\n\n\tprivate DataBuffer createLeakAwareDataBuffer(DataBuffer delegateBuffer) {\n\t\tLeakAwareDataBuffer dataBuffer = new LeakAwareDataBuffer(delegateBuffer, this);\n\t\tif (this.trackCreated.get()) {\n\t\t\tthis.created.add(dataBuffer);\n\t\t}\n\t\treturn dataBuffer;\n\t}\n\n\t@Override\n\tpublic DataBuffer wrap(ByteBuffer byteBuffer) {\n\t\treturn this.delegate.wrap(byteBuffer);\n\t}\n\n\t@Override\n\tpublic DataBuffer wrap(byte[] bytes) {\n\t\treturn this.delegate.wrap(bytes);\n\t}\n\n\t@Override\n\tpublic DataBuffer join(List<? extends DataBuffer> dataBuffers) {\n\t\t// Remove LeakAwareDataBuffer wrapper so delegate can find native buffers\n\t\tdataBuffers = dataBuffers.stream()\n\t\t\t\t.map(o -> o instanceof LeakAwareDataBuffer ? ((LeakAwareDataBuffer) o).dataBuffer() : o)\n\t\t\t\t.toList();\n\t\treturn new LeakAwareDataBuffer(this.delegate.join(dataBuffers), this);\n\t}\n\n\t@Override\n\tpublic boolean isDirect() {\n\t\treturn this.delegate.isDirect();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory#logger",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory#logger",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Log",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory#delegate",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory#delegate",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DataBufferFactory",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory#created",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory#created",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<LeakAwareDataBuffer>",
+    "tailType": "type"
+  }
+]

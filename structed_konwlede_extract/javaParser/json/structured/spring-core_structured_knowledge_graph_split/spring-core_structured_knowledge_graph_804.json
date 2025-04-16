@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler#getName(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Executable;\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Parameter;\n\nimport org.springframework.core.MethodParameter;\n\n/**\n * A {@link MethodParameter} variant which synthesizes annotations that\n * declare attribute aliases via {@link AliasFor @AliasFor}.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 4.2\n * @see AnnotationUtils#synthesizeAnnotation\n * @see AnnotationUtils#synthesizeAnnotationArray\n */\npublic class SynthesizingMethodParameter extends MethodParameter {\n\n\t/**\n\t * Create a new {@code SynthesizingMethodParameter} for the given method,\n\t * with nesting level 1.\n\t * @param method the Method to specify a parameter for\n\t * @param parameterIndex the index of the parameter: -1 for the method\n\t * return type; 0 for the first method parameter; 1 for the second method\n\t * parameter, etc.\n\t */\n\tpublic SynthesizingMethodParameter(Method method, int parameterIndex) {\n\t\tsuper(method, parameterIndex);\n\t}\n\n\t/**\n\t * Create a new {@code SynthesizingMethodParameter} for the given method.\n\t * @param method the Method to specify a parameter for\n\t * @param parameterIndex the index of the parameter: -1 for the method\n\t * return type; 0 for the first method parameter; 1 for the second method\n\t * parameter, etc.\n\t * @param nestingLevel the nesting level of the target type\n\t * (typically 1; for example, in case of a List of Lists, 1 would indicate the\n\t * nested List, whereas 2 would indicate the element of the nested List)\n\t */\n\tpublic SynthesizingMethodParameter(Method method, int parameterIndex, int nestingLevel) {\n\t\tsuper(method, parameterIndex, nestingLevel);\n\t}\n\n\t/**\n\t * Create a new {@code SynthesizingMethodParameter} for the given constructor,\n\t * with nesting level 1.\n\t * @param constructor the Constructor to specify a parameter for\n\t * @param parameterIndex the index of the parameter\n\t */\n\tpublic SynthesizingMethodParameter(Constructor<?> constructor, int parameterIndex) {\n\t\tsuper(constructor, parameterIndex);\n\t}\n\n\t/**\n\t * Create a new {@code SynthesizingMethodParameter} for the given constructor.\n\t * @param constructor the Constructor to specify a parameter for\n\t * @param parameterIndex the index of the parameter\n\t * @param nestingLevel the nesting level of the target type\n\t * (typically 1; for example, in case of a List of Lists, 1 would indicate the\n\t * nested List, whereas 2 would indicate the element of the nested List)\n\t */\n\tpublic SynthesizingMethodParameter(Constructor<?> constructor, int parameterIndex, int nestingLevel) {\n\t\tsuper(constructor, parameterIndex, nestingLevel);\n\t}\n\n\t/**\n\t * Copy constructor, resulting in an independent {@code SynthesizingMethodParameter}\n\t * based on the same metadata and cache state that the original object was in.\n\t * @param original the original SynthesizingMethodParameter object to copy from\n\t */\n\tprotected SynthesizingMethodParameter(SynthesizingMethodParameter original) {\n\t\tsuper(original);\n\t}\n\n\n\t@Override\n\tprotected <A extends Annotation> A adaptAnnotation(A annotation) {\n\t\treturn AnnotationUtils.synthesizeAnnotation(annotation, getAnnotatedElement());\n\t}\n\n\t@Override\n\tprotected Annotation[] adaptAnnotationArray(Annotation[] annotations) {\n\t\treturn AnnotationUtils.synthesizeAnnotationArray(annotations, getAnnotatedElement());\n\t}\n\n\t@Override\n\tpublic SynthesizingMethodParameter clone() {\n\t\treturn new SynthesizingMethodParameter(this);\n\t}\n\n\n\t/**\n\t * Create a new SynthesizingMethodParameter for the given method or constructor.\n\t * <p>This is a convenience factory method for scenarios where a\n\t * Method or Constructor reference is treated in a generic fashion.\n\t * @param executable the Method or Constructor to specify a parameter for\n\t * @param parameterIndex the index of the parameter\n\t * @return the corresponding SynthesizingMethodParameter instance\n\t * @since 5.0\n\t */\n\tpublic static SynthesizingMethodParameter forExecutable(Executable executable, int parameterIndex) {\n\t\tif (executable instanceof Method method) {\n\t\t\treturn new SynthesizingMethodParameter(method, parameterIndex);\n\t\t}\n\t\telse if (executable instanceof Constructor<?> constructor) {\n\t\t\treturn new SynthesizingMethodParameter(constructor, parameterIndex);\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalArgumentException(\"Not a Method/Constructor: \" + executable);\n\t\t}\n\t}\n\n\t/**\n\t * Create a new SynthesizingMethodParameter for the given parameter descriptor.\n\t * <p>This is a convenience factory method for scenarios where a\n\t * Java 8 {@link Parameter} descriptor is already available.\n\t * @param parameter the parameter descriptor\n\t * @return the corresponding SynthesizingMethodParameter instance\n\t * @since 5.0\n\t */\n\tpublic static SynthesizingMethodParameter forParameter(Parameter parameter) {\n\t\treturn forExecutable(parameter.getDeclaringExecutable(), findParameterIndex(parameter));\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#adaptAnnotation(A)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected <A extends Annotation> A adaptAnnotation(A annotation) {\r\n    return AnnotationUtils.synthesizeAnnotation(annotation, getAnnotatedElement());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SynthesizingMethodParameter#adaptAnnotation(A)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#adaptAnnotation(A)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#adaptAnnotationArray(Annotation[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Annotation[] adaptAnnotationArray(Annotation[] annotations) {\r\n    return AnnotationUtils.synthesizeAnnotationArray(annotations, getAnnotatedElement());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SynthesizingMethodParameter#adaptAnnotationArray(Annotation[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#adaptAnnotationArray(Annotation[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#clone()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic SynthesizingMethodParameter clone() {\r\n    return new SynthesizingMethodParameter(this);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SynthesizingMethodParameter#clone()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#clone()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#forExecutable(Executable,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new SynthesizingMethodParameter for the given method or constructor.\r\n * <p>This is a convenience factory method for scenarios where a\r\n * Method or Constructor reference is treated in a generic fashion.\r\n * @param executable the Method or Constructor to specify a parameter for\r\n * @param parameterIndex the index of the parameter\r\n * @return the corresponding SynthesizingMethodParameter instance\r\n * @since 5.0\r\n */\r\npublic static SynthesizingMethodParameter forExecutable(Executable executable, int parameterIndex) {\r\n    if (executable instanceof Method method) {\r\n        return new SynthesizingMethodParameter(method, parameterIndex);\r\n    } else if (executable instanceof Constructor<?> constructor) {\r\n        return new SynthesizingMethodParameter(constructor, parameterIndex);\r\n    } else {\r\n        throw new IllegalArgumentException(\"Not a Method/Constructor: \" + executable);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SynthesizingMethodParameter#forExecutable(Executable,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter#forParameter(Parameter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new SynthesizingMethodParameter for the given parameter descriptor.\r\n * <p>This is a convenience factory method for scenarios where a\r\n * Java 8 {@link Parameter} descriptor is already available.\r\n * @param parameter the parameter descriptor\r\n * @return the corresponding SynthesizingMethodParameter instance\r\n * @since 5.0\r\n */\r\npublic static SynthesizingMethodParameter forParameter(Parameter parameter) {\r\n    return forExecutable(parameter.getDeclaringExecutable(), findParameterIndex(parameter));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SynthesizingMethodParameter#forParameter(Parameter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SynthesizingMethodParameter",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "MethodParameter",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.TypeMappedAnnotation",
+    "tailType": "class"
+  }
+]

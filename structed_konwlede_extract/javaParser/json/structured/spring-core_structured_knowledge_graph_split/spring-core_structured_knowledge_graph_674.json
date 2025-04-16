@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastClassEmitter#emitIndexByClassArray(List)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter#signatureSwitchHelper(CodeEmitter,List)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void signatureSwitchHelper(final CodeEmitter e, final List signatures) {\r\n    ObjectSwitchCallback callback = new ObjectSwitchCallback() {\r\n\r\n        @Override\r\n        public void processCase(Object key, Label end) {\r\n            // TODO: remove linear indexOf\r\n            e.push(signatures.indexOf(key));\r\n            e.return_value();\r\n        }\r\n\r\n        @Override\r\n        public void processDefault() {\r\n            e.push(-1);\r\n            e.return_value();\r\n        }\r\n    };\r\n    EmitUtils.string_switch(e, (String[]) signatures.toArray(new String[signatures.size()]), Constants.SWITCH_STYLE_HASH, callback);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastClassEmitter#signatureSwitchHelper(CodeEmitter,List)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter#invokeSwitchHelper(CodeEmitter,List,int,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void invokeSwitchHelper(final CodeEmitter e, List members, final int arg, final Type base) {\r\n    final List info = CollectionUtils.transform(members, MethodInfoTransformer.getInstance());\r\n    final Label illegalArg = e.make_label();\r\n    Block block = e.begin_block();\r\n    e.process_switch(getIntRange(info.size()), new ProcessSwitchCallback() {\r\n\r\n        @Override\r\n        public void processCase(int key, Label end) {\r\n            MethodInfo method = (MethodInfo) info.get(key);\r\n            Type[] types = method.getSignature().getArgumentTypes();\r\n            for (int i = 0; i < types.length; i++) {\r\n                e.load_arg(arg);\r\n                e.aaload(i);\r\n                e.unbox(types[i]);\r\n            }\r\n            // TODO: change method lookup process so MethodInfo will already reference base\r\n            // instead of superclass when superclass method is inaccessible\r\n            e.invoke(method, base);\r\n            if (!TypeUtils.isConstructor(method)) {\r\n                e.box(method.getSignature().getReturnType());\r\n            }\r\n            e.return_value();\r\n        }\r\n\r\n        @Override\r\n        public void processDefault() {\r\n            e.goTo(illegalArg);\r\n        }\r\n    });\r\n    block.end();\r\n    EmitUtils.wrap_throwable(block, INVOCATION_TARGET_EXCEPTION);\r\n    e.mark(illegalArg);\r\n    e.throw_exception(ILLEGAL_ARGUMENT_EXCEPTION, \"Cannot find matching method/constructor\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastClassEmitter#invokeSwitchHelper(CodeEmitter,List,int,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter#getIntRange(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static int[] getIntRange(int length) {\r\n    int[] range = new int[length];\r\n    for (int i = 0; i < length; i++) {\r\n        range[i] = i;\r\n    }\r\n    return range;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.FastClassEmitter#getIntRange(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.FastClassEmitter",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ClassEmitter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.GetIndexCallback",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.reflect;\n\nimport java.lang.reflect.Method;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Label;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.Block;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.CollectionUtils;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.DuplicatesPredicate;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.MethodInfoTransformer;\nimport org.springframework.cglib.core.ObjectSwitchCallback;\nimport org.springframework.cglib.core.ProcessSwitchCallback;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\nimport org.springframework.cglib.core.VisibilityPredicate;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\", \"deprecation\"})\nclass FastClassEmitter extends ClassEmitter {\n    private static final Signature CSTRUCT_CLASS =\n      TypeUtils.parseConstructor(\"Class\");\n    private static final Signature METHOD_GET_INDEX =\n      TypeUtils.parseSignature(\"int getIndex(String, Class[])\");\n    private static final Signature SIGNATURE_GET_INDEX =\n      new Signature(\"getIndex\", Type.INT_TYPE, new Type[]{ Constants.TYPE_SIGNATURE });\n    private static final Signature TO_STRING =\n      TypeUtils.parseSignature(\"String toString()\");\n    private static final Signature CONSTRUCTOR_GET_INDEX =\n      TypeUtils.parseSignature(\"int getIndex(Class[])\");\n    private static final Signature INVOKE =\n      TypeUtils.parseSignature(\"Object invoke(int, Object, Object[])\");\n    private static final Signature NEW_INSTANCE =\n      TypeUtils.parseSignature(\"Object newInstance(int, Object[])\");\n    private static final Signature GET_MAX_INDEX =\n      TypeUtils.parseSignature(\"int getMaxIndex()\");\n    private static final Signature GET_SIGNATURE_WITHOUT_RETURN_TYPE =\n      TypeUtils.parseSignature(\"String getSignatureWithoutReturnType(String, Class[])\");\n    private static final Type FAST_CLASS =\n      TypeUtils.parseType(\"org.springframework.cglib.reflect.FastClass\");\n    private static final Type ILLEGAL_ARGUMENT_EXCEPTION =\n      TypeUtils.parseType(\"IllegalArgumentException\");\n    private static final Type INVOCATION_TARGET_EXCEPTION =\n      TypeUtils.parseType(\"java.lang.reflect.InvocationTargetException\");\n    private static final Type[] INVOCATION_TARGET_EXCEPTION_ARRAY = { INVOCATION_TARGET_EXCEPTION };\n\n    public FastClassEmitter(ClassVisitor v, String className, Class type) {\n        super(v);\n\n        Type base = Type.getType(type);\n        begin_class(Constants.V1_8, Constants.ACC_PUBLIC, className, FAST_CLASS, null, Constants.SOURCE_FILE);\n\n        // constructor\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, CSTRUCT_CLASS, null);\n        e.load_this();\n        e.load_args();\n        e.super_invoke_constructor(CSTRUCT_CLASS);\n        e.return_value();\n        e.end_method();\n\n        VisibilityPredicate vp = new VisibilityPredicate(type, false);\n        List methods = ReflectUtils.addAllMethods(type, new ArrayList());\n        CollectionUtils.filter(methods, vp);\n        CollectionUtils.filter(methods, new DuplicatesPredicate());\n        List constructors = new ArrayList(Arrays.asList(type.getDeclaredConstructors()));\n        CollectionUtils.filter(constructors, vp);\n\n        // getIndex(String)\n        emitIndexBySignature(methods);\n\n        // getIndex(String, Class[])\n        emitIndexByClassArray(methods);\n\n        // getIndex(Class[])\n        e = begin_method(Constants.ACC_PUBLIC, CONSTRUCTOR_GET_INDEX, null);\n        e.load_args();\n        List info = CollectionUtils.transform(constructors, MethodInfoTransformer.getInstance());\n        EmitUtils.constructor_switch(e, info, new GetIndexCallback(e, info));\n        e.end_method();\n\n        // invoke(int, Object, Object[])\n        e = begin_method(Constants.ACC_PUBLIC, INVOKE, INVOCATION_TARGET_EXCEPTION_ARRAY);\n        e.load_arg(1);\n        e.checkcast(base);\n        e.load_arg(0);\n        invokeSwitchHelper(e, methods, 2, base);\n        e.end_method();\n\n        // newInstance(int, Object[])\n        e = begin_method(Constants.ACC_PUBLIC, NEW_INSTANCE, INVOCATION_TARGET_EXCEPTION_ARRAY);\n        e.new_instance(base);\n        e.dup();\n        e.load_arg(0);\n        invokeSwitchHelper(e, constructors, 1, base);\n        e.end_method();\n\n        // getMaxIndex()\n        e = begin_method(Constants.ACC_PUBLIC, GET_MAX_INDEX, null);\n        e.push(methods.size() - 1);\n        e.return_value();\n        e.end_method();\n\n        end_class();\n    }\n\n    // TODO: support constructor indices (\"<init>\")\n    private void emitIndexBySignature(List methods) {\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, SIGNATURE_GET_INDEX, null);\n        List signatures = CollectionUtils.transform(methods, obj -> ReflectUtils.getSignature((Method)obj).toString());\n        e.load_arg(0);\n        e.invoke_virtual(Constants.TYPE_OBJECT, TO_STRING);\n        signatureSwitchHelper(e, signatures);\n        e.end_method();\n    }\n\n    private static final int TOO_MANY_METHODS = 100; // TODO\n    private void emitIndexByClassArray(List methods) {\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, METHOD_GET_INDEX, null);\n        if (methods.size() > TOO_MANY_METHODS) {\n            // hack for big classes\n            List signatures = CollectionUtils.transform(methods, obj -> {\n\t\t\t    String s = ReflectUtils.getSignature((Method)obj).toString();\n\t\t\t    return s.substring(0, s.lastIndexOf(')') + 1);\n\t\t\t});\n            e.load_args();\n            e.invoke_static(FAST_CLASS, GET_SIGNATURE_WITHOUT_RETURN_TYPE);\n            signatureSwitchHelper(e, signatures);\n        } else {\n            e.load_args();\n            List info = CollectionUtils.transform(methods, MethodInfoTransformer.getInstance());\n            EmitUtils.method_switch(e, info, new GetIndexCallback(e, info));\n        }\n        e.end_method();\n    }\n\n    private void signatureSwitchHelper(final CodeEmitter e, final List signatures) {\n        ObjectSwitchCallback callback = new ObjectSwitchCallback() {\n            @Override\n\t\t\tpublic void processCase(Object key, Label end) {\n                // TODO: remove linear indexOf\n                e.push(signatures.indexOf(key));\n                e.return_value();\n            }\n            @Override\n\t\t\tpublic void processDefault() {\n                e.push(-1);\n                e.return_value();\n            }\n        };\n        EmitUtils.string_switch(e,\n                                (String[])signatures.toArray(new String[signatures.size()]),\n                                Constants.SWITCH_STYLE_HASH,\n                                callback);\n    }\n\n    private static void invokeSwitchHelper(final CodeEmitter e, List members, final int arg, final Type base) {\n        final List info = CollectionUtils.transform(members, MethodInfoTransformer.getInstance());\n        final Label illegalArg = e.make_label();\n        Block block = e.begin_block();\n        e.process_switch(getIntRange(info.size()), new ProcessSwitchCallback() {\n            @Override\n\t\t\tpublic void processCase(int key, Label end) {\n                MethodInfo method = (MethodInfo)info.get(key);\n                Type[] types = method.getSignature().getArgumentTypes();\n                for (int i = 0; i < types.length; i++) {\n                    e.load_arg(arg);\n                    e.aaload(i);\n                    e.unbox(types[i]);\n                }\n                // TODO: change method lookup process so MethodInfo will already reference base\n                // instead of superclass when superclass method is inaccessible\n                e.invoke(method, base);\n                if (!TypeUtils.isConstructor(method)) {\n                    e.box(method.getSignature().getReturnType());\n                }\n                e.return_value();\n            }\n            @Override\n\t\t\tpublic void processDefault() {\n                e.goTo(illegalArg);\n            }\n        });\n        block.end();\n        EmitUtils.wrap_throwable(block, INVOCATION_TARGET_EXCEPTION);\n        e.mark(illegalArg);\n        e.throw_exception(ILLEGAL_ARGUMENT_EXCEPTION, \"Cannot find matching method/constructor\");\n    }\n\n    private static class GetIndexCallback implements ObjectSwitchCallback {\n        private CodeEmitter e;\n        private Map indexes = new HashMap();\n\n        public GetIndexCallback(CodeEmitter e, List methods) {\n            this.e = e;\n            int index = 0;\n            for (Iterator it = methods.iterator(); it.hasNext();) {\n                indexes.put(it.next(), index++);\n            }\n        }\n\n        @Override\n\t\tpublic void processCase(Object key, Label end) {\n            e.push(((Integer)indexes.get(key)));\n            e.return_value();\n        }\n\n        @Override\n\t\tpublic void processDefault() {\n            e.push(-1);\n            e.return_value();\n        }\n    }\n\n    private static int[] getIntRange(int length) {\n        int[] range = new int[length];\n        for (int i = 0; i < length; i++) {\n            range[i] = i;\n        }\n        return range;\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.GetIndexCallback#e",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback#e",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "CodeEmitter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.GetIndexCallback#indexes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback#indexes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback#processCase(Object,Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void processCase(Object key, Label end) {\r\n    e.push(((Integer) indexes.get(key)));\r\n    e.return_value();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.GetIndexCallback#processCase(Object,Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback#processCase(Object,Label)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback#processDefault()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void processDefault() {\r\n    e.push(-1);\r\n    e.return_value();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.GetIndexCallback#processDefault()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.GetIndexCallback#processDefault()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.ValueExtractor",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2021 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.reflect.Method;\nimport java.util.Map;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Strategy API for extracting a value for an annotation attribute from a given\n * source object which is typically an {@link Annotation}, {@link Map}, or\n * {@link TypeMappedAnnotation}.\n *\n * @author Sam Brannen\n * @since 5.2.4\n */\n@FunctionalInterface\ninterface ValueExtractor {\n\n\t/**\n\t * Extract the annotation attribute represented by the supplied {@link Method}\n\t * from the supplied source {@link Object}.\n\t */\n\t@Nullable Object extract(Method attribute, @Nullable Object object);\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.ValueExtractor#extract(Method,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Extract the annotation attribute represented by the supplied {@link Method}\r\n * from the supplied source {@link Object}.\r\n */\r\n@Nullable\r\nObject extract(Method attribute, @Nullable Object object);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.ValueExtractor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.ValueExtractor#extract(Method,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.ValueExtractor#extract(Method,Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.AttributeAccessor",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2021 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.util.function.Function;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\n\n/**\n * Interface defining a generic contract for attaching and accessing metadata\n * to/from arbitrary objects.\n *\n * @author Rob Harrop\n * @author Sam Brannen\n * @since 2.0\n */\npublic interface AttributeAccessor {\n\n\t/**\n\t * Set the attribute defined by {@code name} to the supplied {@code value}.\n\t * <p>If {@code value} is {@code null}, the attribute is {@link #removeAttribute removed}.\n\t * <p>In general, users should take care to prevent overlaps with other\n\t * metadata attributes by using fully-qualified names, perhaps using\n\t * class or package names as prefix.\n\t * @param name the unique attribute key\n\t * @param value the attribute value to be attached\n\t */\n\tvoid setAttribute(String name, @Nullable Object value);\n\n\t/**\n\t * Get the value of the attribute identified by {@code name}.\n\t * <p>Return {@code null} if the attribute doesn't exist.\n\t * @param name the unique attribute key\n\t * @return the current value of the attribute, if any\n\t */\n\t@Nullable Object getAttribute(String name);\n\n\t/**\n\t * Compute a new value for the attribute identified by {@code name} if\n\t * necessary and {@linkplain #setAttribute set} the new value in this\n\t * {@code AttributeAccessor}.\n\t * <p>If a value for the attribute identified by {@code name} already exists\n\t * in this {@code AttributeAccessor}, the existing value will be returned\n\t * without applying the supplied compute function.\n\t * <p>The default implementation of this method is not thread safe but can\n\t * be overridden by concrete implementations of this interface.\n\t * @param <T> the type of the attribute value\n\t * @param name the unique attribute key\n\t * @param computeFunction a function that computes a new value for the attribute\n\t * name; the function must not return a {@code null} value\n\t * @return the existing value or newly computed value for the named attribute\n\t * @since 5.3.3\n\t * @see #getAttribute(String)\n\t * @see #setAttribute(String, Object)\n\t */\n\t@SuppressWarnings(\"unchecked\")\n\tdefault <T> T computeAttribute(String name, Function<String, T> computeFunction) {\n\t\tAssert.notNull(name, \"Name must not be null\");\n\t\tAssert.notNull(computeFunction, \"Compute function must not be null\");\n\t\tObject value = getAttribute(name);\n\t\tif (value == null) {\n\t\t\tvalue = computeFunction.apply(name);\n\t\t\tAssert.state(value != null,\n\t\t\t\t\t() -> String.format(\"Compute function must not return null for attribute named '%s'\", name));\n\t\t\tsetAttribute(name, value);\n\t\t}\n\t\treturn (T) value;\n\t}\n\n\t/**\n\t * Remove the attribute identified by {@code name} and return its value.\n\t * <p>Return {@code null} if no attribute under {@code name} is found.\n\t * @param name the unique attribute key\n\t * @return the last value of the attribute, if any\n\t */\n\t@Nullable Object removeAttribute(String name);\n\n\t/**\n\t * Return {@code true} if the attribute identified by {@code name} exists.\n\t * <p>Otherwise return {@code false}.\n\t * @param name the unique attribute key\n\t */\n\tboolean hasAttribute(String name);\n\n\t/**\n\t * Return the names of all attributes.\n\t */\n\tString[] attributeNames();\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#setAttribute(String,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Set the attribute defined by {@code name} to the supplied {@code value}.\r\n * <p>If {@code value} is {@code null}, the attribute is {@link #removeAttribute removed}.\r\n * <p>In general, users should take care to prevent overlaps with other\r\n * metadata attributes by using fully-qualified names, perhaps using\r\n * class or package names as prefix.\r\n * @param name the unique attribute key\r\n * @param value the attribute value to be attached\r\n */\r\nvoid setAttribute(String name, @Nullable Object value);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessor#setAttribute(String,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#getAttribute(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the value of the attribute identified by {@code name}.\r\n * <p>Return {@code null} if the attribute doesn't exist.\r\n * @param name the unique attribute key\r\n * @return the current value of the attribute, if any\r\n */\r\n@Nullable\r\nObject getAttribute(String name);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessor#getAttribute(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#getAttribute(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#computeAttribute(String,Function<String,T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Compute a new value for the attribute identified by {@code name} if\r\n * necessary and {@linkplain #setAttribute set} the new value in this\r\n * {@code AttributeAccessor}.\r\n * <p>If a value for the attribute identified by {@code name} already exists\r\n * in this {@code AttributeAccessor}, the existing value will be returned\r\n * without applying the supplied compute function.\r\n * <p>The default implementation of this method is not thread safe but can\r\n * be overridden by concrete implementations of this interface.\r\n * @param <T> the type of the attribute value\r\n * @param name the unique attribute key\r\n * @param computeFunction a function that computes a new value for the attribute\r\n * name; the function must not return a {@code null} value\r\n * @return the existing value or newly computed value for the named attribute\r\n * @since 5.3.3\r\n * @see #getAttribute(String)\r\n * @see #setAttribute(String, Object)\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\ndefault <T> T computeAttribute(String name, Function<String, T> computeFunction) {\r\n    Assert.notNull(name, \"Name must not be null\");\r\n    Assert.notNull(computeFunction, \"Compute function must not be null\");\r\n    Object value = getAttribute(name);\r\n    if (value == null) {\r\n        value = computeFunction.apply(name);\r\n        Assert.state(value != null, () -> String.format(\"Compute function must not return null for attribute named '%s'\", name));\r\n        setAttribute(name, value);\r\n    }\r\n    return (T) value;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessor#computeAttribute(String,Function<String,T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#computeAttribute(String,Function<String,T>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#removeAttribute(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Remove the attribute identified by {@code name} and return its value.\r\n * <p>Return {@code null} if no attribute under {@code name} is found.\r\n * @param name the unique attribute key\r\n * @return the last value of the attribute, if any\r\n */\r\n@Nullable\r\nObject removeAttribute(String name);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessor#removeAttribute(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#removeAttribute(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor#hasAttribute(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return {@code true} if the attribute identified by {@code name} exists.\r\n * <p>Otherwise return {@code false}.\r\n * @param name the unique attribute key\r\n */\r\nboolean hasAttribute(String name);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessor#hasAttribute(String)",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return this.helperConverter.matches(sourceType, targetType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ArrayToArrayConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (this.conversionService instanceof GenericConversionService genericConversionService) {\r\n        TypeDescriptor targetElement = targetType.getElementTypeDescriptor();\r\n        if (targetElement != null && targetType.getType().isInstance(source) && genericConversionService.canBypassConvert(sourceType.getElementTypeDescriptor(), targetElement)) {\r\n            return source;\r\n        }\r\n    }\r\n    List<Object> sourceList = Arrays.asList(ObjectUtils.toObjectArray(source));\r\n    return this.helperConverter.convert(sourceList, sourceType, targetType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ArrayToArrayConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToArrayConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.ArrayToCollectionConverter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.lang.reflect.Array;\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.Collections;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.CollectionFactory;\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.convert.converter.ConditionalGenericConverter;\n\n/**\n * Converts an array to a Collection.\n *\n * <p>First, creates a new Collection of the requested target type.\n * Then adds each array element to the target collection.\n * Will perform an element conversion from the source component type\n * to the collection's parameterized type if necessary.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n */\nfinal class ArrayToCollectionConverter implements ConditionalGenericConverter {\n\n\tprivate final ConversionService conversionService;\n\n\n\tpublic ArrayToCollectionConverter(ConversionService conversionService) {\n\t\tthis.conversionService = conversionService;\n\t}\n\n\n\t@Override\n\tpublic Set<ConvertiblePair> getConvertibleTypes() {\n\t\treturn Collections.singleton(new ConvertiblePair(Object[].class, Collection.class));\n\t}\n\n\t@Override\n\tpublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\treturn ConversionUtils.canConvertElements(\n\t\t\t\tsourceType.getElementTypeDescriptor(), targetType.getElementTypeDescriptor(), this.conversionService);\n\t}\n\n\t@Override\n\tpublic @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tif (source == null) {\n\t\t\treturn null;\n\t\t}\n\n\t\tint length = Array.getLength(source);\n\t\tTypeDescriptor elementDesc = targetType.getElementTypeDescriptor();\n\t\tCollection<Object> target = createCollection(targetType.getType(),\n\t\t\t\t(elementDesc != null ? elementDesc.getType() : null), length);\n\n\t\tif (elementDesc == null) {\n\t\t\tfor (int i = 0; i < length; i++) {\n\t\t\t\tObject sourceElement = Array.get(source, i);\n\t\t\t\ttarget.add(sourceElement);\n\t\t\t}\n\t\t}\n\t\telse {\n\t\t\tfor (int i = 0; i < length; i++) {\n\t\t\t\tObject sourceElement = Array.get(source, i);\n\t\t\t\tObject targetElement = this.conversionService.convert(sourceElement,\n\t\t\t\t\t\tsourceType.elementTypeDescriptor(sourceElement), elementDesc);\n\t\t\t\ttarget.add(targetElement);\n\t\t\t}\n\t\t}\n\t\treturn target;\n\t}\n\n\tprivate Collection<Object> createCollection(Class<?> targetType, @Nullable Class<?> elementType, int length) {\n\t\tif (targetType.isInterface() && targetType.isAssignableFrom(ArrayList.class)) {\n\t\t\t// Source is an array -> prefer ArrayList for Collection and SequencedCollection.\n\t\t\t// CollectionFactory.createCollection traditionally prefers LinkedHashSet instead.\n\t\t\treturn new ArrayList<>(length);\n\t\t}\n\t\treturn CollectionFactory.createCollection(targetType, elementType, length);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.ArrayToCollectionConverter#conversionService",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter#conversionService",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConversionService",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object[].class, Collection.class));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ArrayToCollectionConverter#getConvertibleTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType.getElementTypeDescriptor(), targetType.getElementTypeDescriptor(), this.conversionService);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ArrayToCollectionConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    int length = Array.getLength(source);\r\n    TypeDescriptor elementDesc = targetType.getElementTypeDescriptor();\r\n    Collection<Object> target = createCollection(targetType.getType(), (elementDesc != null ? elementDesc.getType() : null), length);\r\n    if (elementDesc == null) {\r\n        for (int i = 0; i < length; i++) {\r\n            Object sourceElement = Array.get(source, i);\r\n            target.add(sourceElement);\r\n        }\r\n    } else {\r\n        for (int i = 0; i < length; i++) {\r\n            Object sourceElement = Array.get(source, i);\r\n            Object targetElement = this.conversionService.convert(sourceElement, sourceType.elementTypeDescriptor(sourceElement), elementDesc);\r\n            target.add(targetElement);\r\n        }\r\n    }\r\n    return target;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ArrayToCollectionConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ArrayToCollectionConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  }
+]

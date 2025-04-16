@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2017 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Modifier;\nimport java.util.Collections;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.convert.converter.ConditionalGenericConverter;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.ReflectionUtils;\n\n/**\n * Converts an entity identifier to an entity reference by calling a static finder method\n * on the target entity type.\n *\n * <p>For this converter to match, the finder method must be static, have the signature\n * {@code find[EntityName]([IdType])}, and return an instance of the desired entity type.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n */\nfinal class IdToEntityConverter implements ConditionalGenericConverter {\n\n\tprivate final ConversionService conversionService;\n\n\n\tpublic IdToEntityConverter(ConversionService conversionService) {\n\t\tthis.conversionService = conversionService;\n\t}\n\n\n\t@Override\n\tpublic Set<ConvertiblePair> getConvertibleTypes() {\n\t\treturn Collections.singleton(new ConvertiblePair(Object.class, Object.class));\n\t}\n\n\t@Override\n\tpublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tMethod finder = getFinder(targetType.getType());\n\t\treturn (finder != null &&\n\t\t\t\tthis.conversionService.canConvert(sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0])));\n\t}\n\n\t@Override\n\tpublic @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tif (source == null) {\n\t\t\treturn null;\n\t\t}\n\t\tMethod finder = getFinder(targetType.getType());\n\t\tAssert.state(finder != null, \"No finder method\");\n\t\tObject id = this.conversionService.convert(\n\t\t\t\tsource, sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0]));\n\t\treturn ReflectionUtils.invokeMethod(finder, source, id);\n\t}\n\n\tprivate @Nullable Method getFinder(Class<?> entityClass) {\n\t\tString finderMethod = \"find\" + getEntityName(entityClass);\n\t\tMethod[] methods;\n\t\tboolean localOnlyFiltered;\n\t\ttry {\n\t\t\tmethods = entityClass.getDeclaredMethods();\n\t\t\tlocalOnlyFiltered = true;\n\t\t}\n\t\tcatch (SecurityException ex) {\n\t\t\t// Not allowed to access non-public methods...\n\t\t\t// Fallback: check locally declared public methods only.\n\t\t\tmethods = entityClass.getMethods();\n\t\t\tlocalOnlyFiltered = false;\n\t\t}\n\t\tfor (Method method : methods) {\n\t\t\tif (Modifier.isStatic(method.getModifiers()) && method.getName().equals(finderMethod) &&\n\t\t\t\t\tmethod.getParameterCount() == 1 && method.getReturnType().equals(entityClass) &&\n\t\t\t\t\t(localOnlyFiltered || method.getDeclaringClass().equals(entityClass))) {\n\t\t\t\treturn method;\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\tprivate String getEntityName(Class<?> entityClass) {\n\t\tString shortName = ClassUtils.getShortName(entityClass);\n\t\tint lastDot = shortName.lastIndexOf('.');\n\t\tif (lastDot != -1) {\n\t\t\treturn shortName.substring(lastDot + 1);\n\t\t}\n\t\telse {\n\t\t\treturn shortName;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter#conversionService",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#conversionService",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConversionService",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object.class));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter#getConvertibleTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Method finder = getFinder(targetType.getType());\r\n    return (finder != null && this.conversionService.canConvert(sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0])));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    Method finder = getFinder(targetType.getType());\r\n    Assert.state(finder != null, \"No finder method\");\r\n    Object id = this.conversionService.convert(source, sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0]));\r\n    return ReflectionUtils.invokeMethod(finder, source, id);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#getFinder(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate Method getFinder(Class<?> entityClass) {\r\n    String finderMethod = \"find\" + getEntityName(entityClass);\r\n    Method[] methods;\r\n    boolean localOnlyFiltered;\r\n    try {\r\n        methods = entityClass.getDeclaredMethods();\r\n        localOnlyFiltered = true;\r\n    } catch (SecurityException ex) {\r\n        // Not allowed to access non-public methods...\r\n        // Fallback: check locally declared public methods only.\r\n        methods = entityClass.getMethods();\r\n        localOnlyFiltered = false;\r\n    }\r\n    for (Method method : methods) {\r\n        if (Modifier.isStatic(method.getModifiers()) && method.getName().equals(finderMethod) && method.getParameterCount() == 1 && method.getReturnType().equals(entityClass) && (localOnlyFiltered || method.getDeclaringClass().equals(entityClass))) {\r\n            return method;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter#getFinder(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#getFinder(Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter#getEntityName(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private String getEntityName(Class<?> entityClass) {\r\n    String shortName = ClassUtils.getShortName(entityClass);\r\n    int lastDot = shortName.lastIndexOf('.');\r\n    if (lastDot != -1) {\r\n        return shortName.substring(lastDot + 1);\r\n    } else {\r\n        return shortName;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.IdToEntityConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.IdToEntityConverter#getEntityName(Class<?>)",
+    "tailType": "method"
+  }
+]

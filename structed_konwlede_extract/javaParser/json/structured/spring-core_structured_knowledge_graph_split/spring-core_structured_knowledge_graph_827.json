@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#defaultCharset",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Charset",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#delimitersCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#delimitersCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConcurrentMap<Charset, byte[][]>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#setDefaultCharset(Charset)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Set the default character set to fall back on if the MimeType does not specify any.\r\n * <p>By default this is {@code UTF-8}.\r\n * @param defaultCharset the charset to fall back on\r\n */\r\npublic void setDefaultCharset(Charset defaultCharset) {\r\n    this.defaultCharset = defaultCharset;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#setDefaultCharset(Charset)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#getDefaultCharset()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the configured {@link #setDefaultCharset(Charset) defaultCharset}.\r\n */\r\npublic Charset getDefaultCharset() {\r\n    return this.defaultCharset;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#getDefaultCharset()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final Flux<T> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    byte[][] delimiterBytes = getDelimiterBytes(mimeType);\r\n    LimitedDataBufferList chunks = new LimitedDataBufferList(getMaxInMemorySize());\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delimiterBytes);\r\n    return Flux.from(input).concatMapIterable(buffer -> processDataBuffer(buffer, matcher, chunks)).concatWith(Mono.defer(() -> {\r\n        if (chunks.isEmpty()) {\r\n            return Mono.empty();\r\n        }\r\n        DataBuffer lastBuffer = chunks.get(0).factory().join(chunks);\r\n        chunks.clear();\r\n        return Mono.just(lastBuffer);\r\n    })).doFinally(signalType -> chunks.releaseAndClear()).doOnDiscard(DataBuffer.class, DataBufferUtils::release).map(buffer -> decode(buffer, elementType, mimeType, hints));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#getDelimiterBytes(MimeType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private byte[][] getDelimiterBytes(@Nullable MimeType mimeType) {\r\n    return this.delimitersCache.computeIfAbsent(getCharset(mimeType), charset -> {\r\n        byte[][] result = new byte[this.delimiters.size()][];\r\n        for (int i = 0; i < this.delimiters.size(); i++) {\r\n            result[i] = this.delimiters.get(i).getBytes(charset);\r\n        }\r\n        return result;\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#getDelimiterBytes(MimeType)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#processDataBuffer(DataBuffer,DataBufferUtils.Matcher,LimitedDataBufferList)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Collection<DataBuffer> processDataBuffer(DataBuffer buffer, DataBufferUtils.Matcher matcher, LimitedDataBufferList chunks) {\r\n    boolean release = true;\r\n    try {\r\n        List<DataBuffer> result = null;\r\n        do {\r\n            int endIndex = matcher.match(buffer);\r\n            if (endIndex == -1) {\r\n                chunks.add(buffer);\r\n                release = false;\r\n                break;\r\n            }\r\n            DataBuffer split = buffer.split(endIndex + 1);\r\n            if (result == null) {\r\n                result = new ArrayList<>();\r\n            }\r\n            int delimiterLength = matcher.delimiter().length;\r\n            if (chunks.isEmpty()) {\r\n                if (this.stripDelimiter) {\r\n                    split.writePosition(split.writePosition() - delimiterLength);\r\n                }\r\n                result.add(split);\r\n            } else {\r\n                chunks.add(split);\r\n                DataBuffer joined = buffer.factory().join(chunks);\r\n                if (this.stripDelimiter) {\r\n                    joined.writePosition(joined.writePosition() - delimiterLength);\r\n                }\r\n                result.add(joined);\r\n                chunks.clear();\r\n            }\r\n        } while (buffer.readableByteCount() > 0);\r\n        return (result != null ? result : Collections.emptyList());\r\n    } finally {\r\n        if (release) {\r\n            DataBufferUtils.release(buffer);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#processDataBuffer(DataBuffer,DataBufferUtils.Matcher,LimitedDataBufferList)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final T decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Charset charset = getCharset(mimeType);\r\n    T value = decodeInternal(dataBuffer, charset);\r\n    DataBufferUtils.release(dataBuffer);\r\n    LogFormatUtils.traceDebug(logger, traceOn -> {\r\n        String formatted = LogFormatUtils.formatValue(value, !traceOn);\r\n        return Hints.getLogPrefix(hints) + \"Decoded \" + formatted;\r\n    });\r\n    return value;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#getCharset(MimeType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Charset getCharset(@Nullable MimeType mimeType) {\r\n    if (mimeType != null) {\r\n        Charset charset = mimeType.getCharset();\r\n        if (charset != null) {\r\n            return charset;\r\n        }\r\n    }\r\n    return getDefaultCharset();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#getCharset(MimeType)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#decodeInternal(DataBuffer,Charset)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Template method that decodes the given data buffer into {@code T}, given\r\n * the charset.\r\n */\r\nprotected abstract T decodeInternal(DataBuffer dataBuffer, Charset charset);",
+    "tailType": "method_code"
+  }
+]

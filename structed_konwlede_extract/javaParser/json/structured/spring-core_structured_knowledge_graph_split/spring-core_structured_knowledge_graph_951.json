@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#contentLength()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#lastModified()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic long lastModified() throws IOException {\r\n    URL url = getURL();\r\n    boolean fileCheck = false;\r\n    if (ResourceUtils.isFileURL(url) || ResourceUtils.isJarURL(url)) {\r\n        // Proceed with file system resolution\r\n        fileCheck = true;\r\n        try {\r\n            File fileToCheck = getFileForLastModifiedCheck();\r\n            long lastModified = fileToCheck.lastModified();\r\n            if (lastModified > 0L || fileToCheck.exists()) {\r\n                return lastModified;\r\n            }\r\n        } catch (FileNotFoundException ex) {\r\n            // Defensively fall back to URL connection check instead\r\n        }\r\n    }\r\n    // Try a URL connection last-modified header\r\n    URLConnection con = url.openConnection();\r\n    customizeConnection(con);\r\n    if (con instanceof HttpURLConnection httpCon) {\r\n        httpCon.setRequestMethod(\"HEAD\");\r\n    }\r\n    long lastModified = con.getLastModified();\r\n    if (lastModified == 0) {\r\n        if (con instanceof HttpURLConnection httpCon && httpCon.getResponseCode() == HttpURLConnection.HTTP_BAD_METHOD) {\r\n            con = url.openConnection();\r\n            customizeConnection(con);\r\n            lastModified = con.getLastModified();\r\n        }\r\n        if (fileCheck && con.getContentLengthLong() <= 0) {\r\n            throw new FileNotFoundException(getDescription() + \" cannot be resolved in the file system for checking its last-modified timestamp\");\r\n        }\r\n    }\r\n    return lastModified;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#lastModified()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#lastModified()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#customizeConnection(URLConnection)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Customize the given {@link URLConnection} before fetching the resource.\r\n * <p>Calls {@link ResourceUtils#useCachesIfNecessary(URLConnection)} and\r\n * delegates to {@link #customizeConnection(HttpURLConnection)} if possible.\r\n * Can be overridden in subclasses.\r\n * @param con the URLConnection to customize\r\n * @throws IOException if thrown from URLConnection methods\r\n */\r\nprotected void customizeConnection(URLConnection con) throws IOException {\r\n    ResourceUtils.useCachesIfNecessary(con);\r\n    if (con instanceof HttpURLConnection httpConn) {\r\n        customizeConnection(httpConn);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#customizeConnection(URLConnection)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#customizeConnection(HttpURLConnection)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Customize the given {@link HttpURLConnection} before fetching the resource.\r\n * <p>Can be overridden in subclasses for configuring request headers and timeouts.\r\n * @param con the HttpURLConnection to customize\r\n * @throws IOException if thrown from HttpURLConnection methods\r\n */\r\nprotected void customizeConnection(HttpURLConnection con) throws IOException ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#customizeConnection(HttpURLConnection)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractResource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.VfsResourceDelegate",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.VfsResourceDelegate",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.FileNotFoundException;\nimport java.io.IOException;\nimport java.net.HttpURLConnection;\nimport java.net.JarURLConnection;\nimport java.net.URI;\nimport java.net.URL;\nimport java.net.URLConnection;\nimport java.nio.channels.FileChannel;\nimport java.nio.channels.ReadableByteChannel;\nimport java.nio.file.NoSuchFileException;\nimport java.nio.file.StandardOpenOption;\nimport java.util.jar.JarEntry;\n\nimport org.springframework.util.ResourceUtils;\n\n/**\n * Abstract base class for resources which resolve URLs into File references,\n * such as {@link UrlResource} or {@link ClassPathResource}.\n *\n * <p>Detects the \"file\" protocol as well as the JBoss \"vfs\" protocol in URLs,\n * resolving file system references accordingly.\n *\n * @author Juergen Hoeller\n * @since 3.0\n */\npublic abstract class AbstractFileResolvingResource extends AbstractResource {\n\n\t@Override\n\tpublic boolean exists() {\n\t\ttry {\n\t\t\tURL url = getURL();\n\t\t\tif (ResourceUtils.isFileURL(url)) {\n\t\t\t\t// Proceed with file system resolution\n\t\t\t\treturn getFile().exists();\n\t\t\t}\n\t\t\telse {\n\t\t\t\t// Try a URL connection content-length header\n\t\t\t\tURLConnection con = url.openConnection();\n\t\t\t\tcustomizeConnection(con);\n\t\t\t\tHttpURLConnection httpCon = (con instanceof HttpURLConnection huc ? huc : null);\n\t\t\t\tif (httpCon != null) {\n\t\t\t\t\thttpCon.setRequestMethod(\"HEAD\");\n\t\t\t\t\tint code = httpCon.getResponseCode();\n\t\t\t\t\tif (code == HttpURLConnection.HTTP_OK) {\n\t\t\t\t\t\treturn true;\n\t\t\t\t\t}\n\t\t\t\t\telse if (code == HttpURLConnection.HTTP_NOT_FOUND) {\n\t\t\t\t\t\treturn false;\n\t\t\t\t\t}\n\t\t\t\t\telse if (code == HttpURLConnection.HTTP_BAD_METHOD) {\n\t\t\t\t\t\tcon = url.openConnection();\n\t\t\t\t\t\tcustomizeConnection(con);\n\t\t\t\t\t\tif (con instanceof HttpURLConnection newHttpCon) {\n\t\t\t\t\t\t\tcode = newHttpCon.getResponseCode();\n\t\t\t\t\t\t\tif (code == HttpURLConnection.HTTP_OK) {\n\t\t\t\t\t\t\t\treturn true;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\telse if (code == HttpURLConnection.HTTP_NOT_FOUND) {\n\t\t\t\t\t\t\t\treturn false;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\thttpCon = newHttpCon;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (con.getContentLengthLong() > 0) {\n\t\t\t\t\treturn true;\n\t\t\t\t}\n\t\t\t\tif (httpCon != null) {\n\t\t\t\t\t// No HTTP OK status, and no content-length header: give up\n\t\t\t\t\thttpCon.disconnect();\n\t\t\t\t\treturn false;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\t// Fall back to stream existence: can we open the stream?\n\t\t\t\t\tgetInputStream().close();\n\t\t\t\t\treturn true;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean isReadable() {\n\t\ttry {\n\t\t\treturn checkReadable(getURL());\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\tboolean checkReadable(URL url) {\n\t\ttry {\n\t\t\tif (ResourceUtils.isFileURL(url)) {\n\t\t\t\t// Proceed with file system resolution\n\t\t\t\tFile file = getFile();\n\t\t\t\treturn (file.canRead() && !file.isDirectory());\n\t\t\t}\n\t\t\telse {\n\t\t\t\t// Try InputStream resolution for jar resources\n\t\t\t\tURLConnection con = url.openConnection();\n\t\t\t\tcustomizeConnection(con);\n\t\t\t\tif (con instanceof HttpURLConnection httpCon) {\n\t\t\t\t\thttpCon.setRequestMethod(\"HEAD\");\n\t\t\t\t\tint code = httpCon.getResponseCode();\n\t\t\t\t\tif (code == HttpURLConnection.HTTP_BAD_METHOD) {\n\t\t\t\t\t\tcon = url.openConnection();\n\t\t\t\t\t\tcustomizeConnection(con);\n\t\t\t\t\t\tif (!(con instanceof HttpURLConnection newHttpCon)) {\n\t\t\t\t\t\t\treturn false;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tcode = newHttpCon.getResponseCode();\n\t\t\t\t\t\thttpCon = newHttpCon;\n\t\t\t\t\t}\n\t\t\t\t\tif (code != HttpURLConnection.HTTP_OK) {\n\t\t\t\t\t\thttpCon.disconnect();\n\t\t\t\t\t\treturn false;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\telse if (con instanceof JarURLConnection jarCon) {\n\t\t\t\t\tJarEntry jarEntry = jarCon.getJarEntry();\n\t\t\t\t\tif (jarEntry == null) {\n\t\t\t\t\t\treturn false;\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\treturn !jarEntry.isDirectory();\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tlong contentLength = con.getContentLengthLong();\n\t\t\t\tif (contentLength > 0) {\n\t\t\t\t\treturn true;\n\t\t\t\t}\n\t\t\t\telse if (contentLength == 0) {\n\t\t\t\t\t// Empty file or directory -> not considered readable...\n\t\t\t\t\treturn false;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\t// Fall back to stream existence: can we open the stream?\n\t\t\t\t\tgetInputStream().close();\n\t\t\t\t\treturn true;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean isFile() {\n\t\ttry {\n\t\t\tURL url = getURL();\n\t\t\tif (url.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\n\t\t\t\treturn VfsResourceDelegate.getResource(url).isFile();\n\t\t\t}\n\t\t\treturn ResourceUtils.URL_PROTOCOL_FILE.equals(url.getProtocol());\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t/**\n\t * This implementation returns a File reference for the underlying class path\n\t * resource, provided that it refers to a file in the file system.\n\t * @see org.springframework.util.ResourceUtils#getFile(java.net.URL, String)\n\t */\n\t@Override\n\tpublic File getFile() throws IOException {\n\t\tURL url = getURL();\n\t\tif (url.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\n\t\t\treturn VfsResourceDelegate.getResource(url).getFile();\n\t\t}\n\t\treturn ResourceUtils.getFile(url, getDescription());\n\t}\n\n\t/**\n\t * This implementation determines the underlying File\n\t * (or jar file, in case of a resource in a jar/zip).\n\t */\n\t@Override\n\tprotected File getFileForLastModifiedCheck() throws IOException {\n\t\tURL url = getURL();\n\t\tif (ResourceUtils.isJarURL(url)) {\n\t\t\tURL actualUrl = ResourceUtils.extractArchiveURL(url);\n\t\t\tif (actualUrl.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\n\t\t\t\treturn VfsResourceDelegate.getResource(actualUrl).getFile();\n\t\t\t}\n\t\t\treturn ResourceUtils.getFile(actualUrl, \"Jar URL\");\n\t\t}\n\t\telse {\n\t\t\treturn getFile();\n\t\t}\n\t}\n\n\t/**\n\t * Determine whether the given {@link URI} represents a file in a file system.\n\t * @since 5.0\n\t * @see #getFile(URI)\n\t */\n\tprotected boolean isFile(URI uri) {\n\t\ttry {\n\t\t\tif (uri.getScheme().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\n\t\t\t\treturn VfsResourceDelegate.getResource(uri).isFile();\n\t\t\t}\n\t\t\treturn ResourceUtils.URL_PROTOCOL_FILE.equals(uri.getScheme());\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t/**\n\t * This implementation returns a File reference for the given URI-identified\n\t * resource, provided that it refers to a file in the file system.\n\t * @see org.springframework.util.ResourceUtils#getFile(java.net.URI, String)\n\t */\n\tprotected File getFile(URI uri) throws IOException {\n\t\tif (uri.getScheme().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\n\t\t\treturn VfsResourceDelegate.getResource(uri).getFile();\n\t\t}\n\t\treturn ResourceUtils.getFile(uri, getDescription());\n\t}\n\n\t/**\n\t * This implementation returns a FileChannel for the given URI-identified\n\t * resource, provided that it refers to a file in the file system.\n\t * @since 5.0\n\t * @see #getFile()\n\t */\n\t@Override\n\tpublic ReadableByteChannel readableChannel() throws IOException {\n\t\ttry {\n\t\t\t// Try file system channel\n\t\t\treturn FileChannel.open(getFile().toPath(), StandardOpenOption.READ);\n\t\t}\n\t\tcatch (FileNotFoundException | NoSuchFileException ex) {\n\t\t\t// Fall back to InputStream adaptation in superclass\n\t\t\treturn super.readableChannel();\n\t\t}\n\t}\n\n\t@Override\n\tpublic long contentLength() throws IOException {\n\t\tURL url = getURL();\n\t\tif (ResourceUtils.isFileURL(url)) {\n\t\t\t// Proceed with file system resolution\n\t\t\tFile file = getFile();\n\t\t\tlong length = file.length();\n\t\t\tif (length == 0L && !file.exists()) {\n\t\t\t\tthrow new FileNotFoundException(getDescription() +\n\t\t\t\t\t\t\" cannot be resolved in the file system for checking its content length\");\n\t\t\t}\n\t\t\treturn length;\n\t\t}\n\t\telse {\n\t\t\t// Try a URL connection content-length header\n\t\t\tURLConnection con = url.openConnection();\n\t\t\tcustomizeConnection(con);\n\t\t\tif (con instanceof HttpURLConnection httpCon) {\n\t\t\t\thttpCon.setRequestMethod(\"HEAD\");\n\t\t\t}\n\t\t\tlong length = con.getContentLengthLong();\n\t\t\tif (length <= 0 && con instanceof HttpURLConnection httpCon &&\n\t\t\t\t\thttpCon.getResponseCode() == HttpURLConnection.HTTP_BAD_METHOD) {\n\t\t\t\tcon = url.openConnection();\n\t\t\t\tcustomizeConnection(con);\n\t\t\t\tlength = con.getContentLengthLong();\n\t\t\t}\n\t\t\treturn length;\n\t\t}\n\t}\n\n\t@Override\n\tpublic long lastModified() throws IOException {\n\t\tURL url = getURL();\n\t\tboolean fileCheck = false;\n\t\tif (ResourceUtils.isFileURL(url) || ResourceUtils.isJarURL(url)) {\n\t\t\t// Proceed with file system resolution\n\t\t\tfileCheck = true;\n\t\t\ttry {\n\t\t\t\tFile fileToCheck = getFileForLastModifiedCheck();\n\t\t\t\tlong lastModified = fileToCheck.lastModified();\n\t\t\t\tif (lastModified > 0L || fileToCheck.exists()) {\n\t\t\t\t\treturn lastModified;\n\t\t\t\t}\n\t\t\t}\n\t\t\tcatch (FileNotFoundException ex) {\n\t\t\t\t// Defensively fall back to URL connection check instead\n\t\t\t}\n\t\t}\n\t\t// Try a URL connection last-modified header\n\t\tURLConnection con = url.openConnection();\n\t\tcustomizeConnection(con);\n\t\tif (con instanceof HttpURLConnection httpCon) {\n\t\t\thttpCon.setRequestMethod(\"HEAD\");\n\t\t}\n\t\tlong lastModified = con.getLastModified();\n\t\tif (lastModified == 0) {\n\t\t\tif (con instanceof HttpURLConnection httpCon &&\n\t\t\t\t\thttpCon.getResponseCode() == HttpURLConnection.HTTP_BAD_METHOD) {\n\t\t\t\tcon = url.openConnection();\n\t\t\t\tcustomizeConnection(con);\n\t\t\t\tlastModified = con.getLastModified();\n\t\t\t}\n\t\t\tif (fileCheck && con.getContentLengthLong() <= 0) {\n\t\t\t\tthrow new FileNotFoundException(getDescription() +\n\t\t\t\t\t\t\" cannot be resolved in the file system for checking its last-modified timestamp\");\n\t\t\t}\n\t\t}\n\t\treturn lastModified;\n\t}\n\n\t/**\n\t * Customize the given {@link URLConnection} before fetching the resource.\n\t * <p>Calls {@link ResourceUtils#useCachesIfNecessary(URLConnection)} and\n\t * delegates to {@link #customizeConnection(HttpURLConnection)} if possible.\n\t * Can be overridden in subclasses.\n\t * @param con the URLConnection to customize\n\t * @throws IOException if thrown from URLConnection methods\n\t */\n\tprotected void customizeConnection(URLConnection con) throws IOException {\n\t\tResourceUtils.useCachesIfNecessary(con);\n\t\tif (con instanceof HttpURLConnection httpConn) {\n\t\t\tcustomizeConnection(httpConn);\n\t\t}\n\t}\n\n\t/**\n\t * Customize the given {@link HttpURLConnection} before fetching the resource.\n\t * <p>Can be overridden in subclasses for configuring request headers and timeouts.\n\t * @param con the HttpURLConnection to customize\n\t * @throws IOException if thrown from HttpURLConnection methods\n\t */\n\tprotected void customizeConnection(HttpURLConnection con) throws IOException {\n\t}\n\n\n\t/**\n\t * Inner delegate class, avoiding a hard JBoss VFS API dependency at runtime.\n\t */\n\tprivate static class VfsResourceDelegate {\n\n\t\tpublic static Resource getResource(URL url) throws IOException {\n\t\t\treturn new VfsResource(VfsUtils.getRoot(url));\n\t\t}\n\n\t\tpublic static Resource getResource(URI uri) throws IOException {\n\t\t\treturn new VfsResource(VfsUtils.getRoot(uri));\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.VfsResourceDelegate#getResource(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Resource getResource(URL url) throws IOException {\r\n    return new VfsResource(VfsUtils.getRoot(url));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.VfsResourceDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.VfsResourceDelegate#getResource(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.VfsResourceDelegate#getResource(URI)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Resource getResource(URI uri) throws IOException {\r\n    return new VfsResource(VfsUtils.getRoot(uri));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.VfsResourceDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.VfsResourceDelegate#getResource(URI)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.AbstractResource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractResource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.FileNotFoundException;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.net.URI;\nimport java.net.URISyntaxException;\nimport java.net.URL;\nimport java.nio.channels.Channels;\nimport java.nio.channels.ReadableByteChannel;\nimport java.util.function.Supplier;\n\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.ResourceUtils;\n\n/**\n * Convenience base class for {@link Resource} implementations,\n * pre-implementing typical behavior.\n *\n * <p>The \"exists\" method will check whether a File or InputStream can\n * be opened; \"isOpen\" will always return false; \"getURL\" and \"getFile\"\n * throw an exception; and \"toString\" will return the description.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 28.12.2003\n */\npublic abstract class AbstractResource implements Resource {\n\n\t/**\n\t * This implementation checks whether a File can be opened,\n\t * falling back to whether an InputStream can be opened.\n\t * <p>This will cover both directories and content resources.\n\t */\n\t@Override\n\tpublic boolean exists() {\n\t\t// Try file existence: can we find the file in the file system?\n\t\tif (isFile()) {\n\t\t\ttry {\n\t\t\t\treturn getFile().exists();\n\t\t\t}\n\t\t\tcatch (IOException ex) {\n\t\t\t\tdebug(() -> \"Could not retrieve File for existence check of \" + getDescription(), ex);\n\t\t\t}\n\t\t}\n\t\t// Fall back to stream existence: can we open the stream?\n\t\ttry {\n\t\t\tgetInputStream().close();\n\t\t\treturn true;\n\t\t}\n\t\tcatch (Throwable ex) {\n\t\t\tdebug(() -> \"Could not retrieve InputStream for existence check of \" + getDescription(), ex);\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t/**\n\t * This implementation always returns {@code true} for a resource\n\t * that {@link #exists() exists} (revised as of 5.1).\n\t */\n\t@Override\n\tpublic boolean isReadable() {\n\t\treturn exists();\n\t}\n\n\t/**\n\t * This implementation always returns {@code false}.\n\t */\n\t@Override\n\tpublic boolean isOpen() {\n\t\treturn false;\n\t}\n\n\t/**\n\t * This implementation always returns {@code false}.\n\t */\n\t@Override\n\tpublic boolean isFile() {\n\t\treturn false;\n\t}\n\n\t/**\n\t * This implementation throws a FileNotFoundException, assuming\n\t * that the resource cannot be resolved to a URL.\n\t */\n\t@Override\n\tpublic URL getURL() throws IOException {\n\t\tthrow new FileNotFoundException(getDescription() + \" cannot be resolved to URL\");\n\t}\n\n\t/**\n\t * This implementation builds a URI based on the URL returned\n\t * by {@link #getURL()}.\n\t */\n\t@Override\n\tpublic URI getURI() throws IOException {\n\t\tURL url = getURL();\n\t\ttry {\n\t\t\treturn ResourceUtils.toURI(url);\n\t\t}\n\t\tcatch (URISyntaxException ex) {\n\t\t\tthrow new IOException(\"Invalid URI [\" + url + \"]\", ex);\n\t\t}\n\t}\n\n\t/**\n\t * This implementation throws a FileNotFoundException, assuming\n\t * that the resource cannot be resolved to an absolute file path.\n\t */\n\t@Override\n\tpublic File getFile() throws IOException {\n\t\tthrow new FileNotFoundException(getDescription() + \" cannot be resolved to absolute file path\");\n\t}\n\n\t/**\n\t * This implementation returns {@link Channels#newChannel(InputStream)}\n\t * with the result of {@link #getInputStream()}.\n\t * <p>This is the same as in {@link Resource}'s corresponding default method\n\t * but mirrored here for efficient JVM-level dispatching in a class hierarchy.\n\t */\n\t@Override\n\tpublic ReadableByteChannel readableChannel() throws IOException {\n\t\treturn Channels.newChannel(getInputStream());\n\t}\n\n\t/**\n\t * This method reads the entire InputStream to determine the content length.\n\t * <p>For a custom subclass of {@code InputStreamResource}, we strongly\n\t * recommend overriding this method with a more optimal implementation, for example,\n\t * checking File length, or possibly simply returning -1 if the stream can\n\t * only be read once.\n\t * @see #getInputStream()\n\t */\n\t@Override\n\tpublic long contentLength() throws IOException {\n\t\tInputStream is = getInputStream();\n\t\ttry {\n\t\t\tlong size = 0;\n\t\t\tbyte[] buf = new byte[256];\n\t\t\tint read;\n\t\t\twhile ((read = is.read(buf)) != -1) {\n\t\t\t\tsize += read;\n\t\t\t}\n\t\t\treturn size;\n\t\t}\n\t\tfinally {\n\t\t\ttry {\n\t\t\t\tis.close();\n\t\t\t}\n\t\t\tcatch (IOException ex) {\n\t\t\t\tdebug(() -> \"Could not close content-length InputStream for \" + getDescription(), ex);\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * This implementation checks the timestamp of the underlying File,\n\t * if available.\n\t * @see #getFileForLastModifiedCheck()\n\t */\n\t@Override\n\tpublic long lastModified() throws IOException {\n\t\tFile fileToCheck = getFileForLastModifiedCheck();\n\t\tlong lastModified = fileToCheck.lastModified();\n\t\tif (lastModified == 0L && !fileToCheck.exists()) {\n\t\t\tthrow new FileNotFoundException(getDescription() +\n\t\t\t\t\t\" cannot be resolved in the file system for checking its last-modified timestamp\");\n\t\t}\n\t\treturn lastModified;\n\t}\n\n\t/**\n\t * Determine the File to use for timestamp checking.\n\t * <p>The default implementation delegates to {@link #getFile()}.\n\t * @return the File to use for timestamp checking (never {@code null})\n\t * @throws FileNotFoundException if the resource cannot be resolved as\n\t * an absolute file path, i.e. is not available in a file system\n\t * @throws IOException in case of general resolution/reading failures\n\t */\n\tprotected File getFileForLastModifiedCheck() throws IOException {\n\t\treturn getFile();\n\t}\n\n\t/**\n\t * This implementation throws a FileNotFoundException, assuming\n\t * that relative resources cannot be created for this resource.\n\t */\n\t@Override\n\tpublic Resource createRelative(String relativePath) throws IOException {\n\t\tthrow new FileNotFoundException(\"Cannot create a relative resource for \" + getDescription());\n\t}\n\n\t/**\n\t * This implementation always returns {@code null},\n\t * assuming that this resource type does not have a filename.\n\t */\n\t@Override\n\tpublic @Nullable String getFilename() {\n\t\treturn null;\n\t}\n\n\t/**\n\t * Lazily access the logger for debug logging in case of an exception.\n\t */\n\tprivate void debug(Supplier<String> message, Throwable ex) {\n\t\tLog logger = LogFactory.getLog(getClass());\n\t\tif (logger.isDebugEnabled()) {\n\t\t\tlogger.debug(message.get(), ex);\n\t\t}\n\t}\n\n\n\t/**\n\t * This implementation compares description strings.\n\t * @see #getDescription()\n\t */\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof Resource that &&\n\t\t\t\tgetDescription().equals(that.getDescription())));\n\t}\n\n\t/**\n\t * This implementation returns the description's hash code.\n\t * @see #getDescription()\n\t */\n\t@Override\n\tpublic int hashCode() {\n\t\treturn getDescription().hashCode();\n\t}\n\n\t/**\n\t * This implementation returns the description of this resource.\n\t * @see #getDescription()\n\t */\n\t@Override\n\tpublic String toString() {\n\t\treturn getDescription();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractResource#exists()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation checks whether a File can be opened,\r\n * falling back to whether an InputStream can be opened.\r\n * <p>This will cover both directories and content resources.\r\n */\r\n@Override\r\npublic boolean exists() {\r\n    // Try file existence: can we find the file in the file system?\r\n    if (isFile()) {\r\n        try {\r\n            return getFile().exists();\r\n        } catch (IOException ex) {\r\n            debug(() -> \"Could not retrieve File for existence check of \" + getDescription(), ex);\r\n        }\r\n    }\r\n    // Fall back to stream existence: can we open the stream?\r\n    try {\r\n        getInputStream().close();\r\n        return true;\r\n    } catch (Throwable ex) {\r\n        debug(() -> \"Could not retrieve InputStream for existence check of \" + getDescription(), ex);\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractResource#exists()",
+    "tailType": "method"
+  }
+]

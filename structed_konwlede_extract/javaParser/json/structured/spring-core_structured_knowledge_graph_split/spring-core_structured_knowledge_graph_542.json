@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.testfixture.stereotype",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.beans",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.beans",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.beans.PropertyDescriptor;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Label;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ObjectSwitchCallback;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nclass BeanMapEmitter extends ClassEmitter {\n    private static final Type BEAN_MAP =\n      TypeUtils.parseType(\"org.springframework.cglib.beans.BeanMap\");\n    private static final Type FIXED_KEY_SET =\n      TypeUtils.parseType(\"org.springframework.cglib.beans.FixedKeySet\");\n    private static final Signature CSTRUCT_OBJECT =\n      TypeUtils.parseConstructor(\"Object\");\n    private static final Signature CSTRUCT_STRING_ARRAY =\n      TypeUtils.parseConstructor(\"String[]\");\n    private static final Signature BEAN_MAP_GET =\n      TypeUtils.parseSignature(\"Object get(Object, Object)\");\n    private static final Signature BEAN_MAP_PUT =\n      TypeUtils.parseSignature(\"Object put(Object, Object, Object)\");\n    private static final Signature KEY_SET =\n      TypeUtils.parseSignature(\"java.util.Set keySet()\");\n    private static final Signature NEW_INSTANCE =\n      new Signature(\"newInstance\", BEAN_MAP, new Type[]{ Constants.TYPE_OBJECT });\n    private static final Signature GET_PROPERTY_TYPE =\n      TypeUtils.parseSignature(\"Class getPropertyType(String)\");\n\n    public BeanMapEmitter(ClassVisitor v, String className, Class type, int require) {\n        super(v);\n\n        begin_class(Constants.V1_8, Constants.ACC_PUBLIC, className, BEAN_MAP, null, Constants.SOURCE_FILE);\n        EmitUtils.null_constructor(this);\n        EmitUtils.factory_method(this, NEW_INSTANCE);\n        generateConstructor();\n\n        Map getters = makePropertyMap(ReflectUtils.getBeanGetters(type));\n        Map setters = makePropertyMap(ReflectUtils.getBeanSetters(type));\n        Map allProps = new HashMap();\n        allProps.putAll(getters);\n        allProps.putAll(setters);\n\n        if (require != 0) {\n            for (Iterator it = allProps.keySet().iterator(); it.hasNext();) {\n                String name = (String)it.next();\n                if ((((require & BeanMap.REQUIRE_GETTER) != 0) && !getters.containsKey(name)) ||\n                    (((require & BeanMap.REQUIRE_SETTER) != 0) && !setters.containsKey(name))) {\n                    it.remove();\n                    getters.remove(name);\n                    setters.remove(name);\n                }\n            }\n        }\n        generateGet(type, getters);\n        generatePut(type, setters);\n\n        String[] allNames = getNames(allProps);\n        generateKeySet(allNames);\n        generateGetPropertyType(allProps, allNames);\n        end_class();\n    }\n\n    private Map makePropertyMap(PropertyDescriptor[] props) {\n        Map names = new HashMap();\n        for (PropertyDescriptor prop : props) {\n            names.put(prop.getName(), prop);\n        }\n        return names;\n    }\n\n    private String[] getNames(Map propertyMap) {\n        return (String[])propertyMap.keySet().toArray(new String[propertyMap.size()]);\n    }\n\n    private void generateConstructor() {\n        CodeEmitter e = begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT, null);\n        e.load_this();\n        e.load_arg(0);\n        e.super_invoke_constructor(CSTRUCT_OBJECT);\n        e.return_value();\n        e.end_method();\n    }\n\n    private void generateGet(Class type, final Map getters) {\n        final CodeEmitter e = begin_method(Constants.ACC_PUBLIC, BEAN_MAP_GET, null);\n        e.load_arg(0);\n        e.checkcast(Type.getType(type));\n        e.load_arg(1);\n        e.checkcast(Constants.TYPE_STRING);\n        EmitUtils.string_switch(e, getNames(getters), Constants.SWITCH_STYLE_HASH, new ObjectSwitchCallback() {\n            @Override\n\t\t\tpublic void processCase(Object key, Label end) {\n                PropertyDescriptor pd = (PropertyDescriptor)getters.get(key);\n                MethodInfo method = ReflectUtils.getMethodInfo(pd.getReadMethod());\n                e.invoke(method);\n                e.box(method.getSignature().getReturnType());\n                e.return_value();\n            }\n            @Override\n\t\t\tpublic void processDefault() {\n                e.aconst_null();\n                e.return_value();\n            }\n        });\n        e.end_method();\n    }\n\n    private void generatePut(Class type, final Map setters) {\n        final CodeEmitter e = begin_method(Constants.ACC_PUBLIC, BEAN_MAP_PUT, null);\n        e.load_arg(0);\n        e.checkcast(Type.getType(type));\n        e.load_arg(1);\n        e.checkcast(Constants.TYPE_STRING);\n        EmitUtils.string_switch(e, getNames(setters), Constants.SWITCH_STYLE_HASH, new ObjectSwitchCallback() {\n            @Override\n\t\t\tpublic void processCase(Object key, Label end) {\n                PropertyDescriptor pd = (PropertyDescriptor)setters.get(key);\n                if (pd.getReadMethod() == null) {\n                    e.aconst_null();\n                } else {\n                    MethodInfo read = ReflectUtils.getMethodInfo(pd.getReadMethod());\n                    e.dup();\n                    e.invoke(read);\n                    e.box(read.getSignature().getReturnType());\n                }\n                e.swap(); // move old value behind bean\n                e.load_arg(2); // new value\n                MethodInfo write = ReflectUtils.getMethodInfo(pd.getWriteMethod());\n                e.unbox(write.getSignature().getArgumentTypes()[0]);\n                e.invoke(write);\n                e.return_value();\n            }\n            @Override\n\t\t\tpublic void processDefault() {\n                // fall-through\n            }\n        });\n        e.aconst_null();\n        e.return_value();\n        e.end_method();\n    }\n\n    private void generateKeySet(String[] allNames) {\n        // static initializer\n        declare_field(Constants.ACC_STATIC | Constants.ACC_PRIVATE, \"keys\", FIXED_KEY_SET, null);\n\n        CodeEmitter e = begin_static();\n        e.new_instance(FIXED_KEY_SET);\n        e.dup();\n        EmitUtils.push_array(e, allNames);\n        e.invoke_constructor(FIXED_KEY_SET, CSTRUCT_STRING_ARRAY);\n        e.putfield(\"keys\");\n        e.return_value();\n        e.end_method();\n\n        // keySet\n        e = begin_method(Constants.ACC_PUBLIC, KEY_SET, null);\n        e.load_this();\n        e.getfield(\"keys\");\n        e.return_value();\n        e.end_method();\n    }\n\n    private void generateGetPropertyType(final Map allProps, String[] allNames) {\n        final CodeEmitter e = begin_method(Constants.ACC_PUBLIC, GET_PROPERTY_TYPE, null);\n        e.load_arg(0);\n        EmitUtils.string_switch(e, allNames, Constants.SWITCH_STYLE_HASH, new ObjectSwitchCallback() {\n            @Override\n\t\t\tpublic void processCase(Object key, Label end) {\n                PropertyDescriptor pd = (PropertyDescriptor)allProps.get(key);\n                EmitUtils.load_class(e, Type.getType(pd.getPropertyType()));\n                e.return_value();\n            }\n            @Override\n\t\t\tpublic void processDefault() {\n                e.aconst_null();\n                e.return_value();\n            }\n        });\n        e.end_method();\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#BEAN_MAP",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#BEAN_MAP",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#FIXED_KEY_SET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#FIXED_KEY_SET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#CSTRUCT_OBJECT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#CSTRUCT_OBJECT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#CSTRUCT_STRING_ARRAY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#CSTRUCT_STRING_ARRAY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#BEAN_MAP_GET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#BEAN_MAP_GET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#BEAN_MAP_PUT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#BEAN_MAP_PUT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#KEY_SET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter#KEY_SET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BeanMapEmitter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.BeanMapEmitter#NEW_INSTANCE",
+    "tailType": "field"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.buffer;\n\nimport java.nio.ByteBuffer;\nimport java.nio.charset.Charset;\nimport java.util.Arrays;\nimport java.util.NoSuchElementException;\nimport java.util.function.IntPredicate;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ObjectUtils;\n\n/**\n * Default implementation of the {@link DataBuffer} interface that uses a\n * {@link ByteBuffer} internally. with separate read and write positions.\n * Constructed using the {@link DefaultDataBufferFactory}.\n *\n * <p>Inspired by Netty's {@code ByteBuf}. Introduced so that non-Netty runtimes\n * (i.e. Servlet) do not require Netty on the classpath.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @author Brian Clozel\n * @since 5.0\n * @see DefaultDataBufferFactory\n */\npublic class DefaultDataBuffer implements DataBuffer {\n\n\tprivate static final int MAX_CAPACITY = Integer.MAX_VALUE;\n\n\tprivate static final int CAPACITY_THRESHOLD = 1024 * 1024 * 4;\n\n\n\tprivate final DefaultDataBufferFactory dataBufferFactory;\n\n\tprivate ByteBuffer byteBuffer;\n\n\tprivate int capacity;\n\n\tprivate int readPosition;\n\n\tprivate int writePosition;\n\n\n\tprivate DefaultDataBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\n\t\tAssert.notNull(dataBufferFactory, \"DefaultDataBufferFactory must not be null\");\n\t\tAssert.notNull(byteBuffer, \"ByteBuffer must not be null\");\n\t\tthis.dataBufferFactory = dataBufferFactory;\n\t\tByteBuffer slice = byteBuffer.slice();\n\t\tthis.byteBuffer = slice;\n\t\tthis.capacity = slice.remaining();\n\t}\n\n\tstatic DefaultDataBuffer fromFilledByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\n\t\tDefaultDataBuffer dataBuffer = new DefaultDataBuffer(dataBufferFactory, byteBuffer);\n\t\tdataBuffer.writePosition(byteBuffer.remaining());\n\t\treturn dataBuffer;\n\t}\n\n\tstatic DefaultDataBuffer fromEmptyByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\n\t\treturn new DefaultDataBuffer(dataBufferFactory, byteBuffer);\n\t}\n\n\n\t/**\n\t * Directly exposes the native {@code ByteBuffer} that this buffer is based\n\t * on. The {@linkplain ByteBuffer#position() position} of the returned\n\t * {@code ByteBuffer} is set to the {@linkplain #readPosition() read\n\t * position}, and the {@linkplain ByteBuffer#limit()} to the\n\t * {@linkplain #writePosition() write position}.\n\t * @return the wrapped byte buffer\n\t */\n\tpublic ByteBuffer getNativeBuffer() {\n\t\treturn this.byteBuffer.duplicate()\n\t\t\t\t.position(this.readPosition)\n\t\t\t\t.limit(this.writePosition);\n\t}\n\n\tprivate void setNativeBuffer(ByteBuffer byteBuffer) {\n\t\tthis.byteBuffer = byteBuffer;\n\t\tthis.capacity = byteBuffer.capacity();\n\t}\n\n\n\t@Override\n\tpublic DefaultDataBufferFactory factory() {\n\t\treturn this.dataBufferFactory;\n\t}\n\n\t@Override\n\tpublic int indexOf(IntPredicate predicate, int fromIndex) {\n\t\tAssert.notNull(predicate, \"IntPredicate must not be null\");\n\t\tif (fromIndex < 0) {\n\t\t\tfromIndex = 0;\n\t\t}\n\t\telse if (fromIndex >= this.writePosition) {\n\t\t\treturn -1;\n\t\t}\n\t\tfor (int i = fromIndex; i < this.writePosition; i++) {\n\t\t\tbyte b = this.byteBuffer.get(i);\n\t\t\tif (predicate.test(b)) {\n\t\t\t\treturn i;\n\t\t\t}\n\t\t}\n\t\treturn -1;\n\t}\n\n\t@Override\n\tpublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\n\t\tAssert.notNull(predicate, \"IntPredicate must not be null\");\n\t\tint i = Math.min(fromIndex, this.writePosition - 1);\n\t\tfor (; i >= 0; i--) {\n\t\t\tbyte b = this.byteBuffer.get(i);\n\t\t\tif (predicate.test(b)) {\n\t\t\t\treturn i;\n\t\t\t}\n\t\t}\n\t\treturn -1;\n\t}\n\n\t@Override\n\tpublic int readableByteCount() {\n\t\treturn this.writePosition - this.readPosition;\n\t}\n\n\t@Override\n\tpublic int writableByteCount() {\n\t\treturn this.capacity - this.writePosition;\n\t}\n\n\t@Override\n\tpublic int readPosition() {\n\t\treturn this.readPosition;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer readPosition(int readPosition) {\n\t\tassertIndex(readPosition >= 0, \"'readPosition' %d must be >= 0\", readPosition);\n\t\tassertIndex(readPosition <= this.writePosition, \"'readPosition' %d must be <= %d\",\n\t\t\t\treadPosition, this.writePosition);\n\t\tthis.readPosition = readPosition;\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic int writePosition() {\n\t\treturn this.writePosition;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer writePosition(int writePosition) {\n\t\tassertIndex(writePosition >= this.readPosition, \"'writePosition' %d must be >= %d\",\n\t\t\t\twritePosition, this.readPosition);\n\t\tassertIndex(writePosition <= this.capacity, \"'writePosition' %d must be <= %d\",\n\t\t\t\twritePosition, this.capacity);\n\t\tthis.writePosition = writePosition;\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic int capacity() {\n\t\treturn this.capacity;\n\t}\n\n\t@Override\n\t@Deprecated\n\tpublic DataBuffer capacity(int capacity) {\n\t\tsetCapacity(capacity);\n\t\treturn this;\n\t}\n\n\tprivate void setCapacity(int newCapacity) {\n\t\tif (newCapacity < 0) {\n\t\t\tthrow new IllegalArgumentException(String.format(\"'newCapacity' %d must be 0 or higher\", newCapacity));\n\t\t}\n\t\tint readPosition = readPosition();\n\t\tint writePosition = writePosition();\n\t\tint oldCapacity = capacity();\n\n\t\tif (newCapacity > oldCapacity) {\n\t\t\tByteBuffer oldBuffer = this.byteBuffer;\n\t\t\tByteBuffer newBuffer = allocate(newCapacity, oldBuffer.isDirect());\n\t\t\toldBuffer.position(0).limit(oldBuffer.capacity());\n\t\t\tnewBuffer.position(0).limit(oldBuffer.capacity());\n\t\t\tnewBuffer.put(oldBuffer);\n\t\t\tnewBuffer.clear();\n\t\t\tsetNativeBuffer(newBuffer);\n\t\t}\n\t\telse if (newCapacity < oldCapacity) {\n\t\t\tByteBuffer oldBuffer = this.byteBuffer;\n\t\t\tByteBuffer newBuffer = allocate(newCapacity, oldBuffer.isDirect());\n\t\t\tif (readPosition < newCapacity) {\n\t\t\t\tif (writePosition > newCapacity) {\n\t\t\t\t\twritePosition = newCapacity;\n\t\t\t\t\twritePosition(writePosition);\n\t\t\t\t}\n\t\t\t\toldBuffer.position(readPosition).limit(writePosition);\n\t\t\t\tnewBuffer.position(readPosition).limit(writePosition);\n\t\t\t\tnewBuffer.put(oldBuffer);\n\t\t\t\tnewBuffer.clear();\n\t\t\t}\n\t\t\telse {\n\t\t\t\treadPosition(newCapacity);\n\t\t\t\twritePosition(newCapacity);\n\t\t\t}\n\t\t\tsetNativeBuffer(newBuffer);\n\t\t}\n\t}\n\n\t@Override\n\tpublic DataBuffer ensureWritable(int length) {\n\t\tif (length > writableByteCount()) {\n\t\t\tint newCapacity = calculateCapacity(this.writePosition + length);\n\t\t\tsetCapacity(newCapacity);\n\t\t}\n\t\treturn this;\n\t}\n\n\tprivate static ByteBuffer allocate(int capacity, boolean direct) {\n\t\treturn (direct ? ByteBuffer.allocateDirect(capacity) : ByteBuffer.allocate(capacity));\n\t}\n\n\t@Override\n\tpublic byte getByte(int index) {\n\t\tassertIndex(index >= 0, \"index %d must be >= 0\", index);\n\t\tassertIndex(index <= this.writePosition - 1, \"index %d must be <= %d\", index, this.writePosition - 1);\n\t\treturn this.byteBuffer.get(index);\n\t}\n\n\t@Override\n\tpublic byte read() {\n\t\tassertIndex(this.readPosition <= this.writePosition - 1, \"readPosition %d must be <= %d\",\n\t\t\t\tthis.readPosition, this.writePosition - 1);\n\t\tint pos = this.readPosition;\n\t\tbyte b = this.byteBuffer.get(pos);\n\t\tthis.readPosition = pos + 1;\n\t\treturn b;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer read(byte[] destination) {\n\t\tAssert.notNull(destination, \"Byte array must not be null\");\n\t\tread(destination, 0, destination.length);\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer read(byte[] destination, int offset, int length) {\n\t\tAssert.notNull(destination, \"Byte array must not be null\");\n\t\tassertIndex(this.readPosition <= this.writePosition - length,\n\t\t\t\t\"readPosition %d and length %d should be smaller than writePosition %d\",\n\t\t\t\tthis.readPosition, length, this.writePosition);\n\n\t\tByteBuffer tmp = this.byteBuffer.duplicate();\n\t\tint limit = this.readPosition + length;\n\t\ttmp.clear().position(this.readPosition).limit(limit);\n\t\ttmp.get(destination, offset, length);\n\n\t\tthis.readPosition += length;\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer write(byte b) {\n\t\tensureWritable(1);\n\t\tint pos = this.writePosition;\n\t\tthis.byteBuffer.put(pos, b);\n\t\tthis.writePosition = pos + 1;\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer write(byte[] source) {\n\t\tAssert.notNull(source, \"Byte array must not be null\");\n\t\twrite(source, 0, source.length);\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer write(byte[] source, int offset, int length) {\n\t\tAssert.notNull(source, \"Byte array must not be null\");\n\t\tensureWritable(length);\n\n\t\tByteBuffer tmp = this.byteBuffer.duplicate();\n\t\tint limit = this.writePosition + length;\n\t\ttmp.clear().position(this.writePosition).limit(limit);\n\t\ttmp.put(source, offset, length);\n\n\t\tthis.writePosition += length;\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer write(DataBuffer... dataBuffers) {\n\t\tif (!ObjectUtils.isEmpty(dataBuffers)) {\n\t\t\tByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\n\t\t\tfor (int i = 0; i < dataBuffers.length; i++) {\n\t\t\t\tbyteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\n\t\t\t\tdataBuffers[i].toByteBuffer(byteBuffers[i]);\n\t\t\t}\n\t\t\twrite(byteBuffers);\n\t\t}\n\t\treturn this;\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer write(ByteBuffer... buffers) {\n\t\tif (!ObjectUtils.isEmpty(buffers)) {\n\t\t\tint capacity = Arrays.stream(buffers).mapToInt(ByteBuffer::remaining).sum();\n\t\t\tensureWritable(capacity);\n\t\t\tArrays.stream(buffers).forEach(this::write);\n\t\t}\n\t\treturn this;\n\t}\n\n\tprivate void write(ByteBuffer source) {\n\t\tint length = source.remaining();\n\t\tByteBuffer tmp = this.byteBuffer.duplicate();\n\t\tint limit = this.writePosition + source.remaining();\n\t\ttmp.clear().position(this.writePosition).limit(limit);\n\t\ttmp.put(source);\n\t\tthis.writePosition += length;\n\t}\n\n\t@Override\n\t@Deprecated\n\tpublic DefaultDataBuffer slice(int index, int length) {\n\t\tcheckIndex(index, length);\n\t\tint oldPosition = this.byteBuffer.position();\n\t\ttry {\n\t\t\tthis.byteBuffer.position(index);\n\t\t\tByteBuffer slice = this.byteBuffer.slice();\n\t\t\tslice.limit(length);\n\t\t\treturn new SlicedDefaultDataBuffer(slice, this.dataBufferFactory, length);\n\t\t}\n\t\tfinally {\n\t\t\tthis.byteBuffer.position(oldPosition);\n\t\t}\n\t}\n\n\t@Override\n\tpublic DefaultDataBuffer split(int index) {\n\t\tcheckIndex(index);\n\n\t\tByteBuffer split = this.byteBuffer.duplicate().clear()\n\t\t\t.position(0)\n\t\t\t.limit(index)\n\t\t\t.slice();\n\n\t\tDefaultDataBuffer result = new DefaultDataBuffer(this.dataBufferFactory, split);\n\t\tresult.writePosition = Math.min(this.writePosition, index);\n\t\tresult.readPosition = Math.min(this.readPosition, index);\n\n\t\tthis.byteBuffer = this.byteBuffer.duplicate().clear()\n\t\t\t\t.position(index)\n\t\t\t\t.limit(this.byteBuffer.capacity())\n\t\t\t\t.slice();\n\t\tthis.writePosition = Math.max(this.writePosition, index) - index;\n\t\tthis.readPosition = Math.max(this.readPosition, index) - index;\n\t\tthis.capacity = this.byteBuffer.capacity();\n\n\t\treturn result;\n\t}\n\n\t@Override\n\t@Deprecated\n\tpublic ByteBuffer asByteBuffer() {\n\t\treturn asByteBuffer(this.readPosition, readableByteCount());\n\t}\n\n\t@Override\n\t@Deprecated\n\tpublic ByteBuffer asByteBuffer(int index, int length) {\n\t\tcheckIndex(index, length);\n\n\t\tByteBuffer duplicate = this.byteBuffer.duplicate();\n\t\tduplicate.position(index);\n\t\tduplicate.limit(index + length);\n\t\treturn duplicate.slice();\n\t}\n\n\t@Override\n\t@Deprecated\n\tpublic ByteBuffer toByteBuffer(int index, int length) {\n\t\tcheckIndex(index, length);\n\n\t\tByteBuffer copy = allocate(length, this.byteBuffer.isDirect());\n\t\tByteBuffer readOnly = this.byteBuffer.asReadOnlyBuffer();\n\t\treadOnly.clear().position(index).limit(index + length);\n\t\tcopy.put(readOnly);\n\t\treturn copy.flip();\n\t}\n\n\t@Override\n\tpublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\n\t\tcheckIndex(srcPos, length);\n\t\tAssert.notNull(dest, \"Dest must not be null\");\n\n\t\tdest = dest.duplicate().clear();\n\t\tdest.put(destPos, this.byteBuffer, srcPos, length);\n\t}\n\n\t@Override\n\tpublic DataBuffer.ByteBufferIterator readableByteBuffers() {\n\t\tByteBuffer readOnly = this.byteBuffer.slice(this.readPosition, readableByteCount())\n\t\t\t\t.asReadOnlyBuffer();\n\t\treturn new ByteBufferIterator(readOnly);\n\t}\n\n\t@Override\n\tpublic DataBuffer.ByteBufferIterator writableByteBuffers() {\n\t\tByteBuffer slice = this.byteBuffer.slice(this.writePosition, writableByteCount());\n\t\treturn new ByteBufferIterator(slice);\n\t}\n\n\t@Override\n\tpublic String toString(int index, int length, Charset charset) {\n\t\tcheckIndex(index, length);\n\t\tAssert.notNull(charset, \"Charset must not be null\");\n\n\t\tbyte[] bytes;\n\t\tint offset;\n\n\t\tif (this.byteBuffer.hasArray()) {\n\t\t\tbytes = this.byteBuffer.array();\n\t\t\toffset = this.byteBuffer.arrayOffset() + index;\n\t\t}\n\t\telse {\n\t\t\tbytes = new byte[length];\n\t\t\toffset = 0;\n\t\t\tByteBuffer duplicate = this.byteBuffer.duplicate();\n\t\t\tduplicate.clear().position(index).limit(index + length);\n\t\t\tduplicate.get(bytes, 0, length);\n\t\t}\n\t\treturn new String(bytes, offset, length, charset);\n\t}\n\n\t/**\n\t * Calculate the capacity of the buffer.\n\t * @see io.netty.buffer.AbstractByteBufAllocator#calculateNewCapacity(int, int)\n\t */\n\tprivate int calculateCapacity(int neededCapacity) {\n\t\tAssert.isTrue(neededCapacity >= 0, \"'neededCapacity' must be >= 0\");\n\n\t\tif (neededCapacity == CAPACITY_THRESHOLD) {\n\t\t\treturn CAPACITY_THRESHOLD;\n\t\t}\n\t\telse if (neededCapacity > CAPACITY_THRESHOLD) {\n\t\t\tint newCapacity = neededCapacity / CAPACITY_THRESHOLD * CAPACITY_THRESHOLD;\n\t\t\tif (newCapacity > MAX_CAPACITY - CAPACITY_THRESHOLD) {\n\t\t\t\tnewCapacity = MAX_CAPACITY;\n\t\t\t}\n\t\t\telse {\n\t\t\t\tnewCapacity += CAPACITY_THRESHOLD;\n\t\t\t}\n\t\t\treturn newCapacity;\n\t\t}\n\t\telse {\n\t\t\tint newCapacity = 64;\n\t\t\twhile (newCapacity < neededCapacity) {\n\t\t\t\tnewCapacity <<= 1;\n\t\t\t}\n\t\t\treturn Math.min(newCapacity, MAX_CAPACITY);\n\t\t}\n\t}\n\n\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof DefaultDataBuffer that &&\n\t\t\t\tthis.readPosition == that.readPosition &&\n\t\t\t\tthis.writePosition == that.writePosition &&\n\t\t\t\tthis.byteBuffer.equals(that.byteBuffer)));\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn this.byteBuffer.hashCode();\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\treturn String.format(\"DefaultDataBuffer (r: %d, w: %d, c: %d)\",\n\t\t\t\tthis.readPosition, this.writePosition, this.capacity);\n\t}\n\n\n\tprivate void checkIndex(int index, int length) {\n\t\tcheckIndex(index);\n\t\tcheckLength(length);\n\t}\n\n\tprivate void checkIndex(int index) {\n\t\tassertIndex(index >= 0, \"index %d must be >= 0\", index);\n\t\tassertIndex(index <= this.capacity, \"index %d must be <= %d\", index, this.capacity);\n\t}\n\n\tprivate void checkLength(int length) {\n\t\tassertIndex(length >= 0, \"length %d must be >= 0\", length);\n\t\tassertIndex(length <= this.capacity, \"length %d must be <= %d\", length, this.capacity);\n\t}\n\n\tprivate void assertIndex(boolean expression, String format, Object... args) {\n\t\tif (!expression) {\n\t\t\tString message = String.format(format, args);\n\t\t\tthrow new IndexOutOfBoundsException(message);\n\t\t}\n\t}\n\n\n\tprivate static class SlicedDefaultDataBuffer extends DefaultDataBuffer {\n\n\t\tSlicedDefaultDataBuffer(ByteBuffer byteBuffer, DefaultDataBufferFactory dataBufferFactory, int length) {\n\t\t\tsuper(dataBufferFactory, byteBuffer);\n\t\t\twritePosition(length);\n\t\t}\n\n\t\t@Override\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tpublic DefaultDataBuffer capacity(int newCapacity) {\n\t\t\tthrow new UnsupportedOperationException(\"Changing the capacity of a sliced buffer is not supported\");\n\t\t}\n\t}\n\n\n\tprivate static final class ByteBufferIterator implements DataBuffer.ByteBufferIterator {\n\n\t\tprivate final ByteBuffer buffer;\n\n\t\tprivate boolean hasNext = true;\n\n\n\t\tpublic ByteBufferIterator(ByteBuffer buffer) {\n\t\t\tthis.buffer = buffer;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean hasNext() {\n\t\t\treturn this.hasNext;\n\t\t}\n\n\t\t@Override\n\t\tpublic ByteBuffer next() {\n\t\t\tif (!this.hasNext) {\n\t\t\t\tthrow new NoSuchElementException();\n\t\t\t}\n\t\t\telse {\n\t\t\t\tthis.hasNext = false;\n\t\t\t\treturn this.buffer;\n\t\t\t}\n\t\t}\n\n\t\t@Override\n\t\tpublic void close() {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#MAX_CAPACITY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#MAX_CAPACITY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#CAPACITY_THRESHOLD",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#CAPACITY_THRESHOLD",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#dataBufferFactory",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#dataBufferFactory",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DefaultDataBufferFactory",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#byteBuffer",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#byteBuffer",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ByteBuffer",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#capacity",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#capacity",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#readPosition",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#readPosition",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#writePosition",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#writePosition",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#fromFilledByteBuffer(DefaultDataBufferFactory,ByteBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static DefaultDataBuffer fromFilledByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    DefaultDataBuffer dataBuffer = new DefaultDataBuffer(dataBufferFactory, byteBuffer);\r\n    dataBuffer.writePosition(byteBuffer.remaining());\r\n    return dataBuffer;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DefaultDataBuffer#fromFilledByteBuffer(DefaultDataBufferFactory,ByteBuffer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DefaultDataBuffer#fromEmptyByteBuffer(DefaultDataBufferFactory,ByteBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static DefaultDataBuffer fromEmptyByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    return new DefaultDataBuffer(dataBufferFactory, byteBuffer);\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Spliterator;\nimport java.util.concurrent.CopyOnWriteArrayList;\nimport java.util.stream.Stream;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * The default implementation of the {@link PropertySources} interface.\n * Allows manipulation of contained property sources and provides a constructor\n * for copying an existing {@code PropertySources} instance.\n *\n * <p>Where <em>precedence</em> is mentioned in methods such as {@link #addFirst}\n * and {@link #addLast}, this is with regard to the order in which property sources\n * will be searched when resolving a given property with a {@link PropertyResolver}.\n *\n * @author Chris Beams\n * @author Juergen Hoeller\n * @since 3.1\n * @see PropertySourcesPropertyResolver\n */\npublic class MutablePropertySources implements PropertySources {\n\n\tprivate final List<PropertySource<?>> propertySourceList = new CopyOnWriteArrayList<>();\n\n\n\t/**\n\t * Create a new {@link MutablePropertySources} object.\n\t */\n\tpublic MutablePropertySources() {\n\t}\n\n\t/**\n\t * Create a new {@code MutablePropertySources} from the given propertySources\n\t * object, preserving the original order of contained {@code PropertySource} objects.\n\t */\n\tpublic MutablePropertySources(PropertySources propertySources) {\n\t\tthis();\n\t\tfor (PropertySource<?> propertySource : propertySources) {\n\t\t\taddLast(propertySource);\n\t\t}\n\t}\n\n\n\t@Override\n\tpublic Iterator<PropertySource<?>> iterator() {\n\t\treturn this.propertySourceList.iterator();\n\t}\n\n\t@Override\n\tpublic Spliterator<PropertySource<?>> spliterator() {\n\t\treturn this.propertySourceList.spliterator();\n\t}\n\n\t@Override\n\tpublic Stream<PropertySource<?>> stream() {\n\t\treturn this.propertySourceList.stream();\n\t}\n\n\t@Override\n\tpublic boolean contains(String name) {\n\t\tfor (PropertySource<?> propertySource : this.propertySourceList) {\n\t\t\tif (propertySource.getName().equals(name)) {\n\t\t\t\treturn true;\n\t\t\t}\n\t\t}\n\t\treturn false;\n\t}\n\n\t@Override\n\tpublic @Nullable PropertySource<?> get(String name) {\n\t\tfor (PropertySource<?> propertySource : this.propertySourceList) {\n\t\t\tif (propertySource.getName().equals(name)) {\n\t\t\t\treturn propertySource;\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\n\t/**\n\t * Add the given property source object with the highest precedence.\n\t */\n\tpublic void addFirst(PropertySource<?> propertySource) {\n\t\tsynchronized (this.propertySourceList) {\n\t\t\tremoveIfPresent(propertySource);\n\t\t\tthis.propertySourceList.add(0, propertySource);\n\t\t}\n\t}\n\n\t/**\n\t * Add the given property source object with the lowest precedence.\n\t */\n\tpublic void addLast(PropertySource<?> propertySource) {\n\t\tsynchronized (this.propertySourceList) {\n\t\t\tremoveIfPresent(propertySource);\n\t\t\tthis.propertySourceList.add(propertySource);\n\t\t}\n\t}\n\n\t/**\n\t * Add the given property source object with precedence immediately higher\n\t * than the named relative property source.\n\t */\n\tpublic void addBefore(String relativePropertySourceName, PropertySource<?> propertySource) {\n\t\tassertLegalRelativeAddition(relativePropertySourceName, propertySource);\n\t\tsynchronized (this.propertySourceList) {\n\t\t\tremoveIfPresent(propertySource);\n\t\t\tint index = assertPresentAndGetIndex(relativePropertySourceName);\n\t\t\taddAtIndex(index, propertySource);\n\t\t}\n\t}\n\n\t/**\n\t * Add the given property source object with precedence immediately lower\n\t * than the named relative property source.\n\t */\n\tpublic void addAfter(String relativePropertySourceName, PropertySource<?> propertySource) {\n\t\tassertLegalRelativeAddition(relativePropertySourceName, propertySource);\n\t\tsynchronized (this.propertySourceList) {\n\t\t\tremoveIfPresent(propertySource);\n\t\t\tint index = assertPresentAndGetIndex(relativePropertySourceName);\n\t\t\taddAtIndex(index + 1, propertySource);\n\t\t}\n\t}\n\n\t/**\n\t * Return the precedence of the given property source, {@code -1} if not found.\n\t */\n\tpublic int precedenceOf(PropertySource<?> propertySource) {\n\t\treturn this.propertySourceList.indexOf(propertySource);\n\t}\n\n\t/**\n\t * Remove and return the property source with the given name, {@code null} if not found.\n\t * @param name the name of the property source to find and remove\n\t */\n\tpublic @Nullable PropertySource<?> remove(String name) {\n\t\tsynchronized (this.propertySourceList) {\n\t\t\tint index = this.propertySourceList.indexOf(PropertySource.named(name));\n\t\t\treturn (index != -1 ? this.propertySourceList.remove(index) : null);\n\t\t}\n\t}\n\n\t/**\n\t * Replace the property source with the given name with the given property source object.\n\t * @param name the name of the property source to find and replace\n\t * @param propertySource the replacement property source\n\t * @throws IllegalArgumentException if no property source with the given name is present\n\t * @see #contains\n\t */\n\tpublic void replace(String name, PropertySource<?> propertySource) {\n\t\tsynchronized (this.propertySourceList) {\n\t\t\tint index = assertPresentAndGetIndex(name);\n\t\t\tthis.propertySourceList.set(index, propertySource);\n\t\t}\n\t}\n\n\t/**\n\t * Return the number of {@link PropertySource} objects contained.\n\t */\n\tpublic int size() {\n\t\treturn this.propertySourceList.size();\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\treturn this.propertySourceList.toString();\n\t}\n\n\n\t/**\n\t * Ensure that the given property source is not being added relative to itself.\n\t */\n\tprotected void assertLegalRelativeAddition(String relativePropertySourceName, PropertySource<?> propertySource) {\n\t\tString newPropertySourceName = propertySource.getName();\n\t\tif (relativePropertySourceName.equals(newPropertySourceName)) {\n\t\t\tthrow new IllegalArgumentException(\n\t\t\t\t\t\"PropertySource named '\" + newPropertySourceName + \"' cannot be added relative to itself\");\n\t\t}\n\t}\n\n\t/**\n\t * Remove the given property source if it is present.\n\t */\n\tprotected void removeIfPresent(PropertySource<?> propertySource) {\n\t\tthis.propertySourceList.remove(propertySource);\n\t}\n\n\t/**\n\t * Add the given property source at a particular index in the list.\n\t */\n\tprivate void addAtIndex(int index, PropertySource<?> propertySource) {\n\t\tremoveIfPresent(propertySource);\n\t\tthis.propertySourceList.add(index, propertySource);\n\t}\n\n\t/**\n\t * Assert that the named property source is present and return its index.\n\t * @param name {@linkplain PropertySource#getName() name of the property source} to find\n\t * @throws IllegalArgumentException if the named property source is not present\n\t */\n\tprivate int assertPresentAndGetIndex(String name) {\n\t\tint index = this.propertySourceList.indexOf(PropertySource.named(name));\n\t\tif (index == -1) {\n\t\t\tthrow new IllegalArgumentException(\"PropertySource named '\" + name + \"' does not exist\");\n\t\t}\n\t\treturn index;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.MutablePropertySources#propertySourceList",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#propertySourceList",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<PropertySource<?>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#iterator()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Iterator<PropertySource<?>> iterator() {\r\n    return this.propertySourceList.iterator();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.MutablePropertySources#iterator()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#iterator()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#spliterator()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Spliterator<PropertySource<?>> spliterator() {\r\n    return this.propertySourceList.spliterator();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.MutablePropertySources#spliterator()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#spliterator()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#stream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Stream<PropertySource<?>> stream() {\r\n    return this.propertySourceList.stream();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.MutablePropertySources#stream()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#stream()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#contains(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean contains(String name) {\r\n    for (PropertySource<?> propertySource : this.propertySourceList) {\r\n        if (propertySource.getName().equals(name)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.MutablePropertySources#contains(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#contains(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#get(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic PropertySource<?> get(String name) {\r\n    for (PropertySource<?> propertySource : this.propertySourceList) {\r\n        if (propertySource.getName().equals(name)) {\r\n            return propertySource;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.MutablePropertySources#get(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#get(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#get(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.MutablePropertySources#addFirst(PropertySource<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add the given property source object with the highest precedence.\r\n */\r\npublic void addFirst(PropertySource<?> propertySource) {\r\n    synchronized (this.propertySourceList) {\r\n        removeIfPresent(propertySource);\r\n        this.propertySourceList.add(0, propertySource);\r\n    }\r\n}",
+    "tailType": "method_code"
+  }
+]

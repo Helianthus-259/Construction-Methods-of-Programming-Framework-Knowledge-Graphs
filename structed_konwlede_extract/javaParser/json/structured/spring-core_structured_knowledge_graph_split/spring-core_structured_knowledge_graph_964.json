@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#readAsynchronousFileChannel(Callable<AsynchronousFileChannel>,DataBufferFactory,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Obtain a {@code AsynchronousFileChannel} from the given supplier, and read\r\n * it into a {@code Flux} of {@code DataBuffer}s. Closes the channel when\r\n * the Flux is terminated.\r\n * @param channelSupplier the supplier for the channel to read from\r\n * @param bufferFactory the factory to create data buffers with\r\n * @param bufferSize the maximum size of the data buffers\r\n * @return a Flux of data buffers read from the given channel\r\n */\r\npublic static Flux<DataBuffer> readAsynchronousFileChannel(Callable<AsynchronousFileChannel> channelSupplier, DataBufferFactory bufferFactory, int bufferSize) {\r\n    return readAsynchronousFileChannel(channelSupplier, 0, bufferFactory, bufferSize);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#readAsynchronousFileChannel(Callable<AsynchronousFileChannel>,DataBufferFactory,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#readAsynchronousFileChannel(Callable<AsynchronousFileChannel>,long,DataBufferFactory,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Obtain an {@code AsynchronousFileChannel} from the given supplier, and\r\n * read it into a {@code Flux} of {@code DataBuffer}s, starting at the given\r\n * position. Closes the channel when the Flux is terminated.\r\n * @param channelSupplier the supplier for the channel to read from\r\n * @param position the position to start reading from\r\n * @param bufferFactory the factory to create data buffers with\r\n * @param bufferSize the maximum size of the data buffers\r\n * @return a Flux of data buffers read from the given channel\r\n */\r\npublic static Flux<DataBuffer> readAsynchronousFileChannel(Callable<AsynchronousFileChannel> channelSupplier, long position, DataBufferFactory bufferFactory, int bufferSize) {\r\n    Assert.notNull(channelSupplier, \"'channelSupplier' must not be null\");\r\n    Assert.notNull(bufferFactory, \"'bufferFactory' must not be null\");\r\n    Assert.isTrue(position >= 0, \"'position' must be >= 0\");\r\n    Assert.isTrue(bufferSize > 0, \"'bufferSize' must be > 0\");\r\n    Flux<DataBuffer> flux = Flux.using(channelSupplier, channel -> Flux.create(sink -> {\r\n        ReadCompletionHandler handler = new ReadCompletionHandler(channel, sink, position, bufferFactory, bufferSize);\r\n        sink.onCancel(handler::cancel);\r\n        sink.onRequest(handler::request);\r\n    }), channel -> {\r\n        // Do not close channel from here, rather wait for the current read callback\r\n        // and then complete after releasing the DataBuffer.\r\n    });\r\n    return flux.doOnDiscard(DataBuffer.class, DataBufferUtils::release);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#readAsynchronousFileChannel(Callable<AsynchronousFileChannel>,long,DataBufferFactory,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#read(Path,DataBufferFactory,int,OpenOption)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Read bytes from the given file {@code Path} into a {@code Flux} of {@code DataBuffer}s.\r\n * The method ensures that the file is closed when the flux is terminated.\r\n * @param path the path to read bytes from\r\n * @param bufferFactory the factory to create data buffers with\r\n * @param bufferSize the maximum size of the data buffers\r\n * @return a Flux of data buffers read from the given channel\r\n * @since 5.2\r\n */\r\npublic static Flux<DataBuffer> read(Path path, DataBufferFactory bufferFactory, int bufferSize, OpenOption... options) {\r\n    Assert.notNull(path, \"Path must not be null\");\r\n    Assert.notNull(bufferFactory, \"DataBufferFactory must not be null\");\r\n    Assert.isTrue(bufferSize > 0, \"'bufferSize' must be > 0\");\r\n    if (options.length > 0) {\r\n        for (OpenOption option : options) {\r\n            Assert.isTrue(!(option == StandardOpenOption.APPEND || option == StandardOpenOption.WRITE), () -> \"'\" + option + \"' not allowed\");\r\n        }\r\n    }\r\n    return readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(path, options), bufferFactory, bufferSize);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#read(Path,DataBufferFactory,int,OpenOption)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#read(Resource,DataBufferFactory,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Read the given {@code Resource} into a {@code Flux} of {@code DataBuffer}s.\r\n * <p>If the resource is a file, it is read into an\r\n * {@code AsynchronousFileChannel} and turned to {@code Flux} via\r\n * {@link #readAsynchronousFileChannel(Callable, DataBufferFactory, int)} or else\r\n * fall back to {@link #readByteChannel(Callable, DataBufferFactory, int)}.\r\n * Closes the channel when the flux is terminated.\r\n * @param resource the resource to read from\r\n * @param bufferFactory the factory to create data buffers with\r\n * @param bufferSize the maximum size of the data buffers\r\n * @return a Flux of data buffers read from the given channel\r\n */\r\npublic static Flux<DataBuffer> read(Resource resource, DataBufferFactory bufferFactory, int bufferSize) {\r\n    return read(resource, 0, bufferFactory, bufferSize);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#read(Resource,DataBufferFactory,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#read(Resource,long,DataBufferFactory,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Read the given {@code Resource} into a {@code Flux} of {@code DataBuffer}s\r\n * starting at the given position.\r\n * <p>If the resource is a file, it is read into an\r\n * {@code AsynchronousFileChannel} and turned to {@code Flux} via\r\n * {@link #readAsynchronousFileChannel(Callable, DataBufferFactory, int)} or else\r\n * fall back on {@link #readByteChannel(Callable, DataBufferFactory, int)}.\r\n * Closes the channel when the flux is terminated.\r\n * @param resource the resource to read from\r\n * @param position the position to start reading from\r\n * @param bufferFactory the factory to create data buffers with\r\n * @param bufferSize the maximum size of the data buffers\r\n * @return a Flux of data buffers read from the given channel\r\n */\r\npublic static Flux<DataBuffer> read(Resource resource, long position, DataBufferFactory bufferFactory, int bufferSize) {\r\n    try {\r\n        if (resource.isFile()) {\r\n            File file = resource.getFile();\r\n            return readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ), position, bufferFactory, bufferSize);\r\n        }\r\n    } catch (IOException ignore) {\r\n        // fallback to resource.readableChannel(), below\r\n    }\r\n    Flux<DataBuffer> result = readByteChannel(resource::readableChannel, bufferFactory, bufferSize);\r\n    return position == 0 ? result : skipUntilByteCount(result, position);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#read(Resource,long,DataBufferFactory,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,OutputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "//---------------------------------------------------------------------\r\n// Writing\r\n//---------------------------------------------------------------------\r\n/**\r\n * Write the given stream of {@link DataBuffer DataBuffers} to the given\r\n * {@code OutputStream}. Does <strong>not</strong> close the output stream\r\n * when the flux is terminated, and does <strong>not</strong>\r\n * {@linkplain #release(DataBuffer) release} the data buffers in the source.\r\n * If releasing is required, then subscribe to the returned {@code Flux}\r\n * with a {@link #releaseConsumer()}.\r\n * <p>Note that the writing process does not start until the returned\r\n * {@code Flux} is subscribed to.\r\n * @param source the stream of data buffers to be written\r\n * @param outputStream the output stream to write to\r\n * @return a Flux containing the same buffers as in {@code source}, that\r\n * starts the writing process when subscribed to, and that publishes any\r\n * writing errors and the completion signal\r\n */\r\npublic static Flux<DataBuffer> write(Publisher<DataBuffer> source, OutputStream outputStream) {\r\n    Assert.notNull(source, \"'source' must not be null\");\r\n    Assert.notNull(outputStream, \"'outputStream' must not be null\");\r\n    WritableByteChannel channel = Channels.newChannel(outputStream);\r\n    return write(source, channel);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,OutputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,WritableByteChannel)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the given stream of {@link DataBuffer DataBuffers} to the given\r\n * {@code WritableByteChannel}. Does <strong>not</strong> close the channel\r\n * when the flux is terminated, and does <strong>not</strong>\r\n * {@linkplain #release(DataBuffer) release} the data buffers in the source.\r\n * If releasing is required, then subscribe to the returned {@code Flux}\r\n * with a {@link #releaseConsumer()}.\r\n * <p>Note that the writing process does not start until the returned\r\n * {@code Flux} is subscribed to.\r\n * @param source the stream of data buffers to be written\r\n * @param channel the channel to write to\r\n * @return a Flux containing the same buffers as in {@code source}, that\r\n * starts the writing process when subscribed to, and that publishes any\r\n * writing errors and the completion signal\r\n */\r\npublic static Flux<DataBuffer> write(Publisher<DataBuffer> source, WritableByteChannel channel) {\r\n    Assert.notNull(source, \"'source' must not be null\");\r\n    Assert.notNull(channel, \"'channel' must not be null\");\r\n    Flux<DataBuffer> flux = Flux.from(source);\r\n    return Flux.create(sink -> {\r\n        WritableByteChannelSubscriber subscriber = new WritableByteChannelSubscriber(sink, channel);\r\n        sink.onDispose(subscriber);\r\n        flux.subscribe(subscriber);\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,WritableByteChannel)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,AsynchronousFileChannel)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the given stream of {@link DataBuffer DataBuffers} to the given\r\n * {@code AsynchronousFileChannel}. Does <strong>not</strong> close the\r\n * channel when the flux is terminated, and does <strong>not</strong>\r\n * {@linkplain #release(DataBuffer) release} the data buffers in the source.\r\n * If releasing is required, then subscribe to the returned {@code Flux}\r\n * with a {@link #releaseConsumer()}.\r\n * <p>Note that the writing process does not start until the returned\r\n * {@code Flux} is subscribed to.\r\n * @param source the stream of data buffers to be written\r\n * @param channel the channel to write to\r\n * @return a Flux containing the same buffers as in {@code source}, that\r\n * starts the writing process when subscribed to, and that publishes any\r\n * writing errors and the completion signal\r\n * @since 5.0.10\r\n */\r\npublic static Flux<DataBuffer> write(Publisher<DataBuffer> source, AsynchronousFileChannel channel) {\r\n    return write(source, channel, 0);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,AsynchronousFileChannel)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<? extends DataBuffer>,AsynchronousFileChannel,long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the given stream of {@link DataBuffer DataBuffers} to the given\r\n * {@code AsynchronousFileChannel}. Does <strong>not</strong> close the channel\r\n * when the flux is terminated, and does <strong>not</strong>\r\n * {@linkplain #release(DataBuffer) release} the data buffers in the source.\r\n * If releasing is required, then subscribe to the returned {@code Flux} with a\r\n * {@link #releaseConsumer()}.\r\n * <p>Note that the writing process does not start until the returned\r\n * {@code Flux} is subscribed to.\r\n * @param source the stream of data buffers to be written\r\n * @param channel the channel to write to\r\n * @param position the file position where writing is to begin; must be non-negative\r\n * @return a flux containing the same buffers as in {@code source}, that\r\n * starts the writing process when subscribed to, and that publishes any\r\n * writing errors and the completion signal\r\n */\r\npublic static Flux<DataBuffer> write(Publisher<? extends DataBuffer> source, AsynchronousFileChannel channel, long position) {\r\n    Assert.notNull(source, \"'source' must not be null\");\r\n    Assert.notNull(channel, \"'channel' must not be null\");\r\n    Assert.isTrue(position >= 0, \"'position' must be >= 0\");\r\n    Flux<DataBuffer> flux = Flux.from(source);\r\n    return Flux.create(sink -> {\r\n        WriteCompletionHandler handler = new WriteCompletionHandler(sink, channel, position);\r\n        sink.onDispose(handler);\r\n        flux.subscribe(handler);\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<? extends DataBuffer>,AsynchronousFileChannel,long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,Path,OpenOption)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the given stream of {@link DataBuffer DataBuffers} to the given\r\n * file {@link Path}. The optional {@code options} parameter specifies\r\n * how the file is created or opened (defaults to\r\n * {@link StandardOpenOption#CREATE CREATE},\r\n * {@link StandardOpenOption#TRUNCATE_EXISTING TRUNCATE_EXISTING}, and\r\n * {@link StandardOpenOption#WRITE WRITE}).\r\n * @param source the stream of data buffers to be written\r\n * @param destination the path to the file\r\n * @param options the options specifying how the file is opened\r\n * @return a {@link Mono} that indicates completion or error\r\n * @since 5.2\r\n */\r\npublic static Mono<Void> write(Publisher<DataBuffer> source, Path destination, OpenOption... options) {\r\n    Assert.notNull(source, \"Source must not be null\");\r\n    Assert.notNull(destination, \"Destination must not be null\");\r\n    Set<OpenOption> optionSet = checkWriteOptions(options);\r\n    return Mono.create(sink -> {\r\n        try {\r\n            AsynchronousFileChannel channel = AsynchronousFileChannel.open(destination, optionSet, null);\r\n            sink.onDispose(() -> closeChannel(channel));\r\n            write(source, channel).subscribe(DataBufferUtils::release, sink::error, sink::success, Context.of(sink.contextView()));\r\n        } catch (IOException ex) {\r\n            sink.error(ex);\r\n        }\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtils#write(Publisher<DataBuffer>,Path,OpenOption)",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.Generator#nextInstance(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Object nextInstance(Object instance) {\r\n    return instance;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Generator#nextInstance(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator#nextInstance(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator#generateClass(ClassVisitor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void generateClass(ClassVisitor v) {\r\n    ClassEmitter ce = new ClassEmitter(v);\r\n    Method newInstance = ReflectUtils.findNewInstance(keyInterface);\r\n    if (!newInstance.getReturnType().equals(Object.class)) {\r\n        throw new IllegalArgumentException(\"newInstance method must return Object\");\r\n    }\r\n    Type[] parameterTypes = TypeUtils.getTypes(newInstance.getParameterTypes());\r\n    ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), KEY_FACTORY, new Type[] { Type.getType(keyInterface) }, Constants.SOURCE_FILE);\r\n    EmitUtils.null_constructor(ce);\r\n    EmitUtils.factory_method(ce, ReflectUtils.getSignature(newInstance));\r\n    int seed = 0;\r\n    CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, TypeUtils.parseConstructor(parameterTypes), null);\r\n    e.load_this();\r\n    e.super_invoke_constructor();\r\n    e.load_this();\r\n    List<FieldTypeCustomizer> fieldTypeCustomizers = getCustomizers(FieldTypeCustomizer.class);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        Type parameterType = parameterTypes[i];\r\n        Type fieldType = parameterType;\r\n        for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n            fieldType = customizer.getOutType(i, fieldType);\r\n        }\r\n        seed += fieldType.hashCode();\r\n        ce.declare_field(Constants.ACC_PRIVATE | Constants.ACC_FINAL, getFieldName(i), fieldType, null);\r\n        e.dup();\r\n        e.load_arg(i);\r\n        for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n            customizer.customize(e, i, parameterType);\r\n        }\r\n        e.putfield(getFieldName(i));\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n    // hash code\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, HASH_CODE, null);\r\n    int hc = (constant != 0) ? constant : PRIMES[(Math.abs(seed) % PRIMES.length)];\r\n    int hm = (multiplier != 0) ? multiplier : PRIMES[(Math.abs(seed * 13) % PRIMES.length)];\r\n    e.push(hc);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.hash_code(e, parameterTypes[i], hm, customizers);\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n    // equals\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, EQUALS, null);\r\n    Label fail = e.make_label();\r\n    e.load_arg(0);\r\n    e.instance_of_this();\r\n    e.if_jump(CodeEmitter.EQ, fail);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        e.load_arg(0);\r\n        e.checkcast_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.not_equals(e, parameterTypes[i], fail, customizers);\r\n    }\r\n    e.push(1);\r\n    e.return_value();\r\n    e.mark(fail);\r\n    e.push(0);\r\n    e.return_value();\r\n    e.end_method();\r\n    // toString\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, TO_STRING, null);\r\n    e.new_instance(Constants.TYPE_STRING_BUFFER);\r\n    e.dup();\r\n    e.invoke_constructor(Constants.TYPE_STRING_BUFFER);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        if (i > 0) {\r\n            e.push(\", \");\r\n            e.invoke_virtual(Constants.TYPE_STRING_BUFFER, APPEND_STRING);\r\n        }\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.append_string(e, parameterTypes[i], EmitUtils.DEFAULT_DELIMITERS, customizers);\r\n    }\r\n    e.invoke_virtual(Constants.TYPE_STRING_BUFFER, TO_STRING);\r\n    e.return_value();\r\n    e.end_method();\r\n    ce.end_class();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Generator#generateClass(ClassVisitor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator#generateClass(ClassVisitor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator#getFieldName(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private String getFieldName(int arg) {\r\n    return \"FIELD_\" + arg;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Generator#getFieldName(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Generator",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractClassGenerator",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.KeyFactoryCustomizer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactoryCustomizer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "package org.springframework.cglib.core;\n\n/**\n * Marker interface for customizers of {@link KeyFactory}\n */\npublic interface KeyFactoryCustomizer {\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.Local",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.core;\n\nimport org.springframework.asm.Type;\n\npublic class Local\n{\n    private Type type;\n    private int index;\n\n    public Local(int index, Type type) {\n        this.type = type;\n        this.index = index;\n    }\n\n    public int getIndex() {\n        return index;\n    }\n\n    public Type getType() {\n        return type;\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.Local#type",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local#type",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.Local#index",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local#index",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.Local#getIndex()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public int getIndex() {\r\n    return index;\r\n}",
+    "tailType": "method_code"
+  }
+]

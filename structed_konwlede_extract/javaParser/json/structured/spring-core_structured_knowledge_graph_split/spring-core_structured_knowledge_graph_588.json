@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.Converter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Converter#convert(Object,Class,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.Customizer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.Customizer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.core;\n\nimport org.springframework.asm.Type;\n\n/**\n * Customizes key types for {@link KeyFactory} when building equals, hashCode, and toString.\n * For customization of field types, use {@link FieldTypeCustomizer}\n *\n * @see KeyFactory#CLASS_BY_NAME\n */\npublic interface Customizer extends KeyFactoryCustomizer {\n    void customize(CodeEmitter e, Type type);\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Customizer#customize(CodeEmitter,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "void customize(CodeEmitter e, Type type);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.Customizer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.Customizer#customize(CodeEmitter,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.Customizer",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "KeyFactoryCustomizer",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.core;\n\nimport java.io.BufferedOutputStream;\nimport java.io.File;\nimport java.io.FileOutputStream;\nimport java.io.OutputStream;\nimport java.io.OutputStreamWriter;\nimport java.io.PrintWriter;\nimport java.lang.reflect.Constructor;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.ClassWriter;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class DebuggingClassWriter extends ClassVisitor {\n\n    public static final String DEBUG_LOCATION_PROPERTY = \"cglib.debugLocation\";\n\n    private static String debugLocation;\n    private static Constructor traceCtor;\n\n    private String className;\n    private String superName;\n\n    static {\n        debugLocation = System.getProperty(DEBUG_LOCATION_PROPERTY);\n        if (debugLocation != null) {\n            System.err.println(\"CGLIB debugging enabled, writing to '\" + debugLocation + \"'\");\n            try {\n              Class clazz = Class.forName(\"org.springframework.asm.util.TraceClassVisitor\");\n              traceCtor = clazz.getConstructor(new Class[]{ClassVisitor.class, PrintWriter.class});\n            } catch (Throwable ignore) {\n            }\n        }\n    }\n\n    public DebuggingClassWriter(int flags) {\n        super(Constants.ASM_API, new ClassWriter(flags));\n    }\n\n    @Override\n    public void visit(int version,\n                      int access,\n                      String name,\n                      String signature,\n                      String superName,\n                      String[] interfaces) {\n        className = name.replace('/', '.');\n        this.superName = superName.replace('/', '.');\n        super.visit(version, access, name, signature, superName, interfaces);\n    }\n\n    public String getClassName() {\n        return className;\n    }\n\n    public String getSuperName() {\n        return superName;\n    }\n\n    public byte[] toByteArray() {\n\n\t\tbyte[] b = ((ClassWriter) DebuggingClassWriter.super.cv).toByteArray();\n\t\tif (debugLocation != null) {\n\t\t\tString dirs = className.replace('.', File.separatorChar);\n\t\t\ttry {\n\t\t\t\tnew File(debugLocation + File.separatorChar + dirs).getParentFile().mkdirs();\n\n\t\t\t\tFile file = new File(new File(debugLocation), dirs + \".class\");\n\t\t\t\tOutputStream out = new BufferedOutputStream(new FileOutputStream(file));\n\t\t\t\ttry {\n\t\t\t\t\tout.write(b);\n\t\t\t\t} finally {\n\t\t\t\t\tout.close();\n\t\t\t\t}\n\n\t\t\t\tif (traceCtor != null) {\n\t\t\t\t\tfile = new File(new File(debugLocation), dirs + \".asm\");\n\t\t\t\t\tout = new BufferedOutputStream(new FileOutputStream(file));\n\t\t\t\t\ttry {\n\t\t\t\t\t\tClassReader cr = new ClassReader(b);\n\t\t\t\t\t\tPrintWriter pw = new PrintWriter(new OutputStreamWriter(out));\n\t\t\t\t\t\tClassVisitor tcv = (ClassVisitor)traceCtor.newInstance(new Object[]{null, pw});\n\t\t\t\t\t\tcr.accept(tcv, 0);\n\t\t\t\t\t\tpw.flush();\n\t\t\t\t\t} finally {\n\t\t\t\t\t\tout.close();\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t} catch (Exception e) {\n\t\t\t\tthrow new CodeGenerationException(e);\n\t\t\t}\n\t\t}\n\t\treturn b;\n\t }\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#DEBUG_LOCATION_PROPERTY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#DEBUG_LOCATION_PROPERTY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#debugLocation",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#debugLocation",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#traceCtor",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#traceCtor",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Constructor",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#className",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter#className",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.DebuggingClassWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.DebuggingClassWriter#superName",
+    "tailType": "field"
+  }
+]

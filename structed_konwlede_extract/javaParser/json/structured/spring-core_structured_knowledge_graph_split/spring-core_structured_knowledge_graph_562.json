@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#getClassType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Type getClassType() {\r\n    return classInfo.getType();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#getClassType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#getSuperType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Type getSuperType() {\r\n    return classInfo.getSuperType();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#getSuperType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#end_class()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void end_class() {\r\n    if (staticHook != null && staticInit == null) {\r\n        // force creation of static init\r\n        begin_static();\r\n    }\r\n    if (staticInit != null) {\r\n        staticHook.return_value();\r\n        staticHook.end_method();\r\n        rawStaticInit.visitInsn(Constants.RETURN);\r\n        rawStaticInit.visitMaxs(0, 0);\r\n        staticInit = staticHook = null;\r\n        staticHookSig = null;\r\n    }\r\n    cv.visitEnd();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#end_class()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#begin_method(int,Signature,Type[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public CodeEmitter begin_method(int access, Signature sig, Type[] exceptions) {\r\n    if (classInfo == null) {\r\n        throw new IllegalStateException(\"classInfo is null! \" + this);\r\n    }\r\n    MethodVisitor v = cv.visitMethod(access, sig.getName(), sig.getDescriptor(), null, TypeUtils.toInternalNames(exceptions));\r\n    if (sig.equals(Constants.SIG_STATIC) && !TypeUtils.isInterface(getAccess())) {\r\n        rawStaticInit = v;\r\n        MethodVisitor wrapped = new MethodVisitor(Constants.ASM_API, v) {\r\n\r\n            @Override\r\n            public void visitMaxs(int maxStack, int maxLocals) {\r\n                // ignore\r\n            }\r\n\r\n            @Override\r\n            public void visitInsn(int insn) {\r\n                if (insn != Constants.RETURN) {\r\n                    super.visitInsn(insn);\r\n                }\r\n            }\r\n        };\r\n        staticInit = new CodeEmitter(this, wrapped, access, sig, exceptions);\r\n        if (staticHook == null) {\r\n            // force static hook creation\r\n            getStaticHook();\r\n        } else {\r\n            staticInit.invoke_static_this(staticHookSig);\r\n        }\r\n        return staticInit;\r\n    } else if (sig.equals(staticHookSig)) {\r\n        return new CodeEmitter(this, v, access, sig, exceptions) {\r\n\r\n            @Override\r\n            public boolean isStaticHook() {\r\n                return true;\r\n            }\r\n        };\r\n    } else {\r\n        return new CodeEmitter(this, v, access, sig, exceptions);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#begin_method(int,Signature,Type[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#begin_static()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public CodeEmitter begin_static() {\r\n    return begin_method(Constants.ACC_STATIC, Constants.SIG_STATIC, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#begin_static()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#declare_field(int,String,Type,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void declare_field(int access, String name, Type type, Object value) {\r\n    FieldInfo existing = (FieldInfo) fieldInfo.get(name);\r\n    FieldInfo info = new FieldInfo(access, name, type, value);\r\n    if (existing != null) {\r\n        if (!info.equals(existing)) {\r\n            throw new IllegalArgumentException(\"Field \\\"\" + name + \"\\\" has been declared differently\");\r\n        }\r\n    } else {\r\n        fieldInfo.put(name, info);\r\n        cv.visitField(access, name, type.getDescriptor(), null, value);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#declare_field(int,String,Type,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#isFieldDeclared(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// TODO: make public?\r\nboolean isFieldDeclared(String name) {\r\n    return fieldInfo.get(name) != null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#isFieldDeclared(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#getFieldInfo(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "FieldInfo getFieldInfo(String name) {\r\n    FieldInfo field = (FieldInfo) fieldInfo.get(name);\r\n    if (field == null) {\r\n        throw new IllegalArgumentException(\"Field \" + name + \" is not declared in \" + getClassType().getClassName());\r\n    }\r\n    return field;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#getFieldInfo(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#visit(int,int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n    begin_class(version, access, name.replace('/', '.'), TypeUtils.fromInternalName(superName), TypeUtils.fromInternalNames(interfaces), // TODO\r\n    null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.ClassEmitter#visit(int,int,String,String,String,String[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#visit(int,int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.ClassEmitter#visitEnd()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitEnd() {\r\n    end_class();\r\n}",
+    "tailType": "method_code"
+  }
+]

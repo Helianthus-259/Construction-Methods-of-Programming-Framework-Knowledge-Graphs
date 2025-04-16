@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#write(byte[],int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#write(DataBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write one or more {@code DataBuffer}s to this buffer, starting at the current\r\n * writing position. It is the responsibility of the caller to\r\n * {@linkplain DataBufferUtils#release(DataBuffer) release} the given data buffers.\r\n * @param buffers the byte buffers to write into this buffer\r\n * @return this buffer\r\n */\r\nDataBuffer write(DataBuffer... buffers);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#write(DataBuffer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#write(ByteBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write one or more {@link ByteBuffer} to this buffer, starting at the current\r\n * writing position.\r\n * @param buffers the byte buffers to write into this buffer\r\n * @return this buffer\r\n */\r\nDataBuffer write(ByteBuffer... buffers);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#write(ByteBuffer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#write(CharSequence,Charset)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the given {@code CharSequence} using the given {@code Charset},\r\n * starting at the current writing position.\r\n * @param charSequence the char sequence to write into this buffer\r\n * @param charset the charset to encode the char sequence with\r\n * @return this buffer\r\n * @since 5.1.4\r\n */\r\ndefault DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    Assert.notNull(charSequence, \"CharSequence must not be null\");\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    if (!charSequence.isEmpty()) {\r\n        CharsetEncoder encoder = charset.newEncoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE);\r\n        CharBuffer src = CharBuffer.wrap(charSequence);\r\n        int averageSize = (int) Math.ceil(src.remaining() * encoder.averageBytesPerChar());\r\n        ensureWritable(averageSize);\r\n        while (true) {\r\n            CoderResult cr;\r\n            if (src.hasRemaining()) {\r\n                try (ByteBufferIterator iterator = writableByteBuffers()) {\r\n                    Assert.state(iterator.hasNext(), \"No ByteBuffer available\");\r\n                    ByteBuffer dest = iterator.next();\r\n                    cr = encoder.encode(src, dest, true);\r\n                    if (cr.isUnderflow()) {\r\n                        cr = encoder.flush(dest);\r\n                    }\r\n                    writePosition(writePosition() + dest.position());\r\n                }\r\n            } else {\r\n                cr = CoderResult.UNDERFLOW;\r\n            }\r\n            if (cr.isUnderflow()) {\r\n                break;\r\n            } else if (cr.isOverflow()) {\r\n                int maxSize = (int) Math.ceil(src.remaining() * encoder.maxBytesPerChar());\r\n                ensureWritable(maxSize);\r\n            }\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#write(CharSequence,Charset)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#slice(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@code DataBuffer} whose contents is a shared subsequence of this\r\n * data buffer's content.  Data between this data buffer and the returned buffer is\r\n * shared; though changes in the returned buffer's position will not be reflected\r\n * in the reading nor writing position of this data buffer.\r\n * <p><strong>Note</strong> that this method will <strong>not</strong> call\r\n * {@link DataBufferUtils#retain(DataBuffer)} on the resulting slice: the reference\r\n * count will not be increased.\r\n * @param index the index at which to start the slice\r\n * @param length the length of the slice\r\n * @return the specified slice of this data buffer\r\n * @deprecated as of 6.0, in favor of {@link #split(int)}, which\r\n * has different semantics\r\n */\r\n@Deprecated(since = \"6.0\")\r\nDataBuffer slice(int index, int length);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#slice(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#slice(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#retainedSlice(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@code DataBuffer} whose contents is a shared, retained subsequence of this\r\n * data buffer's content.  Data between this data buffer and the returned buffer is\r\n * shared; though changes in the returned buffer's position will not be reflected\r\n * in the reading nor writing position of this data buffer.\r\n * <p><strong>Note</strong> that unlike {@link #slice(int, int)}, this method\r\n * <strong>will</strong> call {@link DataBufferUtils#retain(DataBuffer)} (or equivalent) on the\r\n * resulting slice.\r\n * @param index the index at which to start the slice\r\n * @param length the length of the slice\r\n * @return the specified, retained slice of this data buffer\r\n * @since 5.2\r\n * @deprecated as of 6.0, in favor of {@link #split(int)}, which\r\n * has different semantics\r\n */\r\n@Deprecated(since = \"6.0\")\r\ndefault DataBuffer retainedSlice(int index, int length) {\r\n    return DataBufferUtils.retain(slice(index, length));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#retainedSlice(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#retainedSlice(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#split(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Splits this data buffer into two at the given index.\r\n *\r\n * <p>Data that precedes the {@code index} will be returned in a new buffer,\r\n * while this buffer will contain data that follows after {@code index}.\r\n * Memory between the two buffers is shared, but independent and cannot\r\n * overlap (unlike {@link #slice(int, int) slice}).\r\n *\r\n * <p>The {@linkplain #readPosition() read} and\r\n * {@linkplain #writePosition() write} position of the returned buffer are\r\n * truncated to fit within the buffers {@linkplain #capacity() capacity} if\r\n * necessary. The positions of this buffer are set to {@code 0} if they are\r\n * smaller than {@code index}.\r\n * @param index the index at which it should be split\r\n * @return a new data buffer, containing the bytes from index {@code 0} to\r\n * {@code index}\r\n * @since 6.0\r\n */\r\nDataBuffer split(int index);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#split(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#asByteBuffer()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Expose this buffer's bytes as a {@link ByteBuffer}. Data between this\r\n * {@code DataBuffer} and the returned {@code ByteBuffer} is shared; though\r\n * changes in the returned buffer's {@linkplain ByteBuffer#position() position}\r\n * will not be reflected in the reading nor writing position of this data buffer.\r\n * @return this data buffer as a byte buffer\r\n * @deprecated as of 6.0, in favor of {@link #toByteBuffer(ByteBuffer)},\r\n * {@link #readableByteBuffers()}, or {@link #writableByteBuffers()}.\r\n */\r\n@Deprecated(since = \"6.0\")\r\nByteBuffer asByteBuffer();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#asByteBuffer()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#asByteBuffer()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer#asByteBuffer(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Expose a subsequence of this buffer's bytes as a {@link ByteBuffer}. Data between\r\n * this {@code DataBuffer} and the returned {@code ByteBuffer} is shared; though\r\n * changes in the returned buffer's {@linkplain ByteBuffer#position() position}\r\n * will not be reflected in the reading nor writing position of this data buffer.\r\n * @param index the index at which to start the byte buffer\r\n * @param length the length of the returned byte buffer\r\n * @return this data buffer as a byte buffer\r\n * @since 5.0.1\r\n * @deprecated as of 6.0, in favor of {@link #toByteBuffer(int, ByteBuffer, int, int)},\r\n * {@link #readableByteBuffers()}, or {@link #writableByteBuffers()}.\r\n */\r\n@Deprecated(since = \"6.0\")\r\nByteBuffer asByteBuffer(int index, int length);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBuffer#asByteBuffer(int,int)",
+    "tailType": "method"
+  }
+]

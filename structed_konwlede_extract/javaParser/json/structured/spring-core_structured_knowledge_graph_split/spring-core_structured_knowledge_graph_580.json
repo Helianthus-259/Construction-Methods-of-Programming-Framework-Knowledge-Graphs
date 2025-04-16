@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#mark()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#push(boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void push(boolean value) {\r\n    push(value ? 1 : 0);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#push(boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#not()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Toggles the integer on the top of the stack from 1 to 0 or vice versa\r\n */\r\npublic void not() {\r\n    push(1);\r\n    math(XOR, Type.INT_TYPE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#not()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#throw_exception(Type,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void throw_exception(Type type, String msg) {\r\n    new_instance(type);\r\n    dup();\r\n    push(msg);\r\n    invoke_constructor(type, CSTRUCT_STRING);\r\n    athrow();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#throw_exception(Type,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#box(Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * If the argument is a primitive class, replaces the primitive value\r\n * on the top of the stack with the wrapped (Object) equivalent. For\r\n * example, char -> Character.\r\n * If the class is Void, a null is pushed onto the stack instead.\r\n * @param type the class indicating the current type of the top stack value\r\n */\r\npublic void box(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        if (type == Type.VOID_TYPE) {\r\n            aconst_null();\r\n        } else {\r\n            Type boxed = TypeUtils.getBoxedType(type);\r\n            new_instance(boxed);\r\n            if (type.getSize() == 2) {\r\n                // Pp -> Ppo -> oPpo -> ooPpo -> ooPp -> o\r\n                dup_x2();\r\n                dup_x2();\r\n                pop();\r\n            } else {\r\n                // p -> po -> opo -> oop -> o\r\n                dup_x1();\r\n                swap();\r\n            }\r\n            invoke_constructor(boxed, new Signature(Constants.CONSTRUCTOR_NAME, Type.VOID_TYPE, new Type[] { type }));\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#box(Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#unbox(Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * If the argument is a primitive class, replaces the object\r\n * on the top of the stack with the unwrapped (primitive)\r\n * equivalent. For example, Character -> char.\r\n * @param type the class indicating the desired type of the top stack value\r\n */\r\npublic void unbox(Type type) {\r\n    Type t = Constants.TYPE_NUMBER;\r\n    Signature sig = null;\r\n    switch(type.getSort()) {\r\n        case Type.VOID:\r\n            return;\r\n        case Type.CHAR:\r\n            t = Constants.TYPE_CHARACTER;\r\n            sig = CHAR_VALUE;\r\n            break;\r\n        case Type.BOOLEAN:\r\n            t = Constants.TYPE_BOOLEAN;\r\n            sig = BOOLEAN_VALUE;\r\n            break;\r\n        case Type.DOUBLE:\r\n            sig = DOUBLE_VALUE;\r\n            break;\r\n        case Type.FLOAT:\r\n            sig = FLOAT_VALUE;\r\n            break;\r\n        case Type.LONG:\r\n            sig = LONG_VALUE;\r\n            break;\r\n        case Type.INT:\r\n        case Type.SHORT:\r\n        case Type.BYTE:\r\n            sig = INT_VALUE;\r\n    }\r\n    if (sig == null) {\r\n        checkcast(type);\r\n    } else {\r\n        checkcast(t);\r\n        invoke_virtual(t, sig);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#unbox(Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#create_arg_array()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Allocates and fills an Object[] array with the arguments to the\r\n * current method. Primitive values are inserted as their boxed\r\n * (Object) equivalents.\r\n */\r\npublic void create_arg_array() {\r\n    /* generates:\r\n           Object[] args = new Object[]{ arg1, new Integer(arg2) };\r\n         */\r\n    push(state.argumentTypes.length);\r\n    newarray();\r\n    for (int i = 0; i < state.argumentTypes.length; i++) {\r\n        dup();\r\n        push(i);\r\n        load_arg(i);\r\n        box(state.argumentTypes[i]);\r\n        aastore();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#create_arg_array()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#zero_or_null(Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Pushes a zero onto the stack if the argument is a primitive class, or a null otherwise.\r\n */\r\npublic void zero_or_null(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        switch(type.getSort()) {\r\n            case Type.DOUBLE:\r\n                push(0d);\r\n                break;\r\n            case Type.LONG:\r\n                push(0L);\r\n                break;\r\n            case Type.FLOAT:\r\n                push(0f);\r\n                break;\r\n            case Type.VOID:\r\n                aconst_null();\r\n            default:\r\n                push(0);\r\n        }\r\n    } else {\r\n        aconst_null();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#zero_or_null(Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#unbox_or_zero(Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Unboxes the object on the top of the stack. If the object is null, the\r\n * unboxed primitive value becomes zero.\r\n */\r\npublic void unbox_or_zero(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        if (type != Type.VOID_TYPE) {\r\n            Label nonNull = make_label();\r\n            Label end = make_label();\r\n            dup();\r\n            ifnonnull(nonNull);\r\n            pop();\r\n            zero_or_null(type);\r\n            goTo(end);\r\n            mark(nonNull);\r\n            unbox(type);\r\n            mark(end);\r\n        }\r\n    } else {\r\n        checkcast(type);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#unbox_or_zero(Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#visitMaxs(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitMaxs(int maxStack, int maxLocals) {\r\n    if (!TypeUtils.isAbstract(state.access)) {\r\n        mv.visitMaxs(0, 0);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.CodeEmitter#visitMaxs(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.CodeEmitter#visitMaxs(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

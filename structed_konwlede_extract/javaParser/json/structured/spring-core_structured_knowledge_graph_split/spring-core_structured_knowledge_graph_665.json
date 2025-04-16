@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy.Proxy#getInvocationHandler(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static InvocationHandler getInvocationHandler(Object proxy) {\r\n    if (!(proxy instanceof ProxyImpl)) {\r\n        throw new IllegalArgumentException(\"Object is not a proxy\");\r\n    }\r\n    return ((Proxy) proxy).h;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Proxy#getInvocationHandler(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy#getProxyClass(ClassLoader,Class[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Class getProxyClass(ClassLoader loader, Class[] interfaces) {\r\n    Enhancer e = new Enhancer();\r\n    e.setSuperclass(ProxyImpl.class);\r\n    e.setInterfaces(interfaces);\r\n    e.setCallbackTypes(new Class[] { InvocationHandler.class, NoOp.class });\r\n    e.setCallbackFilter(BAD_OBJECT_METHOD_FILTER);\r\n    e.setUseFactory(false);\r\n    return e.createClass();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Proxy#getProxyClass(ClassLoader,Class[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy#isProxyClass(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static boolean isProxyClass(Class cl) {\r\n    return cl.getSuperclass().equals(ProxyImpl.class);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Proxy#isProxyClass(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy#newProxyInstance(ClassLoader,Class[],InvocationHandler)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Object newProxyInstance(ClassLoader loader, Class[] interfaces, InvocationHandler h) {\r\n    try {\r\n        Class clazz = getProxyClass(loader, interfaces);\r\n        return clazz.getConstructor(new Class[] { InvocationHandler.class }).newInstance(new Object[] { h });\r\n    } catch (RuntimeException e) {\r\n        throw e;\r\n    } catch (Exception e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.Proxy",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.Proxy#newProxyInstance(ClassLoader,Class[],InvocationHandler)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.ProxyImpl",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.ProxyImpl",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.proxy;\n\nimport java.io.Serializable;\n\nimport org.springframework.cglib.core.CodeGenerationException;\n\n/**\n * This class is meant to be used as replacement for\n * <code>java.lang.reflect.Proxy</code> under JDK 1.2. There are some known\n * subtle differences:\n * <ul>\n * <li>The exceptions returned by invoking <code>getExceptionTypes</code>\n * on the <code>Method</code> passed to the <code>invoke</code> method\n * <b>are</b> the exact set that can be thrown without resulting in an\n * <code>UndeclaredThrowableException</code> being thrown.\n * <li>{@link UndeclaredThrowableException} is used instead\n * of <code>java.lang.reflect.UndeclaredThrowableException</code>.\n * </ul>\n * <p>\n * @version $Id: Proxy.java,v 1.6 2004/06/24 21:15:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\", \"serial\"})\npublic class Proxy implements Serializable {\n    protected InvocationHandler h;\n\n    private static final CallbackFilter BAD_OBJECT_METHOD_FILTER = method -> {\n\t    if (method.getDeclaringClass().getName().equals(\"java.lang.Object\")) {\n\t        String name = method.getName();\n\t        if (!(name.equals(\"hashCode\") ||\n\t              name.equals(\"equals\") ||\n\t              name.equals(\"toString\"))) {\n\t            return 1;\n\t        }\n\t    }\n\t    return 0;\n\t};\n\n    protected Proxy(InvocationHandler h) {\n        Enhancer.registerCallbacks(getClass(), new Callback[]{ h, null });\n        this.h = h;\n    }\n\n    // private for security of isProxyClass\n    private static class ProxyImpl extends Proxy {\n        protected ProxyImpl(InvocationHandler h) {\n            super(h);\n        }\n    }\n\n    public static InvocationHandler getInvocationHandler(Object proxy) {\n        if (!(proxy instanceof ProxyImpl)) {\n            throw new IllegalArgumentException(\"Object is not a proxy\");\n        }\n        return ((Proxy)proxy).h;\n    }\n\n    public static Class getProxyClass(ClassLoader loader, Class[] interfaces) {\n        Enhancer e = new Enhancer();\n        e.setSuperclass(ProxyImpl.class);\n        e.setInterfaces(interfaces);\n        e.setCallbackTypes(new Class[]{\n            InvocationHandler.class,\n            NoOp.class,\n        });\n        e.setCallbackFilter(BAD_OBJECT_METHOD_FILTER);\n        e.setUseFactory(false);\n        return e.createClass();\n    }\n\n    public static boolean isProxyClass(Class cl) {\n        return cl.getSuperclass().equals(ProxyImpl.class);\n    }\n\n    public static Object newProxyInstance(ClassLoader loader, Class[] interfaces, InvocationHandler h) {\n        try {\n            Class clazz = getProxyClass(loader, interfaces);\n            return clazz.getConstructor(new Class[]{ InvocationHandler.class }).newInstance(new Object[]{ h });\n        } catch (RuntimeException e) {\n            throw e;\n        } catch (Exception e) {\n            throw new CodeGenerationException(e);\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.ProxyImpl",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Proxy",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.ProxyRefDispatcher",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.ProxyRefDispatcher",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.proxy;\n\n/**\n * Dispatching {@link Enhancer} callback. This is the same as the\n * {@link Dispatcher} except for the addition of an argument\n * which references the proxy object.\n */\npublic interface ProxyRefDispatcher extends Callback {\n    /**\n     * Return the object which the original method invocation should\n     * be dispatched. This method is called for <b>every</b> method invocation.\n     * @param proxy a reference to the proxy (generated) object\n     * @return an object that can invoke the method\n     */\n    Object loadObject(Object proxy) throws Exception;\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.ProxyRefDispatcher#loadObject(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the object which the original method invocation should\r\n * be dispatched. This method is called for <b>every</b> method invocation.\r\n * @param proxy a reference to the proxy (generated) object\r\n * @return an object that can invoke the method\r\n */\r\nObject loadObject(Object proxy) throws Exception;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.ProxyRefDispatcher",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.ProxyRefDispatcher#loadObject(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.ProxyRefDispatcher",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Callback",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.UndeclaredThrowableException",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.UndeclaredThrowableException",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  }
+]

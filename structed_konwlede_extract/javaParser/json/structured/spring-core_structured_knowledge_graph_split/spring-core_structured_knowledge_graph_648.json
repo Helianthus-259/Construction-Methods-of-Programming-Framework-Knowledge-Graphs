@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator#LOAD_OBJECT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator#generate(ClassEmitter,Context,List)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void generate(ClassEmitter ce, Context context, List methods) {\r\n    for (Iterator it = methods.iterator(); it.hasNext(); ) {\r\n        MethodInfo method = (MethodInfo) it.next();\r\n        CodeEmitter e = context.beginMethod(ce, method);\r\n        context.emitCallback(e, context.getIndex(method));\r\n        e.invoke_interface(FIXED_VALUE, LOAD_OBJECT);\r\n        e.unbox_or_zero(e.getReturnType());\r\n        e.return_value();\r\n        e.end_method();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.FixedValueGenerator#generate(ClassEmitter,Context,List)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator#generate(ClassEmitter,Context,List)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator#generateStatic(CodeEmitter,Context,List)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void generateStatic(CodeEmitter e, Context context, List methods) ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.FixedValueGenerator#generateStatic(CodeEmitter,Context,List)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.FixedValueGenerator#generateStatic(CodeEmitter,Context,List)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.InterfaceMaker",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.proxy;\n\nimport java.lang.reflect.Method;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.Map;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\n\n/**\n * Generates new interfaces at runtime.\n * By passing a generated interface to the Enhancer's list of interfaces to\n * implement, you can make your enhanced classes handle an arbitrary set\n * of method signatures.\n * @author Chris Nokleberg\n * @version $Id: InterfaceMaker.java,v 1.4 2006/03/05 02:43:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class InterfaceMaker extends AbstractClassGenerator\n{\n    private static final Source SOURCE = new Source(InterfaceMaker.class.getName());\n    private Map signatures = new HashMap();\n\n    /**\n     * Create a new <code>InterfaceMaker</code>. A new <code>InterfaceMaker</code>\n     * object should be used for each generated interface, and should not\n     * be shared across threads.\n     */\n    public InterfaceMaker() {\n        super(SOURCE);\n    }\n\n    /**\n     * Add a method signature to the interface.\n     * @param sig the method signature to add to the interface\n     * @param exceptions an array of exception types to declare for the method\n     */\n    public void add(Signature sig, Type[] exceptions) {\n        signatures.put(sig, exceptions);\n    }\n\n    /**\n     * Add a method signature to the interface. The method modifiers are ignored,\n     * since interface methods are by definition abstract and public.\n     * @param method the method to add to the interface\n     */\n    public void add(Method method) {\n        add(ReflectUtils.getSignature(method),\n            ReflectUtils.getExceptionTypes(method));\n    }\n\n    /**\n     * Add all the public methods in the specified class.\n     * Methods from superclasses are included, except for methods declared in the base\n     * Object class (for example, <code>getClass</code>, <code>equals</code>, <code>hashCode</code>).\n     * @param clazz the class containing the methods to add to the interface\n     */\n    public void add(Class clazz) {\n        Method[] methods = clazz.getMethods();\n        for (Method m : methods) {\n            if (!m.getDeclaringClass().getName().equals(\"java.lang.Object\")) {\n                add(m);\n            }\n        }\n    }\n\n    /**\n     * Create an interface using the current set of method signatures.\n     */\n    public Class create() {\n        setUseCache(false);\n        return (Class)super.create(this);\n    }\n\n    @Override\n\tprotected ClassLoader getDefaultClassLoader() {\n        return null;\n    }\n\n    @Override\n\tprotected Object firstInstance(Class type) {\n        return type;\n    }\n\n    @Override\n\tprotected Object nextInstance(Object instance) {\n        throw new IllegalStateException(\"InterfaceMaker does not cache\");\n    }\n\n    @Override\n\tpublic void generateClass(ClassVisitor v) throws Exception {\n        ClassEmitter ce = new ClassEmitter(v);\n        ce.begin_class(Constants.V1_8,\n                       Constants.ACC_PUBLIC | Constants.ACC_INTERFACE | Constants.ACC_ABSTRACT,\n                       getClassName(),\n                       null,\n                       null,\n                       Constants.SOURCE_FILE);\n        for (Iterator it = signatures.keySet().iterator(); it.hasNext();) {\n            Signature sig = (Signature)it.next();\n            Type[] exceptions = (Type[])signatures.get(sig);\n            ce.begin_method(Constants.ACC_PUBLIC | Constants.ACC_ABSTRACT,\n                            sig,\n                            exceptions).end_method();\n        }\n        ce.end_class();\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.InterfaceMaker#SOURCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker#SOURCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.InterfaceMaker#signatures",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker#signatures",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker#add(Signature,Type[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add a method signature to the interface.\r\n * @param sig the method signature to add to the interface\r\n * @param exceptions an array of exception types to declare for the method\r\n */\r\npublic void add(Signature sig, Type[] exceptions) {\r\n    signatures.put(sig, exceptions);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.InterfaceMaker#add(Signature,Type[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker#add(Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add a method signature to the interface. The method modifiers are ignored,\r\n * since interface methods are by definition abstract and public.\r\n * @param method the method to add to the interface\r\n */\r\npublic void add(Method method) {\r\n    add(ReflectUtils.getSignature(method), ReflectUtils.getExceptionTypes(method));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.InterfaceMaker#add(Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InterfaceMaker#add(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add all the public methods in the specified class.\r\n * Methods from superclasses are included, except for methods declared in the base\r\n * Object class (for example, <code>getClass</code>, <code>equals</code>, <code>hashCode</code>).\r\n * @param clazz the class containing the methods to add to the interface\r\n */\r\npublic void add(Class clazz) {\r\n    Method[] methods = clazz.getMethods();\r\n    for (Method m : methods) {\r\n        if (!m.getDeclaringClass().getName().equals(\"java.lang.Object\")) {\r\n            add(m);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  }
+]

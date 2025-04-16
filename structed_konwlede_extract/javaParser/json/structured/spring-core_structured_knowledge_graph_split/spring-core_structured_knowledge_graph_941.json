@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.StubPropertySource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.StubPropertySource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Objects;\n\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ObjectUtils;\n\n/**\n * Abstract base class representing a source of name/value property pairs. The underlying\n * {@linkplain #getSource() source object} may be of any type {@code T} that encapsulates\n * properties. Examples include {@link java.util.Properties} objects, {@link java.util.Map}\n * objects, {@code ServletContext} and {@code ServletConfig} objects (for access to init\n * parameters). Explore the {@code PropertySource} type hierarchy to see provided\n * implementations.\n *\n * <p>{@code PropertySource} objects are not typically used in isolation, but rather\n * through a {@link PropertySources} object, which aggregates property sources and in\n * conjunction with a {@link PropertyResolver} implementation that can perform\n * precedence-based searches across the set of {@code PropertySources}.\n *\n * <p>{@code PropertySource} identity is determined not based on the content of\n * encapsulated properties, but rather based on the {@link #getName() name} of the\n * {@code PropertySource} alone. This is useful for manipulating {@code PropertySource}\n * objects when in collection contexts. See operations in {@link MutablePropertySources}\n * as well as the {@link #named(String)} and {@link #toString()} methods for details.\n *\n * <p>Note that when working with @{@link\n * org.springframework.context.annotation.Configuration Configuration} classes that\n * the @{@link org.springframework.context.annotation.PropertySource PropertySource}\n * annotation provides a convenient and declarative way of adding property sources to the\n * enclosing {@code Environment}.\n *\n * @author Chris Beams\n * @since 3.1\n * @param <T> the source type\n * @see PropertySources\n * @see PropertyResolver\n * @see PropertySourcesPropertyResolver\n * @see MutablePropertySources\n * @see org.springframework.context.annotation.PropertySource\n */\npublic abstract class PropertySource<T> {\n\n\tprotected final Log logger = LogFactory.getLog(getClass());\n\n\tprotected final String name;\n\n\tprotected final T source;\n\n\n\t/**\n\t * Create a new {@code PropertySource} with the given name and source object.\n\t * @param name the associated name\n\t * @param source the source object\n\t */\n\tpublic PropertySource(String name, T source) {\n\t\tAssert.hasText(name, \"Property source name must contain at least one character\");\n\t\tAssert.notNull(source, \"Property source must not be null\");\n\t\tthis.name = name;\n\t\tthis.source = source;\n\t}\n\n\t/**\n\t * Create a new {@code PropertySource} with the given name and with a new\n\t * {@code Object} instance as the underlying source.\n\t * <p>Often useful in testing scenarios when creating anonymous implementations\n\t * that never query an actual source but rather return hard-coded values.\n\t */\n\t@SuppressWarnings(\"unchecked\")\n\tpublic PropertySource(String name) {\n\t\tthis(name, (T) new Object());\n\t}\n\n\n\t/**\n\t * Return the name of this {@code PropertySource}.\n\t * <p>See the {@linkplain PropertySource class-level Javadoc} for details\n\t * on property source identity and names.\n\t */\n\tpublic String getName() {\n\t\treturn this.name;\n\t}\n\n\t/**\n\t * Return the underlying source object for this {@code PropertySource}.\n\t */\n\tpublic T getSource() {\n\t\treturn this.source;\n\t}\n\n\t/**\n\t * Return whether this {@code PropertySource} contains the given name.\n\t * <p>This implementation simply checks for a {@code null} return value\n\t * from {@link #getProperty(String)}. Subclasses may wish to implement\n\t * a more efficient algorithm if possible.\n\t * @param name the property name to find\n\t */\n\tpublic boolean containsProperty(String name) {\n\t\treturn (getProperty(name) != null);\n\t}\n\n\t/**\n\t * Return the value associated with the given name,\n\t * or {@code null} if not found.\n\t * @param name the property to find\n\t * @see PropertyResolver#getRequiredProperty(String)\n\t */\n\tpublic abstract @Nullable Object getProperty(String name);\n\n\n\t/**\n\t * This {@code PropertySource} object is equal to the given object if:\n\t * <ul>\n\t * <li>they are the same instance\n\t * <li>the {@code name} properties for both objects are equal\n\t * </ul>\n\t * <p>No properties other than {@code name} are evaluated.\n\t */\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof PropertySource<?> that &&\n\t\t\t\tObjectUtils.nullSafeEquals(getName(), that.getName())));\n\t}\n\n\t/**\n\t * Return a hash code derived from the {@code name} property\n\t * of this {@code PropertySource} object.\n\t */\n\t@Override\n\tpublic int hashCode() {\n\t\treturn Objects.hashCode(getName());\n\t}\n\n\t/**\n\t * Produce concise output (type and name) if the current log level does not include\n\t * debug. If debug is enabled, produce verbose output including the hash code of the\n\t * PropertySource instance and every name/value property pair.\n\t * <p>This variable verbosity is useful as a property source such as system properties\n\t * or environment variables may contain an arbitrary number of property pairs,\n\t * potentially leading to difficulties to read exception and log messages.\n\t * @see Log#isDebugEnabled()\n\t */\n\t@Override\n\tpublic String toString() {\n\t\tif (logger.isDebugEnabled()) {\n\t\t\treturn getClass().getSimpleName() + \"@\" + System.identityHashCode(this) +\n\t\t\t\t\t\" {name='\" + getName() + \"', properties=\" + getSource() + \"}\";\n\t\t}\n\t\telse {\n\t\t\treturn getClass().getSimpleName() + \" {name='\" + getName() + \"'}\";\n\t\t}\n\t}\n\n\n\t/**\n\t * Return a {@code PropertySource} implementation intended for collection\n\t * comparison purposes only.\n\t * <p>Primarily for internal use, but given a collection of {@code PropertySource}\n\t * objects, may be used as follows:\n\t * <pre class=\"code\">\n\t * List&lt;PropertySource&lt;?&gt;&gt; sources = new ArrayList&lt;&gt;();\n\t * sources.add(new MapPropertySource(\"sourceA\", mapA));\n\t * sources.add(new MapPropertySource(\"sourceB\", mapB));\n\t * assert sources.contains(PropertySource.named(\"sourceA\"));\n\t * assert sources.contains(PropertySource.named(\"sourceB\"));\n\t * assert !sources.contains(PropertySource.named(\"sourceC\"));</pre>\n\t * <p>The returned {@code PropertySource} will throw {@code UnsupportedOperationException}\n\t * if any methods other than {@code equals(Object)}, {@code hashCode()}, and {@code toString()}\n\t * are called.\n\t * @param name the name of the comparison {@code PropertySource} to be created\n\t * and returned\n\t */\n\tpublic static PropertySource<?> named(String name) {\n\t\treturn new ComparisonPropertySource(name);\n\t}\n\n\n\t/**\n\t * {@code PropertySource} to be used as a placeholder in cases where an actual\n\t * property source cannot be eagerly initialized at application context\n\t * creation time.  For example, a {@code ServletContext}-based property source\n\t * must wait until the {@code ServletContext} object is available to its enclosing\n\t * {@code ApplicationContext}.  In such cases, a stub should be used to hold the\n\t * intended default position/order of the property source, then be replaced\n\t * during context refresh.\n\t * @see org.springframework.context.support.AbstractApplicationContext#initPropertySources()\n\t * @see org.springframework.web.context.support.StandardServletEnvironment\n\t * @see org.springframework.web.context.support.ServletContextPropertySource\n\t */\n\tpublic static class StubPropertySource extends PropertySource<Object> {\n\n\t\tpublic StubPropertySource(String name) {\n\t\t\tsuper(name);\n\t\t}\n\n\t\t/**\n\t\t * Always returns {@code null}.\n\t\t */\n\t\t@Override\n\t\tpublic @Nullable String getProperty(String name) {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\n\t/**\n\t * A {@code PropertySource} implementation intended for collection comparison\n\t * purposes.\n\t *\n\t * @see PropertySource#named(String)\n\t */\n\tstatic class ComparisonPropertySource extends StubPropertySource {\n\n\t\tprivate static final String USAGE_ERROR =\n\t\t\t\t\"ComparisonPropertySource instances are for use with collection comparison only\";\n\n\t\tpublic ComparisonPropertySource(String name) {\n\t\t\tsuper(name);\n\t\t}\n\n\t\t@Override\n\t\tpublic Object getSource() {\n\t\t\tthrow new UnsupportedOperationException(USAGE_ERROR);\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean containsProperty(String name) {\n\t\t\tthrow new UnsupportedOperationException(USAGE_ERROR);\n\t\t}\n\n\t\t@Override\n\t\tpublic @Nullable String getProperty(String name) {\n\t\t\tthrow new UnsupportedOperationException(USAGE_ERROR);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.StubPropertySource#getProperty(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Always returns {@code null}.\r\n */\r\n@Override\r\n@Nullable\r\npublic String getProperty(String name) {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.StubPropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.StubPropertySource#getProperty(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.StubPropertySource#getProperty(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.StubPropertySource#getProperty(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.StubPropertySource",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "PropertySource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.ComparisonPropertySource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Objects;\n\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ObjectUtils;\n\n/**\n * Abstract base class representing a source of name/value property pairs. The underlying\n * {@linkplain #getSource() source object} may be of any type {@code T} that encapsulates\n * properties. Examples include {@link java.util.Properties} objects, {@link java.util.Map}\n * objects, {@code ServletContext} and {@code ServletConfig} objects (for access to init\n * parameters). Explore the {@code PropertySource} type hierarchy to see provided\n * implementations.\n *\n * <p>{@code PropertySource} objects are not typically used in isolation, but rather\n * through a {@link PropertySources} object, which aggregates property sources and in\n * conjunction with a {@link PropertyResolver} implementation that can perform\n * precedence-based searches across the set of {@code PropertySources}.\n *\n * <p>{@code PropertySource} identity is determined not based on the content of\n * encapsulated properties, but rather based on the {@link #getName() name} of the\n * {@code PropertySource} alone. This is useful for manipulating {@code PropertySource}\n * objects when in collection contexts. See operations in {@link MutablePropertySources}\n * as well as the {@link #named(String)} and {@link #toString()} methods for details.\n *\n * <p>Note that when working with @{@link\n * org.springframework.context.annotation.Configuration Configuration} classes that\n * the @{@link org.springframework.context.annotation.PropertySource PropertySource}\n * annotation provides a convenient and declarative way of adding property sources to the\n * enclosing {@code Environment}.\n *\n * @author Chris Beams\n * @since 3.1\n * @param <T> the source type\n * @see PropertySources\n * @see PropertyResolver\n * @see PropertySourcesPropertyResolver\n * @see MutablePropertySources\n * @see org.springframework.context.annotation.PropertySource\n */\npublic abstract class PropertySource<T> {\n\n\tprotected final Log logger = LogFactory.getLog(getClass());\n\n\tprotected final String name;\n\n\tprotected final T source;\n\n\n\t/**\n\t * Create a new {@code PropertySource} with the given name and source object.\n\t * @param name the associated name\n\t * @param source the source object\n\t */\n\tpublic PropertySource(String name, T source) {\n\t\tAssert.hasText(name, \"Property source name must contain at least one character\");\n\t\tAssert.notNull(source, \"Property source must not be null\");\n\t\tthis.name = name;\n\t\tthis.source = source;\n\t}\n\n\t/**\n\t * Create a new {@code PropertySource} with the given name and with a new\n\t * {@code Object} instance as the underlying source.\n\t * <p>Often useful in testing scenarios when creating anonymous implementations\n\t * that never query an actual source but rather return hard-coded values.\n\t */\n\t@SuppressWarnings(\"unchecked\")\n\tpublic PropertySource(String name) {\n\t\tthis(name, (T) new Object());\n\t}\n\n\n\t/**\n\t * Return the name of this {@code PropertySource}.\n\t * <p>See the {@linkplain PropertySource class-level Javadoc} for details\n\t * on property source identity and names.\n\t */\n\tpublic String getName() {\n\t\treturn this.name;\n\t}\n\n\t/**\n\t * Return the underlying source object for this {@code PropertySource}.\n\t */\n\tpublic T getSource() {\n\t\treturn this.source;\n\t}\n\n\t/**\n\t * Return whether this {@code PropertySource} contains the given name.\n\t * <p>This implementation simply checks for a {@code null} return value\n\t * from {@link #getProperty(String)}. Subclasses may wish to implement\n\t * a more efficient algorithm if possible.\n\t * @param name the property name to find\n\t */\n\tpublic boolean containsProperty(String name) {\n\t\treturn (getProperty(name) != null);\n\t}\n\n\t/**\n\t * Return the value associated with the given name,\n\t * or {@code null} if not found.\n\t * @param name the property to find\n\t * @see PropertyResolver#getRequiredProperty(String)\n\t */\n\tpublic abstract @Nullable Object getProperty(String name);\n\n\n\t/**\n\t * This {@code PropertySource} object is equal to the given object if:\n\t * <ul>\n\t * <li>they are the same instance\n\t * <li>the {@code name} properties for both objects are equal\n\t * </ul>\n\t * <p>No properties other than {@code name} are evaluated.\n\t */\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof PropertySource<?> that &&\n\t\t\t\tObjectUtils.nullSafeEquals(getName(), that.getName())));\n\t}\n\n\t/**\n\t * Return a hash code derived from the {@code name} property\n\t * of this {@code PropertySource} object.\n\t */\n\t@Override\n\tpublic int hashCode() {\n\t\treturn Objects.hashCode(getName());\n\t}\n\n\t/**\n\t * Produce concise output (type and name) if the current log level does not include\n\t * debug. If debug is enabled, produce verbose output including the hash code of the\n\t * PropertySource instance and every name/value property pair.\n\t * <p>This variable verbosity is useful as a property source such as system properties\n\t * or environment variables may contain an arbitrary number of property pairs,\n\t * potentially leading to difficulties to read exception and log messages.\n\t * @see Log#isDebugEnabled()\n\t */\n\t@Override\n\tpublic String toString() {\n\t\tif (logger.isDebugEnabled()) {\n\t\t\treturn getClass().getSimpleName() + \"@\" + System.identityHashCode(this) +\n\t\t\t\t\t\" {name='\" + getName() + \"', properties=\" + getSource() + \"}\";\n\t\t}\n\t\telse {\n\t\t\treturn getClass().getSimpleName() + \" {name='\" + getName() + \"'}\";\n\t\t}\n\t}\n\n\n\t/**\n\t * Return a {@code PropertySource} implementation intended for collection\n\t * comparison purposes only.\n\t * <p>Primarily for internal use, but given a collection of {@code PropertySource}\n\t * objects, may be used as follows:\n\t * <pre class=\"code\">\n\t * List&lt;PropertySource&lt;?&gt;&gt; sources = new ArrayList&lt;&gt;();\n\t * sources.add(new MapPropertySource(\"sourceA\", mapA));\n\t * sources.add(new MapPropertySource(\"sourceB\", mapB));\n\t * assert sources.contains(PropertySource.named(\"sourceA\"));\n\t * assert sources.contains(PropertySource.named(\"sourceB\"));\n\t * assert !sources.contains(PropertySource.named(\"sourceC\"));</pre>\n\t * <p>The returned {@code PropertySource} will throw {@code UnsupportedOperationException}\n\t * if any methods other than {@code equals(Object)}, {@code hashCode()}, and {@code toString()}\n\t * are called.\n\t * @param name the name of the comparison {@code PropertySource} to be created\n\t * and returned\n\t */\n\tpublic static PropertySource<?> named(String name) {\n\t\treturn new ComparisonPropertySource(name);\n\t}\n\n\n\t/**\n\t * {@code PropertySource} to be used as a placeholder in cases where an actual\n\t * property source cannot be eagerly initialized at application context\n\t * creation time.  For example, a {@code ServletContext}-based property source\n\t * must wait until the {@code ServletContext} object is available to its enclosing\n\t * {@code ApplicationContext}.  In such cases, a stub should be used to hold the\n\t * intended default position/order of the property source, then be replaced\n\t * during context refresh.\n\t * @see org.springframework.context.support.AbstractApplicationContext#initPropertySources()\n\t * @see org.springframework.web.context.support.StandardServletEnvironment\n\t * @see org.springframework.web.context.support.ServletContextPropertySource\n\t */\n\tpublic static class StubPropertySource extends PropertySource<Object> {\n\n\t\tpublic StubPropertySource(String name) {\n\t\t\tsuper(name);\n\t\t}\n\n\t\t/**\n\t\t * Always returns {@code null}.\n\t\t */\n\t\t@Override\n\t\tpublic @Nullable String getProperty(String name) {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\n\t/**\n\t * A {@code PropertySource} implementation intended for collection comparison\n\t * purposes.\n\t *\n\t * @see PropertySource#named(String)\n\t */\n\tstatic class ComparisonPropertySource extends StubPropertySource {\n\n\t\tprivate static final String USAGE_ERROR =\n\t\t\t\t\"ComparisonPropertySource instances are for use with collection comparison only\";\n\n\t\tpublic ComparisonPropertySource(String name) {\n\t\t\tsuper(name);\n\t\t}\n\n\t\t@Override\n\t\tpublic Object getSource() {\n\t\t\tthrow new UnsupportedOperationException(USAGE_ERROR);\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean containsProperty(String name) {\n\t\t\tthrow new UnsupportedOperationException(USAGE_ERROR);\n\t\t}\n\n\t\t@Override\n\t\tpublic @Nullable String getProperty(String name) {\n\t\t\tthrow new UnsupportedOperationException(USAGE_ERROR);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.ComparisonPropertySource#USAGE_ERROR",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#USAGE_ERROR",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#getSource()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Object getSource() {\r\n    throw new UnsupportedOperationException(USAGE_ERROR);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ComparisonPropertySource#getSource()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#getSource()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#containsProperty(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean containsProperty(String name) {\r\n    throw new UnsupportedOperationException(USAGE_ERROR);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ComparisonPropertySource#containsProperty(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#containsProperty(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#getProperty(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic String getProperty(String name) {\r\n    throw new UnsupportedOperationException(USAGE_ERROR);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ComparisonPropertySource#getProperty(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ComparisonPropertySource#getProperty(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

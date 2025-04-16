@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#invokeAnnotationMethod(Method,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Invoke the supplied annotation attribute {@link Method} on the supplied\r\n * {@link Annotation}.\r\n * <p>An attempt will first be made to invoke the method via the annotation's\r\n * {@link InvocationHandler} (if the annotation instance is a JDK dynamic proxy).\r\n * If that fails, an attempt will be made to invoke the method via reflection.\r\n * @param method the method to invoke\r\n * @param annotation the annotation on which to invoke the method\r\n * @return the value returned from the method invocation\r\n * @since 5.3.24\r\n */\r\n@Nullable\r\nstatic Object invokeAnnotationMethod(Method method, @Nullable Object annotation) {\r\n    if (annotation == null) {\r\n        return null;\r\n    }\r\n    if (Proxy.isProxyClass(annotation.getClass())) {\r\n        try {\r\n            InvocationHandler handler = Proxy.getInvocationHandler(annotation);\r\n            return handler.invoke(annotation, method, null);\r\n        } catch (Throwable ex) {\r\n            // Ignore and fall back to reflection below\r\n        }\r\n    }\r\n    return ReflectionUtils.invokeMethod(method, annotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#invokeAnnotationMethod(Method,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#invokeAnnotationMethod(Method,Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#rethrowAnnotationConfigurationException(Throwable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * If the supplied throwable is an {@link AnnotationConfigurationException},\r\n * it will be cast to an {@code AnnotationConfigurationException} and thrown,\r\n * allowing it to propagate to the caller.\r\n * <p>Otherwise, this method does nothing.\r\n * @param ex the throwable to inspect\r\n */\r\nstatic void rethrowAnnotationConfigurationException(Throwable ex) {\r\n    if (ex instanceof AnnotationConfigurationException exception) {\r\n        throw exception;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#rethrowAnnotationConfigurationException(Throwable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#handleIntrospectionFailure(AnnotatedElement,Throwable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Handle the supplied annotation introspection exception.\r\n * <p>If the supplied exception is an {@link AnnotationConfigurationException},\r\n * it will simply be thrown, allowing it to propagate to the caller, and\r\n * nothing will be logged.\r\n * <p>Otherwise, this method logs an introspection failure (in particular for\r\n * a {@link TypeNotPresentException}) before moving on, assuming nested\r\n * {@code Class} values were not resolvable within annotation attributes and\r\n * thereby effectively pretending there were no annotations on the specified\r\n * element.\r\n * @param element the element that we tried to introspect annotations on\r\n * @param ex the exception that we encountered\r\n * @see #rethrowAnnotationConfigurationException\r\n * @see IntrospectionFailureLogger\r\n */\r\nstatic void handleIntrospectionFailure(AnnotatedElement element, Throwable ex) {\r\n    rethrowAnnotationConfigurationException(ex);\r\n    IntrospectionFailureLogger logger = IntrospectionFailureLogger.INFO;\r\n    boolean meta = false;\r\n    if (element instanceof Class<?> clazz && Annotation.class.isAssignableFrom(clazz)) {\r\n        // Meta-annotation introspection failure\r\n        logger = IntrospectionFailureLogger.DEBUG;\r\n        meta = true;\r\n    }\r\n    if (logger.isEnabled()) {\r\n        logger.log(\"Failed to \" + (meta ? \"meta-introspect annotation \" : \"introspect annotations on \") + element + \": \" + ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#handleIntrospectionFailure(AnnotatedElement,Throwable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#handleValueRetrievalFailure(Annotation,Throwable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Handle the supplied value retrieval exception.\r\n * @param annotation the annotation instance from which to retrieve the value\r\n * @param ex the exception that we encountered\r\n * @see #handleIntrospectionFailure\r\n */\r\nprivate static void handleValueRetrievalFailure(Annotation annotation, Throwable ex) {\r\n    rethrowAnnotationConfigurationException(ex);\r\n    IntrospectionFailureLogger logger = IntrospectionFailureLogger.INFO;\r\n    if (logger.isEnabled()) {\r\n        logger.log(\"Failed to retrieve value from \" + annotation + \": \" + ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#handleValueRetrievalFailure(Annotation,Throwable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Annotation)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve the <em>default value</em> of the {@code value} attribute\r\n * of a single-element Annotation, given an annotation instance.\r\n * @param annotation the annotation instance from which to retrieve the default value\r\n * @return the default value, or {@code null} if not found\r\n * @see #getDefaultValue(Annotation, String)\r\n */\r\n@Nullable\r\npublic static Object getDefaultValue(Annotation annotation) {\r\n    return getDefaultValue(annotation, VALUE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Annotation)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Annotation)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Annotation,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve the <em>default value</em> of a named attribute, given an annotation instance.\r\n * @param annotation the annotation instance from which to retrieve the default value\r\n * @param attributeName the name of the attribute value to retrieve\r\n * @return the default value of the named attribute, or {@code null} if not found\r\n * @see #getDefaultValue(Class, String)\r\n */\r\n@Nullable\r\npublic static Object getDefaultValue(@Nullable Annotation annotation, @Nullable String attributeName) {\r\n    return (annotation != null ? getDefaultValue(annotation.annotationType(), attributeName) : null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Annotation,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Annotation,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Class<? extends Annotation>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve the <em>default value</em> of the {@code value} attribute\r\n * of a single-element Annotation, given the {@link Class annotation type}.\r\n * @param annotationType the <em>annotation type</em> for which the default value should be retrieved\r\n * @return the default value, or {@code null} if not found\r\n * @see #getDefaultValue(Class, String)\r\n */\r\n@Nullable\r\npublic static Object getDefaultValue(Class<? extends Annotation> annotationType) {\r\n    return getDefaultValue(annotationType, VALUE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Class<? extends Annotation>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Class<? extends Annotation>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Class<? extends Annotation>,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve the <em>default value</em> of a named attribute, given the\r\n * {@link Class annotation type}.\r\n * @param annotationType the <em>annotation type</em> for which the default value should be retrieved\r\n * @param attributeName the name of the attribute value to retrieve.\r\n * @return the default value of the named attribute, or {@code null} if not found\r\n * @see #getDefaultValue(Annotation, String)\r\n */\r\n@Nullable\r\npublic static Object getDefaultValue(@Nullable Class<? extends Annotation> annotationType, @Nullable String attributeName) {\r\n    if (annotationType == null || !StringUtils.hasText(attributeName)) {\r\n        return null;\r\n    }\r\n    return MergedAnnotation.of(annotationType).getDefaultValue(attributeName).orElse(null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationUtils#getDefaultValue(Class<? extends Annotation>,String)",
+    "tailType": "method"
+  }
+]

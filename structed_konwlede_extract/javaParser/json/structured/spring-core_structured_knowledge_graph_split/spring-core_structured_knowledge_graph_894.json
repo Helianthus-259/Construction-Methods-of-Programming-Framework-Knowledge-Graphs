@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support.PropertiesToStringConverter#convert(Properties)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String convert(Properties source) {\r\n    try {\r\n        ByteArrayOutputStream os = new ByteArrayOutputStream(256);\r\n        source.store(os, null);\r\n        return os.toString(StandardCharsets.ISO_8859_1);\r\n    } catch (IOException ex) {\r\n        // Should never happen.\r\n        throw new IllegalArgumentException(\"Failed to store [\" + source + \"] into String\", ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.PropertiesToStringConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.PropertiesToStringConverter#convert(Properties)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.PropertiesToStringConverter#convert(Properties)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.StreamConverter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2017 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.util.Collection;\nimport java.util.Collections;\nimport java.util.HashSet;\nimport java.util.List;\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.convert.converter.ConditionalGenericConverter;\n\n/**\n * Converts a {@link Stream} to and from a collection or array, converting the\n * element type if necessary.\n *\n * @author Stephane Nicoll\n * @since 4.2\n */\nclass StreamConverter implements ConditionalGenericConverter {\n\n\tprivate static final TypeDescriptor STREAM_TYPE = TypeDescriptor.valueOf(Stream.class);\n\n\tprivate static final Set<ConvertiblePair> CONVERTIBLE_TYPES = createConvertibleTypes();\n\n\tprivate final ConversionService conversionService;\n\n\n\tpublic StreamConverter(ConversionService conversionService) {\n\t\tthis.conversionService = conversionService;\n\t}\n\n\n\t@Override\n\tpublic Set<ConvertiblePair> getConvertibleTypes() {\n\t\treturn CONVERTIBLE_TYPES;\n\t}\n\n\t@Override\n\tpublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tif (sourceType.isAssignableTo(STREAM_TYPE)) {\n\t\t\treturn matchesFromStream(sourceType.getElementTypeDescriptor(), targetType);\n\t\t}\n\t\tif (targetType.isAssignableTo(STREAM_TYPE)) {\n\t\t\treturn matchesToStream(targetType.getElementTypeDescriptor(), sourceType);\n\t\t}\n\t\treturn false;\n\t}\n\n\t/**\n\t * Validate that a {@link Collection} of the elements held within the stream can be\n\t * converted to the specified {@code targetType}.\n\t * @param elementType the type of the stream elements\n\t * @param targetType the type to convert to\n\t */\n\tpublic boolean matchesFromStream(@Nullable TypeDescriptor elementType, TypeDescriptor targetType) {\n\t\tTypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\n\t\treturn this.conversionService.canConvert(collectionOfElement, targetType);\n\t}\n\n\t/**\n\t * Validate that the specified {@code sourceType} can be converted to a {@link Collection} of\n\t * the type of the stream elements.\n\t * @param elementType the type of the stream elements\n\t * @param sourceType the type to convert from\n\t */\n\tpublic boolean matchesToStream(@Nullable TypeDescriptor elementType, TypeDescriptor sourceType) {\n\t\tTypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\n\t\treturn this.conversionService.canConvert(sourceType, collectionOfElement);\n\t}\n\n\t@Override\n\tpublic @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tif (sourceType.isAssignableTo(STREAM_TYPE)) {\n\t\t\treturn convertFromStream((Stream<?>) source, sourceType, targetType);\n\t\t}\n\t\tif (targetType.isAssignableTo(STREAM_TYPE)) {\n\t\t\treturn convertToStream(source, sourceType, targetType);\n\t\t}\n\t\t// Should not happen\n\t\tthrow new IllegalStateException(\"Unexpected source/target types\");\n\t}\n\n\tprivate @Nullable Object convertFromStream(@Nullable Stream<?> source, TypeDescriptor streamType, TypeDescriptor targetType) {\n\t\tList<Object> content = (source != null ? source.collect(Collectors.<Object>toList()) : Collections.emptyList());\n\t\tTypeDescriptor listType = TypeDescriptor.collection(List.class, streamType.getElementTypeDescriptor());\n\t\treturn this.conversionService.convert(content, listType, targetType);\n\t}\n\n\tprivate Object convertToStream(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor streamType) {\n\t\tTypeDescriptor targetCollection = TypeDescriptor.collection(List.class, streamType.getElementTypeDescriptor());\n\t\tList<?> target = (List<?>) this.conversionService.convert(source, sourceType, targetCollection);\n\t\tif (target == null) {\n\t\t\ttarget = Collections.emptyList();\n\t\t}\n\t\treturn target.stream();\n\t}\n\n\n\tprivate static Set<ConvertiblePair> createConvertibleTypes() {\n\t\tSet<ConvertiblePair> convertiblePairs = new HashSet<>();\n\t\tconvertiblePairs.add(new ConvertiblePair(Stream.class, Collection.class));\n\t\tconvertiblePairs.add(new ConvertiblePair(Stream.class, Object[].class));\n\t\tconvertiblePairs.add(new ConvertiblePair(Collection.class, Stream.class));\n\t\tconvertiblePairs.add(new ConvertiblePair(Object[].class, Stream.class));\n\t\treturn convertiblePairs;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.StreamConverter#STREAM_TYPE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#STREAM_TYPE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "TypeDescriptor",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.StreamConverter#CONVERTIBLE_TYPES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#CONVERTIBLE_TYPES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Set<ConvertiblePair>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.StreamConverter#conversionService",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#conversionService",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConversionService",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return CONVERTIBLE_TYPES;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StreamConverter#getConvertibleTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (sourceType.isAssignableTo(STREAM_TYPE)) {\r\n        return matchesFromStream(sourceType.getElementTypeDescriptor(), targetType);\r\n    }\r\n    if (targetType.isAssignableTo(STREAM_TYPE)) {\r\n        return matchesToStream(targetType.getElementTypeDescriptor(), sourceType);\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StreamConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter#matchesFromStream(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Validate that a {@link Collection} of the elements held within the stream can be\r\n * converted to the specified {@code targetType}.\r\n * @param elementType the type of the stream elements\r\n * @param targetType the type to convert to\r\n */\r\npublic boolean matchesFromStream(@Nullable TypeDescriptor elementType, TypeDescriptor targetType) {\r\n    TypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\r\n    return this.conversionService.canConvert(collectionOfElement, targetType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StreamConverter#matchesFromStream(TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  }
+]

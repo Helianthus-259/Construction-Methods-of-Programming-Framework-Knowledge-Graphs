@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.util.ArrayDeque;\nimport java.util.ArrayList;\nimport java.util.Deque;\nimport java.util.HashSet;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.lang.Contract;\nimport org.springframework.util.ConcurrentReferenceHashMap;\n\n/**\n * Provides {@link AnnotationTypeMapping} information for a single source\n * annotation type. Performs a recursive breadth first crawl of all\n * meta-annotations to ultimately provide a quick way to map the attributes of\n * a root {@link Annotation}.\n *\n * <p>Supports convention based merging of meta-annotations as well as implicit\n * and explicit {@link AliasFor @AliasFor} aliases. Also provides information\n * about mirrored attributes.\n *\n * <p>This class is designed to be cached so that meta-annotations only need to\n * be searched once, regardless of how many times they are actually used.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 5.2\n * @see AnnotationTypeMapping\n */\nfinal class AnnotationTypeMappings {\n\n\tprivate static final IntrospectionFailureLogger failureLogger = IntrospectionFailureLogger.DEBUG;\n\n\tprivate static final Map<AnnotationFilter, Cache> standardRepeatablesCache = new ConcurrentReferenceHashMap<>();\n\n\tprivate static final Map<AnnotationFilter, Cache> noRepeatablesCache = new ConcurrentReferenceHashMap<>();\n\n\n\tprivate final RepeatableContainers repeatableContainers;\n\n\tprivate final AnnotationFilter filter;\n\n\tprivate final List<AnnotationTypeMapping> mappings;\n\n\n\tprivate AnnotationTypeMappings(RepeatableContainers repeatableContainers,\n\t\t\tAnnotationFilter filter, Class<? extends Annotation> annotationType,\n\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\n\t\tthis.repeatableContainers = repeatableContainers;\n\t\tthis.filter = filter;\n\t\tthis.mappings = new ArrayList<>();\n\t\taddAllMappings(annotationType, visitedAnnotationTypes);\n\t\tthis.mappings.forEach(AnnotationTypeMapping::afterAllMappingsSet);\n\t}\n\n\n\tprivate void addAllMappings(Class<? extends Annotation> annotationType,\n\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\t\tDeque<AnnotationTypeMapping> queue = new ArrayDeque<>();\n\t\taddIfPossible(queue, null, annotationType, null, visitedAnnotationTypes);\n\t\twhile (!queue.isEmpty()) {\n\t\t\tAnnotationTypeMapping mapping = queue.removeFirst();\n\t\t\tthis.mappings.add(mapping);\n\t\t\taddMetaAnnotationsToQueue(queue, mapping);\n\t\t}\n\t}\n\n\tprivate void addMetaAnnotationsToQueue(Deque<AnnotationTypeMapping> queue, AnnotationTypeMapping source) {\n\t\t@Nullable Annotation[] metaAnnotations = AnnotationsScanner.getDeclaredAnnotations(source.getAnnotationType(), false);\n\t\tfor (Annotation metaAnnotation : metaAnnotations) {\n\t\t\tif (!isMappable(source, metaAnnotation)) {\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tAnnotation[] repeatedAnnotations = this.repeatableContainers.findRepeatedAnnotations(metaAnnotation);\n\t\t\tif (repeatedAnnotations != null) {\n\t\t\t\tfor (Annotation repeatedAnnotation : repeatedAnnotations) {\n\t\t\t\t\tif (!isMappable(source, repeatedAnnotation)) {\n\t\t\t\t\t\tcontinue;\n\t\t\t\t\t}\n\t\t\t\t\taddIfPossible(queue, source, repeatedAnnotation);\n\t\t\t\t}\n\t\t\t}\n\t\t\telse {\n\t\t\t\taddIfPossible(queue, source, metaAnnotation);\n\t\t\t}\n\t\t}\n\t}\n\n\tprivate void addIfPossible(Deque<AnnotationTypeMapping> queue, AnnotationTypeMapping source, Annotation ann) {\n\t\taddIfPossible(queue, source, ann.annotationType(), ann, new HashSet<>());\n\t}\n\n\tprivate void addIfPossible(Deque<AnnotationTypeMapping> queue, @Nullable AnnotationTypeMapping source,\n\t\t\tClass<? extends Annotation> annotationType, @Nullable Annotation ann,\n\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\n\t\ttry {\n\t\t\tqueue.addLast(new AnnotationTypeMapping(source, annotationType, ann, visitedAnnotationTypes));\n\t\t}\n\t\tcatch (Exception ex) {\n\t\t\tAnnotationUtils.rethrowAnnotationConfigurationException(ex);\n\t\t\tif (failureLogger.isEnabled()) {\n\t\t\t\tfailureLogger.log(\"Failed to introspect meta-annotation \" + annotationType.getName(),\n\t\t\t\t\t\t(source != null ? source.getAnnotationType() : null), ex);\n\t\t\t}\n\t\t}\n\t}\n\n\t@Contract(\"_, null -> false\")\n\tprivate boolean isMappable(AnnotationTypeMapping source, @Nullable Annotation metaAnnotation) {\n\t\treturn (metaAnnotation != null && !this.filter.matches(metaAnnotation) &&\n\t\t\t\t!AnnotationFilter.PLAIN.matches(source.getAnnotationType()) &&\n\t\t\t\t!isAlreadyMapped(source, metaAnnotation));\n\t}\n\n\tprivate boolean isAlreadyMapped(AnnotationTypeMapping source, Annotation metaAnnotation) {\n\t\tClass<? extends Annotation> annotationType = metaAnnotation.annotationType();\n\t\tAnnotationTypeMapping mapping = source;\n\t\twhile (mapping != null) {\n\t\t\tif (mapping.getAnnotationType() == annotationType) {\n\t\t\t\treturn true;\n\t\t\t}\n\t\t\tmapping = mapping.getSource();\n\t\t}\n\t\treturn false;\n\t}\n\n\t/**\n\t * Get the total number of contained mappings.\n\t * @return the total number of mappings\n\t */\n\tint size() {\n\t\treturn this.mappings.size();\n\t}\n\n\t/**\n\t * Get an individual mapping from this instance.\n\t * <p>Index {@code 0} will always return the root mapping; higher indexes\n\t * will return meta-annotation mappings.\n\t * @param index the index to return\n\t * @return the {@link AnnotationTypeMapping}\n\t * @throws IndexOutOfBoundsException if the index is out of range\n\t * ({@code index < 0 || index >= size()})\n\t */\n\tAnnotationTypeMapping get(int index) {\n\t\treturn this.mappings.get(index);\n\t}\n\n\n\t/**\n\t * Create {@link AnnotationTypeMappings} for the specified annotation type.\n\t * @param annotationType the source annotation type\n\t * @return type mappings for the annotation type\n\t */\n\tstatic AnnotationTypeMappings forAnnotationType(Class<? extends Annotation> annotationType) {\n\t\treturn forAnnotationType(annotationType, new HashSet<>());\n\t}\n\n\t/**\n\t * Create {@link AnnotationTypeMappings} for the specified annotation type.\n\t * @param annotationType the source annotation type\n\t * @param visitedAnnotationTypes the set of annotations that we have already\n\t * visited; used to avoid infinite recursion for recursive annotations which\n\t * some JVM languages support (such as Kotlin)\n\t * @return type mappings for the annotation type\n\t */\n\tstatic AnnotationTypeMappings forAnnotationType(Class<? extends Annotation> annotationType,\n\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\n\t\treturn forAnnotationType(annotationType, RepeatableContainers.standardRepeatables(),\n\t\t\t\tAnnotationFilter.PLAIN, visitedAnnotationTypes);\n\t}\n\n\t/**\n\t * Create {@link AnnotationTypeMappings} for the specified annotation type.\n\t * @param annotationType the source annotation type\n\t * @param repeatableContainers the repeatable containers that may be used by\n\t * the meta-annotations\n\t * @param annotationFilter the annotation filter used to limit which\n\t * annotations are considered\n\t * @return type mappings for the annotation type\n\t */\n\tstatic AnnotationTypeMappings forAnnotationType(Class<? extends Annotation> annotationType,\n\t\t\tRepeatableContainers repeatableContainers, AnnotationFilter annotationFilter) {\n\n\t\treturn forAnnotationType(annotationType, repeatableContainers, annotationFilter, new HashSet<>());\n\t}\n\n\t/**\n\t * Create {@link AnnotationTypeMappings} for the specified annotation type.\n\t * @param annotationType the source annotation type\n\t * @param repeatableContainers the repeatable containers that may be used by\n\t * the meta-annotations\n\t * @param annotationFilter the annotation filter used to limit which\n\t * annotations are considered\n\t * @param visitedAnnotationTypes the set of annotations that we have already\n\t * visited; used to avoid infinite recursion for recursive annotations which\n\t * some JVM languages support (such as Kotlin)\n\t * @return type mappings for the annotation type\n\t */\n\tstatic AnnotationTypeMappings forAnnotationType(Class<? extends Annotation> annotationType,\n\t\t\tRepeatableContainers repeatableContainers, AnnotationFilter annotationFilter,\n\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\n\t\tif (repeatableContainers == RepeatableContainers.standardRepeatables()) {\n\t\t\treturn standardRepeatablesCache.computeIfAbsent(annotationFilter,\n\t\t\t\t\tkey -> new Cache(repeatableContainers, key)).get(annotationType, visitedAnnotationTypes);\n\t\t}\n\t\tif (repeatableContainers == RepeatableContainers.none()) {\n\t\t\treturn noRepeatablesCache.computeIfAbsent(annotationFilter,\n\t\t\t\t\tkey -> new Cache(repeatableContainers, key)).get(annotationType, visitedAnnotationTypes);\n\t\t}\n\t\treturn new AnnotationTypeMappings(repeatableContainers, annotationFilter, annotationType,\n\t\t\t\tvisitedAnnotationTypes);\n\t}\n\n\tstatic void clearCache() {\n\t\tstandardRepeatablesCache.clear();\n\t\tnoRepeatablesCache.clear();\n\t}\n\n\n\t/**\n\t * Cache created per {@link AnnotationFilter}.\n\t */\n\tprivate static class Cache {\n\n\t\tprivate final RepeatableContainers repeatableContainers;\n\n\t\tprivate final AnnotationFilter filter;\n\n\t\tprivate final Map<Class<? extends Annotation>, AnnotationTypeMappings> mappings;\n\n\t\t/**\n\t\t * Create a cache instance with the specified filter.\n\t\t * @param filter the annotation filter\n\t\t */\n\t\tCache(RepeatableContainers repeatableContainers, AnnotationFilter filter) {\n\t\t\tthis.repeatableContainers = repeatableContainers;\n\t\t\tthis.filter = filter;\n\t\t\tthis.mappings = new ConcurrentReferenceHashMap<>();\n\t\t}\n\n\t\t/**\n\t\t * Get or create {@link AnnotationTypeMappings} for the specified annotation type.\n\t\t * @param annotationType the annotation type\n\t\t * @param visitedAnnotationTypes the set of annotations that we have already\n\t\t * visited; used to avoid infinite recursion for recursive annotations which\n\t\t * some JVM languages support (such as Kotlin)\n\t\t * @return a new or existing {@link AnnotationTypeMappings} instance\n\t\t */\n\t\tAnnotationTypeMappings get(Class<? extends Annotation> annotationType,\n\t\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\t\t\treturn this.mappings.computeIfAbsent(annotationType, key -> createMappings(key, visitedAnnotationTypes));\n\t\t}\n\n\t\tprivate AnnotationTypeMappings createMappings(Class<? extends Annotation> annotationType,\n\t\t\t\tSet<Class<? extends Annotation>> visitedAnnotationTypes) {\n\t\t\treturn new AnnotationTypeMappings(this.repeatableContainers, this.filter, annotationType,\n\t\t\t\t\tvisitedAnnotationTypes);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#failureLogger",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#failureLogger",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "IntrospectionFailureLogger",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#standardRepeatablesCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#standardRepeatablesCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<AnnotationFilter, Cache>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#noRepeatablesCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#noRepeatablesCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<AnnotationFilter, Cache>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#repeatableContainers",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#repeatableContainers",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "RepeatableContainers",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#filter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#filter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AnnotationFilter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#mappings",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#mappings",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<AnnotationTypeMapping>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#addAllMappings(Class<? extends Annotation>,Set<Class<? extends Annotation>>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void addAllMappings(Class<? extends Annotation> annotationType, Set<Class<? extends Annotation>> visitedAnnotationTypes) {\r\n    Deque<AnnotationTypeMapping> queue = new ArrayDeque<>();\r\n    addIfPossible(queue, null, annotationType, null, visitedAnnotationTypes);\r\n    while (!queue.isEmpty()) {\r\n        AnnotationTypeMapping mapping = queue.removeFirst();\r\n        this.mappings.add(mapping);\r\n        addMetaAnnotationsToQueue(queue, mapping);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#addAllMappings(Class<? extends Annotation>,Set<Class<? extends Annotation>>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#addMetaAnnotationsToQueue(Deque<AnnotationTypeMapping>,AnnotationTypeMapping)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void addMetaAnnotationsToQueue(Deque<AnnotationTypeMapping> queue, AnnotationTypeMapping source) {\r\n    @Nullable\r\n    Annotation[] metaAnnotations = AnnotationsScanner.getDeclaredAnnotations(source.getAnnotationType(), false);\r\n    for (Annotation metaAnnotation : metaAnnotations) {\r\n        if (!isMappable(source, metaAnnotation)) {\r\n            continue;\r\n        }\r\n        Annotation[] repeatedAnnotations = this.repeatableContainers.findRepeatedAnnotations(metaAnnotation);\r\n        if (repeatedAnnotations != null) {\r\n            for (Annotation repeatedAnnotation : repeatedAnnotations) {\r\n                if (!isMappable(source, repeatedAnnotation)) {\r\n                    continue;\r\n                }\r\n                addIfPossible(queue, source, repeatedAnnotation);\r\n            }\r\n        } else {\r\n            addIfPossible(queue, source, metaAnnotation);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.AnnotationTypeMappings#addMetaAnnotationsToQueue(Deque<AnnotationTypeMapping>,AnnotationTypeMapping)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.AnnotationTypeMappings#addIfPossible(Deque<AnnotationTypeMapping>,AnnotationTypeMapping,Annotation)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void addIfPossible(Deque<AnnotationTypeMapping> queue, AnnotationTypeMapping source, Annotation ann) {\r\n    addIfPossible(queue, source, ann.annotationType(), ann, new HashSet<>());\r\n}",
+    "tailType": "method_code"
+  }
+]

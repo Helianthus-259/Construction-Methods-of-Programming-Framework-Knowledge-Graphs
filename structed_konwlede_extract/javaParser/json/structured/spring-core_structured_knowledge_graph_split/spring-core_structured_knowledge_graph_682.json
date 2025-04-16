@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.reflect;\n\nimport java.security.ProtectionDomain;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.Local;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class MulticastDelegate implements Cloneable {\n    protected Object[] targets = {};\n\n    protected MulticastDelegate() {\n    }\n\n    public List getTargets() {\n        return new ArrayList(Arrays.asList(targets));\n    }\n\n    abstract public MulticastDelegate add(Object target);\n\n    protected MulticastDelegate addHelper(Object target) {\n        MulticastDelegate copy = newInstance();\n        copy.targets = new Object[targets.length + 1];\n        System.arraycopy(targets, 0, copy.targets, 0, targets.length);\n        copy.targets[targets.length] = target;\n        return copy;\n    }\n\n    public MulticastDelegate remove(Object target) {\n        for (int i = targets.length - 1; i >= 0; i--) {\n            if (targets[i].equals(target)) {\n                MulticastDelegate copy = newInstance();\n                copy.targets = new Object[targets.length - 1];\n                System.arraycopy(targets, 0, copy.targets, 0, i);\n                System.arraycopy(targets, i + 1, copy.targets, i, targets.length - i - 1);\n                return copy;\n            }\n        }\n        return this;\n    }\n\n    abstract public MulticastDelegate newInstance();\n\n    public static MulticastDelegate create(Class iface) {\n        Generator gen = new Generator();\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(MulticastDelegate.class.getName());\n        private static final Type MULTICAST_DELEGATE =\n          TypeUtils.parseType(\"org.springframework.cglib.reflect.MulticastDelegate\");\n        private static final Signature NEW_INSTANCE =\n          new Signature(\"newInstance\", MULTICAST_DELEGATE, new Type[0]);\n        private static final Signature ADD_DELEGATE =\n          new Signature(\"add\", MULTICAST_DELEGATE, new Type[]{ Constants.TYPE_OBJECT });\n        private static final Signature ADD_HELPER =\n          new Signature(\"addHelper\", MULTICAST_DELEGATE, new Type[]{ Constants.TYPE_OBJECT });\n\n        private Class iface;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        @Override\n        protected ClassLoader getDefaultClassLoader() {\n            return iface.getClassLoader();\n        }\n\n        @Override\n        protected ProtectionDomain getProtectionDomain() {\n            return ReflectUtils.getProtectionDomain(iface);\n        }\n\n        public void setInterface(Class iface) {\n            this.iface = iface;\n        }\n\n        public MulticastDelegate create() {\n            setNamePrefix(MulticastDelegate.class.getName());\n            return (MulticastDelegate)super.create(iface.getName());\n        }\n\n        @Override\n        public void generateClass(ClassVisitor cv) {\n            final MethodInfo method = ReflectUtils.getMethodInfo(ReflectUtils.findInterfaceMethod(iface));\n\n            ClassEmitter ce = new ClassEmitter(cv);\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           MULTICAST_DELEGATE,\n                           new Type[]{ Type.getType(iface) },\n                           Constants.SOURCE_FILE);\n            EmitUtils.null_constructor(ce);\n\n            // generate proxied method\n            emitProxy(ce, method);\n\n            // newInstance\n            CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, NEW_INSTANCE, null);\n            e.new_instance_this();\n            e.dup();\n            e.invoke_constructor_this();\n            e.return_value();\n            e.end_method();\n\n            // add\n            e = ce.begin_method(Constants.ACC_PUBLIC, ADD_DELEGATE, null);\n            e.load_this();\n            e.load_arg(0);\n            e.checkcast(Type.getType(iface));\n            e.invoke_virtual_this(ADD_HELPER);\n            e.return_value();\n            e.end_method();\n\n            ce.end_class();\n        }\n\n        private void emitProxy(ClassEmitter ce, final MethodInfo method) {\n            int modifiers = Constants.ACC_PUBLIC;\n            if ((method.getModifiers() & Constants.ACC_VARARGS) == Constants.ACC_VARARGS) {\n                modifiers |= Constants.ACC_VARARGS;\n            }\n            final CodeEmitter e = EmitUtils.begin_method(ce, method, modifiers);\n            Type returnType = method.getSignature().getReturnType();\n            final boolean returns = returnType != Type.VOID_TYPE;\n            Local result = null;\n            if (returns) {\n                result = e.make_local(returnType);\n                e.zero_or_null(returnType);\n                e.store_local(result);\n            }\n            e.load_this();\n            e.super_getfield(\"targets\", Constants.TYPE_OBJECT_ARRAY);\n            final Local result2 = result;\n            EmitUtils.process_array(e, Constants.TYPE_OBJECT_ARRAY, type -> {\n\t\t\t    e.checkcast(Type.getType(iface));\n\t\t\t    e.load_args();\n\t\t\t    e.invoke(method);\n\t\t\t    if (returns) {\n\t\t\t        e.store_local(result2);\n\t\t\t    }\n\t\t\t});\n            if (returns) {\n                e.load_local(result);\n            }\n            e.return_value();\n            e.end_method();\n        }\n\n        @Override\n        protected Object firstInstance(Class type) {\n            // make a new instance in case first object is used with a long list of targets\n            return ((MulticastDelegate)ReflectUtils.newInstance(type)).newInstance();\n        }\n\n        @Override\n        protected Object nextInstance(Object instance) {\n            return ((MulticastDelegate)instance).newInstance();\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#targets",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#targets",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#getTargets()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public List getTargets() {\r\n    return new ArrayList(Arrays.asList(targets));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#getTargets()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#add(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "abstract public MulticastDelegate add(Object target);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#add(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#addHelper(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "protected MulticastDelegate addHelper(Object target) {\r\n    MulticastDelegate copy = newInstance();\r\n    copy.targets = new Object[targets.length + 1];\r\n    System.arraycopy(targets, 0, copy.targets, 0, targets.length);\r\n    copy.targets[targets.length] = target;\r\n    return copy;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#addHelper(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#remove(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public MulticastDelegate remove(Object target) {\r\n    for (int i = targets.length - 1; i >= 0; i--) {\r\n        if (targets[i].equals(target)) {\r\n            MulticastDelegate copy = newInstance();\r\n            copy.targets = new Object[targets.length - 1];\r\n            System.arraycopy(targets, 0, copy.targets, 0, i);\r\n            System.arraycopy(targets, i + 1, copy.targets, i, targets.length - i - 1);\r\n            return copy;\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#remove(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#newInstance()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "abstract public MulticastDelegate newInstance();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#newInstance()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate#create(Class)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static MulticastDelegate create(Class iface) {\r\n    Generator gen = new Generator();\r\n    gen.setInterface(iface);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.MulticastDelegate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.reflect.MulticastDelegate#create(Class)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.reflect",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.reflect.Generator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.reflect;\n\nimport java.security.ProtectionDomain;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.Local;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class MulticastDelegate implements Cloneable {\n    protected Object[] targets = {};\n\n    protected MulticastDelegate() {\n    }\n\n    public List getTargets() {\n        return new ArrayList(Arrays.asList(targets));\n    }\n\n    abstract public MulticastDelegate add(Object target);\n\n    protected MulticastDelegate addHelper(Object target) {\n        MulticastDelegate copy = newInstance();\n        copy.targets = new Object[targets.length + 1];\n        System.arraycopy(targets, 0, copy.targets, 0, targets.length);\n        copy.targets[targets.length] = target;\n        return copy;\n    }\n\n    public MulticastDelegate remove(Object target) {\n        for (int i = targets.length - 1; i >= 0; i--) {\n            if (targets[i].equals(target)) {\n                MulticastDelegate copy = newInstance();\n                copy.targets = new Object[targets.length - 1];\n                System.arraycopy(targets, 0, copy.targets, 0, i);\n                System.arraycopy(targets, i + 1, copy.targets, i, targets.length - i - 1);\n                return copy;\n            }\n        }\n        return this;\n    }\n\n    abstract public MulticastDelegate newInstance();\n\n    public static MulticastDelegate create(Class iface) {\n        Generator gen = new Generator();\n        gen.setInterface(iface);\n        return gen.create();\n    }\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(MulticastDelegate.class.getName());\n        private static final Type MULTICAST_DELEGATE =\n          TypeUtils.parseType(\"org.springframework.cglib.reflect.MulticastDelegate\");\n        private static final Signature NEW_INSTANCE =\n          new Signature(\"newInstance\", MULTICAST_DELEGATE, new Type[0]);\n        private static final Signature ADD_DELEGATE =\n          new Signature(\"add\", MULTICAST_DELEGATE, new Type[]{ Constants.TYPE_OBJECT });\n        private static final Signature ADD_HELPER =\n          new Signature(\"addHelper\", MULTICAST_DELEGATE, new Type[]{ Constants.TYPE_OBJECT });\n\n        private Class iface;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        @Override\n        protected ClassLoader getDefaultClassLoader() {\n            return iface.getClassLoader();\n        }\n\n        @Override\n        protected ProtectionDomain getProtectionDomain() {\n            return ReflectUtils.getProtectionDomain(iface);\n        }\n\n        public void setInterface(Class iface) {\n            this.iface = iface;\n        }\n\n        public MulticastDelegate create() {\n            setNamePrefix(MulticastDelegate.class.getName());\n            return (MulticastDelegate)super.create(iface.getName());\n        }\n\n        @Override\n        public void generateClass(ClassVisitor cv) {\n            final MethodInfo method = ReflectUtils.getMethodInfo(ReflectUtils.findInterfaceMethod(iface));\n\n            ClassEmitter ce = new ClassEmitter(cv);\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           MULTICAST_DELEGATE,\n                           new Type[]{ Type.getType(iface) },\n                           Constants.SOURCE_FILE);\n            EmitUtils.null_constructor(ce);\n\n            // generate proxied method\n            emitProxy(ce, method);\n\n            // newInstance\n            CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, NEW_INSTANCE, null);\n            e.new_instance_this();\n            e.dup();\n            e.invoke_constructor_this();\n            e.return_value();\n            e.end_method();\n\n            // add\n            e = ce.begin_method(Constants.ACC_PUBLIC, ADD_DELEGATE, null);\n            e.load_this();\n            e.load_arg(0);\n            e.checkcast(Type.getType(iface));\n            e.invoke_virtual_this(ADD_HELPER);\n            e.return_value();\n            e.end_method();\n\n            ce.end_class();\n        }\n\n        private void emitProxy(ClassEmitter ce, final MethodInfo method) {\n            int modifiers = Constants.ACC_PUBLIC;\n            if ((method.getModifiers() & Constants.ACC_VARARGS) == Constants.ACC_VARARGS) {\n                modifiers |= Constants.ACC_VARARGS;\n            }\n            final CodeEmitter e = EmitUtils.begin_method(ce, method, modifiers);\n            Type returnType = method.getSignature().getReturnType();\n            final boolean returns = returnType != Type.VOID_TYPE;\n            Local result = null;\n            if (returns) {\n                result = e.make_local(returnType);\n                e.zero_or_null(returnType);\n                e.store_local(result);\n            }\n            e.load_this();\n            e.super_getfield(\"targets\", Constants.TYPE_OBJECT_ARRAY);\n            final Local result2 = result;\n            EmitUtils.process_array(e, Constants.TYPE_OBJECT_ARRAY, type -> {\n\t\t\t    e.checkcast(Type.getType(iface));\n\t\t\t    e.load_args();\n\t\t\t    e.invoke(method);\n\t\t\t    if (returns) {\n\t\t\t        e.store_local(result2);\n\t\t\t    }\n\t\t\t});\n            if (returns) {\n                e.load_local(result);\n            }\n            e.return_value();\n            e.end_method();\n        }\n\n        @Override\n        protected Object firstInstance(Class type) {\n            // make a new instance in case first object is used with a long list of targets\n            return ((MulticastDelegate)ReflectUtils.newInstance(type)).newInstance();\n        }\n\n        @Override\n        protected Object nextInstance(Object instance) {\n            return ((MulticastDelegate)instance).newInstance();\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.Generator#SOURCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator#SOURCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.reflect.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.reflect.Generator#MULTICAST_DELEGATE",
+    "tailType": "field"
+  }
+]

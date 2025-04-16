@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Executable;\nimport java.lang.reflect.InvocationTargetException;\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Modifier;\nimport java.util.Collections;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.convert.ConversionFailedException;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.convert.converter.ConditionalGenericConverter;\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.ConcurrentReferenceHashMap;\nimport org.springframework.util.ReflectionUtils;\n\n/**\n * Generic converter that uses conventions to convert a source object to a\n * {@code targetType} by delegating to a method on the source object or to\n * a static factory method or constructor on the {@code targetType}.\n *\n * <h3>Conversion Algorithm</h3>\n * <ol>\n * <li>Invoke a non-static {@code to[targetType.simpleName]()} method on the\n * source object that has a return type assignable to {@code targetType}, if such\n * a method exists. For example, {@code org.example.Bar Foo#toBar()} is a\n * method that follows this convention.\n * <li>Otherwise invoke a <em>static</em> {@code valueOf(sourceType)} or Java\n * 8 style <em>static</em> {@code of(sourceType)} or {@code from(sourceType)}\n * method on the {@code targetType} that has a return type <em>related</em> to\n * {@code targetType}, if such a method exists. For example, a static\n * {@code Foo.of(sourceType)} method that returns a {@code Foo},\n * {@code SuperFooType}, or {@code SubFooType} is a method that follows this\n * convention. {@link java.time.ZoneId#of(String)} is a concrete example of\n * such a static factory method which returns a subtype of {@code ZoneId}.\n * <li>Otherwise invoke a constructor on the {@code targetType} that accepts\n * a single {@code sourceType} argument, if such a constructor exists.\n * <li>Otherwise throw a {@link ConversionFailedException} or\n * {@link IllegalStateException}.\n * </ol>\n *\n * <p><strong>Warning</strong>: this converter does <em>not</em> support the\n * {@link Object#toString()} or {@link String#valueOf(Object)} methods for converting\n * from a {@code sourceType} to {@code java.lang.String}. For {@code toString()}\n * support, use {@link FallbackObjectToStringConverter} instead.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 3.0\n * @see FallbackObjectToStringConverter\n */\nfinal class ObjectToObjectConverter implements ConditionalGenericConverter {\n\n\t// Cache for the latest to-method, static factory method, or factory constructor\n\t// resolved on a given Class\n\tprivate static final Map<Class<?>, Executable> conversionExecutableCache =\n\t\t\tnew ConcurrentReferenceHashMap<>(32);\n\n\n\t@Override\n\tpublic Set<ConvertiblePair> getConvertibleTypes() {\n\t\treturn Collections.singleton(new ConvertiblePair(Object.class, Object.class));\n\t}\n\n\t@Override\n\tpublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\treturn (sourceType.getType() != targetType.getType() &&\n\t\t\t\thasConversionMethodOrConstructor(targetType.getType(), sourceType.getType()));\n\t}\n\n\t@Override\n\tpublic @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\n\t\tif (source == null) {\n\t\t\treturn null;\n\t\t}\n\t\tClass<?> sourceClass = sourceType.getType();\n\t\tClass<?> targetClass = targetType.getType();\n\t\tExecutable executable = getValidatedExecutable(targetClass, sourceClass);\n\n\t\ttry {\n\t\t\tif (executable instanceof Method method) {\n\t\t\t\tReflectionUtils.makeAccessible(method);\n\t\t\t\tif (!Modifier.isStatic(method.getModifiers())) {\n\t\t\t\t\treturn method.invoke(source);\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\treturn method.invoke(null, source);\n\t\t\t\t}\n\t\t\t}\n\t\t\telse if (executable instanceof Constructor<?> constructor) {\n\t\t\t\tReflectionUtils.makeAccessible(constructor);\n\t\t\t\treturn constructor.newInstance(source);\n\t\t\t}\n\t\t}\n\t\tcatch (InvocationTargetException ex) {\n\t\t\tthrow new ConversionFailedException(sourceType, targetType, source, ex.getTargetException());\n\t\t}\n\t\tcatch (Throwable ex) {\n\t\t\tthrow new ConversionFailedException(sourceType, targetType, source, ex);\n\t\t}\n\n\t\t// If sourceClass is Number and targetClass is Integer, the following message should expand to:\n\t\t// No toInteger() method exists on java.lang.Number, and no static valueOf/of/from(java.lang.Number)\n\t\t// method or Integer(java.lang.Number) constructor exists on java.lang.Integer.\n\t\tthrow new IllegalStateException(String.format(\"No to%3$s() method exists on %1$s, \" +\n\t\t\t\t\"and no static valueOf/of/from(%1$s) method or %3$s(%1$s) constructor exists on %2$s.\",\n\t\t\t\tsourceClass.getName(), targetClass.getName(), targetClass.getSimpleName()));\n\t}\n\n\n\tstatic boolean hasConversionMethodOrConstructor(Class<?> targetClass, Class<?> sourceClass) {\n\t\treturn (getValidatedExecutable(targetClass, sourceClass) != null);\n\t}\n\n\tprivate static @Nullable Executable getValidatedExecutable(Class<?> targetClass, Class<?> sourceClass) {\n\t\tExecutable executable = conversionExecutableCache.get(targetClass);\n\t\tif (executable != null && isApplicable(executable, sourceClass)) {\n\t\t\treturn executable;\n\t\t}\n\n\t\texecutable = determineToMethod(targetClass, sourceClass);\n\t\tif (executable == null) {\n\t\t\texecutable = determineFactoryMethod(targetClass, sourceClass);\n\t\t\tif (executable == null) {\n\t\t\t\texecutable = determineFactoryConstructor(targetClass, sourceClass);\n\t\t\t\tif (executable == null) {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\tconversionExecutableCache.put(targetClass, executable);\n\t\treturn executable;\n\t}\n\n\tprivate static boolean isApplicable(Executable executable, Class<?> sourceClass) {\n\t\tif (executable instanceof Method method) {\n\t\t\treturn (!Modifier.isStatic(method.getModifiers()) ?\n\t\t\t\t\tClassUtils.isAssignable(method.getDeclaringClass(), sourceClass) :\n\t\t\t\t\tmethod.getParameterTypes()[0] == sourceClass);\n\t\t}\n\t\telse if (executable instanceof Constructor<?> constructor) {\n\t\t\treturn (constructor.getParameterTypes()[0] == sourceClass);\n\t\t}\n\t\telse {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\tprivate static @Nullable Method determineToMethod(Class<?> targetClass, Class<?> sourceClass) {\n\t\tif (String.class == targetClass || String.class == sourceClass) {\n\t\t\t// Do not accept a toString() method or any to methods on String itself\n\t\t\treturn null;\n\t\t}\n\n\t\tMethod method = ClassUtils.getMethodIfAvailable(sourceClass, \"to\" + targetClass.getSimpleName());\n\t\treturn (method != null && !Modifier.isStatic(method.getModifiers()) &&\n\t\t\t\tClassUtils.isAssignable(targetClass, method.getReturnType()) ? method : null);\n\t}\n\n\tprivate static @Nullable Method determineFactoryMethod(Class<?> targetClass, Class<?> sourceClass) {\n\t\tif (String.class == targetClass) {\n\t\t\t// Do not accept the String.valueOf(Object) method\n\t\t\treturn null;\n\t\t}\n\n\t\tMethod method = ClassUtils.getStaticMethod(targetClass, \"valueOf\", sourceClass);\n\t\tif (method == null) {\n\t\t\tmethod = ClassUtils.getStaticMethod(targetClass, \"of\", sourceClass);\n\t\t\tif (method == null) {\n\t\t\t\tmethod = ClassUtils.getStaticMethod(targetClass, \"from\", sourceClass);\n\t\t\t}\n\t\t}\n\n\t\treturn (method != null && areRelatedTypes(targetClass, method.getReturnType()) ? method : null);\n\t}\n\n\t/**\n\t * Determine if the two types reside in the same type hierarchy (i.e., type 1\n\t * is assignable to type 2 or vice versa).\n\t * @since 5.3.21\n\t * @see ClassUtils#isAssignable(Class, Class)\n\t */\n\tprivate static boolean areRelatedTypes(Class<?> type1, Class<?> type2) {\n\t\treturn (ClassUtils.isAssignable(type1, type2) || ClassUtils.isAssignable(type2, type1));\n\t}\n\n\tprivate static @Nullable Constructor<?> determineFactoryConstructor(Class<?> targetClass, Class<?> sourceClass) {\n\t\treturn ClassUtils.getConstructorIfAvailable(targetClass, sourceClass);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter#conversionExecutableCache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#conversionExecutableCache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Class<?>, Executable>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object.class));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter#getConvertibleTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#getConvertibleTypes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (sourceType.getType() != targetType.getType() && hasConversionMethodOrConstructor(targetType.getType(), sourceType.getType()));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    Class<?> sourceClass = sourceType.getType();\r\n    Class<?> targetClass = targetType.getType();\r\n    Executable executable = getValidatedExecutable(targetClass, sourceClass);\r\n    try {\r\n        if (executable instanceof Method method) {\r\n            ReflectionUtils.makeAccessible(method);\r\n            if (!Modifier.isStatic(method.getModifiers())) {\r\n                return method.invoke(source);\r\n            } else {\r\n                return method.invoke(null, source);\r\n            }\r\n        } else if (executable instanceof Constructor<?> constructor) {\r\n            ReflectionUtils.makeAccessible(constructor);\r\n            return constructor.newInstance(source);\r\n        }\r\n    } catch (InvocationTargetException ex) {\r\n        throw new ConversionFailedException(sourceType, targetType, source, ex.getTargetException());\r\n    } catch (Throwable ex) {\r\n        throw new ConversionFailedException(sourceType, targetType, source, ex);\r\n    }\r\n    // If sourceClass is Number and targetClass is Integer, the following message should expand to:\r\n    // No toInteger() method exists on java.lang.Number, and no static valueOf/of/from(java.lang.Number)\r\n    // method or Integer(java.lang.Number) constructor exists on java.lang.Integer.\r\n    throw new IllegalStateException(String.format(\"No to%3$s() method exists on %1$s, \" + \"and no static valueOf/of/from(%1$s) method or %3$s(%1$s) constructor exists on %2$s.\", sourceClass.getName(), targetClass.getName(), targetClass.getSimpleName()));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#hasConversionMethodOrConstructor(Class<?>,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static boolean hasConversionMethodOrConstructor(Class<?> targetClass, Class<?> sourceClass) {\r\n    return (getValidatedExecutable(targetClass, sourceClass) != null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter#hasConversionMethodOrConstructor(Class<?>,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#getValidatedExecutable(Class<?>,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate static Executable getValidatedExecutable(Class<?> targetClass, Class<?> sourceClass) {\r\n    Executable executable = conversionExecutableCache.get(targetClass);\r\n    if (executable != null && isApplicable(executable, sourceClass)) {\r\n        return executable;\r\n    }\r\n    executable = determineToMethod(targetClass, sourceClass);\r\n    if (executable == null) {\r\n        executable = determineFactoryMethod(targetClass, sourceClass);\r\n        if (executable == null) {\r\n            executable = determineFactoryConstructor(targetClass, sourceClass);\r\n            if (executable == null) {\r\n                return null;\r\n            }\r\n        }\r\n    }\r\n    conversionExecutableCache.put(targetClass, executable);\r\n    return executable;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.ObjectToObjectConverter#getValidatedExecutable(Class<?>,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#getValidatedExecutable(Class<?>,Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.ObjectToObjectConverter#isApplicable(Executable,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static boolean isApplicable(Executable executable, Class<?> sourceClass) {\r\n    if (executable instanceof Method method) {\r\n        return (!Modifier.isStatic(method.getModifiers()) ? ClassUtils.isAssignable(method.getDeclaringClass(), sourceClass) : method.getParameterTypes()[0] == sourceClass);\r\n    } else if (executable instanceof Constructor<?> constructor) {\r\n        return (constructor.getParameterTypes()[0] == sourceClass);\r\n    } else {\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  }
+]

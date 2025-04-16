@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy.InvocationHandlerGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.InvocationHandlerGenerator#generateStatic(CodeEmitter,Context,List)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.InvocationHandlerGenerator#generateStatic(CodeEmitter,Context,List)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.LazyLoader",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoader",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.proxy;\n\n/**\n * Lazy-loading {@link Enhancer} callback.\n */\npublic interface LazyLoader extends Callback {\n    /**\n     * Return the object which the original method invocation should be\n     * dispatched. Called as soon as the first lazily-loaded method in\n     * the enhanced instance is invoked. The same object is then used\n     * for every future method call to the proxy instance.\n     * @return an object that can invoke the method\n     */\n    Object loadObject() throws Exception;\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoader#loadObject()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the object which the original method invocation should be\r\n * dispatched. Called as soon as the first lazily-loaded method in\r\n * the enhanced instance is invoked. The same object is then used\r\n * for every future method call to the proxy instance.\r\n * @return an object that can invoke the method\r\n */\r\nObject loadObject() throws Exception;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.LazyLoader#loadObject()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoader",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Callback",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.proxy",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.proxy;\n\nimport java.util.HashSet;\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Set;\n\nimport org.springframework.asm.Label;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nclass LazyLoaderGenerator implements CallbackGenerator {\n    public static final LazyLoaderGenerator INSTANCE = new LazyLoaderGenerator();\n\n    private static final Signature LOAD_OBJECT =\n      TypeUtils.parseSignature(\"Object loadObject()\");\n    private static final Type LAZY_LOADER =\n      TypeUtils.parseType(\"org.springframework.cglib.proxy.LazyLoader\");\n\n    @Override\n\tpublic void generate(ClassEmitter ce, Context context, List methods) {\n        Set indexes = new HashSet();\n        for (Iterator it = methods.iterator(); it.hasNext();) {\n            MethodInfo method = (MethodInfo)it.next();\n            if (TypeUtils.isProtected(method.getModifiers())) {\n                // ignore protected methods\n            } else {\n                int index = context.getIndex(method);\n                indexes.add(index);\n                CodeEmitter e = context.beginMethod(ce, method);\n                e.load_this();\n                e.dup();\n                e.invoke_virtual_this(loadMethod(index));\n                e.checkcast(method.getClassInfo().getType());\n                e.load_args();\n                e.invoke(method);\n                e.return_value();\n                e.end_method();\n            }\n        }\n\n        for (Iterator it = indexes.iterator(); it.hasNext();) {\n            int index = ((Integer)it.next());\n\n            String delegate = \"CGLIB$LAZY_LOADER_\" + index;\n            ce.declare_field(Constants.ACC_PRIVATE, delegate, Constants.TYPE_OBJECT, null);\n\n            CodeEmitter e = ce.begin_method(Constants.ACC_PRIVATE |\n                                            Constants.ACC_SYNCHRONIZED |\n                                            Constants.ACC_FINAL,\n                                            loadMethod(index),\n                                            null);\n            e.load_this();\n            e.getfield(delegate);\n            e.dup();\n            Label end = e.make_label();\n            e.ifnonnull(end);\n            e.pop();\n            e.load_this();\n            context.emitCallback(e, index);\n            e.invoke_interface(LAZY_LOADER, LOAD_OBJECT);\n            e.dup_x1();\n            e.putfield(delegate);\n            e.mark(end);\n            e.return_value();\n            e.end_method();\n\n        }\n    }\n\n    private Signature loadMethod(int index) {\n        return new Signature(\"CGLIB$LOAD_PRIVATE_\" + index,\n                             Constants.TYPE_OBJECT,\n                             Constants.TYPES_EMPTY);\n    }\n\n    @Override\n\tpublic void generateStatic(CodeEmitter e, Context context, List methods) { }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.LazyLoaderGenerator#INSTANCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator#INSTANCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "LazyLoaderGenerator",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.LazyLoaderGenerator#LOAD_OBJECT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator#LOAD_OBJECT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.LazyLoaderGenerator#LAZY_LOADER",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator#LAZY_LOADER",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator#generate(ClassEmitter,Context,List)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void generate(ClassEmitter ce, Context context, List methods) {\r\n    Set indexes = new HashSet();\r\n    for (Iterator it = methods.iterator(); it.hasNext(); ) {\r\n        MethodInfo method = (MethodInfo) it.next();\r\n        if (TypeUtils.isProtected(method.getModifiers())) {\r\n            // ignore protected methods\r\n        } else {\r\n            int index = context.getIndex(method);\r\n            indexes.add(index);\r\n            CodeEmitter e = context.beginMethod(ce, method);\r\n            e.load_this();\r\n            e.dup();\r\n            e.invoke_virtual_this(loadMethod(index));\r\n            e.checkcast(method.getClassInfo().getType());\r\n            e.load_args();\r\n            e.invoke(method);\r\n            e.return_value();\r\n            e.end_method();\r\n        }\r\n    }\r\n    for (Iterator it = indexes.iterator(); it.hasNext(); ) {\r\n        int index = ((Integer) it.next());\r\n        String delegate = \"CGLIB$LAZY_LOADER_\" + index;\r\n        ce.declare_field(Constants.ACC_PRIVATE, delegate, Constants.TYPE_OBJECT, null);\r\n        CodeEmitter e = ce.begin_method(Constants.ACC_PRIVATE | Constants.ACC_SYNCHRONIZED | Constants.ACC_FINAL, loadMethod(index), null);\r\n        e.load_this();\r\n        e.getfield(delegate);\r\n        e.dup();\r\n        Label end = e.make_label();\r\n        e.ifnonnull(end);\r\n        e.pop();\r\n        e.load_this();\r\n        context.emitCallback(e, index);\r\n        e.invoke_interface(LAZY_LOADER, LOAD_OBJECT);\r\n        e.dup_x1();\r\n        e.putfield(delegate);\r\n        e.mark(end);\r\n        e.return_value();\r\n        e.end_method();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.LazyLoaderGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.LazyLoaderGenerator#generate(ClassEmitter,Context,List)",
+    "tailType": "method"
+  }
+]

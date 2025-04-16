@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.CoroutinesUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.InvocationTargetException;\nimport java.lang.reflect.Method;\nimport java.util.Map;\n\nimport kotlin.Unit;\nimport kotlin.coroutines.CoroutineContext;\nimport kotlin.jvm.JvmClassMappingKt;\nimport kotlin.reflect.KClass;\nimport kotlin.reflect.KFunction;\nimport kotlin.reflect.KParameter;\nimport kotlin.reflect.KType;\nimport kotlin.reflect.full.KCallables;\nimport kotlin.reflect.full.KClasses;\nimport kotlin.reflect.full.KClassifiers;\nimport kotlin.reflect.full.KTypes;\nimport kotlin.reflect.jvm.KCallablesJvm;\nimport kotlin.reflect.jvm.ReflectJvmMapping;\nimport kotlinx.coroutines.BuildersKt;\nimport kotlinx.coroutines.CoroutineStart;\nimport kotlinx.coroutines.Deferred;\nimport kotlinx.coroutines.Dispatchers;\nimport kotlinx.coroutines.GlobalScope;\nimport kotlinx.coroutines.flow.Flow;\nimport kotlinx.coroutines.reactor.MonoKt;\nimport kotlinx.coroutines.reactor.ReactorFlowKt;\nimport org.jspecify.annotations.Nullable;\nimport org.reactivestreams.Publisher;\nimport reactor.core.publisher.Flux;\nimport reactor.core.publisher.Mono;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.CollectionUtils;\n\n/**\n * Utilities for working with Kotlin Coroutines.\n *\n * @author Sebastien Deleuze\n * @author Phillip Webb\n * @since 5.2\n */\npublic abstract class CoroutinesUtils {\n\n\tprivate static final KType flowType = KClassifiers.getStarProjectedType(JvmClassMappingKt.getKotlinClass(Flow.class));\n\n\tprivate static final KType monoType = KClassifiers.getStarProjectedType(JvmClassMappingKt.getKotlinClass(Mono.class));\n\n\tprivate static final KType publisherType = KClassifiers.getStarProjectedType(JvmClassMappingKt.getKotlinClass(Publisher.class));\n\n\n\t/**\n\t * Convert a {@link Deferred} instance to a {@link Mono}.\n\t */\n\tpublic static <T> Mono<T> deferredToMono(Deferred<T> source) {\n\t\treturn MonoKt.mono(Dispatchers.getUnconfined(),\n\t\t\t\t(scope, continuation) -> source.await(continuation));\n\t}\n\n\t/**\n\t * Convert a {@link Mono} instance to a {@link Deferred}.\n\t */\n\tpublic static <T> Deferred<T> monoToDeferred(Mono<T> source) {\n\t\treturn BuildersKt.async(GlobalScope.INSTANCE, Dispatchers.getUnconfined(),\n\t\t\t\tCoroutineStart.DEFAULT,\n\t\t\t\t(scope, continuation) -> MonoKt.awaitSingleOrNull(source, continuation));\n\t}\n\n\t/**\n\t * Invoke a suspending function and convert it to {@link Mono} or {@link Flux}.\n\t * Uses an {@linkplain Dispatchers#getUnconfined() unconfined} dispatcher.\n\t * @param method the suspending function to invoke\n\t * @param target the target to invoke {@code method} on\n\t * @param args the function arguments. If the {@code Continuation} argument is specified as the last argument\n\t * (typically {@code null}), it is ignored.\n\t * @return the method invocation result as reactive stream\n\t * @throws IllegalArgumentException if {@code method} is not a suspending function\n\t */\n\tpublic static Publisher<?> invokeSuspendingFunction(Method method, Object target, @Nullable Object... args) {\n\t\treturn invokeSuspendingFunction(Dispatchers.getUnconfined(), method, target, args);\n\t}\n\n\t/**\n\t * Invoke a suspending function and convert it to {@link Mono} or\n\t * {@link Flux}.\n\t * @param context the coroutine context to use\n\t * @param method the suspending function to invoke\n\t * @param target the target to invoke {@code method} on\n\t * @param args the function arguments. If the {@code Continuation} argument is specified as the last argument\n\t * (typically {@code null}), it is ignored.\n\t * @return the method invocation result as reactive stream\n\t * @throws IllegalArgumentException if {@code method} is not a suspending function\n\t * @since 6.0\n\t */\n\t@SuppressWarnings({\"DataFlowIssue\", \"NullAway\"})\n\tpublic static Publisher<?> invokeSuspendingFunction(\n\t\t\tCoroutineContext context, Method method, @Nullable Object target, @Nullable Object... args) {\n\n\t\tAssert.isTrue(KotlinDetector.isSuspendingFunction(method), \"Method must be a suspending function\");\n\t\tKFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\n\t\tAssert.notNull(function, () -> \"Failed to get Kotlin function for method: \" + method);\n\t\tif (!KCallablesJvm.isAccessible(function)) {\n\t\t\tKCallablesJvm.setAccessible(function, true);\n\t\t}\n\t\tMono<Object> mono = MonoKt.mono(context, (scope, continuation) -> {\n\t\t\t\t\tMap<KParameter, Object> argMap = CollectionUtils.newHashMap(args.length + 1);\n\t\t\t\t\tint index = 0;\n\t\t\t\t\tfor (KParameter parameter : function.getParameters()) {\n\t\t\t\t\t\tswitch (parameter.getKind()) {\n\t\t\t\t\t\t\tcase INSTANCE -> argMap.put(parameter, target);\n\t\t\t\t\t\t\tcase VALUE, EXTENSION_RECEIVER -> {\n\t\t\t\t\t\t\t\tObject arg = args[index];\n\t\t\t\t\t\t\t\tif (!(parameter.isOptional() && arg == null)) {\n\t\t\t\t\t\t\t\t\tKType type = parameter.getType();\n\t\t\t\t\t\t\t\t\tif (!(type.isMarkedNullable() && arg == null) &&\n\t\t\t\t\t\t\t\t\t\t\ttype.getClassifier() instanceof KClass<?> kClass &&\n\t\t\t\t\t\t\t\t\t\t\tKotlinDetector.isInlineClass(JvmClassMappingKt.getJavaClass(kClass))) {\n\t\t\t\t\t\t\t\t\t\tKFunction<?> constructor = KClasses.getPrimaryConstructor(kClass);\n\t\t\t\t\t\t\t\t\t\tif (!KCallablesJvm.isAccessible(constructor)) {\n\t\t\t\t\t\t\t\t\t\t\tKCallablesJvm.setAccessible(constructor, true);\n\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\targ = constructor.call(arg);\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\targMap.put(parameter, arg);\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\tindex++;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\treturn KCallables.callSuspendBy(function, argMap, continuation);\n\t\t\t\t})\n\t\t\t\t.filter(result -> result != Unit.INSTANCE)\n\t\t\t\t.onErrorMap(InvocationTargetException.class, InvocationTargetException::getTargetException);\n\n\t\tKType returnType = function.getReturnType();\n\t\tif (KTypes.isSubtypeOf(returnType, flowType)) {\n\t\t\treturn mono.flatMapMany(CoroutinesUtils::asFlux);\n\t\t}\n\t\tif (KTypes.isSubtypeOf(returnType, publisherType)) {\n\t\t\tif (KTypes.isSubtypeOf(returnType, monoType)) {\n\t\t\t\treturn mono.flatMap(o -> ((Mono<?>)o));\n\t\t\t}\n\t\t\treturn mono.flatMapMany(o -> ((Publisher<?>)o));\n\t\t}\n\t\treturn mono;\n\t}\n\n\tprivate static Flux<?> asFlux(Object flow) {\n\t\treturn ReactorFlowKt.asFlux(((Flow<?>) flow));\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.CoroutinesUtils#flowType",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#flowType",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "KType",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.CoroutinesUtils#monoType",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#monoType",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "KType",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.CoroutinesUtils#publisherType",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#publisherType",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "KType",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#deferredToMono(Deferred<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Convert a {@link Deferred} instance to a {@link Mono}.\r\n */\r\npublic static <T> Mono<T> deferredToMono(Deferred<T> source) {\r\n    return MonoKt.mono(Dispatchers.getUnconfined(), (scope, continuation) -> source.await(continuation));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.CoroutinesUtils#deferredToMono(Deferred<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#monoToDeferred(Mono<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Convert a {@link Mono} instance to a {@link Deferred}.\r\n */\r\npublic static <T> Deferred<T> monoToDeferred(Mono<T> source) {\r\n    return BuildersKt.async(GlobalScope.INSTANCE, Dispatchers.getUnconfined(), CoroutineStart.DEFAULT, (scope, continuation) -> MonoKt.awaitSingleOrNull(source, continuation));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.CoroutinesUtils#monoToDeferred(Mono<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#invokeSuspendingFunction(Method,Object,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Invoke a suspending function and convert it to {@link Mono} or {@link Flux}.\r\n * Uses an {@linkplain Dispatchers#getUnconfined() unconfined} dispatcher.\r\n * @param method the suspending function to invoke\r\n * @param target the target to invoke {@code method} on\r\n * @param args the function arguments. If the {@code Continuation} argument is specified as the last argument\r\n * (typically {@code null}), it is ignored.\r\n * @return the method invocation result as reactive stream\r\n * @throws IllegalArgumentException if {@code method} is not a suspending function\r\n */\r\npublic static Publisher<?> invokeSuspendingFunction(Method method, Object target, @Nullable Object... args) {\r\n    return invokeSuspendingFunction(Dispatchers.getUnconfined(), method, target, args);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.CoroutinesUtils#invokeSuspendingFunction(Method,Object,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#invokeSuspendingFunction(CoroutineContext,Method,Object,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Invoke a suspending function and convert it to {@link Mono} or\r\n * {@link Flux}.\r\n * @param context the coroutine context to use\r\n * @param method the suspending function to invoke\r\n * @param target the target to invoke {@code method} on\r\n * @param args the function arguments. If the {@code Continuation} argument is specified as the last argument\r\n * (typically {@code null}), it is ignored.\r\n * @return the method invocation result as reactive stream\r\n * @throws IllegalArgumentException if {@code method} is not a suspending function\r\n * @since 6.0\r\n */\r\n@SuppressWarnings({ \"DataFlowIssue\", \"NullAway\" })\r\npublic static Publisher<?> invokeSuspendingFunction(CoroutineContext context, Method method, @Nullable Object target, @Nullable Object... args) {\r\n    Assert.isTrue(KotlinDetector.isSuspendingFunction(method), \"Method must be a suspending function\");\r\n    KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\r\n    Assert.notNull(function, () -> \"Failed to get Kotlin function for method: \" + method);\r\n    if (!KCallablesJvm.isAccessible(function)) {\r\n        KCallablesJvm.setAccessible(function, true);\r\n    }\r\n    Mono<Object> mono = MonoKt.mono(context, (scope, continuation) -> {\r\n        Map<KParameter, Object> argMap = CollectionUtils.newHashMap(args.length + 1);\r\n        int index = 0;\r\n        for (KParameter parameter : function.getParameters()) {\r\n            switch(parameter.getKind()) {\r\n                case INSTANCE ->\r\n                    argMap.put(parameter, target);\r\n                case VALUE, EXTENSION_RECEIVER ->\r\n                    {\r\n                        Object arg = args[index];\r\n                        if (!(parameter.isOptional() && arg == null)) {\r\n                            KType type = parameter.getType();\r\n                            if (!(type.isMarkedNullable() && arg == null) && type.getClassifier() instanceof KClass<?> kClass && KotlinDetector.isInlineClass(JvmClassMappingKt.getJavaClass(kClass))) {\r\n                                KFunction<?> constructor = KClasses.getPrimaryConstructor(kClass);\r\n                                if (!KCallablesJvm.isAccessible(constructor)) {\r\n                                    KCallablesJvm.setAccessible(constructor, true);\r\n                                }\r\n                                arg = constructor.call(arg);\r\n                            }\r\n                            argMap.put(parameter, arg);\r\n                        }\r\n                        index++;\r\n                    }\r\n            }\r\n        }\r\n        return KCallables.callSuspendBy(function, argMap, continuation);\r\n    }).filter(result -> result != Unit.INSTANCE).onErrorMap(InvocationTargetException.class, InvocationTargetException::getTargetException);\r\n    KType returnType = function.getReturnType();\r\n    if (KTypes.isSubtypeOf(returnType, flowType)) {\r\n        return mono.flatMapMany(CoroutinesUtils::asFlux);\r\n    }\r\n    if (KTypes.isSubtypeOf(returnType, publisherType)) {\r\n        if (KTypes.isSubtypeOf(returnType, monoType)) {\r\n            return mono.flatMap(o -> ((Mono<?>) o));\r\n        }\r\n        return mono.flatMapMany(o -> ((Publisher<?>) o));\r\n    }\r\n    return mono;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.CoroutinesUtils#invokeSuspendingFunction(CoroutineContext,Method,Object,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#invokeSuspendingFunction(CoroutineContext,Method,Object,Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils#asFlux(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Flux<?> asFlux(Object flow) {\r\n    return ReactorFlowKt.asFlux(((Flow<?>) flow));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.CoroutinesUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.CoroutinesUtils#asFlux(Object)",
+    "tailType": "method"
+  }
+]

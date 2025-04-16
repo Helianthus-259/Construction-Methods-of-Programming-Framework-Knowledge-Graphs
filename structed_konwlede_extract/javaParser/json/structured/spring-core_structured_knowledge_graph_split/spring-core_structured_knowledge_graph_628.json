@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2011 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.proxy;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Opcodes;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.Signature;\n\n/**\n * Uses bytecode reflection to figure out the targets of all bridge methods that use invokespecial\n * and invokeinterface, so that we can later rewrite them to use invokevirtual.\n *\n * <p>For interface bridges, using invokesuper will fail since the method being bridged to is in a\n * superinterface, not a superclass. Starting in Java 8, javac emits default bridge methods in\n * interfaces, which use invokeinterface to bridge to the target method.\n *\n * @author sberlin@gmail.com (Sam Berlin)\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nclass BridgeMethodResolver {\n\n    private final Map/* <Class, Set<Signature> */declToBridge;\n    private final ClassLoader classLoader;\n\n    public BridgeMethodResolver(Map declToBridge, ClassLoader classLoader) {\n        this.declToBridge = declToBridge;\n        this.classLoader = classLoader;\n    }\n\n    /**\n     * Finds all bridge methods that are being called with invokespecial &\n     * returns them.\n     */\n    public Map/*<Signature, Signature>*/resolveAll() {\n        Map resolved = new HashMap();\n        for (Iterator entryIter = declToBridge.entrySet().iterator(); entryIter.hasNext(); ) {\n            Map.Entry entry = (Map.Entry) entryIter.next();\n            Class owner = (Class) entry.getKey();\n            Set bridges = (Set) entry.getValue();\n            try {\n                InputStream is = classLoader.getResourceAsStream(owner.getName().replace('.', '/') + \".class\");\n                if (is == null) {\n                    return resolved;\n                }\n                try {\n                    new ClassReader(is)\n                            .accept(new BridgedFinder(bridges, resolved),\n                                    ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\n                } finally {\n                    is.close();\n                }\n            } catch (IOException ignored) {}\n        }\n        return resolved;\n    }\n\n    private static class BridgedFinder extends ClassVisitor {\n        private Map/*<Signature, Signature>*/ resolved;\n        private Set/*<Signature>*/ eligibleMethods;\n\n        private Signature currentMethod = null;\n\n        BridgedFinder(Set eligibleMethods, Map resolved) {\n            super(Constants.ASM_API);\n            this.resolved = resolved;\n            this.eligibleMethods = eligibleMethods;\n        }\n\n        @Override\n\t\tpublic void visit(int version, int access, String name,\n                String signature, String superName, String[] interfaces) {\n        }\n\n        @Override\n\t\tpublic MethodVisitor visitMethod(int access, String name, String desc,\n                String signature, String[] exceptions) {\n            Signature sig = new Signature(name, desc);\n            if (eligibleMethods.remove(sig)) {\n                currentMethod = sig;\n                return new MethodVisitor(Constants.ASM_API) {\n                    @Override\n\t\t\t\t\tpublic void visitMethodInsn(\n                            int opcode, String owner, String name, String desc, boolean itf) {\n                        if ((opcode == Opcodes.INVOKESPECIAL\n                                        || (itf && opcode == Opcodes.INVOKEINTERFACE))\n                                && currentMethod != null) {\n                            Signature target = new Signature(name, desc);\n                            // If the target signature is the same as the current,\n                            // we shouldn't change our bridge becaues invokespecial\n                            // is the only way to make progress (otherwise we'll\n                            // get infinite recursion).  This would typically\n                            // only happen when a bridge method is created to widen\n                            // the visibility of a superclass' method.\n                            if (!target.equals(currentMethod)) {\n                                resolved.put(currentMethod, target);\n                            }\n                            currentMethod = null;\n                        }\n                    }\n                };\n            } else {\n                return null;\n            }\n        }\n    }\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.BridgeMethodResolver#declToBridge",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver#declToBridge",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.BridgeMethodResolver#classLoader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver#classLoader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ClassLoader",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver#resolveAll()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Finds all bridge methods that are being called with invokespecial &\r\n * returns them.\r\n */\r\npublic Map /*<Signature, Signature>*/\r\nresolveAll() {\r\n    Map resolved = new HashMap();\r\n    for (Iterator entryIter = declToBridge.entrySet().iterator(); entryIter.hasNext(); ) {\r\n        Map.Entry entry = (Map.Entry) entryIter.next();\r\n        Class owner = (Class) entry.getKey();\r\n        Set bridges = (Set) entry.getValue();\r\n        try {\r\n            InputStream is = classLoader.getResourceAsStream(owner.getName().replace('.', '/') + \".class\");\r\n            if (is == null) {\r\n                return resolved;\r\n            }\r\n            try {\r\n                new ClassReader(is).accept(new BridgedFinder(bridges, resolved), ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\r\n            } finally {\r\n                is.close();\r\n            }\r\n        } catch (IOException ignored) ;\r\n    }\r\n    return resolved;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.BridgeMethodResolver#resolveAll()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.proxy.BridgedFinder",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2011 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.proxy;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.springframework.asm.ClassReader;\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Opcodes;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.Signature;\n\n/**\n * Uses bytecode reflection to figure out the targets of all bridge methods that use invokespecial\n * and invokeinterface, so that we can later rewrite them to use invokevirtual.\n *\n * <p>For interface bridges, using invokesuper will fail since the method being bridged to is in a\n * superinterface, not a superclass. Starting in Java 8, javac emits default bridge methods in\n * interfaces, which use invokeinterface to bridge to the target method.\n *\n * @author sberlin@gmail.com (Sam Berlin)\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nclass BridgeMethodResolver {\n\n    private final Map/* <Class, Set<Signature> */declToBridge;\n    private final ClassLoader classLoader;\n\n    public BridgeMethodResolver(Map declToBridge, ClassLoader classLoader) {\n        this.declToBridge = declToBridge;\n        this.classLoader = classLoader;\n    }\n\n    /**\n     * Finds all bridge methods that are being called with invokespecial &\n     * returns them.\n     */\n    public Map/*<Signature, Signature>*/resolveAll() {\n        Map resolved = new HashMap();\n        for (Iterator entryIter = declToBridge.entrySet().iterator(); entryIter.hasNext(); ) {\n            Map.Entry entry = (Map.Entry) entryIter.next();\n            Class owner = (Class) entry.getKey();\n            Set bridges = (Set) entry.getValue();\n            try {\n                InputStream is = classLoader.getResourceAsStream(owner.getName().replace('.', '/') + \".class\");\n                if (is == null) {\n                    return resolved;\n                }\n                try {\n                    new ClassReader(is)\n                            .accept(new BridgedFinder(bridges, resolved),\n                                    ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\n                } finally {\n                    is.close();\n                }\n            } catch (IOException ignored) {}\n        }\n        return resolved;\n    }\n\n    private static class BridgedFinder extends ClassVisitor {\n        private Map/*<Signature, Signature>*/ resolved;\n        private Set/*<Signature>*/ eligibleMethods;\n\n        private Signature currentMethod = null;\n\n        BridgedFinder(Set eligibleMethods, Map resolved) {\n            super(Constants.ASM_API);\n            this.resolved = resolved;\n            this.eligibleMethods = eligibleMethods;\n        }\n\n        @Override\n\t\tpublic void visit(int version, int access, String name,\n                String signature, String superName, String[] interfaces) {\n        }\n\n        @Override\n\t\tpublic MethodVisitor visitMethod(int access, String name, String desc,\n                String signature, String[] exceptions) {\n            Signature sig = new Signature(name, desc);\n            if (eligibleMethods.remove(sig)) {\n                currentMethod = sig;\n                return new MethodVisitor(Constants.ASM_API) {\n                    @Override\n\t\t\t\t\tpublic void visitMethodInsn(\n                            int opcode, String owner, String name, String desc, boolean itf) {\n                        if ((opcode == Opcodes.INVOKESPECIAL\n                                        || (itf && opcode == Opcodes.INVOKEINTERFACE))\n                                && currentMethod != null) {\n                            Signature target = new Signature(name, desc);\n                            // If the target signature is the same as the current,\n                            // we shouldn't change our bridge becaues invokespecial\n                            // is the only way to make progress (otherwise we'll\n                            // get infinite recursion).  This would typically\n                            // only happen when a bridge method is created to widen\n                            // the visibility of a superclass' method.\n                            if (!target.equals(currentMethod)) {\n                                resolved.put(currentMethod, target);\n                            }\n                            currentMethod = null;\n                        }\n                    }\n                };\n            } else {\n                return null;\n            }\n        }\n    }\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.BridgedFinder#resolved",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder#resolved",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.BridgedFinder#eligibleMethods",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder#eligibleMethods",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Set",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.proxy.BridgedFinder#currentMethod",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder#currentMethod",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder#visit(int,int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.proxy.BridgedFinder#visit(int,int,String,String,String,String[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.proxy.BridgedFinder#visit(int,int,String,String,String,String[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

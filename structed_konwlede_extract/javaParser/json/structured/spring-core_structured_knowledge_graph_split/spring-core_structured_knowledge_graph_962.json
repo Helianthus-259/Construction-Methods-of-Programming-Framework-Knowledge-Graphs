@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#close()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream#close()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream#checkClosed()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void checkClosed() throws IOException {\r\n    if (this.closed) {\r\n        throw new IOException(\"DataBufferInputStream is closed\");\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferInputStream#checkClosed()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferInputStream",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "InputStream",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.buffer.DataBufferLimitException",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferLimitException",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferLimitException",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2021 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.buffer;\n\n/**\n * Exception that indicates the cumulative number of bytes consumed from a\n * stream of {@link DataBuffer DataBuffer}'s exceeded some pre-configured limit.\n * This can be raised when data buffers are cached and aggregated, for example,\n * {@link DataBufferUtils#join}. Or it could also be raised when data buffers\n * have been released but a parsed representation is being aggregated, for example, async\n * parsing with Jackson, SSE parsing and aggregating lines per event.\n *\n * @author Rossen Stoyanchev\n * @since 5.1.11\n */\n@SuppressWarnings(\"serial\")\npublic class DataBufferLimitException extends IllegalStateException {\n\n\n\tpublic DataBufferLimitException(String message) {\n\t\tsuper(message);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferLimitException",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "IllegalStateException",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.buffer.DataBufferOutputStream",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.buffer;\n\nimport java.io.IOException;\nimport java.io.OutputStream;\n\nimport org.springframework.util.Assert;\n\n/**\n * An {@link OutputStream} that writes to a {@link DataBuffer}.\n *\n * @author Arjen Poutsma\n * @since 6.0\n * @see DataBuffer#asOutputStream()\n */\nfinal class DataBufferOutputStream extends OutputStream {\n\n\tprivate final DataBuffer dataBuffer;\n\n\tprivate boolean closed;\n\n\n\tpublic DataBufferOutputStream(DataBuffer dataBuffer) {\n\t\tAssert.notNull(dataBuffer, \"DataBuffer must not be null\");\n\t\tthis.dataBuffer = dataBuffer;\n\t}\n\n\t@Override\n\tpublic void write(int b) throws IOException {\n\t\tcheckClosed();\n\t\tthis.dataBuffer.ensureWritable(1);\n\t\tthis.dataBuffer.write((byte) b);\n\t}\n\n\t@Override\n\tpublic void write(byte[] b, int off, int len) throws IOException {\n\t\tcheckClosed();\n\t\tif (len > 0) {\n\t\t\tthis.dataBuffer.ensureWritable(len);\n\t\t\tthis.dataBuffer.write(b, off, len);\n\t\t}\n\t}\n\n\t@Override\n\tpublic void close() {\n\t\tif (this.closed) {\n\t\t\treturn;\n\t\t}\n\t\tthis.closed = true;\n\t}\n\n\tprivate void checkClosed() throws IOException {\n\t\tif (this.closed) {\n\t\t\tthrow new IOException(\"DataBufferOutputStream is closed\");\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferOutputStream#dataBuffer",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream#dataBuffer",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DataBuffer",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.DataBufferOutputStream#closed",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream#closed",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream#write(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void write(int b) throws IOException {\r\n    checkClosed();\r\n    this.dataBuffer.ensureWritable(1);\r\n    this.dataBuffer.write((byte) b);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferOutputStream#write(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferOutputStream#write(int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

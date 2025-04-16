@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.beans.PropertyDescriptor;\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n/**\n * @author Chris Nokleberg\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class ImmutableBean\n{\n\tprivate static final Type ILLEGAL_STATE_EXCEPTION =\n\t  TypeUtils.parseType(\"IllegalStateException\");\n\tprivate static final Signature CSTRUCT_OBJECT =\n\t  TypeUtils.parseConstructor(\"Object\");\n\tprivate static final Class[] OBJECT_CLASSES = { Object.class };\n\tprivate static final String FIELD_NAME = \"CGLIB$RWBean\";\n\n\tprivate ImmutableBean() {\n\t}\n\n\tpublic static Object create(Object bean) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setBean(bean);\n\t\treturn gen.create();\n\t}\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\t\tprivate static final Source SOURCE = new Source(ImmutableBean.class.getName());\n\t\tprivate Object bean;\n\t\tprivate Class target;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\tpublic void setBean(Object bean) {\n\t\t\tthis.bean = bean;\n\t\t\ttarget = bean.getClass();\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(target);\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn target.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(target);\n\t\t}\n\n\t\tpublic Object create() {\n\t\t\tString name = target.getName();\n\t\t\tsetNamePrefix(name);\n\t\t\treturn super.create(name);\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) {\n\t\t\tType targetType = Type.getType(target);\n\t\t\tClassEmitter ce = new ClassEmitter(v);\n\t\t\tce.begin_class(Constants.V1_8,\n\t\t\t\t\t\t   Constants.ACC_PUBLIC,\n\t\t\t\t\t\t   getClassName(),\n\t\t\t\t\t\t   targetType,\n\t\t\t\t\t\t   null,\n\t\t\t\t\t\t   Constants.SOURCE_FILE);\n\n\t\t\tce.declare_field(Constants.ACC_FINAL | Constants.ACC_PRIVATE, FIELD_NAME, targetType, null);\n\n\t\t\tCodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT, null);\n\t\t\te.load_this();\n\t\t\te.super_invoke_constructor();\n\t\t\te.load_this();\n\t\t\te.load_arg(0);\n\t\t\te.checkcast(targetType);\n\t\t\te.putfield(FIELD_NAME);\n\t\t\te.return_value();\n\t\t\te.end_method();\n\n\t\t\tPropertyDescriptor[] descriptors = ReflectUtils.getBeanProperties(target);\n\t\t\tMethod[] getters = ReflectUtils.getPropertyMethods(descriptors, true, false);\n\t\t\tMethod[] setters = ReflectUtils.getPropertyMethods(descriptors, false, true);\n\n\t\t\tfor (Method getter2 : getters) {\n\t\t\t\tMethodInfo getter = ReflectUtils.getMethodInfo(getter2);\n\t\t\t\te = EmitUtils.begin_method(ce, getter, Constants.ACC_PUBLIC);\n\t\t\t\te.load_this();\n\t\t\t\te.getfield(FIELD_NAME);\n\t\t\t\te.invoke(getter);\n\t\t\t\te.return_value();\n\t\t\t\te.end_method();\n\t\t\t}\n\n\t\t\tfor (Method setter2 : setters) {\n\t\t\t\tMethodInfo setter = ReflectUtils.getMethodInfo(setter2);\n\t\t\t\te = EmitUtils.begin_method(ce, setter, Constants.ACC_PUBLIC);\n\t\t\t\te.throw_exception(ILLEGAL_STATE_EXCEPTION, \"Bean is immutable\");\n\t\t\t\te.end_method();\n\t\t\t}\n\n\t\t\tce.end_class();\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\treturn ReflectUtils.newInstance(type, OBJECT_CLASSES, new Object[]{ bean });\n\t\t}\n\n\t\t// TODO: optimize\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn firstInstance(instance.getClass());\n\t\t}\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.ImmutableBean#ILLEGAL_STATE_EXCEPTION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean#ILLEGAL_STATE_EXCEPTION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.ImmutableBean#CSTRUCT_OBJECT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean#CSTRUCT_OBJECT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.ImmutableBean#OBJECT_CLASSES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean#OBJECT_CLASSES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.ImmutableBean#FIELD_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean#FIELD_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean#create(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Object create(Object bean) {\r\n    Generator gen = new Generator();\r\n    gen.setBean(bean);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.ImmutableBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.ImmutableBean#create(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.beans.Generator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.beans.PropertyDescriptor;\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.MethodInfo;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n/**\n * @author Chris Nokleberg\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class ImmutableBean\n{\n\tprivate static final Type ILLEGAL_STATE_EXCEPTION =\n\t  TypeUtils.parseType(\"IllegalStateException\");\n\tprivate static final Signature CSTRUCT_OBJECT =\n\t  TypeUtils.parseConstructor(\"Object\");\n\tprivate static final Class[] OBJECT_CLASSES = { Object.class };\n\tprivate static final String FIELD_NAME = \"CGLIB$RWBean\";\n\n\tprivate ImmutableBean() {\n\t}\n\n\tpublic static Object create(Object bean) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setBean(bean);\n\t\treturn gen.create();\n\t}\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\t\tprivate static final Source SOURCE = new Source(ImmutableBean.class.getName());\n\t\tprivate Object bean;\n\t\tprivate Class target;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\tpublic void setBean(Object bean) {\n\t\t\tthis.bean = bean;\n\t\t\ttarget = bean.getClass();\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(target);\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn target.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(target);\n\t\t}\n\n\t\tpublic Object create() {\n\t\t\tString name = target.getName();\n\t\t\tsetNamePrefix(name);\n\t\t\treturn super.create(name);\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) {\n\t\t\tType targetType = Type.getType(target);\n\t\t\tClassEmitter ce = new ClassEmitter(v);\n\t\t\tce.begin_class(Constants.V1_8,\n\t\t\t\t\t\t   Constants.ACC_PUBLIC,\n\t\t\t\t\t\t   getClassName(),\n\t\t\t\t\t\t   targetType,\n\t\t\t\t\t\t   null,\n\t\t\t\t\t\t   Constants.SOURCE_FILE);\n\n\t\t\tce.declare_field(Constants.ACC_FINAL | Constants.ACC_PRIVATE, FIELD_NAME, targetType, null);\n\n\t\t\tCodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT, null);\n\t\t\te.load_this();\n\t\t\te.super_invoke_constructor();\n\t\t\te.load_this();\n\t\t\te.load_arg(0);\n\t\t\te.checkcast(targetType);\n\t\t\te.putfield(FIELD_NAME);\n\t\t\te.return_value();\n\t\t\te.end_method();\n\n\t\t\tPropertyDescriptor[] descriptors = ReflectUtils.getBeanProperties(target);\n\t\t\tMethod[] getters = ReflectUtils.getPropertyMethods(descriptors, true, false);\n\t\t\tMethod[] setters = ReflectUtils.getPropertyMethods(descriptors, false, true);\n\n\t\t\tfor (Method getter2 : getters) {\n\t\t\t\tMethodInfo getter = ReflectUtils.getMethodInfo(getter2);\n\t\t\t\te = EmitUtils.begin_method(ce, getter, Constants.ACC_PUBLIC);\n\t\t\t\te.load_this();\n\t\t\t\te.getfield(FIELD_NAME);\n\t\t\t\te.invoke(getter);\n\t\t\t\te.return_value();\n\t\t\t\te.end_method();\n\t\t\t}\n\n\t\t\tfor (Method setter2 : setters) {\n\t\t\t\tMethodInfo setter = ReflectUtils.getMethodInfo(setter2);\n\t\t\t\te = EmitUtils.begin_method(ce, setter, Constants.ACC_PUBLIC);\n\t\t\t\te.throw_exception(ILLEGAL_STATE_EXCEPTION, \"Bean is immutable\");\n\t\t\t\te.end_method();\n\t\t\t}\n\n\t\t\tce.end_class();\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\treturn ReflectUtils.newInstance(type, OBJECT_CLASSES, new Object[]{ bean });\n\t\t}\n\n\t\t// TODO: optimize\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn firstInstance(instance.getClass());\n\t\t}\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#SOURCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#SOURCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#bean",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#bean",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#target",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#target",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class",
+    "tailType": "type"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProvider",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.transform.impl.FieldProvider#getField(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProvider#setField(String,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "void setField(String name, Object value);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProvider",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.transform.impl.FieldProvider#setField(String,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProvider#getField(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "Object getField(String name);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProvider",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.transform.impl.FieldProvider#getField(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.transform.impl",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.transform.impl;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\nimport org.springframework.asm.Label;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.CodeGenerationException;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.ObjectSwitchCallback;\nimport org.springframework.cglib.core.ProcessSwitchCallback;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\nimport org.springframework.cglib.transform.ClassEmitterTransformer;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class FieldProviderTransformer extends ClassEmitterTransformer {\n\n    private static final String FIELD_NAMES = \"CGLIB$FIELD_NAMES\";\n    private static final String FIELD_TYPES = \"CGLIB$FIELD_TYPES\";\n\n    private static final Type FIELD_PROVIDER =\n      TypeUtils.parseType(\"org.springframework.cglib.transform.impl.FieldProvider\");\n    private static final Type ILLEGAL_ARGUMENT_EXCEPTION =\n      TypeUtils.parseType(\"IllegalArgumentException\");\n    private static final Signature PROVIDER_GET =\n      TypeUtils.parseSignature(\"Object getField(String)\");\n    private static final Signature PROVIDER_SET =\n      TypeUtils.parseSignature(\"void setField(String, Object)\");\n    private static final Signature PROVIDER_SET_BY_INDEX =\n      TypeUtils.parseSignature(\"void setField(int, Object)\");\n    private static final Signature PROVIDER_GET_BY_INDEX =\n      TypeUtils.parseSignature(\"Object getField(int)\");\n    private static final Signature PROVIDER_GET_TYPES =\n      TypeUtils.parseSignature(\"Class[] getFieldTypes()\");\n    private static final Signature PROVIDER_GET_NAMES =\n      TypeUtils.parseSignature(\"String[] getFieldNames()\");\n\n    private int access;\n    private Map fields;\n\n    @Override\n    public void begin_class(int version, int access, String className, Type superType, Type[] interfaces, String sourceFile) {\n        if (!TypeUtils.isAbstract(access)) {\n            interfaces = TypeUtils.add(interfaces, FIELD_PROVIDER);\n        }\n        this.access = access;\n        fields = new HashMap();\n        super.begin_class(version, access, className, superType, interfaces, sourceFile);\n    }\n\n    @Override\n    public void declare_field(int access, String name, Type type, Object value) {\n        super.declare_field(access, name, type, value);\n\n        if (!TypeUtils.isStatic(access)) {\n            fields.put(name, type);\n        }\n    }\n\n    @Override\n    public void end_class() {\n        if (!TypeUtils.isInterface(access)) {\n            try {\n                generate();\n            } catch (RuntimeException e) {\n                throw e;\n            } catch (Exception e) {\n                throw new CodeGenerationException(e);\n            }\n        }\n        super.end_class();\n    }\n\n    private void generate() throws Exception {\n        final String[] names = (String[])fields.keySet().toArray(new String[fields.size()]);\n\n        int indexes[] = new int[names.length];\n        for (int i = 0; i < indexes.length; i++) {\n            indexes[i] = i;\n        }\n\n        super.declare_field(Constants.PRIVATE_FINAL_STATIC, FIELD_NAMES, Constants.TYPE_STRING_ARRAY, null);\n        super.declare_field(Constants.PRIVATE_FINAL_STATIC, FIELD_TYPES, Constants.TYPE_CLASS_ARRAY, null);\n\n        // use separate methods here because each process switch inner class needs a final CodeEmitter\n        initFieldProvider(names);\n        getNames();\n        getTypes();\n        getField(names);\n        setField(names);\n        setByIndex(names, indexes);\n        getByIndex(names, indexes);\n    }\n\n    private void initFieldProvider(String[] names) {\n        CodeEmitter e = getStaticHook();\n        EmitUtils.push_object(e, names);\n        e.putstatic(getClassType(), FIELD_NAMES, Constants.TYPE_STRING_ARRAY);\n\n        e.push(names.length);\n        e.newarray(Constants.TYPE_CLASS);\n        e.dup();\n        for(int i = 0; i < names.length; i++ ){\n            e.dup();\n            e.push(i);\n            Type type = (Type)fields.get(names[i]);\n            EmitUtils.load_class(e, type);\n            e.aastore();\n        }\n        e.putstatic(getClassType(), FIELD_TYPES, Constants.TYPE_CLASS_ARRAY);\n    }\n\n    private void getNames() {\n        CodeEmitter e = super.begin_method(Constants.ACC_PUBLIC, PROVIDER_GET_NAMES, null);\n        e.getstatic(getClassType(), FIELD_NAMES, Constants.TYPE_STRING_ARRAY);\n        e.return_value();\n        e.end_method();\n    }\n\n    private void getTypes() {\n        CodeEmitter e = super.begin_method(Constants.ACC_PUBLIC, PROVIDER_GET_TYPES, null);\n        e.getstatic(getClassType(), FIELD_TYPES, Constants.TYPE_CLASS_ARRAY);\n        e.return_value();\n        e.end_method();\n    }\n\n    private void setByIndex(final String[] names, final int[] indexes) throws Exception {\n        final CodeEmitter e = super.begin_method(Constants.ACC_PUBLIC, PROVIDER_SET_BY_INDEX, null);\n        e.load_this();\n        e.load_arg(1);\n        e.load_arg(0);\n        e.process_switch(indexes, new ProcessSwitchCallback() {\n            @Override\n            public void processCase(int key, Label end) throws Exception {\n                Type type = (Type)fields.get(names[key]);\n                e.unbox(type);\n                e.putfield(names[key]);\n                e.return_value();\n            }\n            @Override\n            public void processDefault() throws Exception {\n                e.throw_exception(ILLEGAL_ARGUMENT_EXCEPTION, \"Unknown field index\");\n            }\n        });\n        e.end_method();\n    }\n\n    private void getByIndex(final String[] names, final int[] indexes) throws Exception {\n        final CodeEmitter e = super.begin_method(Constants.ACC_PUBLIC, PROVIDER_GET_BY_INDEX, null);\n        e.load_this();\n        e.load_arg(0);\n        e.process_switch(indexes, new ProcessSwitchCallback() {\n            @Override\n            public void processCase(int key, Label end) throws Exception {\n                Type type = (Type)fields.get(names[key]);\n                e.getfield(names[key]);\n                e.box(type);\n                e.return_value();\n            }\n            @Override\n            public void processDefault() throws Exception {\n                e.throw_exception(ILLEGAL_ARGUMENT_EXCEPTION, \"Unknown field index\");\n            }\n        });\n        e.end_method();\n    }\n\n    // TODO: if this is used to enhance class files SWITCH_STYLE_TRIE should be used\n    // to avoid JVM hashcode implementation incompatibilities\n    private void getField(String[] names) throws Exception {\n        final CodeEmitter e = begin_method(Constants.ACC_PUBLIC, PROVIDER_GET, null);\n        e.load_this();\n        e.load_arg(0);\n        EmitUtils.string_switch(e, names, Constants.SWITCH_STYLE_HASH, new ObjectSwitchCallback() {\n            @Override\n            public void processCase(Object key, Label end) {\n                Type type = (Type)fields.get(key);\n                e.getfield((String)key);\n                e.box(type);\n                e.return_value();\n            }\n            @Override\n            public void processDefault() {\n                e.throw_exception(ILLEGAL_ARGUMENT_EXCEPTION, \"Unknown field name\");\n            }\n        });\n        e.end_method();\n    }\n\n    private void setField(String[] names) throws Exception {\n        final CodeEmitter e = begin_method(Constants.ACC_PUBLIC, PROVIDER_SET, null);\n        e.load_this();\n        e.load_arg(1);\n        e.load_arg(0);\n        EmitUtils.string_switch(e, names, Constants.SWITCH_STYLE_HASH, new ObjectSwitchCallback() {\n            @Override\n            public void processCase(Object key, Label end) {\n                Type type = (Type)fields.get(key);\n                e.unbox(type);\n                e.putfield((String)key);\n                e.return_value();\n            }\n            @Override\n            public void processDefault() {\n                e.throw_exception(ILLEGAL_ARGUMENT_EXCEPTION, \"Unknown field name\");\n            }\n        });\n        e.end_method();\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer#FIELD_NAMES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer#FIELD_NAMES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer#FIELD_TYPES",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer#FIELD_TYPES",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer#FIELD_PROVIDER",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer#FIELD_PROVIDER",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer#ILLEGAL_ARGUMENT_EXCEPTION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer#ILLEGAL_ARGUMENT_EXCEPTION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer#PROVIDER_GET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer#PROVIDER_GET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.transform.impl.FieldProviderTransformer",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.transform.impl.FieldProviderTransformer#PROVIDER_SET",
+    "tailType": "field"
+  }
+]

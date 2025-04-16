@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.util.SorterTemplate#rotate(int,int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void rotate(int lo, int mid, int hi) {\r\n    int lot = lo;\r\n    int hit = mid - 1;\r\n    while (lot < hit) {\r\n        swap(lot++, hit--);\r\n    }\r\n    lot = mid;\r\n    hit = hi - 1;\r\n    while (lot < hit) {\r\n        swap(lot++, hit--);\r\n    }\r\n    lot = lo;\r\n    hit = hi - 1;\r\n    while (lot < hit) {\r\n        swap(lot++, hit--);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.util.SorterTemplate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.util.SorterTemplate#rotate(int,int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.util.SorterTemplate#lower(int,int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private int lower(int lo, int hi, int val) {\r\n    int len = hi - lo;\r\n    while (len > 0) {\r\n        int half = len / 2;\r\n        int mid = lo + half;\r\n        if (compare(mid, val) < 0) {\r\n            lo = mid + 1;\r\n            len = len - half - 1;\r\n        } else {\r\n            len = half;\r\n        }\r\n    }\r\n    return lo;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.util.SorterTemplate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.util.SorterTemplate#lower(int,int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.util.SorterTemplate#upper(int,int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private int upper(int lo, int hi, int val) {\r\n    int len = hi - lo;\r\n    while (len > 0) {\r\n        int half = len / 2;\r\n        int mid = lo + half;\r\n        if (compare(val, mid) < 0) {\r\n            len = half;\r\n        } else {\r\n            lo = mid + 1;\r\n            len = len - half - 1;\r\n        }\r\n    }\r\n    return lo;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.util.SorterTemplate",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.util.SorterTemplate#upper(int,int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.util.StringSwitcher",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.util;\n\nimport java.util.Arrays;\nimport java.util.List;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Label;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.ClassEmitter;\nimport org.springframework.cglib.core.CodeEmitter;\nimport org.springframework.cglib.core.Constants;\nimport org.springframework.cglib.core.EmitUtils;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ObjectSwitchCallback;\nimport org.springframework.cglib.core.ReflectUtils;\nimport org.springframework.cglib.core.Signature;\nimport org.springframework.cglib.core.TypeUtils;\n\n/**\n * This class implements a simple String &rarr; int mapping for a fixed set of keys.\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class StringSwitcher {\n    private static final Type STRING_SWITCHER =\n      TypeUtils.parseType(\"org.springframework.cglib.util.StringSwitcher\");\n    private static final Signature INT_VALUE =\n      TypeUtils.parseSignature(\"int intValue(String)\");\n    private static final StringSwitcherKey KEY_FACTORY =\n      (StringSwitcherKey)KeyFactory.create(StringSwitcherKey.class);\n\n    interface StringSwitcherKey {\n        public Object newInstance(String[] strings, int[] ints, boolean fixedInput);\n    }\n\n    /**\n     * Helper method to create a StringSwitcher.\n     * For finer control over the generated instance, use a new instance of StringSwitcher.Generator\n     * instead of this static method.\n     * @param strings the array of String keys; must be the same length as the value array\n     * @param ints the array of integer results; must be the same length as the key array\n     * @param fixedInput if false, an unknown key will be returned from {@link #intValue} as <code>-1</code>; if true,\n     * the result will be undefined, and the resulting code will be faster\n     */\n    public static StringSwitcher create(String[] strings, int[] ints, boolean fixedInput) {\n        Generator gen = new Generator();\n        gen.setStrings(strings);\n        gen.setInts(ints);\n        gen.setFixedInput(fixedInput);\n        return gen.create();\n    }\n\n    protected StringSwitcher() {\n    }\n\n    /**\n     * Return the integer associated with the given key.\n     * @param s the key\n     * @return the associated integer value, or <code>-1</code> if the key is unknown (unless\n     * <code>fixedInput</code> was specified when this <code>StringSwitcher</code> was created,\n     * in which case the return value for an unknown key is undefined)\n     */\n    abstract public int intValue(String s);\n\n    public static class Generator extends AbstractClassGenerator {\n        private static final Source SOURCE = new Source(StringSwitcher.class.getName());\n\n        private String[] strings;\n        private int[] ints;\n        private boolean fixedInput;\n\n        public Generator() {\n            super(SOURCE);\n        }\n\n        /**\n         * Set the array of recognized Strings.\n         * @param strings the array of String keys; must be the same length as the value array\n         * @see #setInts\n         */\n        public void setStrings(String[] strings) {\n            this.strings = strings;\n        }\n\n        /**\n         * Set the array of integer results.\n         * @param ints the array of integer results; must be the same length as the key array\n         * @see #setStrings\n         */\n        public void setInts(int[] ints) {\n            this.ints = ints;\n        }\n\n        /**\n         * Configure how unknown String keys will be handled.\n         * @param fixedInput if false, an unknown key will be returned from {@link #intValue} as <code>-1</code>; if true,\n         * the result will be undefined, and the resulting code will be faster\n         */\n        public void setFixedInput(boolean fixedInput) {\n            this.fixedInput = fixedInput;\n        }\n\n        @Override\n        protected ClassLoader getDefaultClassLoader() {\n            return getClass().getClassLoader();\n        }\n\n        /**\n         * Generate the <code>StringSwitcher</code>.\n         */\n        public StringSwitcher create() {\n            setNamePrefix(StringSwitcher.class.getName());\n            Object key = KEY_FACTORY.newInstance(strings, ints, fixedInput);\n            return (StringSwitcher)super.create(key);\n        }\n\n        @Override\n        public void generateClass(ClassVisitor v) throws Exception {\n            ClassEmitter ce = new ClassEmitter(v);\n            ce.begin_class(Constants.V1_8,\n                           Constants.ACC_PUBLIC,\n                           getClassName(),\n                           STRING_SWITCHER,\n                           null,\n                           Constants.SOURCE_FILE);\n            EmitUtils.null_constructor(ce);\n            final CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, INT_VALUE, null);\n            e.load_arg(0);\n            final List stringList = Arrays.asList(strings);\n            int style = fixedInput ? Constants.SWITCH_STYLE_HASHONLY : Constants.SWITCH_STYLE_HASH;\n            EmitUtils.string_switch(e, strings, style, new ObjectSwitchCallback() {\n                @Override\n                public void processCase(Object key, Label end) {\n                    e.push(ints[stringList.indexOf(key)]);\n                    e.return_value();\n                }\n                @Override\n                public void processDefault() {\n                    e.push(-1);\n                    e.return_value();\n                }\n            });\n            e.end_method();\n            ce.end_class();\n        }\n\n        @Override\n        protected Object firstInstance(Class type) {\n            return ReflectUtils.newInstance(type);\n        }\n\n        @Override\n        protected Object nextInstance(Object instance) {\n            return instance;\n        }\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.util.StringSwitcher#STRING_SWITCHER",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher#STRING_SWITCHER",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.util.StringSwitcher#INT_VALUE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher#INT_VALUE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.util.StringSwitcher#KEY_FACTORY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher#KEY_FACTORY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "StringSwitcherKey",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher#create(String[],int[],boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Helper method to create a StringSwitcher.\r\n * For finer control over the generated instance, use a new instance of StringSwitcher.Generator\r\n * instead of this static method.\r\n * @param strings the array of String keys; must be the same length as the value array\r\n * @param ints the array of integer results; must be the same length as the key array\r\n * @param fixedInput if false, an unknown key will be returned from {@link #intValue} as <code>-1</code>; if true,\r\n * the result will be undefined, and the resulting code will be faster\r\n */\r\npublic static StringSwitcher create(String[] strings, int[] ints, boolean fixedInput) {\r\n    Generator gen = new Generator();\r\n    gen.setStrings(strings);\r\n    gen.setInts(ints);\r\n    gen.setFixedInput(fixedInput);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.util.StringSwitcher#create(String[],int[],boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher#intValue(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the integer associated with the given key.\r\n * @param s the key\r\n * @return the associated integer value, or <code>-1</code> if the key is unknown (unless\r\n * <code>fixedInput</code> was specified when this <code>StringSwitcher</code> was created,\r\n * in which case the return value for an unknown key is undefined)\r\n */\r\nabstract public int intValue(String s);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.util.StringSwitcher",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.util.StringSwitcher#intValue(String)",
+    "tailType": "method"
+  }
+]

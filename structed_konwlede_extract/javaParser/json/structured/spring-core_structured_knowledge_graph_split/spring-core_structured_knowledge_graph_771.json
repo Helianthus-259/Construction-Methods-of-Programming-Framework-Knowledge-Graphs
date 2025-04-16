@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.AttributeMethods",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.reflect.Method;\nimport java.util.Arrays;\nimport java.util.Comparator;\nimport java.util.Map;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ConcurrentReferenceHashMap;\nimport org.springframework.util.ReflectionUtils;\n\n/**\n * Provides a quick way to access the attribute methods of an {@link Annotation}\n * with consistent ordering as well as a few useful utility methods.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 5.2\n */\nfinal class AttributeMethods {\n\n\tstatic final AttributeMethods NONE = new AttributeMethods(null, new Method[0]);\n\n\tstatic final Map<Class<? extends Annotation>, AttributeMethods> cache = new ConcurrentReferenceHashMap<>();\n\n\tprivate static final Comparator<Method> methodComparator = (m1, m2) -> {\n\t\tif (m1 != null && m2 != null) {\n\t\t\treturn m1.getName().compareTo(m2.getName());\n\t\t}\n\t\treturn (m1 != null ? -1 : 1);\n\t};\n\n\n\tprivate final @Nullable Class<? extends Annotation> annotationType;\n\n\tprivate final Method[] attributeMethods;\n\n\tprivate final boolean[] canThrowTypeNotPresentException;\n\n\tprivate final boolean hasDefaultValueMethod;\n\n\tprivate final boolean hasNestedAnnotation;\n\n\n\tprivate AttributeMethods(@Nullable Class<? extends Annotation> annotationType, Method[] attributeMethods) {\n\t\tthis.annotationType = annotationType;\n\t\tthis.attributeMethods = attributeMethods;\n\t\tthis.canThrowTypeNotPresentException = new boolean[attributeMethods.length];\n\t\tboolean foundDefaultValueMethod = false;\n\t\tboolean foundNestedAnnotation = false;\n\t\tfor (int i = 0; i < attributeMethods.length; i++) {\n\t\t\tMethod method = this.attributeMethods[i];\n\t\t\tClass<?> type = method.getReturnType();\n\t\t\tif (!foundDefaultValueMethod && (method.getDefaultValue() != null)) {\n\t\t\t\tfoundDefaultValueMethod = true;\n\t\t\t}\n\t\t\tif (!foundNestedAnnotation && (type.isAnnotation() || (type.isArray() && type.componentType().isAnnotation()))) {\n\t\t\t\tfoundNestedAnnotation = true;\n\t\t\t}\n\t\t\tReflectionUtils.makeAccessible(method);\n\t\t\tthis.canThrowTypeNotPresentException[i] = (type == Class.class || type == Class[].class || type.isEnum());\n\t\t}\n\t\tthis.hasDefaultValueMethod = foundDefaultValueMethod;\n\t\tthis.hasNestedAnnotation = foundNestedAnnotation;\n\t}\n\n\n\t/**\n\t * Determine if values from the given annotation can be safely accessed without\n\t * causing any {@link TypeNotPresentException TypeNotPresentExceptions}.\n\t * <p>This method is designed to cover Google App Engine's late arrival of such\n\t * exceptions for {@code Class} values (instead of the more typical early\n\t * {@code Class.getAnnotations() failure} on a regular JVM).\n\t * @param annotation the annotation to check\n\t * @return {@code true} if all values are present\n\t * @see #validate(Annotation)\n\t */\n\tboolean canLoad(Annotation annotation) {\n\t\tassertAnnotation(annotation);\n\t\tfor (int i = 0; i < size(); i++) {\n\t\t\tif (canThrowTypeNotPresentException(i)) {\n\t\t\t\ttry {\n\t\t\t\t\tAnnotationUtils.invokeAnnotationMethod(get(i), annotation);\n\t\t\t\t}\n\t\t\t\tcatch (IllegalStateException ex) {\n\t\t\t\t\t// Plain invocation failure to expose -> leave up to attribute retrieval\n\t\t\t\t\t// (if any) where such invocation failure will be logged eventually.\n\t\t\t\t}\n\t\t\t\tcatch (Throwable ex) {\n\t\t\t\t\t// TypeNotPresentException etc. -> annotation type not actually loadable.\n\t\t\t\t\treturn false;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn true;\n\t}\n\n\t/**\n\t * Check if values from the given annotation can be safely accessed without causing\n\t * any {@link TypeNotPresentException TypeNotPresentExceptions}.\n\t * <p>This method is designed to cover Google App Engine's late arrival of such\n\t * exceptions for {@code Class} values (instead of the more typical early\n\t * {@code Class.getAnnotations() failure} on a regular JVM).\n\t * @param annotation the annotation to validate\n\t * @throws IllegalStateException if a declared {@code Class} attribute could not be read\n\t * @see #canLoad(Annotation)\n\t */\n\tvoid validate(Annotation annotation) {\n\t\tassertAnnotation(annotation);\n\t\tfor (int i = 0; i < size(); i++) {\n\t\t\tif (canThrowTypeNotPresentException(i)) {\n\t\t\t\ttry {\n\t\t\t\t\tAnnotationUtils.invokeAnnotationMethod(get(i), annotation);\n\t\t\t\t}\n\t\t\t\tcatch (IllegalStateException ex) {\n\t\t\t\t\tthrow ex;\n\t\t\t\t}\n\t\t\t\tcatch (Throwable ex) {\n\t\t\t\t\tthrow new IllegalStateException(\"Could not obtain annotation attribute value for \" +\n\t\t\t\t\t\t\tget(i).getName() + \" declared on @\" + getName(annotation.annotationType()), ex);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\n\tprivate void assertAnnotation(Annotation annotation) {\n\t\tAssert.notNull(annotation, \"Annotation must not be null\");\n\t\tif (this.annotationType != null) {\n\t\t\tAssert.isInstanceOf(this.annotationType, annotation);\n\t\t}\n\t}\n\n\t/**\n\t * Get the attribute with the specified name or {@code null} if no\n\t * matching attribute exists.\n\t * @param name the attribute name to find\n\t * @return the attribute method or {@code null}\n\t */\n\t@Nullable Method get(String name) {\n\t\tint index = indexOf(name);\n\t\treturn (index != -1 ? this.attributeMethods[index] : null);\n\t}\n\n\t/**\n\t * Get the attribute at the specified index.\n\t * @param index the index of the attribute to return\n\t * @return the attribute method\n\t * @throws IndexOutOfBoundsException if the index is out of range\n\t * ({@code index < 0 || index >= size()})\n\t */\n\tMethod get(int index) {\n\t\treturn this.attributeMethods[index];\n\t}\n\n\t/**\n\t * Determine if the attribute at the specified index could throw a\n\t * {@link TypeNotPresentException} when accessed.\n\t * @param index the index of the attribute to check\n\t * @return {@code true} if the attribute can throw a\n\t * {@link TypeNotPresentException}\n\t */\n\tboolean canThrowTypeNotPresentException(int index) {\n\t\treturn this.canThrowTypeNotPresentException[index];\n\t}\n\n\t/**\n\t * Get the index of the attribute with the specified name, or {@code -1}\n\t * if there is no attribute with the name.\n\t * @param name the name to find\n\t * @return the index of the attribute, or {@code -1}\n\t */\n\tint indexOf(String name) {\n\t\tfor (int i = 0; i < this.attributeMethods.length; i++) {\n\t\t\tif (this.attributeMethods[i].getName().equals(name)) {\n\t\t\t\treturn i;\n\t\t\t}\n\t\t}\n\t\treturn -1;\n\t}\n\n\t/**\n\t * Get the index of the specified attribute, or {@code -1} if the\n\t * attribute is not in this collection.\n\t * @param attribute the attribute to find\n\t * @return the index of the attribute, or {@code -1}\n\t */\n\tint indexOf(Method attribute) {\n\t\tfor (int i = 0; i < this.attributeMethods.length; i++) {\n\t\t\tif (this.attributeMethods[i].equals(attribute)) {\n\t\t\t\treturn i;\n\t\t\t}\n\t\t}\n\t\treturn -1;\n\t}\n\n\t/**\n\t * Get the number of attributes in this collection.\n\t * @return the number of attributes\n\t */\n\tint size() {\n\t\treturn this.attributeMethods.length;\n\t}\n\n\t/**\n\t * Determine if at least one of the attribute methods has a default value.\n\t * @return {@code true} if there is at least one attribute method with a default value\n\t */\n\tboolean hasDefaultValueMethod() {\n\t\treturn this.hasDefaultValueMethod;\n\t}\n\n\t/**\n\t * Determine if at least one of the attribute methods is a nested annotation.\n\t * @return {@code true} if there is at least one attribute method with a nested\n\t * annotation type\n\t */\n\tboolean hasNestedAnnotation() {\n\t\treturn this.hasNestedAnnotation;\n\t}\n\n\n\t/**\n\t * Get the attribute methods for the given annotation type.\n\t * @param annotationType the annotation type\n\t * @return the attribute methods for the annotation type\n\t */\n\tstatic AttributeMethods forAnnotationType(@Nullable Class<? extends Annotation> annotationType) {\n\t\tif (annotationType == null) {\n\t\t\treturn NONE;\n\t\t}\n\t\treturn cache.computeIfAbsent(annotationType, AttributeMethods::compute);\n\t}\n\n\t@SuppressWarnings(\"NullAway\") // Dataflow analysis limitation\n\tprivate static AttributeMethods compute(Class<? extends Annotation> annotationType) {\n\t\tMethod[] methods = annotationType.getDeclaredMethods();\n\t\tint size = methods.length;\n\t\tfor (int i = 0; i < methods.length; i++) {\n\t\t\tif (!isAttributeMethod(methods[i])) {\n\t\t\t\t//noinspection DataFlowIssue\n\t\t\t\tmethods[i] = null;\n\t\t\t\tsize--;\n\t\t\t}\n\t\t}\n\t\tif (size == 0) {\n\t\t\treturn NONE;\n\t\t}\n\t\tArrays.sort(methods, methodComparator);\n\t\tMethod[] attributeMethods = Arrays.copyOf(methods, size);\n\t\treturn new AttributeMethods(annotationType, attributeMethods);\n\t}\n\n\tprivate static boolean isAttributeMethod(Method method) {\n\t\treturn (method.getParameterCount() == 0 && method.getReturnType() != void.class);\n\t}\n\n\t/**\n\t * Create a description for the given attribute method suitable to use in\n\t * exception messages and logs.\n\t * @param attribute the attribute to describe\n\t * @return a description of the attribute\n\t */\n\tstatic String describe(@Nullable Method attribute) {\n\t\tif (attribute == null) {\n\t\t\treturn \"(none)\";\n\t\t}\n\t\treturn describe(attribute.getDeclaringClass(), attribute.getName());\n\t}\n\n\t/**\n\t * Create a description for the given attribute method suitable to use in\n\t * exception messages and logs.\n\t * @param annotationType the annotation type\n\t * @param attributeName the attribute name\n\t * @return a description of the attribute\n\t */\n\tstatic String describe(@Nullable Class<?> annotationType, @Nullable String attributeName) {\n\t\tif (attributeName == null) {\n\t\t\treturn \"(none)\";\n\t\t}\n\t\tString in = (annotationType != null ? \" in annotation [\" + annotationType.getName() + \"]\" : \"\");\n\t\treturn \"attribute '\" + attributeName + \"'\" + in;\n\t}\n\n\tprivate static String getName(Class<?> clazz) {\n\t\tString canonicalName = clazz.getCanonicalName();\n\t\treturn (canonicalName != null ? canonicalName : clazz.getName());\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#NONE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#NONE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AttributeMethods",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#cache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#cache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Class<? extends Annotation>, AttributeMethods>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#methodComparator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#methodComparator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Comparator<Method>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#annotationType",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#annotationType",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class<? extends Annotation>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#attributeMethods",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#attributeMethods",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Method",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#canThrowTypeNotPresentException",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#canThrowTypeNotPresentException",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#hasDefaultValueMethod",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#hasDefaultValueMethod",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.AttributeMethods#hasNestedAnnotation",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#hasNestedAnnotation",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.AttributeMethods#canLoad(Annotation)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine if values from the given annotation can be safely accessed without\r\n * causing any {@link TypeNotPresentException TypeNotPresentExceptions}.\r\n * <p>This method is designed to cover Google App Engine's late arrival of such\r\n * exceptions for {@code Class} values (instead of the more typical early\r\n * {@code Class.getAnnotations() failure} on a regular JVM).\r\n * @param annotation the annotation to check\r\n * @return {@code true} if all values are present\r\n * @see #validate(Annotation)\r\n */\r\nboolean canLoad(Annotation annotation) {\r\n    assertAnnotation(annotation);\r\n    for (int i = 0; i < size(); i++) {\r\n        if (canThrowTypeNotPresentException(i)) {\r\n            try {\r\n                AnnotationUtils.invokeAnnotationMethod(get(i), annotation);\r\n            } catch (IllegalStateException ex) {\r\n                // Plain invocation failure to expose -> leave up to attribute retrieval\r\n                // (if any) where such invocation failure will be logged eventually.\r\n            } catch (Throwable ex) {\r\n                // TypeNotPresentException etc. -> annotation type not actually loadable.\r\n                return false;\r\n            }\r\n        }\r\n    }\r\n    return true;\r\n}",
+    "tailType": "method_code"
+  }
+]

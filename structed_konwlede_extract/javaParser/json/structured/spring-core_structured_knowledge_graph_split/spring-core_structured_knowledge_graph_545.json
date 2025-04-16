@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.beans.BulkBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBean#getPropertyTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBean#getGetters()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public String[] getGetters() {\r\n    return getters.clone();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBean#getGetters()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBean#getSetters()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public String[] getSetters() {\r\n    return setters.clone();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBean#getSetters()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBean#create(Class,String[],String[],Class[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static BulkBean create(Class target, String[] getters, String[] setters, Class[] types) {\r\n    Generator gen = new Generator();\r\n    gen.setTarget(target);\r\n    gen.setGetters(getters);\r\n    gen.setSetters(setters);\r\n    gen.setTypes(types);\r\n    return gen.create();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBean#create(Class,String[],String[],Class[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.beans.BulkBeanKey",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanKey",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ReflectUtils;\n\n/**\n * @author Juozas Baliuka\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class BulkBean\n{\n\tprivate static final BulkBeanKey KEY_FACTORY =\n\t  (BulkBeanKey)KeyFactory.create(BulkBeanKey.class);\n\n\tinterface BulkBeanKey {\n\t\tpublic Object newInstance(String target, String[] getters, String[] setters, String[] types);\n\t}\n\n\tprotected Class target;\n\tprotected String[] getters, setters;\n\tprotected Class[] types;\n\n\tprotected BulkBean() { }\n\n\tabstract public void getPropertyValues(Object bean, Object[] values);\n\tabstract public void setPropertyValues(Object bean, Object[] values);\n\n\tpublic Object[] getPropertyValues(Object bean) {\n\t\tObject[] values = new Object[getters.length];\n\t\tgetPropertyValues(bean, values);\n\t\treturn values;\n\t}\n\n\tpublic Class[] getPropertyTypes() {\n\t\treturn types.clone();\n\t}\n\n\tpublic String[] getGetters() {\n\t\treturn getters.clone();\n\t}\n\n\tpublic String[] getSetters() {\n\t\treturn setters.clone();\n\t}\n\n\tpublic static BulkBean create(Class target, String[] getters, String[] setters, Class[] types) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setTarget(target);\n\t\tgen.setGetters(getters);\n\t\tgen.setSetters(setters);\n\t\tgen.setTypes(types);\n\t\treturn gen.create();\n\t}\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\t\tprivate static final Source SOURCE = new Source(BulkBean.class.getName());\n\t\tprivate Class target;\n\t\tprivate String[] getters;\n\t\tprivate String[] setters;\n\t\tprivate Class[] types;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\tpublic void setTarget(Class target) {\n\t\t\tthis.target = target;\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(target);\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\tpublic void setGetters(String[] getters) {\n\t\t\tthis.getters = getters;\n\t\t}\n\n\t\tpublic void setSetters(String[] setters) {\n\t\t\tthis.setters = setters;\n\t\t}\n\n\t\tpublic void setTypes(Class[] types) {\n\t\t\tthis.types = types;\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn target.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(target);\n\t\t}\n\n\t\tpublic BulkBean create() {\n\t\t\tsetNamePrefix(target.getName());\n\t\t\tString targetClassName = target.getName();\n\t\t\tString[] typeClassNames = ReflectUtils.getNames(types);\n\t\t\tObject key = KEY_FACTORY.newInstance(targetClassName, getters, setters, typeClassNames);\n\t\t\treturn (BulkBean)super.create(key);\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) throws Exception {\n\t\t\tnew BulkBeanEmitter(v, getClassName(), target, getters, setters, types);\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\tBulkBean instance = (BulkBean)ReflectUtils.newInstance(type);\n\t\t\tinstance.target = target;\n\n\t\t\tint length = getters.length;\n\t\t\tinstance.getters = new String[length];\n\t\t\tSystem.arraycopy(getters, 0, instance.getters, 0, length);\n\n\t\t\tinstance.setters = new String[length];\n\t\t\tSystem.arraycopy(setters, 0, instance.setters, 0, length);\n\n\t\t\tinstance.types = new Class[types.length];\n\t\t\tSystem.arraycopy(types, 0, instance.types, 0, types.length);\n\n\t\t\treturn instance;\n\t\t}\n\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn instance;\n\t\t}\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanKey#newInstance(String,String[],String[],String[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Object newInstance(String target, String[] getters, String[] setters, String[] types);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.BulkBeanKey",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.beans.BulkBeanKey#newInstance(String,String[],String[],String[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.beans",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.beans.Generator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.beans;\n\nimport java.security.ProtectionDomain;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.cglib.core.AbstractClassGenerator;\nimport org.springframework.cglib.core.KeyFactory;\nimport org.springframework.cglib.core.ReflectUtils;\n\n/**\n * @author Juozas Baliuka\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class BulkBean\n{\n\tprivate static final BulkBeanKey KEY_FACTORY =\n\t  (BulkBeanKey)KeyFactory.create(BulkBeanKey.class);\n\n\tinterface BulkBeanKey {\n\t\tpublic Object newInstance(String target, String[] getters, String[] setters, String[] types);\n\t}\n\n\tprotected Class target;\n\tprotected String[] getters, setters;\n\tprotected Class[] types;\n\n\tprotected BulkBean() { }\n\n\tabstract public void getPropertyValues(Object bean, Object[] values);\n\tabstract public void setPropertyValues(Object bean, Object[] values);\n\n\tpublic Object[] getPropertyValues(Object bean) {\n\t\tObject[] values = new Object[getters.length];\n\t\tgetPropertyValues(bean, values);\n\t\treturn values;\n\t}\n\n\tpublic Class[] getPropertyTypes() {\n\t\treturn types.clone();\n\t}\n\n\tpublic String[] getGetters() {\n\t\treturn getters.clone();\n\t}\n\n\tpublic String[] getSetters() {\n\t\treturn setters.clone();\n\t}\n\n\tpublic static BulkBean create(Class target, String[] getters, String[] setters, Class[] types) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setTarget(target);\n\t\tgen.setGetters(getters);\n\t\tgen.setSetters(setters);\n\t\tgen.setTypes(types);\n\t\treturn gen.create();\n\t}\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\t\tprivate static final Source SOURCE = new Source(BulkBean.class.getName());\n\t\tprivate Class target;\n\t\tprivate String[] getters;\n\t\tprivate String[] setters;\n\t\tprivate Class[] types;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\tpublic void setTarget(Class target) {\n\t\t\tthis.target = target;\n\t\t\t// SPRING PATCH BEGIN\n\t\t\tsetContextClass(target);\n\t\t\t// SPRING PATCH END\n\t\t}\n\n\t\tpublic void setGetters(String[] getters) {\n\t\t\tthis.getters = getters;\n\t\t}\n\n\t\tpublic void setSetters(String[] setters) {\n\t\t\tthis.setters = setters;\n\t\t}\n\n\t\tpublic void setTypes(Class[] types) {\n\t\t\tthis.types = types;\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn target.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(target);\n\t\t}\n\n\t\tpublic BulkBean create() {\n\t\t\tsetNamePrefix(target.getName());\n\t\t\tString targetClassName = target.getName();\n\t\t\tString[] typeClassNames = ReflectUtils.getNames(types);\n\t\t\tObject key = KEY_FACTORY.newInstance(targetClassName, getters, setters, typeClassNames);\n\t\t\treturn (BulkBean)super.create(key);\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) throws Exception {\n\t\t\tnew BulkBeanEmitter(v, getClassName(), target, getters, setters, types);\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\tBulkBean instance = (BulkBean)ReflectUtils.newInstance(type);\n\t\t\tinstance.target = target;\n\n\t\t\tint length = getters.length;\n\t\t\tinstance.getters = new String[length];\n\t\t\tSystem.arraycopy(getters, 0, instance.getters, 0, length);\n\n\t\t\tinstance.setters = new String[length];\n\t\t\tSystem.arraycopy(setters, 0, instance.setters, 0, length);\n\n\t\t\tinstance.types = new Class[types.length];\n\t\t\tSystem.arraycopy(types, 0, instance.types, 0, types.length);\n\n\t\t\treturn instance;\n\t\t}\n\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn instance;\n\t\t}\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#SOURCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#SOURCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Source",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#target",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#target",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#getters",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator#getters",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.beans.Generator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.beans.Generator#setters",
+    "tailType": "field"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#checkReadable(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "boolean checkReadable(URL url) {\r\n    try {\r\n        if (ResourceUtils.isFileURL(url)) {\r\n            // Proceed with file system resolution\r\n            File file = getFile();\r\n            return (file.canRead() && !file.isDirectory());\r\n        } else {\r\n            // Try InputStream resolution for jar resources\r\n            URLConnection con = url.openConnection();\r\n            customizeConnection(con);\r\n            if (con instanceof HttpURLConnection httpCon) {\r\n                httpCon.setRequestMethod(\"HEAD\");\r\n                int code = httpCon.getResponseCode();\r\n                if (code == HttpURLConnection.HTTP_BAD_METHOD) {\r\n                    con = url.openConnection();\r\n                    customizeConnection(con);\r\n                    if (!(con instanceof HttpURLConnection newHttpCon)) {\r\n                        return false;\r\n                    }\r\n                    code = newHttpCon.getResponseCode();\r\n                    httpCon = newHttpCon;\r\n                }\r\n                if (code != HttpURLConnection.HTTP_OK) {\r\n                    httpCon.disconnect();\r\n                    return false;\r\n                }\r\n            } else if (con instanceof JarURLConnection jarCon) {\r\n                JarEntry jarEntry = jarCon.getJarEntry();\r\n                if (jarEntry == null) {\r\n                    return false;\r\n                } else {\r\n                    return !jarEntry.isDirectory();\r\n                }\r\n            }\r\n            long contentLength = con.getContentLengthLong();\r\n            if (contentLength > 0) {\r\n                return true;\r\n            } else if (contentLength == 0) {\r\n                // Empty file or directory -> not considered readable...\r\n                return false;\r\n            } else {\r\n                // Fall back to stream existence: can we open the stream?\r\n                getInputStream().close();\r\n                return true;\r\n            }\r\n        }\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#checkReadable(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#isFile()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isFile() {\r\n    try {\r\n        URL url = getURL();\r\n        if (url.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\r\n            return VfsResourceDelegate.getResource(url).isFile();\r\n        }\r\n        return ResourceUtils.URL_PROTOCOL_FILE.equals(url.getProtocol());\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#isFile()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#isFile()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#getFile()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation returns a File reference for the underlying class path\r\n * resource, provided that it refers to a file in the file system.\r\n * @see org.springframework.util.ResourceUtils#getFile(java.net.URL, String)\r\n */\r\n@Override\r\npublic File getFile() throws IOException {\r\n    URL url = getURL();\r\n    if (url.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\r\n        return VfsResourceDelegate.getResource(url).getFile();\r\n    }\r\n    return ResourceUtils.getFile(url, getDescription());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#getFile()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#getFile()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#getFileForLastModifiedCheck()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation determines the underlying File\r\n * (or jar file, in case of a resource in a jar/zip).\r\n */\r\n@Override\r\nprotected File getFileForLastModifiedCheck() throws IOException {\r\n    URL url = getURL();\r\n    if (ResourceUtils.isJarURL(url)) {\r\n        URL actualUrl = ResourceUtils.extractArchiveURL(url);\r\n        if (actualUrl.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\r\n            return VfsResourceDelegate.getResource(actualUrl).getFile();\r\n        }\r\n        return ResourceUtils.getFile(actualUrl, \"Jar URL\");\r\n    } else {\r\n        return getFile();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#getFileForLastModifiedCheck()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#getFileForLastModifiedCheck()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#isFile(URI)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given {@link URI} represents a file in a file system.\r\n * @since 5.0\r\n * @see #getFile(URI)\r\n */\r\nprotected boolean isFile(URI uri) {\r\n    try {\r\n        if (uri.getScheme().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\r\n            return VfsResourceDelegate.getResource(uri).isFile();\r\n        }\r\n        return ResourceUtils.URL_PROTOCOL_FILE.equals(uri.getScheme());\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#isFile(URI)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#getFile(URI)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation returns a File reference for the given URI-identified\r\n * resource, provided that it refers to a file in the file system.\r\n * @see org.springframework.util.ResourceUtils#getFile(java.net.URI, String)\r\n */\r\nprotected File getFile(URI uri) throws IOException {\r\n    if (uri.getScheme().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {\r\n        return VfsResourceDelegate.getResource(uri).getFile();\r\n    }\r\n    return ResourceUtils.getFile(uri, getDescription());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#getFile(URI)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#readableChannel()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation returns a FileChannel for the given URI-identified\r\n * resource, provided that it refers to a file in the file system.\r\n * @since 5.0\r\n * @see #getFile()\r\n */\r\n@Override\r\npublic ReadableByteChannel readableChannel() throws IOException {\r\n    try {\r\n        // Try file system channel\r\n        return FileChannel.open(getFile().toPath(), StandardOpenOption.READ);\r\n    } catch (FileNotFoundException | NoSuchFileException ex) {\r\n        // Fall back to InputStream adaptation in superclass\r\n        return super.readableChannel();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#readableChannel()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#readableChannel()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource#contentLength()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic long contentLength() throws IOException {\r\n    URL url = getURL();\r\n    if (ResourceUtils.isFileURL(url)) {\r\n        // Proceed with file system resolution\r\n        File file = getFile();\r\n        long length = file.length();\r\n        if (length == 0L && !file.exists()) {\r\n            throw new FileNotFoundException(getDescription() + \" cannot be resolved in the file system for checking its content length\");\r\n        }\r\n        return length;\r\n    } else {\r\n        // Try a URL connection content-length header\r\n        URLConnection con = url.openConnection();\r\n        customizeConnection(con);\r\n        if (con instanceof HttpURLConnection httpCon) {\r\n            httpCon.setRequestMethod(\"HEAD\");\r\n        }\r\n        long length = con.getContentLengthLong();\r\n        if (length <= 0 && con instanceof HttpURLConnection httpCon && httpCon.getResponseCode() == HttpURLConnection.HTTP_BAD_METHOD) {\r\n            con = url.openConnection();\r\n            customizeConnection(con);\r\n            length = con.getContentLengthLong();\r\n        }\r\n        return length;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.AbstractFileResolvingResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.AbstractFileResolvingResource#contentLength()",
+    "tailType": "method"
+  }
+]

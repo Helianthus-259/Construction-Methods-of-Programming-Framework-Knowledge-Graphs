@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.BridgeMethodResolver#searchInterfaces(Class<?>[],Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate static Method searchInterfaces(Class<?>[] interfaces, Method bridgeMethod) {\r\n    for (Class<?> ifc : interfaces) {\r\n        Method method = searchForMatch(ifc, bridgeMethod);\r\n        if (method != null && !method.isBridge()) {\r\n            return method;\r\n        } else {\r\n            method = searchInterfaces(ifc.getInterfaces(), bridgeMethod);\r\n            if (method != null) {\r\n                return method;\r\n            }\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.BridgeMethodResolver#searchInterfaces(Class<?>[],Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver#searchInterfaces(Class<?>[],Method)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver#searchForMatch(Class<?>,Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * If the supplied {@link Class} has a declared {@link Method} whose signature matches\r\n * that of the supplied {@link Method}, then this matching {@link Method} is returned,\r\n * otherwise {@code null} is returned.\r\n */\r\n@Nullable\r\nprivate static Method searchForMatch(Class<?> type, Method bridgeMethod) {\r\n    try {\r\n        return type.getDeclaredMethod(bridgeMethod.getName(), bridgeMethod.getParameterTypes());\r\n    } catch (NoSuchMethodException ex) {\r\n        return null;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.BridgeMethodResolver#searchForMatch(Class<?>,Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver#searchForMatch(Class<?>,Method)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver#isVisibilityBridgeMethodPair(Method,Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Compare the signatures of the bridge method and the method which it bridges. If\r\n * the parameter and return types are the same, it is a 'visibility' bridge method\r\n * introduced in Java 6 to fix <a href=\"https://bugs.openjdk.org/browse/JDK-6342411\">\r\n * JDK-6342411</a>.\r\n * @return whether signatures match as described\r\n */\r\npublic static boolean isVisibilityBridgeMethodPair(Method bridgeMethod, Method bridgedMethod) {\r\n    if (bridgeMethod == bridgedMethod) {\r\n        // Same method: for common purposes, return true to proceed as if it was a visibility bridge.\r\n        return true;\r\n    }\r\n    if (ClassUtils.getUserClass(bridgeMethod.getDeclaringClass()) != bridgeMethod.getDeclaringClass()) {\r\n        // Method on generated subclass: return false to consistently ignore it for visibility purposes.\r\n        return false;\r\n    }\r\n    return (bridgeMethod.getReturnType().equals(bridgedMethod.getReturnType()) && bridgeMethod.getParameterCount() == bridgedMethod.getParameterCount() && Arrays.equals(bridgeMethod.getParameterTypes(), bridgedMethod.getParameterTypes()));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.BridgeMethodResolver",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.BridgeMethodResolver#isVisibilityBridgeMethodPair(Method,Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.codec",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.codec",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.codec;\n\nimport java.nio.charset.Charset;\nimport java.nio.charset.StandardCharsets;\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.concurrent.ConcurrentHashMap;\nimport java.util.concurrent.ConcurrentMap;\n\nimport org.jspecify.annotations.Nullable;\nimport org.reactivestreams.Publisher;\nimport reactor.core.publisher.Flux;\nimport reactor.core.publisher.Mono;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferUtils;\nimport org.springframework.core.io.buffer.LimitedDataBufferList;\nimport org.springframework.core.log.LogFormatUtils;\nimport org.springframework.util.Assert;\nimport org.springframework.util.MimeType;\n\n/**\n * Abstract base class that decodes from a data buffer stream to a\n * {@code CharSequence} stream.\n *\n * @author Arjen Poutsma\n * @since 6.1\n * @param <T> the character sequence type\n */\npublic abstract class AbstractCharSequenceDecoder<T extends CharSequence> extends AbstractDataBufferDecoder<T> {\n\n\t/** The default charset to use, i.e. \"UTF-8\". */\n\tpublic static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;\n\n\t/** The default delimiter strings to use, i.e. {@code \\r\\n} and {@code \\n}. */\n\tpublic static final List<String> DEFAULT_DELIMITERS = List.of(\"\\r\\n\", \"\\n\");\n\n\n\tprivate final List<String> delimiters;\n\n\tprivate final boolean stripDelimiter;\n\n\tprivate Charset defaultCharset = DEFAULT_CHARSET;\n\n\tprivate final ConcurrentMap<Charset, byte[][]> delimitersCache = new ConcurrentHashMap<>();\n\n\n\t/**\n\t * Create a new {@code AbstractCharSequenceDecoder} with the given parameters.\n\t */\n\tprotected AbstractCharSequenceDecoder(List<String> delimiters, boolean stripDelimiter, MimeType... mimeTypes) {\n\t\tsuper(mimeTypes);\n\t\tAssert.notEmpty(delimiters, \"'delimiters' must not be empty\");\n\t\tthis.delimiters = new ArrayList<>(delimiters);\n\t\tthis.stripDelimiter = stripDelimiter;\n\t}\n\n\n\t/**\n\t * Set the default character set to fall back on if the MimeType does not specify any.\n\t * <p>By default this is {@code UTF-8}.\n\t * @param defaultCharset the charset to fall back on\n\t */\n\tpublic void setDefaultCharset(Charset defaultCharset) {\n\t\tthis.defaultCharset = defaultCharset;\n\t}\n\n\t/**\n\t * Return the configured {@link #setDefaultCharset(Charset) defaultCharset}.\n\t */\n\tpublic Charset getDefaultCharset() {\n\t\treturn this.defaultCharset;\n\t}\n\n\n\t@Override\n\tpublic final Flux<T> decode(Publisher<DataBuffer> input, ResolvableType elementType,\n\t\t\t@Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\n\n\t\tbyte[][] delimiterBytes = getDelimiterBytes(mimeType);\n\n\t\tLimitedDataBufferList chunks = new LimitedDataBufferList(getMaxInMemorySize());\n\t\tDataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delimiterBytes);\n\n\t\treturn Flux.from(input)\n\t\t\t\t.concatMapIterable(buffer -> processDataBuffer(buffer, matcher, chunks))\n\t\t\t\t.concatWith(Mono.defer(() -> {\n\t\t\t\t\tif (chunks.isEmpty()) {\n\t\t\t\t\t\treturn Mono.empty();\n\t\t\t\t\t}\n\t\t\t\t\tDataBuffer lastBuffer = chunks.get(0).factory().join(chunks);\n\t\t\t\t\tchunks.clear();\n\t\t\t\t\treturn Mono.just(lastBuffer);\n\t\t\t\t}))\n\t\t\t\t.doFinally(signalType -> chunks.releaseAndClear())\n\t\t\t\t.doOnDiscard(DataBuffer.class, DataBufferUtils::release)\n\t\t\t\t.map(buffer -> decode(buffer, elementType, mimeType, hints));\n\t}\n\n\tprivate byte[][] getDelimiterBytes(@Nullable MimeType mimeType) {\n\t\treturn this.delimitersCache.computeIfAbsent(getCharset(mimeType), charset -> {\n\t\t\tbyte[][] result = new byte[this.delimiters.size()][];\n\t\t\tfor (int i = 0; i < this.delimiters.size(); i++) {\n\t\t\t\tresult[i] = this.delimiters.get(i).getBytes(charset);\n\t\t\t}\n\t\t\treturn result;\n\t\t});\n\t}\n\n\tprivate Collection<DataBuffer> processDataBuffer(DataBuffer buffer, DataBufferUtils.Matcher matcher,\n\t\t\tLimitedDataBufferList chunks) {\n\n\t\tboolean release = true;\n\t\ttry {\n\t\t\tList<DataBuffer> result = null;\n\t\t\tdo {\n\t\t\t\tint endIndex = matcher.match(buffer);\n\t\t\t\tif (endIndex == -1) {\n\t\t\t\t\tchunks.add(buffer);\n\t\t\t\t\trelease = false;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tDataBuffer split = buffer.split(endIndex + 1);\n\t\t\t\tif (result == null) {\n\t\t\t\t\tresult = new ArrayList<>();\n\t\t\t\t}\n\t\t\t\tint delimiterLength = matcher.delimiter().length;\n\t\t\t\tif (chunks.isEmpty()) {\n\t\t\t\t\tif (this.stripDelimiter) {\n\t\t\t\t\t\tsplit.writePosition(split.writePosition() - delimiterLength);\n\t\t\t\t\t}\n\t\t\t\t\tresult.add(split);\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tchunks.add(split);\n\t\t\t\t\tDataBuffer joined = buffer.factory().join(chunks);\n\t\t\t\t\tif (this.stripDelimiter) {\n\t\t\t\t\t\tjoined.writePosition(joined.writePosition() - delimiterLength);\n\t\t\t\t\t}\n\t\t\t\t\tresult.add(joined);\n\t\t\t\t\tchunks.clear();\n\t\t\t\t}\n\t\t\t}\n\t\t\twhile (buffer.readableByteCount() > 0);\n\t\t\treturn (result != null ? result : Collections.emptyList());\n\t\t}\n\t\tfinally {\n\t\t\tif (release) {\n\t\t\t\tDataBufferUtils.release(buffer);\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic final T decode(DataBuffer dataBuffer, ResolvableType elementType,\n\t\t\t@Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\n\n\t\tCharset charset = getCharset(mimeType);\n\t\tT value = decodeInternal(dataBuffer, charset);\n\t\tDataBufferUtils.release(dataBuffer);\n\t\tLogFormatUtils.traceDebug(logger, traceOn -> {\n\t\t\tString formatted = LogFormatUtils.formatValue(value, !traceOn);\n\t\t\treturn Hints.getLogPrefix(hints) + \"Decoded \" + formatted;\n\t\t});\n\t\treturn value;\n\t}\n\n\tprivate Charset getCharset(@Nullable MimeType mimeType) {\n\t\tif (mimeType != null) {\n\t\t\tCharset charset = mimeType.getCharset();\n\t\t\tif (charset != null) {\n\t\t\t\treturn charset;\n\t\t\t}\n\t\t}\n\t\treturn getDefaultCharset();\n\t}\n\n\n\t/**\n\t * Template method that decodes the given data buffer into {@code T}, given\n\t * the charset.\n\t */\n\tprotected abstract T decodeInternal(DataBuffer dataBuffer, Charset charset);\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#DEFAULT_CHARSET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#DEFAULT_CHARSET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Charset",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#DEFAULT_DELIMITERS",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#DEFAULT_DELIMITERS",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#delimiters",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#delimiters",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#stripDelimiter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder#stripDelimiter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.AbstractCharSequenceDecoder#defaultCharset",
+    "tailType": "field"
+  }
+]

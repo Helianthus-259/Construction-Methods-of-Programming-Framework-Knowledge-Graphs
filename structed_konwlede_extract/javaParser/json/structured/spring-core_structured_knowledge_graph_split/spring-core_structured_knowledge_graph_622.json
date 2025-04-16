@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.TypeUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\npackage org.springframework.cglib.core;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Map;\n\nimport org.springframework.asm.Type;\n\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\npublic class TypeUtils {\n    private static final Map transforms = new HashMap();\n    private static final Map rtransforms = new HashMap();\n\n    private TypeUtils() {\n    }\n\n    static {\n        transforms.put(\"void\", \"V\");\n        transforms.put(\"byte\", \"B\");\n        transforms.put(\"char\", \"C\");\n        transforms.put(\"double\", \"D\");\n        transforms.put(\"float\", \"F\");\n        transforms.put(\"int\", \"I\");\n        transforms.put(\"long\", \"J\");\n        transforms.put(\"short\", \"S\");\n        transforms.put(\"boolean\", \"Z\");\n\n        CollectionUtils.reverse(transforms, rtransforms);\n    }\n\n    public static Type getType(String className) {\n        return Type.getType(\"L\" + className.replace('.', '/') + \";\");\n    }\n\n    public static boolean isFinal(int access) {\n        return (Constants.ACC_FINAL & access) != 0;\n    }\n\n    public static boolean isStatic(int access) {\n        return (Constants.ACC_STATIC & access) != 0;\n    }\n\n    public static boolean isProtected(int access) {\n        return (Constants.ACC_PROTECTED & access) != 0;\n    }\n\n    public static boolean isPublic(int access) {\n        return (Constants.ACC_PUBLIC & access) != 0;\n    }\n\n    public static boolean isAbstract(int access) {\n        return (Constants.ACC_ABSTRACT & access) != 0;\n    }\n\n    public static boolean isInterface(int access) {\n        return (Constants.ACC_INTERFACE & access) != 0;\n    }\n\n    public static boolean isPrivate(int access) {\n        return (Constants.ACC_PRIVATE & access) != 0;\n    }\n\n    public static boolean isSynthetic(int access) {\n        return (Constants.ACC_SYNTHETIC & access) != 0;\n    }\n\n    public static boolean isBridge(int access) {\n    \treturn (Constants.ACC_BRIDGE & access) != 0;\n    }\n\n    // getPackage returns null on JDK 1.2\n    public static String getPackageName(Type type) {\n        return getPackageName(getClassName(type));\n    }\n\n    public static String getPackageName(String className) {\n        int idx = className.lastIndexOf('.');\n        return (idx < 0) ? \"\" : className.substring(0, idx);\n    }\n\n    public static String upperFirst(String s) {\n        if (s == null || s.isEmpty()) {\n            return s;\n        }\n        return Character.toUpperCase(s.charAt(0)) + s.substring(1);\n    }\n\n    public static String getClassName(Type type) {\n        if (isPrimitive(type)) {\n            return (String)rtransforms.get(type.getDescriptor());\n        } else if (isArray(type)) {\n            return getClassName(getComponentType(type)) + \"[]\";\n        } else {\n            return type.getClassName();\n        }\n    }\n\n    public static Type[] add(Type[] types, Type extra) {\n        if (types == null) {\n            return new Type[]{ extra };\n        } else {\n            List list = Arrays.asList(types);\n            if (list.contains(extra)) {\n                return types;\n            }\n            Type[] copy = new Type[types.length + 1];\n            System.arraycopy(types, 0, copy, 0, types.length);\n            copy[types.length] = extra;\n            return copy;\n        }\n    }\n\n    public static Type[] add(Type[] t1, Type[] t2) {\n        // TODO: set semantics?\n        Type[] all = new Type[t1.length + t2.length];\n        System.arraycopy(t1, 0, all, 0, t1.length);\n        System.arraycopy(t2, 0, all, t1.length, t2.length);\n        return all;\n    }\n\n    public static Type fromInternalName(String name) {\n        // TODO; primitives?\n        return Type.getType(\"L\" + name + \";\");\n    }\n\n    public static Type[] fromInternalNames(String[] names) {\n        if (names == null) {\n            return null;\n        }\n        Type[] types = new Type[names.length];\n        for (int i = 0; i < names.length; i++) {\n            types[i] = fromInternalName(names[i]);\n        }\n        return types;\n    }\n\n    public static int getStackSize(Type[] types) {\n        int size = 0;\n        for (Type type : types) {\n            size += type.getSize();\n        }\n        return size;\n    }\n\n    public static String[] toInternalNames(Type[] types) {\n        if (types == null) {\n            return null;\n        }\n        String[] names = new String[types.length];\n        for (int i = 0; i < types.length; i++) {\n            names[i] = types[i].getInternalName();\n        }\n        return names;\n    }\n\n    public static Signature parseSignature(String s) {\n        int space = s.indexOf(' ');\n        int lparen = s.indexOf('(', space);\n        int rparen = s.indexOf(')', lparen);\n        String returnType = s.substring(0, space);\n        String methodName = s.substring(space + 1, lparen);\n\t\tStringBuilder sb = new StringBuilder();\n        sb.append('(');\n        for (Iterator it = parseTypes(s, lparen + 1, rparen).iterator(); it.hasNext();) {\n            sb.append(it.next());\n        }\n        sb.append(')');\n        sb.append(map(returnType));\n        return new Signature(methodName, sb.toString());\n    }\n\n    public static Type parseType(String s) {\n        return Type.getType(map(s));\n    }\n\n    public static Type[] parseTypes(String s) {\n        List names = parseTypes(s, 0, s.length());\n        Type[] types = new Type[names.size()];\n        for (int i = 0; i < types.length; i++) {\n            types[i] = Type.getType((String)names.get(i));\n        }\n        return types;\n    }\n\n    public static Signature parseConstructor(Type[] types) {\n\t\tStringBuilder sb = new StringBuilder();\n        sb.append(\"(\");\n        for (Type type : types) {\n            sb.append(type.getDescriptor());\n        }\n        sb.append(\")\");\n        sb.append(\"V\");\n        return new Signature(Constants.CONSTRUCTOR_NAME, sb.toString());\n    }\n\n    public static Signature parseConstructor(String sig) {\n        return parseSignature(\"void <init>(\" + sig + \")\"); // TODO\n    }\n\n    private static List parseTypes(String s, int mark, int end) {\n        List types = new ArrayList(5);\n        for (;;) {\n            int next = s.indexOf(',', mark);\n            if (next < 0) {\n                break;\n            }\n            types.add(map(s.substring(mark, next).trim()));\n            mark = next + 1;\n        }\n        types.add(map(s.substring(mark, end).trim()));\n        return types;\n    }\n\n    private static String map(String type) {\n        if (type.isEmpty()) {\n            return type;\n        }\n        String t = (String)transforms.get(type);\n        if (t != null) {\n            return t;\n        } else if (type.indexOf('.') < 0) {\n            return map(\"java.lang.\" + type);\n        } else {\n\t\t\tStringBuilder sb = new StringBuilder();\n            int index = 0;\n            while ((index = type.indexOf(\"[]\", index) + 1) > 0) {\n                sb.append('[');\n            }\n            type = type.substring(0, type.length() - sb.length() * 2);\n            sb.append('L').append(type.replace('.', '/')).append(';');\n            return sb.toString();\n        }\n    }\n\n    public static Type getBoxedType(Type type) {\n\t\treturn switch (type.getSort()) {\n\t\t\tcase Type.CHAR -> Constants.TYPE_CHARACTER;\n\t\t\tcase Type.BOOLEAN -> Constants.TYPE_BOOLEAN;\n\t\t\tcase Type.DOUBLE -> Constants.TYPE_DOUBLE;\n\t\t\tcase Type.FLOAT -> Constants.TYPE_FLOAT;\n\t\t\tcase Type.LONG -> Constants.TYPE_LONG;\n\t\t\tcase Type.INT -> Constants.TYPE_INTEGER;\n\t\t\tcase Type.SHORT -> Constants.TYPE_SHORT;\n\t\t\tcase Type.BYTE -> Constants.TYPE_BYTE;\n\t\t\tdefault -> type;\n\t\t};\n    }\n\n    public static Type getUnboxedType(Type type) {\n        if (Constants.TYPE_INTEGER.equals(type)) {\n            return Type.INT_TYPE;\n        } else if (Constants.TYPE_BOOLEAN.equals(type)) {\n            return Type.BOOLEAN_TYPE;\n        } else if (Constants.TYPE_DOUBLE.equals(type)) {\n            return Type.DOUBLE_TYPE;\n        } else if (Constants.TYPE_LONG.equals(type)) {\n            return Type.LONG_TYPE;\n        } else if (Constants.TYPE_CHARACTER.equals(type)) {\n            return Type.CHAR_TYPE;\n        } else if (Constants.TYPE_BYTE.equals(type)) {\n            return Type.BYTE_TYPE;\n        } else if (Constants.TYPE_FLOAT.equals(type)) {\n            return Type.FLOAT_TYPE;\n        } else if (Constants.TYPE_SHORT.equals(type)) {\n            return Type.SHORT_TYPE;\n        } else {\n            return type;\n        }\n    }\n\n    public static boolean isArray(Type type) {\n        return type.getSort() == Type.ARRAY;\n    }\n\n    public static Type getComponentType(Type type) {\n        if (!isArray(type)) {\n            throw new IllegalArgumentException(\"Type \" + type + \" is not an array\");\n        }\n        return Type.getType(type.getDescriptor().substring(1));\n    }\n\n    public static boolean isPrimitive(Type type) {\n\t\treturn switch (type.getSort()) {\n\t\t\tcase Type.ARRAY, Type.OBJECT -> false;\n\t\t\tdefault -> true;\n\t\t};\n    }\n\n    public static String emulateClassGetName(Type type) {\n        if (isArray(type)) {\n            return type.getDescriptor().replace('/', '.');\n        } else {\n            return getClassName(type);\n        }\n    }\n\n    public static boolean isConstructor(MethodInfo method) {\n        return method.getSignature().getName().equals(Constants.CONSTRUCTOR_NAME);\n    }\n\n    public static Type[] getTypes(Class[] classes) {\n        if (classes == null) {\n            return null;\n        }\n        Type[] types = new Type[classes.length];\n        for (int i = 0; i < classes.length; i++) {\n            types[i] = Type.getType(classes[i]);\n        }\n        return types;\n    }\n\n    public static int ICONST(int value) {\n\t\treturn switch (value) {\n\t\t\tcase -1 -> Constants.ICONST_M1;\n\t\t\tcase 0 -> Constants.ICONST_0;\n\t\t\tcase 1 -> Constants.ICONST_1;\n\t\t\tcase 2 -> Constants.ICONST_2;\n\t\t\tcase 3 -> Constants.ICONST_3;\n\t\t\tcase 4 -> Constants.ICONST_4;\n\t\t\tcase 5 -> Constants.ICONST_5;\n\t\t\tdefault -> -1; // error\n\t\t};\n\t}\n\n    public static int LCONST(long value) {\n        if (value == 0L) {\n            return Constants.LCONST_0;\n        } else if (value == 1L) {\n            return Constants.LCONST_1;\n        } else {\n            return -1; // error\n        }\n    }\n\n    public static int FCONST(float value) {\n        if (value == 0f) {\n            return Constants.FCONST_0;\n        } else if (value == 1f) {\n            return Constants.FCONST_1;\n        } else if (value == 2f) {\n            return Constants.FCONST_2;\n        } else {\n            return -1; // error\n        }\n    }\n\n    public static int DCONST(double value) {\n        if (value == 0d) {\n            return Constants.DCONST_0;\n        } else if (value == 1d) {\n            return Constants.DCONST_1;\n        } else {\n            return -1; // error\n        }\n    }\n\n    public static int NEWARRAY(Type type) {\n\t\treturn switch (type.getSort()) {\n\t\t\tcase Type.BYTE -> Constants.T_BYTE;\n\t\t\tcase Type.CHAR -> Constants.T_CHAR;\n\t\t\tcase Type.DOUBLE -> Constants.T_DOUBLE;\n\t\t\tcase Type.FLOAT -> Constants.T_FLOAT;\n\t\t\tcase Type.INT -> Constants.T_INT;\n\t\t\tcase Type.LONG -> Constants.T_LONG;\n\t\t\tcase Type.SHORT -> Constants.T_SHORT;\n\t\t\tcase Type.BOOLEAN -> Constants.T_BOOLEAN;\n\t\t\tdefault -> -1; // error\n\t\t};\n    }\n\n    public static String escapeType(String s) {\n\t\tStringBuilder sb = new StringBuilder();\n        for (int i = 0, len = s.length(); i < len; i++) {\n            char c = s.charAt(i);\n\t\t\tswitch (c) {\n\t\t\t\tcase '$' -> sb.append(\"$24\");\n\t\t\t\tcase '.' -> sb.append(\"$2E\");\n\t\t\t\tcase '[' -> sb.append(\"$5B\");\n\t\t\t\tcase ';' -> sb.append(\"$3B\");\n\t\t\t\tcase '(' -> sb.append(\"$28\");\n\t\t\t\tcase ')' -> sb.append(\"$29\");\n\t\t\t\tcase '/' -> sb.append(\"$2F\");\n\t\t\t\tdefault -> sb.append(c);\n\t\t\t}\n        }\n        return sb.toString();\n    }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.TypeUtils#transforms",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#transforms",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.TypeUtils#rtransforms",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#rtransforms",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#getType(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static Type getType(String className) {\r\n    return Type.getType(\"L\" + className.replace('.', '/') + \";\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.TypeUtils#getType(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#isFinal(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static boolean isFinal(int access) {\r\n    return (Constants.ACC_FINAL & access) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.TypeUtils#isFinal(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#isStatic(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static boolean isStatic(int access) {\r\n    return (Constants.ACC_STATIC & access) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.TypeUtils#isStatic(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#isProtected(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static boolean isProtected(int access) {\r\n    return (Constants.ACC_PROTECTED & access) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.TypeUtils#isProtected(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#isPublic(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static boolean isPublic(int access) {\r\n    return (Constants.ACC_PUBLIC & access) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.TypeUtils#isPublic(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils#isAbstract(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public static boolean isAbstract(int access) {\r\n    return (Constants.ACC_ABSTRACT & access) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.TypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.TypeUtils#isAbstract(int)",
+    "tailType": "method"
+  }
+]

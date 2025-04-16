@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.Conventions#getVariableNameForParameter(MethodParameter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the conventional variable name for the given parameter taking\r\n * the generic collection type, if any, into account.\r\n * <p>As of 5.0 this method supports reactive types:<br>\r\n * {@code Mono<com.myapp.Product>} becomes {@code \"productMono\"}<br>\r\n * {@code Flux<com.myapp.MyProduct>} becomes {@code \"myProductFlux\"}<br>\r\n * {@code Observable<com.myapp.MyProduct>} becomes {@code \"myProductObservable\"}<br>\r\n * @param parameter the method or constructor parameter\r\n * @return the generated variable name\r\n */\r\npublic static String getVariableNameForParameter(MethodParameter parameter) {\r\n    Assert.notNull(parameter, \"MethodParameter must not be null\");\r\n    Class<?> valueClass;\r\n    boolean pluralize = false;\r\n    String reactiveSuffix = \"\";\r\n    if (parameter.getParameterType().isArray()) {\r\n        valueClass = parameter.getParameterType().componentType();\r\n        pluralize = true;\r\n    } else if (Collection.class.isAssignableFrom(parameter.getParameterType())) {\r\n        valueClass = ResolvableType.forMethodParameter(parameter).asCollection().resolveGeneric();\r\n        if (valueClass == null) {\r\n            throw new IllegalArgumentException(\"Cannot generate variable name for non-typed Collection parameter type\");\r\n        }\r\n        pluralize = true;\r\n    } else {\r\n        valueClass = parameter.getParameterType();\r\n        ReactiveAdapter adapter = ReactiveAdapterRegistry.getSharedInstance().getAdapter(valueClass);\r\n        if (adapter != null && !adapter.getDescriptor().isNoValue()) {\r\n            reactiveSuffix = ClassUtils.getShortName(valueClass);\r\n            valueClass = parameter.nested().getNestedParameterType();\r\n        }\r\n    }\r\n    String name = ClassUtils.getShortNameAsProperty(valueClass);\r\n    return (pluralize ? pluralize(name) : name + reactiveSuffix);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#getVariableNameForParameter(MethodParameter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#getVariableNameForReturnType(Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the conventional variable name for the return type of the\r\n * given method, taking the generic collection type, if any, into account.\r\n * @param method the method to generate a variable name for\r\n * @return the generated variable name\r\n */\r\npublic static String getVariableNameForReturnType(Method method) {\r\n    return getVariableNameForReturnType(method, method.getReturnType(), null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#getVariableNameForReturnType(Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#getVariableNameForReturnType(Method,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the conventional variable name for the return type of the given\r\n * method, taking the generic collection type, if any, into account, falling\r\n * back on the given actual return value if the method declaration is not\r\n * specific enough, for example, {@code Object} return type or untyped collection.\r\n * @param method the method to generate a variable name for\r\n * @param value the return value (may be {@code null} if not available)\r\n * @return the generated variable name\r\n */\r\npublic static String getVariableNameForReturnType(Method method, @Nullable Object value) {\r\n    return getVariableNameForReturnType(method, method.getReturnType(), value);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#getVariableNameForReturnType(Method,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#getVariableNameForReturnType(Method,Class<?>,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the conventional variable name for the return type of the given\r\n * method, taking the generic collection type, if any, into account, falling\r\n * back on the given return value if the method declaration is not specific\r\n * enough, for example, {@code Object} return type or untyped collection.\r\n * <p>As of 5.0 this method supports reactive types:<br>\r\n * {@code Mono<com.myapp.Product>} becomes {@code \"productMono\"}<br>\r\n * {@code Flux<com.myapp.MyProduct>} becomes {@code \"myProductFlux\"}<br>\r\n * {@code Observable<com.myapp.MyProduct>} becomes {@code \"myProductObservable\"}<br>\r\n * @param method the method to generate a variable name for\r\n * @param resolvedType the resolved return type of the method\r\n * @param value the return value (may be {@code null} if not available)\r\n * @return the generated variable name\r\n */\r\npublic static String getVariableNameForReturnType(Method method, Class<?> resolvedType, @Nullable Object value) {\r\n    Assert.notNull(method, \"Method must not be null\");\r\n    if (Object.class == resolvedType) {\r\n        Assert.notNull(value, \"Cannot generate variable name for an Object return type with null value\");\r\n        return getVariableName(value);\r\n    }\r\n    Class<?> valueClass;\r\n    boolean pluralize = false;\r\n    String reactiveSuffix = \"\";\r\n    if (resolvedType.isArray()) {\r\n        valueClass = resolvedType.componentType();\r\n        pluralize = true;\r\n    } else if (Collection.class.isAssignableFrom(resolvedType)) {\r\n        valueClass = ResolvableType.forMethodReturnType(method).asCollection().resolveGeneric();\r\n        if (valueClass == null) {\r\n            if (!(value instanceof Collection<?> collection)) {\r\n                throw new IllegalArgumentException(\"Cannot generate variable name \" + \"for non-typed Collection return type and a non-Collection value\");\r\n            }\r\n            if (collection.isEmpty()) {\r\n                throw new IllegalArgumentException(\"Cannot generate variable name \" + \"for non-typed Collection return type and an empty Collection value\");\r\n            }\r\n            Object valueToCheck = peekAhead(collection);\r\n            valueClass = getClassForValue(valueToCheck);\r\n        }\r\n        pluralize = true;\r\n    } else {\r\n        valueClass = resolvedType;\r\n        ReactiveAdapter adapter = ReactiveAdapterRegistry.getSharedInstance().getAdapter(valueClass);\r\n        if (adapter != null && !adapter.getDescriptor().isNoValue()) {\r\n            reactiveSuffix = ClassUtils.getShortName(valueClass);\r\n            valueClass = ResolvableType.forMethodReturnType(method).getGeneric().toClass();\r\n        }\r\n    }\r\n    String name = ClassUtils.getShortNameAsProperty(valueClass);\r\n    return (pluralize ? pluralize(name) : name + reactiveSuffix);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#getVariableNameForReturnType(Method,Class<?>,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#attributeNameToPropertyName(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Convert {@code String}s in attribute name format (for example, lowercase, hyphens\r\n * separating words) into property name format (camel-case). For example\r\n * {@code transaction-manager} becomes {@code \"transactionManager\"}.\r\n */\r\npublic static String attributeNameToPropertyName(String attributeName) {\r\n    Assert.notNull(attributeName, \"'attributeName' must not be null\");\r\n    if (!attributeName.contains(\"-\")) {\r\n        return attributeName;\r\n    }\r\n    // not completely accurate but good guess\r\n    char[] result = new char[attributeName.length() - 1];\r\n    int currPos = 0;\r\n    boolean upperCaseNext = false;\r\n    for (int i = 0; i < attributeName.length(); i++) {\r\n        char c = attributeName.charAt(i);\r\n        if (c == '-') {\r\n            upperCaseNext = true;\r\n        } else if (upperCaseNext) {\r\n            result[currPos++] = Character.toUpperCase(c);\r\n            upperCaseNext = false;\r\n        } else {\r\n            result[currPos++] = c;\r\n        }\r\n    }\r\n    return new String(result, 0, currPos);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#attributeNameToPropertyName(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#getQualifiedAttributeName(Class<?>,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return an attribute name qualified by the given enclosing {@link Class}.\r\n * For example the attribute name '{@code foo}' qualified by {@link Class}\r\n * '{@code com.myapp.SomeClass}' would be '{@code com.myapp.SomeClass.foo}'\r\n */\r\npublic static String getQualifiedAttributeName(Class<?> enclosingClass, String attributeName) {\r\n    Assert.notNull(enclosingClass, \"'enclosingClass' must not be null\");\r\n    Assert.notNull(attributeName, \"'attributeName' must not be null\");\r\n    return enclosingClass.getName() + '.' + attributeName;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#getQualifiedAttributeName(Class<?>,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#getClassForValue(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine the class to use for naming a variable containing the given value.\r\n * <p>Will return the class of the given value, except when encountering a\r\n * JDK proxy, in which case it will determine the 'primary' interface\r\n * implemented by that proxy.\r\n * @param value the value to check\r\n * @return the class to use for naming a variable\r\n */\r\nprivate static Class<?> getClassForValue(Object value) {\r\n    Class<?> valueClass = value.getClass();\r\n    if (Proxy.isProxyClass(valueClass)) {\r\n        Class<?>[] ifcs = valueClass.getInterfaces();\r\n        for (Class<?> ifc : ifcs) {\r\n            if (!ClassUtils.isJavaLanguageInterface(ifc)) {\r\n                return ifc;\r\n            }\r\n        }\r\n    } else if (valueClass.getName().lastIndexOf('$') != -1 && valueClass.getDeclaringClass() == null) {\r\n        // '$' in the class name but no inner class -\r\n        // assuming it's a special subclass (for example, by OpenJPA)\r\n        valueClass = valueClass.getSuperclass();\r\n    }\r\n    return valueClass;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#getClassForValue(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#pluralize(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Pluralize the given name.\r\n */\r\nprivate static String pluralize(String name) {\r\n    return name + PLURAL_SUFFIX;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#pluralize(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Conventions#peekAhead(Collection<E>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve the {@code Class} of an element in the {@code Collection}.\r\n * The exact element for which the {@code Class} is retrieved will depend\r\n * on the concrete {@code Collection} implementation.\r\n */\r\nprivate static <E> E peekAhead(Collection<E> collection) {\r\n    Iterator<E> it = collection.iterator();\r\n    if (!it.hasNext()) {\r\n        throw new IllegalStateException(\"Unable to peek ahead in non-empty collection - no element found\");\r\n    }\r\n    E value = it.next();\r\n    if (value == null) {\r\n        throw new IllegalStateException(\"Unable to peek ahead in non-empty collection - only null element found\");\r\n    }\r\n    return value;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Conventions",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Conventions#peekAhead(Collection<E>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.ConversionException",
+    "tailType": "class"
+  }
+]

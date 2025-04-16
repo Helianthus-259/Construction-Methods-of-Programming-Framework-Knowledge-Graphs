@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#parse(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#parseExpression(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles parseExpression(String expression) {\r\n    Assert.hasText(expression, () -> \"Invalid profile expression [\" + expression + \"]: must contain text\");\r\n    StringTokenizer tokens = new StringTokenizer(expression, \"()&|!\", true);\r\n    return parseTokens(expression, tokens);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#parseExpression(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#parseTokens(String,StringTokenizer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles parseTokens(String expression, StringTokenizer tokens) {\r\n    return parseTokens(expression, tokens, Context.NONE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#parseTokens(String,StringTokenizer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#parseTokens(String,StringTokenizer,Context)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles parseTokens(String expression, StringTokenizer tokens, Context context) {\r\n    List<Profiles> elements = new ArrayList<>();\r\n    Operator operator = null;\r\n    while (tokens.hasMoreTokens()) {\r\n        String token = tokens.nextToken().trim();\r\n        if (token.isEmpty()) {\r\n            continue;\r\n        }\r\n        switch(token) {\r\n            case \"(\" ->\r\n                {\r\n                    Profiles contents = parseTokens(expression, tokens, Context.PARENTHESIS);\r\n                    if (context == Context.NEGATE) {\r\n                        return contents;\r\n                    }\r\n                    elements.add(contents);\r\n                }\r\n            case \"&\" ->\r\n                {\r\n                    assertWellFormed(expression, operator == null || operator == Operator.AND);\r\n                    operator = Operator.AND;\r\n                }\r\n            case \"|\" ->\r\n                {\r\n                    assertWellFormed(expression, operator == null || operator == Operator.OR);\r\n                    operator = Operator.OR;\r\n                }\r\n            case \"!\" ->\r\n                elements.add(not(parseTokens(expression, tokens, Context.NEGATE)));\r\n            case \")\" ->\r\n                {\r\n                    Profiles merged = merge(expression, elements, operator);\r\n                    if (context == Context.PARENTHESIS) {\r\n                        return merged;\r\n                    }\r\n                    elements.clear();\r\n                    elements.add(merged);\r\n                    operator = null;\r\n                }\r\n            default ->\r\n                {\r\n                    Profiles value = equals(token);\r\n                    if (context == Context.NEGATE) {\r\n                        return value;\r\n                    }\r\n                    elements.add(value);\r\n                }\r\n        }\r\n    }\r\n    return merge(expression, elements, operator);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#parseTokens(String,StringTokenizer,Context)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#merge(String,List<Profiles>,Operator)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles merge(String expression, List<Profiles> elements, @Nullable Operator operator) {\r\n    assertWellFormed(expression, !elements.isEmpty());\r\n    if (elements.size() == 1) {\r\n        return elements.get(0);\r\n    }\r\n    Profiles[] profiles = elements.toArray(new Profiles[0]);\r\n    return (operator == Operator.AND ? and(profiles) : or(profiles));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#merge(String,List<Profiles>,Operator)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#assertWellFormed(String,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void assertWellFormed(String expression, boolean wellFormed) {\r\n    Assert.isTrue(wellFormed, () -> \"Malformed profile expression [\" + expression + \"]\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#assertWellFormed(String,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#or(Profiles)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles or(Profiles... profiles) {\r\n    return activeProfile -> Arrays.stream(profiles).anyMatch(isMatch(activeProfile));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#or(Profiles)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#and(Profiles)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles and(Profiles... profiles) {\r\n    return activeProfile -> Arrays.stream(profiles).allMatch(isMatch(activeProfile));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#and(Profiles)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#not(Profiles)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles not(Profiles profiles) {\r\n    return activeProfile -> !profiles.matches(activeProfile);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#not(Profiles)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#equals(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Profiles equals(String profile) {\r\n    return activeProfile -> activeProfile.test(profile);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesParser#equals(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesParser#isMatch(Predicate<String>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Predicate<Profiles> isMatch(Predicate<String> activeProfiles) {\r\n    return profiles -> profiles.matches(activeProfiles);\r\n}",
+    "tailType": "method_code"
+  }
+]

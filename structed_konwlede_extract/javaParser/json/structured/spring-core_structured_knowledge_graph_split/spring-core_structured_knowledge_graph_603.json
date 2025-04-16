@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.cglib.core.internal.LoadingCache",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.cglib.core.internal.LoadingCache#createEntry(K,KK,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core.internal",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.cglib.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.cglib.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.cglib.core.KeyFactory",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2003,2004 The Apache Software Foundation\n *\n *  Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n *  Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.cglib.core;\n\nimport java.lang.reflect.Method;\nimport java.security.ProtectionDomain;\nimport java.util.Collections;\nimport java.util.List;\n\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.Label;\nimport org.springframework.asm.Type;\nimport org.springframework.cglib.core.internal.CustomizerRegistry;\n\n/**\n * Generates classes to handle multi-valued keys, for use in things such as Maps and Sets.\n * Code for <code>equals</code> and <code>hashCode</code> methods follow the\n * the rules laid out in <i>Effective Java</i> by Joshua Bloch.\n * <p>\n * To generate a <code>KeyFactory</code>, you need to supply an interface which\n * describes the structure of the key. The interface should have a\n * single method named <code>newInstance</code>, which returns an\n * <code>Object</code>. The arguments array can be\n * <i>anything</i>--Objects, primitive values, or single or\n * multi-dimension arrays of either. For example:\n * <p><pre>\n *     private interface IntStringKey {\n *         public Object newInstance(int i, String s);\n *     }\n * </pre><p>\n * Once you have made a <code>KeyFactory</code>, you generate a new key by calling\n * the <code>newInstance</code> method defined by your interface.\n * <p><pre>\n *     IntStringKey factory = (IntStringKey)KeyFactory.create(IntStringKey.class);\n *     Object key1 = factory.newInstance(4, \"Hello\");\n *     Object key2 = factory.newInstance(4, \"World\");\n * </pre><p>\n * <b>Note:</b>\n * <code>hashCode</code> equality between two keys <code>key1</code> and <code>key2</code> is only guaranteed if\n * <code>key1.equals(key2)</code> <i>and</i> the keys were produced by the same factory.\n * @version $Id: KeyFactory.java,v 1.26 2006/03/05 02:43:19 herbyderby Exp $\n */\n@SuppressWarnings({\"rawtypes\", \"unchecked\"})\nabstract public class KeyFactory {\n\n\tprivate static final Signature GET_NAME =\n\t\t\tTypeUtils.parseSignature(\"String getName()\");\n\n\tprivate static final Signature GET_CLASS =\n\t\t\tTypeUtils.parseSignature(\"Class getClass()\");\n\n\tprivate static final Signature HASH_CODE =\n\t\t\tTypeUtils.parseSignature(\"int hashCode()\");\n\n\tprivate static final Signature EQUALS =\n\t\t\tTypeUtils.parseSignature(\"boolean equals(Object)\");\n\n\tprivate static final Signature TO_STRING =\n\t\t\tTypeUtils.parseSignature(\"String toString()\");\n\n\tprivate static final Signature APPEND_STRING =\n\t\t\tTypeUtils.parseSignature(\"StringBuffer append(String)\");\n\n\tprivate static final Type KEY_FACTORY =\n\t\t\tTypeUtils.parseType(\"org.springframework.cglib.core.KeyFactory\");\n\n\tprivate static final Signature GET_SORT =\n\t\t\tTypeUtils.parseSignature(\"int getSort()\");\n\n\t//generated numbers:\n\tprivate static final int PRIMES[] = {\n\t\t\t11, 73, 179, 331,\n\t\t\t521, 787, 1213, 1823,\n\t\t\t2609, 3691, 5189, 7247,\n\t\t\t10037, 13931, 19289, 26627,\n\t\t\t36683, 50441, 69403, 95401,\n\t\t\t131129, 180179, 247501, 340057,\n\t\t\t467063, 641371, 880603, 1209107,\n\t\t\t1660097, 2279161, 3129011, 4295723,\n\t\t\t5897291, 8095873, 11114263, 15257791,\n\t\t\t20946017, 28754629, 39474179, 54189869,\n\t\t\t74391461, 102123817, 140194277, 192456917,\n\t\t\t264202273, 362693231, 497900099, 683510293,\n\t\t\t938313161, 1288102441, 1768288259};\n\n\n\tpublic static final Customizer CLASS_BY_NAME = (e, type) -> {\n\t\tif (type.equals(Constants.TYPE_CLASS)) {\n\t\t\te.invoke_virtual(Constants.TYPE_CLASS, GET_NAME);\n\t\t}\n\t};\n\n\tpublic static final FieldTypeCustomizer STORE_CLASS_AS_STRING = new FieldTypeCustomizer() {\n\t\t@Override\n\t\tpublic void customize(CodeEmitter e, int index, Type type) {\n\t\t\tif (type.equals(Constants.TYPE_CLASS)) {\n\t\t\t\te.invoke_virtual(Constants.TYPE_CLASS, GET_NAME);\n\t\t\t}\n\t\t}\n\t\t@Override\n\t\tpublic Type getOutType(int index, Type type) {\n\t\t\tif (type.equals(Constants.TYPE_CLASS)) {\n\t\t\t\treturn Constants.TYPE_STRING;\n\t\t\t}\n\t\t\treturn type;\n\t\t}\n\t};\n\n\t/**\n\t * {@link Type#hashCode()} is very expensive as it traverses full descriptor to calculate hash code.\n\t * This customizer uses {@link Type#getSort()} as a hash code.\n\t */\n\tpublic static final HashCodeCustomizer HASH_ASM_TYPE = (e, type) -> {\n\t\tif (Constants.TYPE_TYPE.equals(type)) {\n\t\t\te.invoke_virtual(type, GET_SORT);\n\t\t\treturn true;\n\t\t}\n\t\treturn false;\n\t};\n\n\t/**\n\t * @deprecated this customizer might result in unexpected class leak since key object still holds a strong reference to the Object and class.\n\t * It is recommended to have pre-processing method that would strip Objects and represent Classes as Strings\n\t */\n\t@Deprecated\n\tpublic static final Customizer OBJECT_BY_CLASS = (e, type) -> e.invoke_virtual(Constants.TYPE_OBJECT, GET_CLASS);\n\n\tprotected KeyFactory() {\n\t}\n\n\tpublic static KeyFactory create(Class keyInterface) {\n\t\treturn create(keyInterface, null);\n\t}\n\n\tpublic static KeyFactory create(Class keyInterface, Customizer customizer) {\n\t\treturn create(keyInterface.getClassLoader(), keyInterface, customizer);\n\t}\n\n\tpublic static KeyFactory create(Class keyInterface, KeyFactoryCustomizer first, List<KeyFactoryCustomizer> next) {\n\t\treturn create(keyInterface.getClassLoader(), keyInterface, first, next);\n\t}\n\n\tpublic static KeyFactory create(ClassLoader loader, Class keyInterface, Customizer customizer) {\n\t\treturn create(loader, keyInterface, customizer, Collections.<KeyFactoryCustomizer>emptyList());\n\t}\n\n\tpublic static KeyFactory create(ClassLoader loader, Class keyInterface, KeyFactoryCustomizer customizer,\n\t\t\tList<KeyFactoryCustomizer> next) {\n\t\tGenerator gen = new Generator();\n\t\tgen.setInterface(keyInterface);\n\t\t// SPRING PATCH BEGIN\n\t\tgen.setContextClass(keyInterface);\n\t\t// SPRING PATCH END\n\n\t\tif (customizer != null) {\n\t\t\tgen.addCustomizer(customizer);\n\t\t}\n\t\tif (next != null && !next.isEmpty()) {\n\t\t\tfor (KeyFactoryCustomizer keyFactoryCustomizer : next) {\n\t\t\t\tgen.addCustomizer(keyFactoryCustomizer);\n\t\t\t}\n\t\t}\n\t\tgen.setClassLoader(loader);\n\t\treturn gen.create();\n\t}\n\n\n\tpublic static class Generator extends AbstractClassGenerator {\n\n\t\tprivate static final Source SOURCE = new Source(KeyFactory.class.getName());\n\n\t\tprivate static final Class[] KNOWN_CUSTOMIZER_TYPES = new Class[]{Customizer.class, FieldTypeCustomizer.class};\n\n\t\tprivate Class keyInterface;\n\n\t\t// TODO: Make me final when deprecated methods are removed\n\t\tprivate CustomizerRegistry customizers = new CustomizerRegistry(KNOWN_CUSTOMIZER_TYPES);\n\n\t\tprivate int constant;\n\n\t\tprivate int multiplier;\n\n\t\tpublic Generator() {\n\t\t\tsuper(SOURCE);\n\t\t}\n\n\t\t@Override\n\t\tprotected ClassLoader getDefaultClassLoader() {\n\t\t\treturn keyInterface.getClassLoader();\n\t\t}\n\n\t\t@Override\n\t\tprotected ProtectionDomain getProtectionDomain() {\n\t\t\treturn ReflectUtils.getProtectionDomain(keyInterface);\n\t\t}\n\n\t\t/**\n\t\t * @deprecated Use {@link #addCustomizer(KeyFactoryCustomizer)} instead.\n\t\t */\n\t\t@Deprecated\n\t\tpublic void setCustomizer(Customizer customizer) {\n\t\t\tcustomizers = CustomizerRegistry.singleton(customizer);\n\t\t}\n\n\t\tpublic void addCustomizer(KeyFactoryCustomizer customizer) {\n\t\t\tcustomizers.add(customizer);\n\t\t}\n\n\t\tpublic <T> List<T> getCustomizers(Class<T> klass) {\n\t\t\treturn customizers.get(klass);\n\t\t}\n\n\t\tpublic void setInterface(Class keyInterface) {\n\t\t\tthis.keyInterface = keyInterface;\n\t\t}\n\n\t\tpublic KeyFactory create() {\n\t\t\tsetNamePrefix(keyInterface.getName());\n\t\t\treturn (KeyFactory) super.create(keyInterface.getName());\n\t\t}\n\n\t\tpublic void setHashConstant(int constant) {\n\t\t\tthis.constant = constant;\n\t\t}\n\n\t\tpublic void setHashMultiplier(int multiplier) {\n\t\t\tthis.multiplier = multiplier;\n\t\t}\n\n\t\t@Override\n\t\tprotected Object firstInstance(Class type) {\n\t\t\treturn ReflectUtils.newInstance(type);\n\t\t}\n\n\t\t@Override\n\t\tprotected Object nextInstance(Object instance) {\n\t\t\treturn instance;\n\t\t}\n\n\t\t@Override\n\t\tpublic void generateClass(ClassVisitor v) {\n\t\t\tClassEmitter ce = new ClassEmitter(v);\n\n\t\t\tMethod newInstance = ReflectUtils.findNewInstance(keyInterface);\n\t\t\tif (!newInstance.getReturnType().equals(Object.class)) {\n\t\t\t\tthrow new IllegalArgumentException(\"newInstance method must return Object\");\n\t\t\t}\n\n\t\t\tType[] parameterTypes = TypeUtils.getTypes(newInstance.getParameterTypes());\n\t\t\tce.begin_class(Constants.V1_8,\n\t\t\t\t\tConstants.ACC_PUBLIC,\n\t\t\t\t\tgetClassName(),\n\t\t\t\t\tKEY_FACTORY,\n\t\t\t\t\tnew Type[]{Type.getType(keyInterface)},\n\t\t\t\t\tConstants.SOURCE_FILE);\n\t\t\tEmitUtils.null_constructor(ce);\n\t\t\tEmitUtils.factory_method(ce, ReflectUtils.getSignature(newInstance));\n\n\t\t\tint seed = 0;\n\t\t\tCodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC,\n\t\t\t\t\tTypeUtils.parseConstructor(parameterTypes),\n\t\t\t\t\tnull);\n\t\t\te.load_this();\n\t\t\te.super_invoke_constructor();\n\t\t\te.load_this();\n\t\t\tList<FieldTypeCustomizer> fieldTypeCustomizers = getCustomizers(FieldTypeCustomizer.class);\n\t\t\tfor (int i = 0; i < parameterTypes.length; i++) {\n\t\t\t\tType parameterType = parameterTypes[i];\n\t\t\t\tType fieldType = parameterType;\n\t\t\t\tfor (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\n\t\t\t\t\tfieldType = customizer.getOutType(i, fieldType);\n\t\t\t\t}\n\t\t\t\tseed += fieldType.hashCode();\n\t\t\t\tce.declare_field(Constants.ACC_PRIVATE | Constants.ACC_FINAL,\n\t\t\t\t\t\tgetFieldName(i),\n\t\t\t\t\t\tfieldType,\n\t\t\t\t\t\tnull);\n\t\t\t\te.dup();\n\t\t\t\te.load_arg(i);\n\t\t\t\tfor (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\n\t\t\t\t\tcustomizer.customize(e, i, parameterType);\n\t\t\t\t}\n\t\t\t\te.putfield(getFieldName(i));\n\t\t\t}\n\t\t\te.return_value();\n\t\t\te.end_method();\n\n\t\t\t// hash code\n\t\t\te = ce.begin_method(Constants.ACC_PUBLIC, HASH_CODE, null);\n\t\t\tint hc = (constant != 0) ? constant : PRIMES[(Math.abs(seed) % PRIMES.length)];\n\t\t\tint hm = (multiplier != 0) ? multiplier : PRIMES[(Math.abs(seed * 13) % PRIMES.length)];\n\t\t\te.push(hc);\n\t\t\tfor (int i = 0; i < parameterTypes.length; i++) {\n\t\t\t\te.load_this();\n\t\t\t\te.getfield(getFieldName(i));\n\t\t\t\tEmitUtils.hash_code(e, parameterTypes[i], hm, customizers);\n\t\t\t}\n\t\t\te.return_value();\n\t\t\te.end_method();\n\n\t\t\t// equals\n\t\t\te = ce.begin_method(Constants.ACC_PUBLIC, EQUALS, null);\n\t\t\tLabel fail = e.make_label();\n\t\t\te.load_arg(0);\n\t\t\te.instance_of_this();\n\t\t\te.if_jump(CodeEmitter.EQ, fail);\n\t\t\tfor (int i = 0; i < parameterTypes.length; i++) {\n\t\t\t\te.load_this();\n\t\t\t\te.getfield(getFieldName(i));\n\t\t\t\te.load_arg(0);\n\t\t\t\te.checkcast_this();\n\t\t\t\te.getfield(getFieldName(i));\n\t\t\t\tEmitUtils.not_equals(e, parameterTypes[i], fail, customizers);\n\t\t\t}\n\t\t\te.push(1);\n\t\t\te.return_value();\n\t\t\te.mark(fail);\n\t\t\te.push(0);\n\t\t\te.return_value();\n\t\t\te.end_method();\n\n\t\t\t// toString\n\t\t\te = ce.begin_method(Constants.ACC_PUBLIC, TO_STRING, null);\n\t\t\te.new_instance(Constants.TYPE_STRING_BUFFER);\n\t\t\te.dup();\n\t\t\te.invoke_constructor(Constants.TYPE_STRING_BUFFER);\n\t\t\tfor (int i = 0; i < parameterTypes.length; i++) {\n\t\t\t\tif (i > 0) {\n\t\t\t\t\te.push(\", \");\n\t\t\t\t\te.invoke_virtual(Constants.TYPE_STRING_BUFFER, APPEND_STRING);\n\t\t\t\t}\n\t\t\t\te.load_this();\n\t\t\t\te.getfield(getFieldName(i));\n\t\t\t\tEmitUtils.append_string(e, parameterTypes[i], EmitUtils.DEFAULT_DELIMITERS, customizers);\n\t\t\t}\n\t\t\te.invoke_virtual(Constants.TYPE_STRING_BUFFER, TO_STRING);\n\t\t\te.return_value();\n\t\t\te.end_method();\n\n\t\t\tce.end_class();\n\t\t}\n\n\t\tprivate String getFieldName(int arg) {\n\t\t\treturn \"FIELD_\" + arg;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#GET_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#GET_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#GET_CLASS",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#GET_CLASS",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#HASH_CODE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#HASH_CODE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#EQUALS",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#EQUALS",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#TO_STRING",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#TO_STRING",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#APPEND_STRING",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#APPEND_STRING",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Signature",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.cglib.core.KeyFactory#KEY_FACTORY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.cglib.core.KeyFactory#KEY_FACTORY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Type",
+    "tailType": "type"
+  }
+]
