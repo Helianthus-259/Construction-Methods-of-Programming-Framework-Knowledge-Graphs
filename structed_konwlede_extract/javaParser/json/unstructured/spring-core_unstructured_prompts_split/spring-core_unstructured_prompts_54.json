@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#getValidatedExecutable(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate static Executable getValidatedExecutable(Class<?> targetClass, Class<?> sourceClass) {\r\n    Executable executable = conversionExecutableCache.get(targetClass);\r\n    if (executable != null && isApplicable(executable, sourceClass)) {\r\n        return executable;\r\n    }\r\n    executable = determineToMethod(targetClass, sourceClass);\r\n    if (executable == null) {\r\n        executable = determineFactoryMethod(targetClass, sourceClass);\r\n        if (executable == null) {\r\n            executable = determineFactoryConstructor(targetClass, sourceClass);\r\n            if (executable == null) {\r\n                return null;\r\n            }\r\n        }\r\n    }\r\n    conversionExecutableCache.put(targetClass, executable);\r\n    return executable;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#isApplicable(Executable,Class<?>)",
+    "entityType": "method",
+    "code": "private static boolean isApplicable(Executable executable, Class<?> sourceClass) {\r\n    if (executable instanceof Method method) {\r\n        return (!Modifier.isStatic(method.getModifiers()) ? ClassUtils.isAssignable(method.getDeclaringClass(), sourceClass) : method.getParameterTypes()[0] == sourceClass);\r\n    } else if (executable instanceof Constructor<?> constructor) {\r\n        return (constructor.getParameterTypes()[0] == sourceClass);\r\n    } else {\r\n        return false;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#determineToMethod(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate static Method determineToMethod(Class<?> targetClass, Class<?> sourceClass) {\r\n    if (String.class == targetClass || String.class == sourceClass) {\r\n        // Do not accept a toString() method or any to methods on String itself\r\n        return null;\r\n    }\r\n    Method method = ClassUtils.getMethodIfAvailable(sourceClass, \"to\" + targetClass.getSimpleName());\r\n    return (method != null && !Modifier.isStatic(method.getModifiers()) && ClassUtils.isAssignable(targetClass, method.getReturnType()) ? method : null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#determineFactoryMethod(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate static Method determineFactoryMethod(Class<?> targetClass, Class<?> sourceClass) {\r\n    if (String.class == targetClass) {\r\n        // Do not accept the String.valueOf(Object) method\r\n        return null;\r\n    }\r\n    Method method = ClassUtils.getStaticMethod(targetClass, \"valueOf\", sourceClass);\r\n    if (method == null) {\r\n        method = ClassUtils.getStaticMethod(targetClass, \"of\", sourceClass);\r\n        if (method == null) {\r\n            method = ClassUtils.getStaticMethod(targetClass, \"from\", sourceClass);\r\n        }\r\n    }\r\n    return (method != null && areRelatedTypes(targetClass, method.getReturnType()) ? method : null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#areRelatedTypes(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine if the two types reside in the same type hierarchy (i.e., type 1\r\n * is assignable to type 2 or vice versa).\r\n * @since 5.3.21\r\n * @see ClassUtils#isAssignable(Class, Class)\r\n */\r\nprivate static boolean areRelatedTypes(Class<?> type1, Class<?> type2) {\r\n    return (ClassUtils.isAssignable(type1, type2) || ClassUtils.isAssignable(type2, type1));\r\n}",
+    "comment": "\n\t * Determine if the two types reside in the same type hierarchy (i.e., type 1\n\t * is assignable to type 2 or vice versa).\n\t * @since 5.3.21\n\t * @see ClassUtils#isAssignable(Class, Class)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#determineFactoryConstructor(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate static Constructor<?> determineFactoryConstructor(Class<?> targetClass, Class<?> sourceClass) {\r\n    return ClassUtils.getConstructorIfAvailable(targetClass, sourceClass);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToOptionalConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic ObjectToOptionalConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    Set<ConvertiblePair> convertibleTypes = CollectionUtils.newLinkedHashSet(3);\r\n    convertibleTypes.add(new ConvertiblePair(Collection.class, Optional.class));\r\n    convertibleTypes.add(new ConvertiblePair(Object[].class, Optional.class));\r\n    convertibleTypes.add(new ConvertiblePair(Object.class, Optional.class));\r\n    return convertibleTypes;\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (targetType.getResolvableType().hasGenerics()) {\r\n        return this.conversionService.canConvert(sourceType, new GenericTypeDescriptor(targetType));\r\n    } else {\r\n        return true;\r\n    }\r\n}\n@Override\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return Optional.empty();\r\n    } else if (source instanceof Optional) {\r\n        return source;\r\n    } else if (targetType.getResolvableType().hasGenerics()) {\r\n        Object target = this.conversionService.convert(source, sourceType, new GenericTypeDescriptor(targetType));\r\n        if (target == null || (target.getClass().isArray() && Array.getLength(target) == 0) || (target instanceof Collection<?> collection && collection.isEmpty())) {\r\n            return Optional.empty();\r\n        }\r\n        return Optional.of(target);\r\n    } else {\r\n        return Optional.of(source);\r\n    }\r\n}\n@SuppressWarnings(\"serial\")\r\nprivate static class GenericTypeDescriptor extends TypeDescriptor {\r\n\r\n    public GenericTypeDescriptor(TypeDescriptor typeDescriptor) {\r\n        super(typeDescriptor.getResolvableType().getGeneric(), null, typeDescriptor.getAnnotations());\r\n    }\r\n}",
+    "comment": "\n * Convert an Object to {@code java.util.Optional<T>} if necessary using the\n * {@code ConversionService} to convert the source Object to the generic type\n * of Optional when known.\n *\n * @author Rossen Stoyanchev\n * @author Juergen Hoeller\n * @since 4.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToOptionalConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    Set<ConvertiblePair> convertibleTypes = CollectionUtils.newLinkedHashSet(3);\r\n    convertibleTypes.add(new ConvertiblePair(Collection.class, Optional.class));\r\n    convertibleTypes.add(new ConvertiblePair(Object[].class, Optional.class));\r\n    convertibleTypes.add(new ConvertiblePair(Object.class, Optional.class));\r\n    return convertibleTypes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToOptionalConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (targetType.getResolvableType().hasGenerics()) {\r\n        return this.conversionService.canConvert(sourceType, new GenericTypeDescriptor(targetType));\r\n    } else {\r\n        return true;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToOptionalConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return Optional.empty();\r\n    } else if (source instanceof Optional) {\r\n        return source;\r\n    } else if (targetType.getResolvableType().hasGenerics()) {\r\n        Object target = this.conversionService.convert(source, sourceType, new GenericTypeDescriptor(targetType));\r\n        if (target == null || (target.getClass().isArray() && Array.getLength(target) == 0) || (target instanceof Collection<?> collection && collection.isEmpty())) {\r\n            return Optional.empty();\r\n        }\r\n        return Optional.of(target);\r\n    } else {\r\n        return Optional.of(source);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericTypeDescriptor",
+    "entityType": "class",
+    "code": "public GenericTypeDescriptor(TypeDescriptor typeDescriptor) {\r\n    super(typeDescriptor.getResolvableType().getGeneric(), null, typeDescriptor.getAnnotations());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToStringConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic String convert(Object source) {\r\n    return source.toString();\r\n}",
+    "comment": "\n * Simply calls {@link Object#toString()} to convert a source Object to a String.\n *\n * @author Keith Donald\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToStringConverter#convert(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String convert(Object source) {\r\n    return source.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.PropertiesToStringConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic String convert(Properties source) {\r\n    try {\r\n        ByteArrayOutputStream os = new ByteArrayOutputStream(256);\r\n        source.store(os, null);\r\n        return os.toString(StandardCharsets.ISO_8859_1);\r\n    } catch (IOException ex) {\r\n        // Should never happen.\r\n        throw new IllegalArgumentException(\"Failed to store [\" + source + \"] into String\", ex);\r\n    }\r\n}",
+    "comment": "\n * Converts from a Properties to a String by calling {@link Properties#store(java.io.OutputStream, String)}.\n * Decodes with the ISO-8859-1 charset before returning the String.\n *\n * @author Keith Donald\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.PropertiesToStringConverter#convert(Properties)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String convert(Properties source) {\r\n    try {\r\n        ByteArrayOutputStream os = new ByteArrayOutputStream(256);\r\n        source.store(os, null);\r\n        return os.toString(StandardCharsets.ISO_8859_1);\r\n    } catch (IOException ex) {\r\n        // Should never happen.\r\n        throw new IllegalArgumentException(\"Failed to store [\" + source + \"] into String\", ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter",
+    "entityType": "class",
+    "code": "private static final TypeDescriptor STREAM_TYPE = TypeDescriptor.valueOf(Stream.class);\nprivate static final Set<ConvertiblePair> CONVERTIBLE_TYPES = createConvertibleTypes();\nprivate final ConversionService conversionService;\npublic StreamConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return CONVERTIBLE_TYPES;\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (sourceType.isAssignableTo(STREAM_TYPE)) {\r\n        return matchesFromStream(sourceType.getElementTypeDescriptor(), targetType);\r\n    }\r\n    if (targetType.isAssignableTo(STREAM_TYPE)) {\r\n        return matchesToStream(targetType.getElementTypeDescriptor(), sourceType);\r\n    }\r\n    return false;\r\n}\n/**\r\n * Validate that a {@link Collection} of the elements held within the stream can be\r\n * converted to the specified {@code targetType}.\r\n * @param elementType the type of the stream elements\r\n * @param targetType the type to convert to\r\n */\r\npublic boolean matchesFromStream(@Nullable TypeDescriptor elementType, TypeDescriptor targetType) {\r\n    TypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\r\n    return this.conversionService.canConvert(collectionOfElement, targetType);\r\n}\n/**\r\n * Validate that the specified {@code sourceType} can be converted to a {@link Collection} of\r\n * the type of the stream elements.\r\n * @param elementType the type of the stream elements\r\n * @param sourceType the type to convert from\r\n */\r\npublic boolean matchesToStream(@Nullable TypeDescriptor elementType, TypeDescriptor sourceType) {\r\n    TypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\r\n    return this.conversionService.canConvert(sourceType, collectionOfElement);\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (sourceType.isAssignableTo(STREAM_TYPE)) {\r\n        return convertFromStream((Stream<?>) source, sourceType, targetType);\r\n    }\r\n    if (targetType.isAssignableTo(STREAM_TYPE)) {\r\n        return convertToStream(source, sourceType, targetType);\r\n    }\r\n    // Should not happen\r\n    throw new IllegalStateException(\"Unexpected source/target types\");\r\n}\n@Nullable\r\nprivate Object convertFromStream(@Nullable Stream<?> source, TypeDescriptor streamType, TypeDescriptor targetType) {\r\n    List<Object> content = (source != null ? source.collect(Collectors.<Object>toList()) : Collections.emptyList());\r\n    TypeDescriptor listType = TypeDescriptor.collection(List.class, streamType.getElementTypeDescriptor());\r\n    return this.conversionService.convert(content, listType, targetType);\r\n}\nprivate Object convertToStream(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor streamType) {\r\n    TypeDescriptor targetCollection = TypeDescriptor.collection(List.class, streamType.getElementTypeDescriptor());\r\n    List<?> target = (List<?>) this.conversionService.convert(source, sourceType, targetCollection);\r\n    if (target == null) {\r\n        target = Collections.emptyList();\r\n    }\r\n    return target.stream();\r\n}\nprivate static Set<ConvertiblePair> createConvertibleTypes() {\r\n    Set<ConvertiblePair> convertiblePairs = new HashSet<>();\r\n    convertiblePairs.add(new ConvertiblePair(Stream.class, Collection.class));\r\n    convertiblePairs.add(new ConvertiblePair(Stream.class, Object[].class));\r\n    convertiblePairs.add(new ConvertiblePair(Collection.class, Stream.class));\r\n    convertiblePairs.add(new ConvertiblePair(Object[].class, Stream.class));\r\n    return convertiblePairs;\r\n}",
+    "comment": "\n * Converts a {@link Stream} to and from a collection or array, converting the\n * element type if necessary.\n *\n * @author Stephane Nicoll\n * @since 4.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return CONVERTIBLE_TYPES;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (sourceType.isAssignableTo(STREAM_TYPE)) {\r\n        return matchesFromStream(sourceType.getElementTypeDescriptor(), targetType);\r\n    }\r\n    if (targetType.isAssignableTo(STREAM_TYPE)) {\r\n        return matchesToStream(targetType.getElementTypeDescriptor(), sourceType);\r\n    }\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#matchesFromStream(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Validate that a {@link Collection} of the elements held within the stream can be\r\n * converted to the specified {@code targetType}.\r\n * @param elementType the type of the stream elements\r\n * @param targetType the type to convert to\r\n */\r\npublic boolean matchesFromStream(@Nullable TypeDescriptor elementType, TypeDescriptor targetType) {\r\n    TypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\r\n    return this.conversionService.canConvert(collectionOfElement, targetType);\r\n}",
+    "comment": "\n\t * Validate that a {@link Collection} of the elements held within the stream can be\n\t * converted to the specified {@code targetType}.\n\t * @param elementType the type of the stream elements\n\t * @param targetType the type to convert to\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#matchesToStream(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Validate that the specified {@code sourceType} can be converted to a {@link Collection} of\r\n * the type of the stream elements.\r\n * @param elementType the type of the stream elements\r\n * @param sourceType the type to convert from\r\n */\r\npublic boolean matchesToStream(@Nullable TypeDescriptor elementType, TypeDescriptor sourceType) {\r\n    TypeDescriptor collectionOfElement = TypeDescriptor.collection(Collection.class, elementType);\r\n    return this.conversionService.canConvert(sourceType, collectionOfElement);\r\n}",
+    "comment": "\n\t * Validate that the specified {@code sourceType} can be converted to a {@link Collection} of\n\t * the type of the stream elements.\n\t * @param elementType the type of the stream elements\n\t * @param sourceType the type to convert from\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (sourceType.isAssignableTo(STREAM_TYPE)) {\r\n        return convertFromStream((Stream<?>) source, sourceType, targetType);\r\n    }\r\n    if (targetType.isAssignableTo(STREAM_TYPE)) {\r\n        return convertToStream(source, sourceType, targetType);\r\n    }\r\n    // Should not happen\r\n    throw new IllegalStateException(\"Unexpected source/target types\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#convertFromStream(Stream<?>,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate Object convertFromStream(@Nullable Stream<?> source, TypeDescriptor streamType, TypeDescriptor targetType) {\r\n    List<Object> content = (source != null ? source.collect(Collectors.<Object>toList()) : Collections.emptyList());\r\n    TypeDescriptor listType = TypeDescriptor.collection(List.class, streamType.getElementTypeDescriptor());\r\n    return this.conversionService.convert(content, listType, targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#convertToStream(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "private Object convertToStream(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor streamType) {\r\n    TypeDescriptor targetCollection = TypeDescriptor.collection(List.class, streamType.getElementTypeDescriptor());\r\n    List<?> target = (List<?>) this.conversionService.convert(source, sourceType, targetCollection);\r\n    if (target == null) {\r\n        target = Collections.emptyList();\r\n    }\r\n    return target.stream();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverter#createConvertibleTypes()",
+    "entityType": "method",
+    "code": "private static Set<ConvertiblePair> createConvertibleTypes() {\r\n    Set<ConvertiblePair> convertiblePairs = new HashSet<>();\r\n    convertiblePairs.add(new ConvertiblePair(Stream.class, Collection.class));\r\n    convertiblePairs.add(new ConvertiblePair(Stream.class, Object[].class));\r\n    convertiblePairs.add(new ConvertiblePair(Collection.class, Stream.class));\r\n    convertiblePairs.add(new ConvertiblePair(Object[].class, Stream.class));\r\n    return convertiblePairs;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToArrayConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic StringToArrayConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(String.class, Object[].class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType, targetType.getElementTypeDescriptor(), this.conversionService);\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    String string = (String) source;\r\n    String[] fields = StringUtils.commaDelimitedListToStringArray(string);\r\n    TypeDescriptor targetElementType = targetType.getElementTypeDescriptor();\r\n    Assert.state(targetElementType != null, \"No target element type\");\r\n    Object target = Array.newInstance(targetElementType.getType(), fields.length);\r\n    for (int i = 0; i < fields.length; i++) {\r\n        String sourceElement = fields[i];\r\n        Object targetElement = this.conversionService.convert(sourceElement.trim(), sourceType, targetElementType);\r\n        Array.set(target, i, targetElement);\r\n    }\r\n    return target;\r\n}",
+    "comment": "\n * Converts a comma-delimited String to an Array.\n * Only matches if {@code String.class} can be converted to the target array element type.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToArrayConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(String.class, Object[].class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToArrayConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType, targetType.getElementTypeDescriptor(), this.conversionService);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToArrayConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    String string = (String) source;\r\n    String[] fields = StringUtils.commaDelimitedListToStringArray(string);\r\n    TypeDescriptor targetElementType = targetType.getElementTypeDescriptor();\r\n    Assert.state(targetElementType != null, \"No target element type\");\r\n    Object target = Array.newInstance(targetElementType.getType(), fields.length);\r\n    for (int i = 0; i < fields.length; i++) {\r\n        String sourceElement = fields[i];\r\n        Object targetElement = this.conversionService.convert(sourceElement.trim(), sourceType, targetElementType);\r\n        Array.set(target, i, targetElement);\r\n    }\r\n    return target;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToBooleanConverter",
+    "entityType": "class",
+    "code": "private static final Set<String> trueValues = Set.of(\"true\", \"on\", \"yes\", \"1\");\nprivate static final Set<String> falseValues = Set.of(\"false\", \"off\", \"no\", \"0\");\n@Override\r\n@Nullable\r\npublic Boolean convert(String source) {\r\n    String value = source.trim();\r\n    if (value.isEmpty()) {\r\n        return null;\r\n    }\r\n    value = value.toLowerCase(Locale.ROOT);\r\n    if (trueValues.contains(value)) {\r\n        return Boolean.TRUE;\r\n    } else if (falseValues.contains(value)) {\r\n        return Boolean.FALSE;\r\n    } else {\r\n        throw new IllegalArgumentException(\"Invalid boolean value '\" + source + \"'\");\r\n    }\r\n}",
+    "comment": "\n * Converts a String to a Boolean.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToBooleanConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Boolean convert(String source) {\r\n    String value = source.trim();\r\n    if (value.isEmpty()) {\r\n        return null;\r\n    }\r\n    value = value.toLowerCase(Locale.ROOT);\r\n    if (trueValues.contains(value)) {\r\n        return Boolean.TRUE;\r\n    } else if (falseValues.contains(value)) {\r\n        return Boolean.FALSE;\r\n    } else {\r\n        throw new IllegalArgumentException(\"Invalid boolean value '\" + source + \"'\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCharacterConverter",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic Character convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    if (source.length() > 1) {\r\n        throw new IllegalArgumentException(\"Can only convert a [String] with length of 1 to a [Character]; string value '\" + source + \"'  has length of \" + source.length());\r\n    }\r\n    return source.charAt(0);\r\n}",
+    "comment": "\n * Converts a String to a Character.\n *\n * @author Keith Donald\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCharacterConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Character convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    if (source.length() > 1) {\r\n        throw new IllegalArgumentException(\"Can only convert a [String] with length of 1 to a [Character]; string value '\" + source + \"'  has length of \" + source.length());\r\n    }\r\n    return source.charAt(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCharsetConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic Charset convert(String source) {\r\n    if (StringUtils.hasText(source)) {\r\n        source = source.trim();\r\n    }\r\n    return Charset.forName(source);\r\n}",
+    "comment": "\n * Convert a String to a {@link Charset}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n * @since 4.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCharsetConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Charset convert(String source) {\r\n    if (StringUtils.hasText(source)) {\r\n        source = source.trim();\r\n    }\r\n    return Charset.forName(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCollectionConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic StringToCollectionConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(String.class, Collection.class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (targetType.getElementTypeDescriptor() == null || this.conversionService.canConvert(sourceType, targetType.getElementTypeDescriptor()));\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    String string = (String) source;\r\n    String[] fields = StringUtils.commaDelimitedListToStringArray(string);\r\n    TypeDescriptor elementDesc = targetType.getElementTypeDescriptor();\r\n    Collection<Object> target = CollectionFactory.createCollection(targetType.getType(), (elementDesc != null ? elementDesc.getType() : null), fields.length);\r\n    if (elementDesc == null) {\r\n        for (String field : fields) {\r\n            target.add(field.trim());\r\n        }\r\n    } else {\r\n        for (String field : fields) {\r\n            Object targetElement = this.conversionService.convert(field.trim(), sourceType, elementDesc);\r\n            target.add(targetElement);\r\n        }\r\n    }\r\n    return target;\r\n}",
+    "comment": "\n * Converts a comma-delimited String to a Collection.\n * If the target collection element type is declared, only matches if\n * {@code String.class} can be converted to it.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCollectionConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(String.class, Collection.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCollectionConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (targetType.getElementTypeDescriptor() == null || this.conversionService.canConvert(sourceType, targetType.getElementTypeDescriptor()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCollectionConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    String string = (String) source;\r\n    String[] fields = StringUtils.commaDelimitedListToStringArray(string);\r\n    TypeDescriptor elementDesc = targetType.getElementTypeDescriptor();\r\n    Collection<Object> target = CollectionFactory.createCollection(targetType.getType(), (elementDesc != null ? elementDesc.getType() : null), fields.length);\r\n    if (elementDesc == null) {\r\n        for (String field : fields) {\r\n            target.add(field.trim());\r\n        }\r\n    } else {\r\n        for (String field : fields) {\r\n            Object targetElement = this.conversionService.convert(field.trim(), sourceType, elementDesc);\r\n            target.add(targetElement);\r\n        }\r\n    }\r\n    return target;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCurrencyConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic Currency convert(String source) {\r\n    if (StringUtils.hasText(source)) {\r\n        source = source.trim();\r\n    }\r\n    return Currency.getInstance(source);\r\n}",
+    "comment": "\n * Convert a String to a {@link Currency}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n * @since 4.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToCurrencyConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Currency convert(String source) {\r\n    if (StringUtils.hasText(source)) {\r\n        source = source.trim();\r\n    }\r\n    return Currency.getInstance(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToEnumConverterFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic <T extends Enum> Converter<String, T> getConverter(Class<T> targetType) {\r\n    return new StringToEnum(ConversionUtils.getEnumType(targetType));\r\n}\nprivate static class StringToEnum<T extends Enum> implements Converter<String, T> {\r\n\r\n    private final Class<T> enumType;\r\n\r\n    StringToEnum(Class<T> enumType) {\r\n        this.enumType = enumType;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public T convert(String source) {\r\n        if (source.isEmpty()) {\r\n            // It's an empty enum identifier: reset the enum value to null.\r\n            return null;\r\n        }\r\n        return (T) Enum.valueOf(this.enumType, source.trim());\r\n    }\r\n}",
+    "comment": "\n * Converts from a String to a {@link java.lang.Enum} by calling {@link Enum#valueOf(Class, String)}.\n *\n * @author Keith Donald\n * @author Stephane Nicoll\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToEnumConverterFactory#getConverter(Class<T>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic <T extends Enum> Converter<String, T> getConverter(Class<T> targetType) {\r\n    return new StringToEnum(ConversionUtils.getEnumType(targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToEnum",
+    "entityType": "class",
+    "code": "private final Class<T> enumType;\nStringToEnum(Class<T> enumType) {\r\n    this.enumType = enumType;\r\n}\n@Override\r\n@Nullable\r\npublic T convert(String source) {\r\n    if (source.isEmpty()) {\r\n        // It's an empty enum identifier: reset the enum value to null.\r\n        return null;\r\n    }\r\n    return (T) Enum.valueOf(this.enumType, source.trim());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToEnum#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic T convert(String source) {\r\n    if (source.isEmpty()) {\r\n        // It's an empty enum identifier: reset the enum value to null.\r\n        return null;\r\n    }\r\n    return (T) Enum.valueOf(this.enumType, source.trim());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToLocaleConverter",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic Locale convert(String source) {\r\n    return StringUtils.parseLocale(source);\r\n}",
+    "comment": "\n * Converts from a String to a {@link java.util.Locale}.\n *\n * <p>Accepts the classic {@link Locale} String format ({@link Locale#toString()})\n * as well as BCP 47 language tags ({@link Locale#forLanguageTag}.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n * @see StringUtils#parseLocale\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToLocaleConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Locale convert(String source) {\r\n    return StringUtils.parseLocale(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToNumberConverterFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic <T extends Number> Converter<String, T> getConverter(Class<T> targetType) {\r\n    return new StringToNumber<>(targetType);\r\n}\nprivate static final class StringToNumber<T extends Number> implements Converter<String, T> {\r\n\r\n    private final Class<T> targetType;\r\n\r\n    public StringToNumber(Class<T> targetType) {\r\n        this.targetType = targetType;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public T convert(String source) {\r\n        if (source.isEmpty()) {\r\n            return null;\r\n        }\r\n        return NumberUtils.parseNumber(source, this.targetType);\r\n    }\r\n}",
+    "comment": "\n * Converts from a String any JDK-standard Number implementation.\n *\n * <p>Support Number classes including Byte, Short, Integer, Float, Double, Long, BigInteger, BigDecimal. This class\n * delegates to {@link NumberUtils#parseNumber(String, Class)} to perform the conversion.\n *\n * @author Keith Donald\n * @since 3.0\n * @see java.lang.Byte\n * @see java.lang.Short\n * @see java.lang.Integer\n * @see java.lang.Long\n * @see java.math.BigInteger\n * @see java.lang.Float\n * @see java.lang.Double\n * @see java.math.BigDecimal\n * @see NumberUtils\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToNumberConverterFactory#getConverter(Class<T>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic <T extends Number> Converter<String, T> getConverter(Class<T> targetType) {\r\n    return new StringToNumber<>(targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToNumber",
+    "entityType": "class",
+    "code": "private final Class<T> targetType;\npublic StringToNumber(Class<T> targetType) {\r\n    this.targetType = targetType;\r\n}\n@Override\r\n@Nullable\r\npublic T convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    return NumberUtils.parseNumber(source, this.targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToNumber#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic T convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    return NumberUtils.parseNumber(source, this.targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToPatternConverter",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic Pattern convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    return Pattern.compile(source);\r\n}",
+    "comment": "\n * Converts from a String to a {@link java.util.regex.Pattern}.\n *\n * @author Valery Yatsynovich\n * @author Stephane Nicoll\n * @since 6.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToPatternConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Pattern convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    return Pattern.compile(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToPropertiesConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic Properties convert(String source) {\r\n    try {\r\n        Properties props = new Properties();\r\n        // Must use the ISO-8859-1 encoding because Properties.load(stream) expects it.\r\n        props.load(new ByteArrayInputStream(source.getBytes(StandardCharsets.ISO_8859_1)));\r\n        return props;\r\n    } catch (Exception ex) {\r\n        // Should never happen.\r\n        throw new IllegalArgumentException(\"Failed to parse [\" + source + \"] into Properties\", ex);\r\n    }\r\n}",
+    "comment": "\n * Converts a String to a Properties by calling Properties#load(java.io.InputStream).\n * Uses ISO-8559-1 encoding required by Properties.\n *\n * @author Keith Donald\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToPropertiesConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Properties convert(String source) {\r\n    try {\r\n        Properties props = new Properties();\r\n        // Must use the ISO-8859-1 encoding because Properties.load(stream) expects it.\r\n        props.load(new ByteArrayInputStream(source.getBytes(StandardCharsets.ISO_8859_1)));\r\n        return props;\r\n    } catch (Exception ex) {\r\n        // Should never happen.\r\n        throw new IllegalArgumentException(\"Failed to parse [\" + source + \"] into Properties\", ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToRegexConverter",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic Regex convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    return new Regex(source);\r\n}",
+    "comment": "\n * Converts from a String to a Kotlin {@link Regex}.\n *\n * @author Stephane Nicoll\n * @author Sebastien Deleuze\n * @since 6.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToRegexConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Regex convert(String source) {\r\n    if (source.isEmpty()) {\r\n        return null;\r\n    }\r\n    return new Regex(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToTimeZoneConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic TimeZone convert(String source) {\r\n    if (StringUtils.hasText(source)) {\r\n        source = source.trim();\r\n    }\r\n    return StringUtils.parseTimeZoneString(source);\r\n}",
+    "comment": "\n * Convert a String to a {@link TimeZone}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n * @since 4.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToTimeZoneConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic TimeZone convert(String source) {\r\n    if (StringUtils.hasText(source)) {\r\n        source = source.trim();\r\n    }\r\n    return StringUtils.parseTimeZoneString(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToUUIDConverter",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic UUID convert(String source) {\r\n    return (StringUtils.hasText(source) ? UUID.fromString(source.trim()) : null);\r\n}",
+    "comment": "\n * Converts from a String to a {@link java.util.UUID}.\n *\n * @author Phillip Webb\n * @since 3.2\n * @see UUID#fromString\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StringToUUIDConverter#convert(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic UUID convert(String source) {\r\n    return (StringUtils.hasText(source) ? UUID.fromString(source.trim()) : null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ZonedDateTimeToCalendarConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic Calendar convert(ZonedDateTime source) {\r\n    return GregorianCalendar.from(source);\r\n}",
+    "comment": "\n * Simple converter from Java 8's {@link java.time.ZonedDateTime} to {@link java.util.Calendar}.\n *\n * <p>Note that Spring's default ConversionService setup understands the 'from'/'to' convention\n * that the JSR-310 {@code java.time} package consistently uses. That convention is implemented\n * reflectively in {@link ObjectToObjectConverter}, not in specific JSR-310 converters.\n * It covers {@link java.util.GregorianCalendar#toZonedDateTime()} as well, and also\n * {@link java.util.Date#from(java.time.Instant)} and {@link java.util.Date#toInstant()}.\n *\n * @author Juergen Hoeller\n * @since 4.0.1\n * @see java.util.GregorianCalendar#from(java.time.ZonedDateTime)\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ZonedDateTimeToCalendarConverter#convert(ZonedDateTime)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Calendar convert(ZonedDateTime source) {\r\n    return GregorianCalendar.from(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ZoneIdToTimeZoneConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic TimeZone convert(ZoneId source) {\r\n    return TimeZone.getTimeZone(source);\r\n}",
+    "comment": "\n * Simple converter from Java 8's {@link java.time.ZoneId} to {@link java.util.TimeZone}.\n *\n * <p>Note that Spring's default ConversionService setup understands the 'from'/'to' convention\n * that the JSR-310 {@code java.time} package consistently uses. That convention is implemented\n * reflectively in {@link ObjectToObjectConverter}, not in specific JSR-310 converters.\n * It covers {@link java.util.TimeZone#toZoneId()} as well, and also\n * {@link java.util.Date#from(java.time.Instant)} and {@link java.util.Date#toInstant()}.\n *\n * @author Juergen Hoeller\n * @since 4.0\n * @see TimeZone#getTimeZone(java.time.ZoneId)\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ZoneIdToTimeZoneConverter#convert(ZoneId)",
+    "entityType": "method",
+    "code": "@Override\r\npublic TimeZone convert(ZoneId source) {\r\n    return TimeZone.getTimeZone(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor",
+    "entityType": "class",
+    "code": "private static final Map<Class<?>, TypeDescriptor> commonTypesCache = new HashMap<>(32);\nprivate static final Class<?>[] CACHED_COMMON_TYPES = { boolean.class, Boolean.class, byte.class, Byte.class, char.class, Character.class, double.class, Double.class, float.class, Float.class, int.class, Integer.class, long.class, Long.class, short.class, Short.class, String.class, Object.class };\nstatic {\r\n    for (Class<?> preCachedClass : CACHED_COMMON_TYPES) {\r\n        commonTypesCache.put(preCachedClass, valueOf(preCachedClass));\r\n    }\r\n}\nprivate final Class<?> type;\nprivate final ResolvableType resolvableType;\nprivate final AnnotatedElementAdapter annotatedElement;\n/**\r\n * Create a new type descriptor from a {@link MethodParameter}.\r\n * <p>Use this constructor when a source or target conversion point is a\r\n * constructor parameter, method parameter, or method return value.\r\n * @param methodParameter the method parameter\r\n */\r\npublic TypeDescriptor(MethodParameter methodParameter) {\r\n    this.resolvableType = ResolvableType.forMethodParameter(methodParameter);\r\n    this.type = this.resolvableType.resolve(methodParameter.getNestedParameterType());\r\n    this.annotatedElement = AnnotatedElementAdapter.from(methodParameter.getParameterIndex() == -1 ? methodParameter.getMethodAnnotations() : methodParameter.getParameterAnnotations());\r\n}\n/**\r\n * Create a new type descriptor from a {@link Field}.\r\n * <p>Use this constructor when a source or target conversion point is a field.\r\n * @param field the field\r\n */\r\npublic TypeDescriptor(Field field) {\r\n    this.resolvableType = ResolvableType.forField(field);\r\n    this.type = this.resolvableType.resolve(field.getType());\r\n    this.annotatedElement = AnnotatedElementAdapter.from(field.getAnnotations());\r\n}\n/**\r\n * Create a new type descriptor from a {@link Property}.\r\n * <p>Use this constructor when a source or target conversion point is a\r\n * property on a Java class.\r\n * @param property the property\r\n */\r\npublic TypeDescriptor(Property property) {\r\n    Assert.notNull(property, \"Property must not be null\");\r\n    this.resolvableType = ResolvableType.forMethodParameter(property.getMethodParameter());\r\n    this.type = this.resolvableType.resolve(property.getType());\r\n    this.annotatedElement = AnnotatedElementAdapter.from(property.getAnnotations());\r\n}\n/**\r\n * Create a new type descriptor from a {@link ResolvableType}.\r\n * <p>This constructor is used internally and may also be used by subclasses\r\n * that support non-Java languages with extended type systems. It is public\r\n * as of 5.1.4 whereas it was protected before.\r\n * @param resolvableType the resolvable type\r\n * @param type the backing type (or {@code null} if it should get resolved)\r\n * @param annotations the type annotations\r\n * @since 4.0\r\n */\r\npublic TypeDescriptor(ResolvableType resolvableType, @Nullable Class<?> type, Annotation @Nullable [] annotations) {\r\n    this.resolvableType = resolvableType;\r\n    this.type = (type != null ? type : resolvableType.toClass());\r\n    this.annotatedElement = AnnotatedElementAdapter.from(annotations);\r\n}\n/**\r\n * Variation of {@link #getType()} that accounts for a primitive type by\r\n * returning its object wrapper type.\r\n * <p>This is useful for conversion service implementations that wish to\r\n * normalize to object-based types and not work with primitive types directly.\r\n */\r\npublic Class<?> getObjectType() {\r\n    return ClassUtils.resolvePrimitiveIfNecessary(getType());\r\n}\n/**\r\n * The type of the backing class, method parameter, field, or property\r\n * described by this TypeDescriptor.\r\n * <p>Returns primitive types as-is. See {@link #getObjectType()} for a\r\n * variation of this operation that resolves primitive types to their\r\n * corresponding Object types if necessary.\r\n * @see #getObjectType()\r\n */\r\npublic Class<?> getType() {\r\n    return this.type;\r\n}\n/**\r\n * Return the underlying {@link ResolvableType}.\r\n * @since 4.0\r\n */\r\npublic ResolvableType getResolvableType() {\r\n    return this.resolvableType;\r\n}\n/**\r\n * Return the underlying source of the descriptor. Will return a {@link Field},\r\n * {@link MethodParameter} or {@link Type} depending on how the {@link TypeDescriptor}\r\n * was constructed. This method is primarily to provide access to additional\r\n * type information or meta-data that alternative JVM languages may provide.\r\n * @since 4.0\r\n */\r\npublic Object getSource() {\r\n    return this.resolvableType.getSource();\r\n}\n/**\r\n * Create a type descriptor for a nested type declared within this descriptor.\r\n * @param nestingLevel the nesting level of the collection/array element or\r\n * map key/value declaration within the property\r\n * @return the nested type descriptor at the specified nesting level, or\r\n * {@code null} if it could not be obtained\r\n * @since 6.1\r\n */\r\n@Nullable\r\npublic TypeDescriptor nested(int nestingLevel) {\r\n    ResolvableType nested = this.resolvableType;\r\n    for (int i = 0; i < nestingLevel; i++) {\r\n        if (Object.class == nested.getType()) {\r\n            // Could be a collection type but we don't know about its element type,\r\n            // so let's just assume there is an element type of type Object...\r\n        } else {\r\n            nested = nested.getNested(2);\r\n        }\r\n    }\r\n    if (nested == ResolvableType.NONE) {\r\n        return null;\r\n    }\r\n    return getRelatedIfResolvable(nested);\r\n}\n/**\r\n * Narrows this {@link TypeDescriptor} by setting its type to the class of the\r\n * provided value.\r\n * <p>If the value is {@code null}, no narrowing is performed and this TypeDescriptor\r\n * is returned unchanged.\r\n * <p>Designed to be called by binding frameworks when they read property, field,\r\n * or method return values. Allows such frameworks to narrow a TypeDescriptor built\r\n * from a declared property, field, or method return value type. For example, a field\r\n * declared as {@code java.lang.Object} would be narrowed to {@code java.util.HashMap}\r\n * if it was set to a {@code java.util.HashMap} value. The narrowed TypeDescriptor\r\n * can then be used to convert the HashMap to some other type. Annotation and nested\r\n * type context is preserved by the narrowed copy.\r\n * @param value the value to use for narrowing this type descriptor\r\n * @return this TypeDescriptor narrowed (returns a copy with its type updated to the\r\n * class of the provided value)\r\n */\r\npublic TypeDescriptor narrow(@Nullable Object value) {\r\n    if (value == null) {\r\n        return this;\r\n    }\r\n    ResolvableType narrowed = ResolvableType.forType(value.getClass(), getResolvableType());\r\n    return new TypeDescriptor(narrowed, value.getClass(), getAnnotations());\r\n}\n/**\r\n * Cast this {@link TypeDescriptor} to a superclass or implemented interface\r\n * preserving annotations and nested type context.\r\n * @param superType the supertype to cast to (can be {@code null})\r\n * @return a new TypeDescriptor for the up-cast type\r\n * @throws IllegalArgumentException if this type is not assignable to the super-type\r\n * @since 3.2\r\n */\r\n@Nullable\r\npublic TypeDescriptor upcast(@Nullable Class<?> superType) {\r\n    if (superType == null) {\r\n        return null;\r\n    }\r\n    Assert.isAssignable(superType, getType());\r\n    return new TypeDescriptor(getResolvableType().as(superType), superType, getAnnotations());\r\n}\n/**\r\n * Return the name of this type: the fully qualified class name.\r\n */\r\npublic String getName() {\r\n    return ClassUtils.getQualifiedName(getType());\r\n}\n/**\r\n * Is this type a primitive type?\r\n */\r\npublic boolean isPrimitive() {\r\n    return getType().isPrimitive();\r\n}\n/**\r\n * Return the annotations associated with this type descriptor, if any.\r\n * @return the annotations, or an empty array if none\r\n */\r\npublic Annotation[] getAnnotations() {\r\n    return this.annotatedElement.getAnnotations();\r\n}\n/**\r\n * Determine if this type descriptor has the specified annotation.\r\n * <p>As of Spring Framework 4.2, this method supports arbitrary levels\r\n * of meta-annotations.\r\n * @param annotationType the annotation type\r\n * @return {@code true} if the annotation is present\r\n */\r\npublic boolean hasAnnotation(Class<? extends Annotation> annotationType) {\r\n    if (this.annotatedElement.isEmpty()) {\r\n        // Shortcut: AnnotatedElementUtils would have to expect AnnotatedElement.getAnnotations()\r\n        // to return a copy of the array, whereas we can do it more efficiently here.\r\n        return false;\r\n    }\r\n    return AnnotatedElementUtils.isAnnotated(this.annotatedElement, annotationType);\r\n}\n/**\r\n * Obtain the annotation of the specified {@code annotationType} that is on this type descriptor.\r\n * <p>As of Spring Framework 4.2, this method supports arbitrary levels of meta-annotations.\r\n * @param annotationType the annotation type\r\n * @return the annotation, or {@code null} if no such annotation exists on this type descriptor\r\n */\r\n@Nullable\r\npublic <T extends Annotation> T getAnnotation(Class<T> annotationType) {\r\n    if (this.annotatedElement.isEmpty()) {\r\n        // Shortcut: AnnotatedElementUtils would have to expect AnnotatedElement.getAnnotations()\r\n        // to return a copy of the array, whereas we can do it more efficiently here.\r\n        return null;\r\n    }\r\n    return AnnotatedElementUtils.getMergedAnnotation(this.annotatedElement, annotationType);\r\n}\n/**\r\n * Returns true if an object of this type descriptor can be assigned to the location\r\n * described by the given type descriptor.\r\n * <p>For example, {@code valueOf(String.class).isAssignableTo(valueOf(CharSequence.class))}\r\n * returns {@code true} because a String value can be assigned to a CharSequence variable.\r\n * On the other hand, {@code valueOf(Number.class).isAssignableTo(valueOf(Integer.class))}\r\n * returns {@code false} because, while all Integers are Numbers, not all Numbers are Integers.\r\n * <p>For arrays, collections, and maps, element and key/value types are checked if declared.\r\n * For example, a {@code List<String>} field value is assignable to a {@code Collection<CharSequence>}\r\n * field, but {@code List<Number>} is not assignable to {@code List<Integer>}.\r\n * @return {@code true} if this type is assignable to the type represented by the provided\r\n * type descriptor\r\n * @see #getObjectType()\r\n */\r\npublic boolean isAssignableTo(TypeDescriptor typeDescriptor) {\r\n    boolean typesAssignable = typeDescriptor.getObjectType().isAssignableFrom(getObjectType());\r\n    if (!typesAssignable) {\r\n        return false;\r\n    }\r\n    if (isArray() && typeDescriptor.isArray()) {\r\n        return isNestedAssignable(getElementTypeDescriptor(), typeDescriptor.getElementTypeDescriptor());\r\n    } else if (isCollection() && typeDescriptor.isCollection()) {\r\n        return isNestedAssignable(getElementTypeDescriptor(), typeDescriptor.getElementTypeDescriptor());\r\n    } else if (isMap() && typeDescriptor.isMap()) {\r\n        return isNestedAssignable(getMapKeyTypeDescriptor(), typeDescriptor.getMapKeyTypeDescriptor()) && isNestedAssignable(getMapValueTypeDescriptor(), typeDescriptor.getMapValueTypeDescriptor());\r\n    } else {\r\n        return true;\r\n    }\r\n}\nprivate boolean isNestedAssignable(@Nullable TypeDescriptor nestedTypeDescriptor, @Nullable TypeDescriptor otherNestedTypeDescriptor) {\r\n    return (nestedTypeDescriptor == null || otherNestedTypeDescriptor == null || nestedTypeDescriptor.isAssignableTo(otherNestedTypeDescriptor));\r\n}\n/**\r\n * Is this type a {@link Collection} type?\r\n */\r\npublic boolean isCollection() {\r\n    return Collection.class.isAssignableFrom(getType());\r\n}\n/**\r\n * Is this type an array type?\r\n */\r\npublic boolean isArray() {\r\n    return getType().isArray();\r\n}\n/**\r\n * If this type is an array, returns the array's component type.\r\n * If this type is a {@code Stream}, returns the stream's component type.\r\n * If this type is a {@link Collection} and it is parameterized, returns the Collection's element type.\r\n * If the Collection is not parameterized, returns {@code null} indicating the element type is not declared.\r\n * @return the array component type or Collection element type, or {@code null} if this type is not\r\n * an array type or a {@code java.util.Collection} or if its element type is not parameterized\r\n * @see #elementTypeDescriptor(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor getElementTypeDescriptor() {\r\n    if (getResolvableType().isArray()) {\r\n        return new TypeDescriptor(getResolvableType().getComponentType(), null, getAnnotations());\r\n    }\r\n    if (Stream.class.isAssignableFrom(getType())) {\r\n        return getRelatedIfResolvable(getResolvableType().as(Stream.class).getGeneric(0));\r\n    }\r\n    return getRelatedIfResolvable(getResolvableType().asCollection().getGeneric(0));\r\n}\n/**\r\n * If this type is a {@link Collection} or an array, creates an element TypeDescriptor\r\n * from the provided collection or array element.\r\n * <p>Narrows the {@link #getElementTypeDescriptor() elementType} property to the class\r\n * of the provided collection or array element. For example, if this describes a\r\n * {@code java.util.List<java.lang.Number>} and the element argument is a\r\n * {@code java.lang.Integer}, the returned TypeDescriptor will be {@code java.lang.Integer}.\r\n * If this describes a {@code java.util.List<?>} and the element argument is a\r\n * {@code java.lang.Integer}, the returned TypeDescriptor will be {@code java.lang.Integer}\r\n * as well.\r\n * <p>Annotation and nested type context will be preserved in the narrowed\r\n * TypeDescriptor that is returned.\r\n * @param element the collection or array element\r\n * @return an element type descriptor, narrowed to the type of the provided element\r\n * @see #getElementTypeDescriptor()\r\n * @see #narrow(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor elementTypeDescriptor(Object element) {\r\n    return narrow(element, getElementTypeDescriptor());\r\n}\n/**\r\n * Is this type a {@link Map} type?\r\n */\r\npublic boolean isMap() {\r\n    return Map.class.isAssignableFrom(getType());\r\n}\n/**\r\n * If this type is a {@link Map} and its key type is parameterized,\r\n * returns the map's key type. If the Map's key type is not parameterized,\r\n * returns {@code null} indicating the key type is not declared.\r\n * @return the Map key type, or {@code null} if this type is a Map\r\n * but its key type is not parameterized\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapKeyTypeDescriptor() {\r\n    Assert.state(isMap(), \"Not a [java.util.Map]\");\r\n    return getRelatedIfResolvable(getResolvableType().asMap().getGeneric(0));\r\n}\n/**\r\n * If this type is a {@link Map}, creates a mapKey {@link TypeDescriptor}\r\n * from the provided map key.\r\n * <p>Narrows the {@link #getMapKeyTypeDescriptor() mapKeyType} property\r\n * to the class of the provided map key. For example, if this describes a\r\n * {@code java.util.Map<java.lang.Number, java.lang.String>} and the key\r\n * argument is a {@code java.lang.Integer}, the returned TypeDescriptor will be\r\n * {@code java.lang.Integer}. If this describes a {@code java.util.Map<?, ?>}\r\n * and the key argument is a {@code java.lang.Integer}, the returned\r\n * TypeDescriptor will be {@code java.lang.Integer} as well.\r\n * <p>Annotation and nested type context will be preserved in the narrowed\r\n * TypeDescriptor that is returned.\r\n * @param mapKey the map key\r\n * @return the map key type descriptor\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n * @see #narrow(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapKeyTypeDescriptor(Object mapKey) {\r\n    return narrow(mapKey, getMapKeyTypeDescriptor());\r\n}\n/**\r\n * If this type is a {@link Map} and its value type is parameterized,\r\n * returns the map's value type.\r\n * <p>If the Map's value type is not parameterized, returns {@code null}\r\n * indicating the value type is not declared.\r\n * @return the Map value type, or {@code null} if this type is a Map\r\n * but its value type is not parameterized\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapValueTypeDescriptor() {\r\n    Assert.state(isMap(), \"Not a [java.util.Map]\");\r\n    return getRelatedIfResolvable(getResolvableType().asMap().getGeneric(1));\r\n}\n/**\r\n * If this type is a {@link Map}, creates a mapValue {@link TypeDescriptor}\r\n * from the provided map value.\r\n * <p>Narrows the {@link #getMapValueTypeDescriptor() mapValueType} property\r\n * to the class of the provided map value. For example, if this describes a\r\n * {@code java.util.Map<java.lang.String, java.lang.Number>} and the value\r\n * argument is a {@code java.lang.Integer}, the returned TypeDescriptor will be\r\n * {@code java.lang.Integer}. If this describes a {@code java.util.Map<?, ?>}\r\n * and the value argument is a {@code java.lang.Integer}, the returned\r\n * TypeDescriptor will be {@code java.lang.Integer} as well.\r\n * <p>Annotation and nested type context will be preserved in the narrowed\r\n * TypeDescriptor that is returned.\r\n * @param mapValue the map value\r\n * @return the map value type descriptor\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n * @see #narrow(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapValueTypeDescriptor(@Nullable Object mapValue) {\r\n    return narrow(mapValue, getMapValueTypeDescriptor());\r\n}\n@Nullable\r\nprivate TypeDescriptor getRelatedIfResolvable(ResolvableType type) {\r\n    if (type.resolve() == null) {\r\n        return null;\r\n    }\r\n    return new TypeDescriptor(type, null, getAnnotations());\r\n}\n@Nullable\r\nprivate TypeDescriptor narrow(@Nullable Object value, @Nullable TypeDescriptor typeDescriptor) {\r\n    if (typeDescriptor != null) {\r\n        return typeDescriptor.narrow(value);\r\n    }\r\n    if (value != null) {\r\n        return narrow(value);\r\n    }\r\n    return null;\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    if (this == other) {\r\n        return true;\r\n    }\r\n    if (!(other instanceof TypeDescriptor otherDesc)) {\r\n        return false;\r\n    }\r\n    if (getType() != otherDesc.getType()) {\r\n        return false;\r\n    }\r\n    if (!annotationsMatch(otherDesc)) {\r\n        return false;\r\n    }\r\n    return Arrays.equals(getResolvableType().getGenerics(), otherDesc.getResolvableType().getGenerics());\r\n}\nprivate boolean annotationsMatch(TypeDescriptor otherDesc) {\r\n    Annotation[] anns = getAnnotations();\r\n    Annotation[] otherAnns = otherDesc.getAnnotations();\r\n    if (anns == otherAnns) {\r\n        return true;\r\n    }\r\n    if (anns.length != otherAnns.length) {\r\n        return false;\r\n    }\r\n    if (anns.length > 0) {\r\n        for (int i = 0; i < anns.length; i++) {\r\n            if (!annotationEquals(anns[i], otherAnns[i])) {\r\n                return false;\r\n            }\r\n        }\r\n    }\r\n    return true;\r\n}\nprivate boolean annotationEquals(Annotation ann, Annotation otherAnn) {\r\n    // Annotation.equals is reflective and pretty slow, so let's check identity and proxy type first.\r\n    return (ann == otherAnn || (ann.getClass() == otherAnn.getClass() && ann.equals(otherAnn)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return getType().hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    StringBuilder builder = new StringBuilder();\r\n    for (Annotation ann : getAnnotations()) {\r\n        builder.append('@').append(getName(ann.annotationType())).append(' ');\r\n    }\r\n    builder.append(getResolvableType());\r\n    return builder.toString();\r\n}\n/**\r\n * Create a new type descriptor for an object.\r\n * <p>Use this factory method to introspect a source object before asking the\r\n * conversion system to convert it to some other type.\r\n * <p>If the provided object is {@code null}, returns {@code null}, else calls\r\n * {@link #valueOf(Class)} to build a TypeDescriptor from the object's class.\r\n * @param source the source object\r\n * @return the type descriptor\r\n */\r\n@Contract(\"!null -> !null; null -> null\")\r\n@Nullable\r\npublic static TypeDescriptor forObject(@Nullable Object source) {\r\n    return (source != null ? valueOf(source.getClass()) : null);\r\n}\n/**\r\n * Create a new type descriptor from the given type.\r\n * <p>Use this to instruct the conversion system to convert an object to a\r\n * specific target type, when no type location such as a method parameter or\r\n * field is available to provide additional conversion context.\r\n * <p>Generally prefer use of {@link #forObject(Object)} for constructing type\r\n * descriptors from source objects, as it handles the {@code null} object case.\r\n * @param type the class (may be {@code null} to indicate {@code Object.class})\r\n * @return the corresponding type descriptor\r\n */\r\npublic static TypeDescriptor valueOf(@Nullable Class<?> type) {\r\n    if (type == null) {\r\n        type = Object.class;\r\n    }\r\n    TypeDescriptor desc = commonTypesCache.get(type);\r\n    return (desc != null ? desc : new TypeDescriptor(ResolvableType.forClass(type), null, null));\r\n}\n/**\r\n * Create a new type descriptor from a {@link java.util.Collection} type.\r\n * <p>Useful for converting to typed Collections.\r\n * <p>For example, a {@code List<String>} could be converted to a\r\n * {@code List<EmailAddress>} by converting to a targetType built with this method.\r\n * The method call to construct such a {@code TypeDescriptor} would look something\r\n * like: {@code collection(List.class, TypeDescriptor.valueOf(EmailAddress.class));}\r\n * @param collectionType the collection type, which must implement {@link Collection}.\r\n * @param elementTypeDescriptor a descriptor for the collection's element type,\r\n * used to convert collection elements\r\n * @return the collection type descriptor\r\n */\r\npublic static TypeDescriptor collection(Class<?> collectionType, @Nullable TypeDescriptor elementTypeDescriptor) {\r\n    Assert.notNull(collectionType, \"Collection type must not be null\");\r\n    if (!Collection.class.isAssignableFrom(collectionType)) {\r\n        throw new IllegalArgumentException(\"Collection type must be a [java.util.Collection]\");\r\n    }\r\n    ResolvableType element = (elementTypeDescriptor != null ? elementTypeDescriptor.resolvableType : null);\r\n    return new TypeDescriptor(ResolvableType.forClassWithGenerics(collectionType, element), null, null);\r\n}\n/**\r\n * Create a new type descriptor from a {@link java.util.Map} type.\r\n * <p>Useful for converting to typed Maps.\r\n * <p>For example, a {@code Map<String, String>} could be converted to a {@code Map<Id, EmailAddress>}\r\n * by converting to a targetType built with this method:\r\n * The method call to construct such a TypeDescriptor would look something like:\r\n * <pre class=\"code\">\r\n * map(Map.class, TypeDescriptor.valueOf(Id.class), TypeDescriptor.valueOf(EmailAddress.class));\r\n * </pre>\r\n * @param mapType the map type, which must implement {@link Map}\r\n * @param keyTypeDescriptor a descriptor for the map's key type, used to convert map keys\r\n * @param valueTypeDescriptor the map's value type, used to convert map values\r\n * @return the map type descriptor\r\n */\r\npublic static TypeDescriptor map(Class<?> mapType, @Nullable TypeDescriptor keyTypeDescriptor, @Nullable TypeDescriptor valueTypeDescriptor) {\r\n    Assert.notNull(mapType, \"Map type must not be null\");\r\n    if (!Map.class.isAssignableFrom(mapType)) {\r\n        throw new IllegalArgumentException(\"Map type must be a [java.util.Map]\");\r\n    }\r\n    ResolvableType key = (keyTypeDescriptor != null ? keyTypeDescriptor.resolvableType : null);\r\n    ResolvableType value = (valueTypeDescriptor != null ? valueTypeDescriptor.resolvableType : null);\r\n    return new TypeDescriptor(ResolvableType.forClassWithGenerics(mapType, key, value), null, null);\r\n}\n/**\r\n * Create a new type descriptor as an array of the specified type.\r\n * <p>For example to create a {@code Map<String,String>[]} use:\r\n * <pre class=\"code\">\r\n * TypeDescriptor.array(TypeDescriptor.map(Map.class, TypeDescriptor.value(String.class), TypeDescriptor.value(String.class)));\r\n * </pre>\r\n * @param elementTypeDescriptor the {@link TypeDescriptor} of the array element or {@code null}\r\n * @return an array {@link TypeDescriptor} or {@code null} if {@code elementTypeDescriptor} is {@code null}\r\n * @since 3.2.1\r\n */\r\n@Contract(\"!null -> !null; null -> null\")\r\n@Nullable\r\npublic static TypeDescriptor array(@Nullable TypeDescriptor elementTypeDescriptor) {\r\n    if (elementTypeDescriptor == null) {\r\n        return null;\r\n    }\r\n    return new TypeDescriptor(ResolvableType.forArrayComponent(elementTypeDescriptor.resolvableType), null, elementTypeDescriptor.getAnnotations());\r\n}\n/**\r\n * Create a type descriptor for a nested type declared within the method parameter.\r\n * <p>For example, if the methodParameter is a {@code List<String>} and the\r\n * nesting level is 1, the nested type descriptor will be String.class.\r\n * <p>If the methodParameter is a {@code List<List<String>>} and the nesting\r\n * level is 2, the nested type descriptor will also be a String.class.\r\n * <p>If the methodParameter is a {@code Map<Integer, String>} and the nesting\r\n * level is 1, the nested type descriptor will be String, derived from the map value.\r\n * <p>If the methodParameter is a {@code List<Map<Integer, String>>} and the\r\n * nesting level is 2, the nested type descriptor will be String, derived from the map value.\r\n * <p>Returns {@code null} if a nested type cannot be obtained because it was not declared.\r\n * For example, if the method parameter is a {@code List<?>}, the nested type\r\n * descriptor returned will be {@code null}.\r\n * @param methodParameter the method parameter with a nestingLevel of 1\r\n * @param nestingLevel the nesting level of the collection/array element or\r\n * map key/value declaration within the method parameter\r\n * @return the nested type descriptor at the specified nesting level,\r\n * or {@code null} if it could not be obtained\r\n * @throws IllegalArgumentException if the nesting level of the input\r\n * {@link MethodParameter} argument is not 1, or if the types up to the\r\n * specified nesting level are not of collection, array, or map types\r\n */\r\n@Nullable\r\npublic static TypeDescriptor nested(MethodParameter methodParameter, int nestingLevel) {\r\n    if (methodParameter.getNestingLevel() != 1) {\r\n        throw new IllegalArgumentException(\"MethodParameter nesting level must be 1: \" + \"use the nestingLevel parameter to specify the desired nestingLevel for nested type traversal\");\r\n    }\r\n    return new TypeDescriptor(methodParameter).nested(nestingLevel);\r\n}\n/**\r\n * Create a type descriptor for a nested type declared within the field.\r\n * <p>For example, if the field is a {@code List<String>} and the nesting\r\n * level is 1, the nested type descriptor will be {@code String.class}.\r\n * <p>If the field is a {@code List<List<String>>} and the nesting level is\r\n * 2, the nested type descriptor will also be a {@code String.class}.\r\n * <p>If the field is a {@code Map<Integer, String>} and the nesting level\r\n * is 1, the nested type descriptor will be String, derived from the map value.\r\n * <p>If the field is a {@code List<Map<Integer, String>>} and the nesting\r\n * level is 2, the nested type descriptor will be String, derived from the map value.\r\n * <p>Returns {@code null} if a nested type cannot be obtained because it was not\r\n * declared. For example, if the field is a {@code List<?>}, the nested type\r\n * descriptor returned will be {@code null}.\r\n * @param field the field\r\n * @param nestingLevel the nesting level of the collection/array element or\r\n * map key/value declaration within the field\r\n * @return the nested type descriptor at the specified nesting level,\r\n * or {@code null} if it could not be obtained\r\n * @throws IllegalArgumentException if the types up to the specified nesting\r\n * level are not of collection, array, or map types\r\n */\r\n@Nullable\r\npublic static TypeDescriptor nested(Field field, int nestingLevel) {\r\n    return new TypeDescriptor(field).nested(nestingLevel);\r\n}\n/**\r\n * Create a type descriptor for a nested type declared within the property.\r\n * <p>For example, if the property is a {@code List<String>} and the nesting\r\n * level is 1, the nested type descriptor will be {@code String.class}.\r\n * <p>If the property is a {@code List<List<String>>} and the nesting level\r\n * is 2, the nested type descriptor will also be a {@code String.class}.\r\n * <p>If the property is a {@code Map<Integer, String>} and the nesting level\r\n * is 1, the nested type descriptor will be String, derived from the map value.\r\n * <p>If the property is a {@code List<Map<Integer, String>>} and the nesting\r\n * level is 2, the nested type descriptor will be String, derived from the map value.\r\n * <p>Returns {@code null} if a nested type cannot be obtained because it was not\r\n * declared. For example, if the property is a {@code List<?>}, the nested type\r\n * descriptor returned will be {@code null}.\r\n * @param property the property\r\n * @param nestingLevel the nesting level of the collection/array element or\r\n * map key/value declaration within the property\r\n * @return the nested type descriptor at the specified nesting level, or\r\n * {@code null} if it could not be obtained\r\n * @throws IllegalArgumentException if the types up to the specified nesting\r\n * level are not of collection, array, or map types\r\n */\r\n@Nullable\r\npublic static TypeDescriptor nested(Property property, int nestingLevel) {\r\n    return new TypeDescriptor(property).nested(nestingLevel);\r\n}\nprivate static String getName(Class<?> clazz) {\r\n    String canonicalName = clazz.getCanonicalName();\r\n    return (canonicalName != null ? canonicalName : clazz.getName());\r\n}\n/**\r\n * Adapter class for exposing a {@code TypeDescriptor}'s annotations as an\r\n * {@link AnnotatedElement}, in particular to {@link AnnotatedElementUtils}.\r\n * @see AnnotatedElementUtils#isAnnotated(AnnotatedElement, Class)\r\n * @see AnnotatedElementUtils#getMergedAnnotation(AnnotatedElement, Class)\r\n */\r\nprivate static final class AnnotatedElementAdapter implements AnnotatedElement, Serializable {\r\n\r\n    private static final AnnotatedElementAdapter EMPTY = new AnnotatedElementAdapter(new Annotation[0]);\r\n\r\n    private final Annotation[] annotations;\r\n\r\n    private AnnotatedElementAdapter(Annotation[] annotations) {\r\n        this.annotations = annotations;\r\n    }\r\n\r\n    private static AnnotatedElementAdapter from(Annotation @Nullable [] annotations) {\r\n        if (annotations == null || annotations.length == 0) {\r\n            return EMPTY;\r\n        }\r\n        return new AnnotatedElementAdapter(annotations);\r\n    }\r\n\r\n    @Override\r\n    public boolean isAnnotationPresent(Class<? extends Annotation> annotationClass) {\r\n        for (Annotation annotation : this.annotations) {\r\n            if (annotation.annotationType() == annotationClass) {\r\n                return true;\r\n            }\r\n        }\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    @SuppressWarnings(\"unchecked\")\r\n    @Nullable\r\n    public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {\r\n        for (Annotation annotation : this.annotations) {\r\n            if (annotation.annotationType() == annotationClass) {\r\n                return (T) annotation;\r\n            }\r\n        }\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public Annotation[] getAnnotations() {\r\n        return (isEmpty() ? this.annotations : this.annotations.clone());\r\n    }\r\n\r\n    @Override\r\n    public Annotation[] getDeclaredAnnotations() {\r\n        return getAnnotations();\r\n    }\r\n\r\n    public boolean isEmpty() {\r\n        return (this.annotations.length == 0);\r\n    }\r\n\r\n    @Override\r\n    public boolean equals(@Nullable Object other) {\r\n        return (this == other || (other instanceof AnnotatedElementAdapter that && Arrays.equals(this.annotations, that.annotations)));\r\n    }\r\n\r\n    @Override\r\n    public int hashCode() {\r\n        return Arrays.hashCode(this.annotations);\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return Arrays.toString(this.annotations);\r\n    }\r\n}",
+    "comment": "\n * Contextual descriptor about a type to convert from or to.\n * <p>Capable of representing arrays and generic collection types.\n *\n * @author Keith Donald\n * @author Andy Clement\n * @author Juergen Hoeller\n * @author Phillip Webb\n * @author Sam Brannen\n * @author Stephane Nicoll\n * @since 3.0\n * @see ConversionService#canConvert(TypeDescriptor, TypeDescriptor)\n * @see ConversionService#convert(Object, TypeDescriptor, TypeDescriptor)\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getObjectType()",
+    "entityType": "method",
+    "code": "/**\r\n * Variation of {@link #getType()} that accounts for a primitive type by\r\n * returning its object wrapper type.\r\n * <p>This is useful for conversion service implementations that wish to\r\n * normalize to object-based types and not work with primitive types directly.\r\n */\r\npublic Class<?> getObjectType() {\r\n    return ClassUtils.resolvePrimitiveIfNecessary(getType());\r\n}",
+    "comment": "\n\t * Variation of {@link #getType()} that accounts for a primitive type by\n\t * returning its object wrapper type.\n\t * <p>This is useful for conversion service implementations that wish to\n\t * normalize to object-based types and not work with primitive types directly.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getType()",
+    "entityType": "method",
+    "code": "/**\r\n * The type of the backing class, method parameter, field, or property\r\n * described by this TypeDescriptor.\r\n * <p>Returns primitive types as-is. See {@link #getObjectType()} for a\r\n * variation of this operation that resolves primitive types to their\r\n * corresponding Object types if necessary.\r\n * @see #getObjectType()\r\n */\r\npublic Class<?> getType() {\r\n    return this.type;\r\n}",
+    "comment": "\n\t * The type of the backing class, method parameter, field, or property\n\t * described by this TypeDescriptor.\n\t * <p>Returns primitive types as-is. See {@link #getObjectType()} for a\n\t * variation of this operation that resolves primitive types to their\n\t * corresponding Object types if necessary.\n\t * @see #getObjectType()\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getResolvableType()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the underlying {@link ResolvableType}.\r\n * @since 4.0\r\n */\r\npublic ResolvableType getResolvableType() {\r\n    return this.resolvableType;\r\n}",
+    "comment": "\n\t * Return the underlying {@link ResolvableType}.\n\t * @since 4.0\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getSource()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the underlying source of the descriptor. Will return a {@link Field},\r\n * {@link MethodParameter} or {@link Type} depending on how the {@link TypeDescriptor}\r\n * was constructed. This method is primarily to provide access to additional\r\n * type information or meta-data that alternative JVM languages may provide.\r\n * @since 4.0\r\n */\r\npublic Object getSource() {\r\n    return this.resolvableType.getSource();\r\n}",
+    "comment": "\n\t * Return the underlying source of the descriptor. Will return a {@link Field},\n\t * {@link MethodParameter} or {@link Type} depending on how the {@link TypeDescriptor}\n\t * was constructed. This method is primarily to provide access to additional\n\t * type information or meta-data that alternative JVM languages may provide.\n\t * @since 4.0\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#nested(int)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a type descriptor for a nested type declared within this descriptor.\r\n * @param nestingLevel the nesting level of the collection/array element or\r\n * map key/value declaration within the property\r\n * @return the nested type descriptor at the specified nesting level, or\r\n * {@code null} if it could not be obtained\r\n * @since 6.1\r\n */\r\n@Nullable\r\npublic TypeDescriptor nested(int nestingLevel) {\r\n    ResolvableType nested = this.resolvableType;\r\n    for (int i = 0; i < nestingLevel; i++) {\r\n        if (Object.class == nested.getType()) {\r\n            // Could be a collection type but we don't know about its element type,\r\n            // so let's just assume there is an element type of type Object...\r\n        } else {\r\n            nested = nested.getNested(2);\r\n        }\r\n    }\r\n    if (nested == ResolvableType.NONE) {\r\n        return null;\r\n    }\r\n    return getRelatedIfResolvable(nested);\r\n}",
+    "comment": "\n\t * Create a type descriptor for a nested type declared within this descriptor.\n\t * @param nestingLevel the nesting level of the collection/array element or\n\t * map key/value declaration within the property\n\t * @return the nested type descriptor at the specified nesting level, or\n\t * {@code null} if it could not be obtained\n\t * @since 6.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#narrow(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Narrows this {@link TypeDescriptor} by setting its type to the class of the\r\n * provided value.\r\n * <p>If the value is {@code null}, no narrowing is performed and this TypeDescriptor\r\n * is returned unchanged.\r\n * <p>Designed to be called by binding frameworks when they read property, field,\r\n * or method return values. Allows such frameworks to narrow a TypeDescriptor built\r\n * from a declared property, field, or method return value type. For example, a field\r\n * declared as {@code java.lang.Object} would be narrowed to {@code java.util.HashMap}\r\n * if it was set to a {@code java.util.HashMap} value. The narrowed TypeDescriptor\r\n * can then be used to convert the HashMap to some other type. Annotation and nested\r\n * type context is preserved by the narrowed copy.\r\n * @param value the value to use for narrowing this type descriptor\r\n * @return this TypeDescriptor narrowed (returns a copy with its type updated to the\r\n * class of the provided value)\r\n */\r\npublic TypeDescriptor narrow(@Nullable Object value) {\r\n    if (value == null) {\r\n        return this;\r\n    }\r\n    ResolvableType narrowed = ResolvableType.forType(value.getClass(), getResolvableType());\r\n    return new TypeDescriptor(narrowed, value.getClass(), getAnnotations());\r\n}",
+    "comment": "\n\t * Narrows this {@link TypeDescriptor} by setting its type to the class of the\n\t * provided value.\n\t * <p>If the value is {@code null}, no narrowing is performed and this TypeDescriptor\n\t * is returned unchanged.\n\t * <p>Designed to be called by binding frameworks when they read property, field,\n\t * or method return values. Allows such frameworks to narrow a TypeDescriptor built\n\t * from a declared property, field, or method return value type. For example, a field\n\t * declared as {@code java.lang.Object} would be narrowed to {@code java.util.HashMap}\n\t * if it was set to a {@code java.util.HashMap} value. The narrowed TypeDescriptor\n\t * can then be used to convert the HashMap to some other type. Annotation and nested\n\t * type context is preserved by the narrowed copy.\n\t * @param value the value to use for narrowing this type descriptor\n\t * @return this TypeDescriptor narrowed (returns a copy with its type updated to the\n\t * class of the provided value)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#upcast(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Cast this {@link TypeDescriptor} to a superclass or implemented interface\r\n * preserving annotations and nested type context.\r\n * @param superType the supertype to cast to (can be {@code null})\r\n * @return a new TypeDescriptor for the up-cast type\r\n * @throws IllegalArgumentException if this type is not assignable to the super-type\r\n * @since 3.2\r\n */\r\n@Nullable\r\npublic TypeDescriptor upcast(@Nullable Class<?> superType) {\r\n    if (superType == null) {\r\n        return null;\r\n    }\r\n    Assert.isAssignable(superType, getType());\r\n    return new TypeDescriptor(getResolvableType().as(superType), superType, getAnnotations());\r\n}",
+    "comment": "\n\t * Cast this {@link TypeDescriptor} to a superclass or implemented interface\n\t * preserving annotations and nested type context.\n\t * @param superType the supertype to cast to (can be {@code null})\n\t * @return a new TypeDescriptor for the up-cast type\n\t * @throws IllegalArgumentException if this type is not assignable to the super-type\n\t * @since 3.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the name of this type: the fully qualified class name.\r\n */\r\npublic String getName() {\r\n    return ClassUtils.getQualifiedName(getType());\r\n}",
+    "comment": "\n\t * Return the name of this type: the fully qualified class name.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#isPrimitive()",
+    "entityType": "method",
+    "code": "/**\r\n * Is this type a primitive type?\r\n */\r\npublic boolean isPrimitive() {\r\n    return getType().isPrimitive();\r\n}",
+    "comment": "\n\t * Is this type a primitive type?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getAnnotations()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the annotations associated with this type descriptor, if any.\r\n * @return the annotations, or an empty array if none\r\n */\r\npublic Annotation[] getAnnotations() {\r\n    return this.annotatedElement.getAnnotations();\r\n}",
+    "comment": "\n\t * Return the annotations associated with this type descriptor, if any.\n\t * @return the annotations, or an empty array if none\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#hasAnnotation(Class<? extends Annotation>)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine if this type descriptor has the specified annotation.\r\n * <p>As of Spring Framework 4.2, this method supports arbitrary levels\r\n * of meta-annotations.\r\n * @param annotationType the annotation type\r\n * @return {@code true} if the annotation is present\r\n */\r\npublic boolean hasAnnotation(Class<? extends Annotation> annotationType) {\r\n    if (this.annotatedElement.isEmpty()) {\r\n        // Shortcut: AnnotatedElementUtils would have to expect AnnotatedElement.getAnnotations()\r\n        // to return a copy of the array, whereas we can do it more efficiently here.\r\n        return false;\r\n    }\r\n    return AnnotatedElementUtils.isAnnotated(this.annotatedElement, annotationType);\r\n}",
+    "comment": "\n\t * Determine if this type descriptor has the specified annotation.\n\t * <p>As of Spring Framework 4.2, this method supports arbitrary levels\n\t * of meta-annotations.\n\t * @param annotationType the annotation type\n\t * @return {@code true} if the annotation is present\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getAnnotation(Class<T>)",
+    "entityType": "method",
+    "code": "/**\r\n * Obtain the annotation of the specified {@code annotationType} that is on this type descriptor.\r\n * <p>As of Spring Framework 4.2, this method supports arbitrary levels of meta-annotations.\r\n * @param annotationType the annotation type\r\n * @return the annotation, or {@code null} if no such annotation exists on this type descriptor\r\n */\r\n@Nullable\r\npublic <T extends Annotation> T getAnnotation(Class<T> annotationType) {\r\n    if (this.annotatedElement.isEmpty()) {\r\n        // Shortcut: AnnotatedElementUtils would have to expect AnnotatedElement.getAnnotations()\r\n        // to return a copy of the array, whereas we can do it more efficiently here.\r\n        return null;\r\n    }\r\n    return AnnotatedElementUtils.getMergedAnnotation(this.annotatedElement, annotationType);\r\n}",
+    "comment": "\n\t * Obtain the annotation of the specified {@code annotationType} that is on this type descriptor.\n\t * <p>As of Spring Framework 4.2, this method supports arbitrary levels of meta-annotations.\n\t * @param annotationType the annotation type\n\t * @return the annotation, or {@code null} if no such annotation exists on this type descriptor\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#isAssignableTo(TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Returns true if an object of this type descriptor can be assigned to the location\r\n * described by the given type descriptor.\r\n * <p>For example, {@code valueOf(String.class).isAssignableTo(valueOf(CharSequence.class))}\r\n * returns {@code true} because a String value can be assigned to a CharSequence variable.\r\n * On the other hand, {@code valueOf(Number.class).isAssignableTo(valueOf(Integer.class))}\r\n * returns {@code false} because, while all Integers are Numbers, not all Numbers are Integers.\r\n * <p>For arrays, collections, and maps, element and key/value types are checked if declared.\r\n * For example, a {@code List<String>} field value is assignable to a {@code Collection<CharSequence>}\r\n * field, but {@code List<Number>} is not assignable to {@code List<Integer>}.\r\n * @return {@code true} if this type is assignable to the type represented by the provided\r\n * type descriptor\r\n * @see #getObjectType()\r\n */\r\npublic boolean isAssignableTo(TypeDescriptor typeDescriptor) {\r\n    boolean typesAssignable = typeDescriptor.getObjectType().isAssignableFrom(getObjectType());\r\n    if (!typesAssignable) {\r\n        return false;\r\n    }\r\n    if (isArray() && typeDescriptor.isArray()) {\r\n        return isNestedAssignable(getElementTypeDescriptor(), typeDescriptor.getElementTypeDescriptor());\r\n    } else if (isCollection() && typeDescriptor.isCollection()) {\r\n        return isNestedAssignable(getElementTypeDescriptor(), typeDescriptor.getElementTypeDescriptor());\r\n    } else if (isMap() && typeDescriptor.isMap()) {\r\n        return isNestedAssignable(getMapKeyTypeDescriptor(), typeDescriptor.getMapKeyTypeDescriptor()) && isNestedAssignable(getMapValueTypeDescriptor(), typeDescriptor.getMapValueTypeDescriptor());\r\n    } else {\r\n        return true;\r\n    }\r\n}",
+    "comment": "\n\t * Returns true if an object of this type descriptor can be assigned to the location\n\t * described by the given type descriptor.\n\t * <p>For example, {@code valueOf(String.class).isAssignableTo(valueOf(CharSequence.class))}\n\t * returns {@code true} because a String value can be assigned to a CharSequence variable.\n\t * On the other hand, {@code valueOf(Number.class).isAssignableTo(valueOf(Integer.class))}\n\t * returns {@code false} because, while all Integers are Numbers, not all Numbers are Integers.\n\t * <p>For arrays, collections, and maps, element and key/value types are checked if declared.\n\t * For example, a {@code List<String>} field value is assignable to a {@code Collection<CharSequence>}\n\t * field, but {@code List<Number>} is not assignable to {@code List<Integer>}.\n\t * @return {@code true} if this type is assignable to the type represented by the provided\n\t * type descriptor\n\t * @see #getObjectType()\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#isNestedAssignable(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "private boolean isNestedAssignable(@Nullable TypeDescriptor nestedTypeDescriptor, @Nullable TypeDescriptor otherNestedTypeDescriptor) {\r\n    return (nestedTypeDescriptor == null || otherNestedTypeDescriptor == null || nestedTypeDescriptor.isAssignableTo(otherNestedTypeDescriptor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#isCollection()",
+    "entityType": "method",
+    "code": "/**\r\n * Is this type a {@link Collection} type?\r\n */\r\npublic boolean isCollection() {\r\n    return Collection.class.isAssignableFrom(getType());\r\n}",
+    "comment": "\n\t * Is this type a {@link Collection} type?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#isArray()",
+    "entityType": "method",
+    "code": "/**\r\n * Is this type an array type?\r\n */\r\npublic boolean isArray() {\r\n    return getType().isArray();\r\n}",
+    "comment": "\n\t * Is this type an array type?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getElementTypeDescriptor()",
+    "entityType": "method",
+    "code": "/**\r\n * If this type is an array, returns the array's component type.\r\n * If this type is a {@code Stream}, returns the stream's component type.\r\n * If this type is a {@link Collection} and it is parameterized, returns the Collection's element type.\r\n * If the Collection is not parameterized, returns {@code null} indicating the element type is not declared.\r\n * @return the array component type or Collection element type, or {@code null} if this type is not\r\n * an array type or a {@code java.util.Collection} or if its element type is not parameterized\r\n * @see #elementTypeDescriptor(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor getElementTypeDescriptor() {\r\n    if (getResolvableType().isArray()) {\r\n        return new TypeDescriptor(getResolvableType().getComponentType(), null, getAnnotations());\r\n    }\r\n    if (Stream.class.isAssignableFrom(getType())) {\r\n        return getRelatedIfResolvable(getResolvableType().as(Stream.class).getGeneric(0));\r\n    }\r\n    return getRelatedIfResolvable(getResolvableType().asCollection().getGeneric(0));\r\n}",
+    "comment": "\n\t * If this type is an array, returns the array's component type.\n\t * If this type is a {@code Stream}, returns the stream's component type.\n\t * If this type is a {@link Collection} and it is parameterized, returns the Collection's element type.\n\t * If the Collection is not parameterized, returns {@code null} indicating the element type is not declared.\n\t * @return the array component type or Collection element type, or {@code null} if this type is not\n\t * an array type or a {@code java.util.Collection} or if its element type is not parameterized\n\t * @see #elementTypeDescriptor(Object)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#elementTypeDescriptor(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * If this type is a {@link Collection} or an array, creates an element TypeDescriptor\r\n * from the provided collection or array element.\r\n * <p>Narrows the {@link #getElementTypeDescriptor() elementType} property to the class\r\n * of the provided collection or array element. For example, if this describes a\r\n * {@code java.util.List<java.lang.Number>} and the element argument is a\r\n * {@code java.lang.Integer}, the returned TypeDescriptor will be {@code java.lang.Integer}.\r\n * If this describes a {@code java.util.List<?>} and the element argument is a\r\n * {@code java.lang.Integer}, the returned TypeDescriptor will be {@code java.lang.Integer}\r\n * as well.\r\n * <p>Annotation and nested type context will be preserved in the narrowed\r\n * TypeDescriptor that is returned.\r\n * @param element the collection or array element\r\n * @return an element type descriptor, narrowed to the type of the provided element\r\n * @see #getElementTypeDescriptor()\r\n * @see #narrow(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor elementTypeDescriptor(Object element) {\r\n    return narrow(element, getElementTypeDescriptor());\r\n}",
+    "comment": "\n\t * If this type is a {@link Collection} or an array, creates an element TypeDescriptor\n\t * from the provided collection or array element.\n\t * <p>Narrows the {@link #getElementTypeDescriptor() elementType} property to the class\n\t * of the provided collection or array element. For example, if this describes a\n\t * {@code java.util.List<java.lang.Number>} and the element argument is a\n\t * {@code java.lang.Integer}, the returned TypeDescriptor will be {@code java.lang.Integer}.\n\t * If this describes a {@code java.util.List<?>} and the element argument is a\n\t * {@code java.lang.Integer}, the returned TypeDescriptor will be {@code java.lang.Integer}\n\t * as well.\n\t * <p>Annotation and nested type context will be preserved in the narrowed\n\t * TypeDescriptor that is returned.\n\t * @param element the collection or array element\n\t * @return an element type descriptor, narrowed to the type of the provided element\n\t * @see #getElementTypeDescriptor()\n\t * @see #narrow(Object)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#isMap()",
+    "entityType": "method",
+    "code": "/**\r\n * Is this type a {@link Map} type?\r\n */\r\npublic boolean isMap() {\r\n    return Map.class.isAssignableFrom(getType());\r\n}",
+    "comment": "\n\t * Is this type a {@link Map} type?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getMapKeyTypeDescriptor()",
+    "entityType": "method",
+    "code": "/**\r\n * If this type is a {@link Map} and its key type is parameterized,\r\n * returns the map's key type. If the Map's key type is not parameterized,\r\n * returns {@code null} indicating the key type is not declared.\r\n * @return the Map key type, or {@code null} if this type is a Map\r\n * but its key type is not parameterized\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapKeyTypeDescriptor() {\r\n    Assert.state(isMap(), \"Not a [java.util.Map]\");\r\n    return getRelatedIfResolvable(getResolvableType().asMap().getGeneric(0));\r\n}",
+    "comment": "\n\t * If this type is a {@link Map} and its key type is parameterized,\n\t * returns the map's key type. If the Map's key type is not parameterized,\n\t * returns {@code null} indicating the key type is not declared.\n\t * @return the Map key type, or {@code null} if this type is a Map\n\t * but its key type is not parameterized\n\t * @throws IllegalStateException if this type is not a {@code java.util.Map}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getMapKeyTypeDescriptor(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * If this type is a {@link Map}, creates a mapKey {@link TypeDescriptor}\r\n * from the provided map key.\r\n * <p>Narrows the {@link #getMapKeyTypeDescriptor() mapKeyType} property\r\n * to the class of the provided map key. For example, if this describes a\r\n * {@code java.util.Map<java.lang.Number, java.lang.String>} and the key\r\n * argument is a {@code java.lang.Integer}, the returned TypeDescriptor will be\r\n * {@code java.lang.Integer}. If this describes a {@code java.util.Map<?, ?>}\r\n * and the key argument is a {@code java.lang.Integer}, the returned\r\n * TypeDescriptor will be {@code java.lang.Integer} as well.\r\n * <p>Annotation and nested type context will be preserved in the narrowed\r\n * TypeDescriptor that is returned.\r\n * @param mapKey the map key\r\n * @return the map key type descriptor\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n * @see #narrow(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapKeyTypeDescriptor(Object mapKey) {\r\n    return narrow(mapKey, getMapKeyTypeDescriptor());\r\n}",
+    "comment": "\n\t * If this type is a {@link Map}, creates a mapKey {@link TypeDescriptor}\n\t * from the provided map key.\n\t * <p>Narrows the {@link #getMapKeyTypeDescriptor() mapKeyType} property\n\t * to the class of the provided map key. For example, if this describes a\n\t * {@code java.util.Map<java.lang.Number, java.lang.String>} and the key\n\t * argument is a {@code java.lang.Integer}, the returned TypeDescriptor will be\n\t * {@code java.lang.Integer}. If this describes a {@code java.util.Map<?, ?>}\n\t * and the key argument is a {@code java.lang.Integer}, the returned\n\t * TypeDescriptor will be {@code java.lang.Integer} as well.\n\t * <p>Annotation and nested type context will be preserved in the narrowed\n\t * TypeDescriptor that is returned.\n\t * @param mapKey the map key\n\t * @return the map key type descriptor\n\t * @throws IllegalStateException if this type is not a {@code java.util.Map}\n\t * @see #narrow(Object)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getMapValueTypeDescriptor()",
+    "entityType": "method",
+    "code": "/**\r\n * If this type is a {@link Map} and its value type is parameterized,\r\n * returns the map's value type.\r\n * <p>If the Map's value type is not parameterized, returns {@code null}\r\n * indicating the value type is not declared.\r\n * @return the Map value type, or {@code null} if this type is a Map\r\n * but its value type is not parameterized\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapValueTypeDescriptor() {\r\n    Assert.state(isMap(), \"Not a [java.util.Map]\");\r\n    return getRelatedIfResolvable(getResolvableType().asMap().getGeneric(1));\r\n}",
+    "comment": "\n\t * If this type is a {@link Map} and its value type is parameterized,\n\t * returns the map's value type.\n\t * <p>If the Map's value type is not parameterized, returns {@code null}\n\t * indicating the value type is not declared.\n\t * @return the Map value type, or {@code null} if this type is a Map\n\t * but its value type is not parameterized\n\t * @throws IllegalStateException if this type is not a {@code java.util.Map}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getMapValueTypeDescriptor(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * If this type is a {@link Map}, creates a mapValue {@link TypeDescriptor}\r\n * from the provided map value.\r\n * <p>Narrows the {@link #getMapValueTypeDescriptor() mapValueType} property\r\n * to the class of the provided map value. For example, if this describes a\r\n * {@code java.util.Map<java.lang.String, java.lang.Number>} and the value\r\n * argument is a {@code java.lang.Integer}, the returned TypeDescriptor will be\r\n * {@code java.lang.Integer}. If this describes a {@code java.util.Map<?, ?>}\r\n * and the value argument is a {@code java.lang.Integer}, the returned\r\n * TypeDescriptor will be {@code java.lang.Integer} as well.\r\n * <p>Annotation and nested type context will be preserved in the narrowed\r\n * TypeDescriptor that is returned.\r\n * @param mapValue the map value\r\n * @return the map value type descriptor\r\n * @throws IllegalStateException if this type is not a {@code java.util.Map}\r\n * @see #narrow(Object)\r\n */\r\n@Nullable\r\npublic TypeDescriptor getMapValueTypeDescriptor(@Nullable Object mapValue) {\r\n    return narrow(mapValue, getMapValueTypeDescriptor());\r\n}",
+    "comment": "\n\t * If this type is a {@link Map}, creates a mapValue {@link TypeDescriptor}\n\t * from the provided map value.\n\t * <p>Narrows the {@link #getMapValueTypeDescriptor() mapValueType} property\n\t * to the class of the provided map value. For example, if this describes a\n\t * {@code java.util.Map<java.lang.String, java.lang.Number>} and the value\n\t * argument is a {@code java.lang.Integer}, the returned TypeDescriptor will be\n\t * {@code java.lang.Integer}. If this describes a {@code java.util.Map<?, ?>}\n\t * and the value argument is a {@code java.lang.Integer}, the returned\n\t * TypeDescriptor will be {@code java.lang.Integer} as well.\n\t * <p>Annotation and nested type context will be preserved in the narrowed\n\t * TypeDescriptor that is returned.\n\t * @param mapValue the map value\n\t * @return the map value type descriptor\n\t * @throws IllegalStateException if this type is not a {@code java.util.Map}\n\t * @see #narrow(Object)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#getRelatedIfResolvable(ResolvableType)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate TypeDescriptor getRelatedIfResolvable(ResolvableType type) {\r\n    if (type.resolve() == null) {\r\n        return null;\r\n    }\r\n    return new TypeDescriptor(type, null, getAnnotations());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#narrow(Object,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate TypeDescriptor narrow(@Nullable Object value, @Nullable TypeDescriptor typeDescriptor) {\r\n    if (typeDescriptor != null) {\r\n        return typeDescriptor.narrow(value);\r\n    }\r\n    if (value != null) {\r\n        return narrow(value);\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    if (this == other) {\r\n        return true;\r\n    }\r\n    if (!(other instanceof TypeDescriptor otherDesc)) {\r\n        return false;\r\n    }\r\n    if (getType() != otherDesc.getType()) {\r\n        return false;\r\n    }\r\n    if (!annotationsMatch(otherDesc)) {\r\n        return false;\r\n    }\r\n    return Arrays.equals(getResolvableType().getGenerics(), otherDesc.getResolvableType().getGenerics());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#annotationsMatch(TypeDescriptor)",
+    "entityType": "method",
+    "code": "private boolean annotationsMatch(TypeDescriptor otherDesc) {\r\n    Annotation[] anns = getAnnotations();\r\n    Annotation[] otherAnns = otherDesc.getAnnotations();\r\n    if (anns == otherAnns) {\r\n        return true;\r\n    }\r\n    if (anns.length != otherAnns.length) {\r\n        return false;\r\n    }\r\n    if (anns.length > 0) {\r\n        for (int i = 0; i < anns.length; i++) {\r\n            if (!annotationEquals(anns[i], otherAnns[i])) {\r\n                return false;\r\n            }\r\n        }\r\n    }\r\n    return true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#annotationEquals(Annotation,Annotation)",
+    "entityType": "method",
+    "code": "private boolean annotationEquals(Annotation ann, Annotation otherAnn) {\r\n    // Annotation.equals is reflective and pretty slow, so let's check identity and proxy type first.\r\n    return (ann == otherAnn || (ann.getClass() == otherAnn.getClass() && ann.equals(otherAnn)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return getType().hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    StringBuilder builder = new StringBuilder();\r\n    for (Annotation ann : getAnnotations()) {\r\n        builder.append('@').append(getName(ann.annotationType())).append(' ');\r\n    }\r\n    builder.append(getResolvableType());\r\n    return builder.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#forObject(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new type descriptor for an object.\r\n * <p>Use this factory method to introspect a source object before asking the\r\n * conversion system to convert it to some other type.\r\n * <p>If the provided object is {@code null}, returns {@code null}, else calls\r\n * {@link #valueOf(Class)} to build a TypeDescriptor from the object's class.\r\n * @param source the source object\r\n * @return the type descriptor\r\n */\r\n@Contract(\"!null -> !null; null -> null\")\r\n@Nullable\r\npublic static TypeDescriptor forObject(@Nullable Object source) {\r\n    return (source != null ? valueOf(source.getClass()) : null);\r\n}",
+    "comment": "\n\t * Create a new type descriptor for an object.\n\t * <p>Use this factory method to introspect a source object before asking the\n\t * conversion system to convert it to some other type.\n\t * <p>If the provided object is {@code null}, returns {@code null}, else calls\n\t * {@link #valueOf(Class)} to build a TypeDescriptor from the object's class.\n\t * @param source the source object\n\t * @return the type descriptor\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#valueOf(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new type descriptor from the given type.\r\n * <p>Use this to instruct the conversion system to convert an object to a\r\n * specific target type, when no type location such as a method parameter or\r\n * field is available to provide additional conversion context.\r\n * <p>Generally prefer use of {@link #forObject(Object)} for constructing type\r\n * descriptors from source objects, as it handles the {@code null} object case.\r\n * @param type the class (may be {@code null} to indicate {@code Object.class})\r\n * @return the corresponding type descriptor\r\n */\r\npublic static TypeDescriptor valueOf(@Nullable Class<?> type) {\r\n    if (type == null) {\r\n        type = Object.class;\r\n    }\r\n    TypeDescriptor desc = commonTypesCache.get(type);\r\n    return (desc != null ? desc : new TypeDescriptor(ResolvableType.forClass(type), null, null));\r\n}",
+    "comment": "\n\t * Create a new type descriptor from the given type.\n\t * <p>Use this to instruct the conversion system to convert an object to a\n\t * specific target type, when no type location such as a method parameter or\n\t * field is available to provide additional conversion context.\n\t * <p>Generally prefer use of {@link #forObject(Object)} for constructing type\n\t * descriptors from source objects, as it handles the {@code null} object case.\n\t * @param type the class (may be {@code null} to indicate {@code Object.class})\n\t * @return the corresponding type descriptor\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#collection(Class<?>,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new type descriptor from a {@link java.util.Collection} type.\r\n * <p>Useful for converting to typed Collections.\r\n * <p>For example, a {@code List<String>} could be converted to a\r\n * {@code List<EmailAddress>} by converting to a targetType built with this method.\r\n * The method call to construct such a {@code TypeDescriptor} would look something\r\n * like: {@code collection(List.class, TypeDescriptor.valueOf(EmailAddress.class));}\r\n * @param collectionType the collection type, which must implement {@link Collection}.\r\n * @param elementTypeDescriptor a descriptor for the collection's element type,\r\n * used to convert collection elements\r\n * @return the collection type descriptor\r\n */\r\npublic static TypeDescriptor collection(Class<?> collectionType, @Nullable TypeDescriptor elementTypeDescriptor) {\r\n    Assert.notNull(collectionType, \"Collection type must not be null\");\r\n    if (!Collection.class.isAssignableFrom(collectionType)) {\r\n        throw new IllegalArgumentException(\"Collection type must be a [java.util.Collection]\");\r\n    }\r\n    ResolvableType element = (elementTypeDescriptor != null ? elementTypeDescriptor.resolvableType : null);\r\n    return new TypeDescriptor(ResolvableType.forClassWithGenerics(collectionType, element), null, null);\r\n}",
+    "comment": "\n\t * Create a new type descriptor from a {@link java.util.Collection} type.\n\t * <p>Useful for converting to typed Collections.\n\t * <p>For example, a {@code List<String>} could be converted to a\n\t * {@code List<EmailAddress>} by converting to a targetType built with this method.\n\t * The method call to construct such a {@code TypeDescriptor} would look something\n\t * like: {@code collection(List.class, TypeDescriptor.valueOf(EmailAddress.class));}\n\t * @param collectionType the collection type, which must implement {@link Collection}.\n\t * @param elementTypeDescriptor a descriptor for the collection's element type,\n\t * used to convert collection elements\n\t * @return the collection type descriptor\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#map(Class<?>,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new type descriptor from a {@link java.util.Map} type.\r\n * <p>Useful for converting to typed Maps.\r\n * <p>For example, a {@code Map<String, String>} could be converted to a {@code Map<Id, EmailAddress>}\r\n * by converting to a targetType built with this method:\r\n * The method call to construct such a TypeDescriptor would look something like:\r\n * <pre class=\"code\">\r\n * map(Map.class, TypeDescriptor.valueOf(Id.class), TypeDescriptor.valueOf(EmailAddress.class));\r\n * </pre>\r\n * @param mapType the map type, which must implement {@link Map}\r\n * @param keyTypeDescriptor a descriptor for the map's key type, used to convert map keys\r\n * @param valueTypeDescriptor the map's value type, used to convert map values\r\n * @return the map type descriptor\r\n */\r\npublic static TypeDescriptor map(Class<?> mapType, @Nullable TypeDescriptor keyTypeDescriptor, @Nullable TypeDescriptor valueTypeDescriptor) {\r\n    Assert.notNull(mapType, \"Map type must not be null\");\r\n    if (!Map.class.isAssignableFrom(mapType)) {\r\n        throw new IllegalArgumentException(\"Map type must be a [java.util.Map]\");\r\n    }\r\n    ResolvableType key = (keyTypeDescriptor != null ? keyTypeDescriptor.resolvableType : null);\r\n    ResolvableType value = (valueTypeDescriptor != null ? valueTypeDescriptor.resolvableType : null);\r\n    return new TypeDescriptor(ResolvableType.forClassWithGenerics(mapType, key, value), null, null);\r\n}",
+    "comment": "\n\t * Create a new type descriptor from a {@link java.util.Map} type.\n\t * <p>Useful for converting to typed Maps.\n\t * <p>For example, a {@code Map<String, String>} could be converted to a {@code Map<Id, EmailAddress>}\n\t * by converting to a targetType built with this method:\n\t * The method call to construct such a TypeDescriptor would look something like:\n\t * <pre class=\"code\">\n\t * map(Map.class, TypeDescriptor.valueOf(Id.class), TypeDescriptor.valueOf(EmailAddress.class));\n\t * </pre>\n\t * @param mapType the map type, which must implement {@link Map}\n\t * @param keyTypeDescriptor a descriptor for the map's key type, used to convert map keys\n\t * @param valueTypeDescriptor the map's value type, used to convert map values\n\t * @return the map type descriptor\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptor#array(TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new type descriptor as an array of the specified type.\r\n * <p>For example to create a {@code Map<String,String>[]} use:\r\n * <pre class=\"code\">\r\n * TypeDescriptor.array(TypeDescriptor.map(Map.class, TypeDescriptor.value(String.class), TypeDescriptor.value(String.class)));\r\n * </pre>\r\n * @param elementTypeDescriptor the {@link TypeDescriptor} of the array element or {@code null}\r\n * @return an array {@link TypeDescriptor} or {@code null} if {@code elementTypeDescriptor} is {@code null}\r\n * @since 3.2.1\r\n */\r\n@Contract(\"!null -> !null; null -> null\")\r\n@Nullable\r\npublic static TypeDescriptor array(@Nullable TypeDescriptor elementTypeDescriptor) {\r\n    if (elementTypeDescriptor == null) {\r\n        return null;\r\n    }\r\n    return new TypeDescriptor(ResolvableType.forArrayComponent(elementTypeDescriptor.resolvableType), null, elementTypeDescriptor.getAnnotations());\r\n}",
+    "comment": "\n\t * Create a new type descriptor as an array of the specified type.\n\t * <p>For example to create a {@code Map<String,String>[]} use:\n\t * <pre class=\"code\">\n\t * TypeDescriptor.array(TypeDescriptor.map(Map.class, TypeDescriptor.value(String.class), TypeDescriptor.value(String.class)));\n\t * </pre>\n\t * @param elementTypeDescriptor the {@link TypeDescriptor} of the array element or {@code null}\n\t * @return an array {@link TypeDescriptor} or {@code null} if {@code elementTypeDescriptor} is {@code null}\n\t * @since 3.2.1\n\t "
+  }
+]

@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic void parseSseLines(SseLinesState state, Blackhole blackhole) {\r\n    blackhole.consume(state.parseLines().blockLast());\r\n}\n@State(Scope.Benchmark)\r\n@SuppressWarnings({ \"NotNullFieldNotInitialized\", \"ConstantConditions\" })\r\npublic static class SseLinesState {\r\n\r\n    private static final Charset CHARSET = StandardCharsets.UTF_8;\r\n\r\n    private static final ResolvableType ELEMENT_TYPE = ResolvableType.forClass(String.class);\r\n\r\n    @Param(\"10240\")\r\n    int totalSize;\r\n\r\n    @Param(\"2000\")\r\n    int chunkSize;\r\n\r\n    List<DataBuffer> chunks;\r\n\r\n    StringDecoder decoder = StringDecoder.textPlainOnly(Arrays.asList(\"\\r\\n\", \"\\n\"), false);\r\n\r\n    MimeType mimeType = new MimeType(\"text\", \"plain\", CHARSET);\r\n\r\n    @Setup(Level.Trial)\r\n    public void setup() {\r\n        String eventTemplate = \"\"\"\r\n            id:$1\r\n            event:some-event\r\n            :some-comment-$1-aa\r\n            :some-comment-$1-bb\r\n            data:abcdefg-$1-hijklmnop-$1-qrstuvw-$1-xyz-$1\r\n            \r\n            \"\"\";\r\n        int eventLength = String.format(eventTemplate, String.format(\"%05d\", 1)).length();\r\n        int eventCount = this.totalSize / eventLength;\r\n        DataBufferFactory bufferFactory = new DefaultDataBufferFactory();\r\n        this.chunks = Flux.range(1, eventCount).map(index -> String.format(eventTemplate, String.format(\"%05d\", index))).buffer(this.chunkSize > eventLength ? this.chunkSize / eventLength : 1).map(strings -> String.join(\"\", strings)).map(chunk -> {\r\n            byte[] bytes = chunk.getBytes(CHARSET);\r\n            DataBuffer buffer = bufferFactory.allocateBuffer(bytes.length);\r\n            buffer.write(bytes);\r\n            return buffer;\r\n        }).collectList().block();\r\n    }\r\n\r\n    public Flux<String> parseLines() {\r\n        Flux<DataBuffer> input = Flux.fromIterable(this.chunks).doOnNext(DataBufferUtils::retain);\r\n        return this.decoder.decode(input, ELEMENT_TYPE, this.mimeType, Collections.emptyMap());\r\n    }\r\n}",
+    "comment": "\n * Benchmarks for {@link DataBufferUtils}.\n *\n * @author Rossen Stoyanchev\n "
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests",
+    "entityType": "class",
+    "code": "private static final String REAL_NAME = \"real_name\";\nprivate static final String NICKNAME = \"nickname\";\nprivate static final String NAME1 = \"name1\";\nprivate static final String NAME2 = \"name2\";\nprivate static final String NAME3 = \"name3\";\nprivate static final String NAME4 = \"name4\";\nprivate static final String NAME5 = \"name5\";\nprivate static final String ALIAS1 = \"alias1\";\nprivate static final String ALIAS2 = \"alias2\";\nprivate static final String ALIAS3 = \"alias3\";\nprivate static final String ALIAS4 = \"alias4\";\nprivate static final String ALIAS5 = \"alias5\";\nprivate final SimpleAliasRegistry registry = new SimpleAliasRegistry();\n@Test\r\nvoid aliasChaining() {\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(ALIAS1, ALIAS2);\r\n    registerAlias(ALIAS2, ALIAS3);\r\n    assertHasAlias(NAME1, ALIAS1);\r\n    assertHasAlias(NAME1, ALIAS2);\r\n    assertHasAlias(NAME1, ALIAS3);\r\n    assertThat(registry.canonicalName(ALIAS1)).isEqualTo(NAME1);\r\n    assertThat(registry.canonicalName(ALIAS2)).isEqualTo(NAME1);\r\n    assertThat(registry.canonicalName(ALIAS3)).isEqualTo(NAME1);\r\n}\n// SPR-17191\r\n@Test\r\nvoid aliasChainingWithMultipleAliases() {\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME1, ALIAS2);\r\n    assertHasAlias(NAME1, ALIAS1);\r\n    assertHasAlias(NAME1, ALIAS2);\r\n    registerAlias(REAL_NAME, NAME1);\r\n    assertHasAlias(REAL_NAME, NAME1);\r\n    assertHasAlias(REAL_NAME, ALIAS1);\r\n    assertHasAlias(REAL_NAME, ALIAS2);\r\n    registerAlias(NAME1, ALIAS3);\r\n    assertHasAlias(REAL_NAME, NAME1);\r\n    assertHasAlias(REAL_NAME, ALIAS1);\r\n    assertHasAlias(REAL_NAME, ALIAS2);\r\n    assertHasAlias(REAL_NAME, ALIAS3);\r\n}\n@Test\r\nvoid removeNullAlias() {\r\n    assertThatNullPointerException().isThrownBy(() -> registry.removeAlias(null));\r\n}\n@Test\r\nvoid removeNonExistentAlias() {\r\n    String alias = NICKNAME;\r\n    assertDoesNotHaveAlias(REAL_NAME, alias);\r\n    assertThatIllegalStateException().isThrownBy(() -> registry.removeAlias(alias)).withMessage(\"No alias '%s' registered\", alias);\r\n}\n@Test\r\nvoid removeExistingAlias() {\r\n    registerAlias(REAL_NAME, NICKNAME);\r\n    assertHasAlias(REAL_NAME, NICKNAME);\r\n    registry.removeAlias(NICKNAME);\r\n    assertDoesNotHaveAlias(REAL_NAME, NICKNAME);\r\n}\n@Test\r\nvoid isAlias() {\r\n    registerAlias(REAL_NAME, NICKNAME);\r\n    assertThat(registry.isAlias(NICKNAME)).isTrue();\r\n    assertThat(registry.isAlias(REAL_NAME)).isFalse();\r\n    assertThat(registry.isAlias(\"bogus\")).isFalse();\r\n}\n@Test\r\nvoid getAliases() {\r\n    assertThat(registry.getAliases(NAME1)).isEmpty();\r\n    registerAlias(NAME1, ALIAS1);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS1);\r\n    registerAlias(ALIAS1, ALIAS2);\r\n    registerAlias(ALIAS2, ALIAS3);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS2, ALIAS3);\r\n    assertThat(registry.getAliases(ALIAS1)).containsExactlyInAnyOrder(ALIAS2, ALIAS3);\r\n    assertThat(registry.getAliases(ALIAS2)).containsExactly(ALIAS3);\r\n    assertThat(registry.getAliases(ALIAS3)).isEmpty();\r\n}\n@Test\r\nvoid checkForAliasCircle() {\r\n    // No aliases registered, so no cycles possible.\r\n    assertThatNoException().isThrownBy(() -> registry.checkForAliasCircle(NAME1, ALIAS1));\r\n    // ALIAS1 -> NAME1\r\n    registerAlias(NAME1, ALIAS1);\r\n    // No cycles possible.\r\n    assertThatNoException().isThrownBy(() -> registry.checkForAliasCircle(NAME1, ALIAS1));\r\n    assertThatIllegalStateException().// NAME1 -> ALIAS1 -> NAME1\r\n    isThrownBy(// internally invokes checkForAliasCircle()\r\n    () -> registerAlias(ALIAS1, NAME1)).withMessageContaining(\"'%s' is a direct or indirect alias for '%s'\", ALIAS1, NAME1);\r\n    // ALIAS2 -> ALIAS1 -> NAME1\r\n    registerAlias(ALIAS1, ALIAS2);\r\n    assertThatIllegalStateException().// NAME1 -> ALIAS1 -> ALIAS2 -> NAME1\r\n    isThrownBy(// internally invokes checkForAliasCircle()\r\n    () -> registerAlias(ALIAS2, NAME1)).withMessageContaining(\"'%s' is a direct or indirect alias for '%s'\", ALIAS2, NAME1);\r\n}\n@Test\r\nvoid resolveAliasesPreconditions() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> registry.resolveAliases(null));\r\n}\n@Test\r\nvoid resolveAliasesWithoutPlaceholderReplacement() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver();\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME1, ALIAS3);\r\n    registerAlias(NAME2, ALIAS2);\r\n    registerAlias(NAME2, ALIAS4);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n    registry.removeAlias(ALIAS1);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n}\n@Test\r\nvoid resolveAliasesWithPlaceholderReplacement() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(NAME1, NAME2, ALIAS1, ALIAS2));\r\n    registerAlias(NAME1, ALIAS1);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS1);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).isEmpty();\r\n    assertThat(registry.getAliases(NAME2)).containsExactly(ALIAS2);\r\n    registry.removeAlias(ALIAS2);\r\n    assertThat(registry.getAliases(NAME1)).isEmpty();\r\n    assertThat(registry.getAliases(NAME2)).isEmpty();\r\n}\n@Test\r\nvoid resolveAliasesWithPlaceholderReplacementConflict() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(ALIAS1, ALIAS2));\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME2, ALIAS2);\r\n    // Original state:\r\n    // ALIAS1 -> NAME1\r\n    // ALIAS2 -> NAME2\r\n    // State after processing original entry (ALIAS1 -> NAME1):\r\n    // ALIAS2 -> NAME1 --> Conflict: entry for ALIAS2 already exists\r\n    // ALIAS2 -> NAME2\r\n    assertThatIllegalStateException().isThrownBy(() -> registry.resolveAliases(valueResolver)).withMessage(\"Cannot register resolved alias '%s' (original: '%s') for name '%s': \" + \"It is already registered for name '%s'.\", ALIAS2, ALIAS1, NAME1, NAME2);\r\n}\n@ParameterizedTest\r\n@ValueSource(strings = { \"alias4\", \"test\", \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" })\r\nvoid resolveAliasesWithComplexPlaceholderReplacementWithAliasSwitching(String aliasX) {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(ALIAS3, ALIAS1, aliasX, ALIAS5, ALIAS5, ALIAS2));\r\n    // Since SimpleAliasRegistry ensures that aliases are processed in declaration\r\n    // order, we need to register ALIAS5 *before* aliasX to support our use case.\r\n    registerAlias(NAME3, ALIAS3);\r\n    registerAlias(NAME5, ALIAS5);\r\n    registerAlias(NAME4, aliasX);\r\n    // Original state:\r\n    // ALIAS3 -> NAME3\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (ALIAS3 -> NAME3):\r\n    // ALIAS1 -> NAME3\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (ALIAS5 -> NAME5):\r\n    // ALIAS1 -> NAME3\r\n    // ALIAS2 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (aliasX -> NAME4):\r\n    // ALIAS1 -> NAME3\r\n    // ALIAS2 -> NAME5\r\n    // ALIAS5 -> NAME4\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME3)).containsExactly(ALIAS1);\r\n    assertThat(registry.getAliases(NAME4)).containsExactly(ALIAS5);\r\n    assertThat(registry.getAliases(NAME5)).containsExactly(ALIAS2);\r\n}\n// gh-32024\r\n@ParameterizedTest\r\n@ValueSource(strings = { \"alias4\", \"test\", \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" })\r\nvoid resolveAliasesWithComplexPlaceholderReplacementWithAliasAndNameSwitching(String aliasX) {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(ALIAS3, ALIAS1, aliasX, ALIAS5, ALIAS5, ALIAS2, NAME3, NAME4, NAME4, NAME3));\r\n    // Since SimpleAliasRegistry ensures that aliases are processed in declaration\r\n    // order, we need to register ALIAS5 *before* aliasX to support our use case.\r\n    registerAlias(NAME3, ALIAS3);\r\n    registerAlias(NAME5, ALIAS5);\r\n    registerAlias(NAME4, aliasX);\r\n    // Original state:\r\n    // ALIAS3 -> NAME3\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (ALIAS3 -> NAME3):\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // ALIAS1 -> NAME4\r\n    // State after processing original entry (ALIAS5 -> NAME5):\r\n    // aliasX -> NAME4\r\n    // ALIAS1 -> NAME4\r\n    // ALIAS2 -> NAME5\r\n    // State after processing original entry (aliasX -> NAME4):\r\n    // ALIAS1 -> NAME4\r\n    // ALIAS2 -> NAME5\r\n    // alias5 -> NAME3\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME3)).containsExactly(ALIAS5);\r\n    assertThat(registry.getAliases(NAME4)).containsExactly(ALIAS1);\r\n    assertThat(registry.getAliases(NAME5)).containsExactly(ALIAS2);\r\n}\nprivate void registerAlias(String name, String alias) {\r\n    registry.registerAlias(name, alias);\r\n}\nprivate void assertHasAlias(String name, String alias) {\r\n    assertThat(registry.hasAlias(name, alias)).isTrue();\r\n}\nprivate void assertDoesNotHaveAlias(String name, String alias) {\r\n    assertThat(registry.hasAlias(name, alias)).isFalse();\r\n}\n/**\r\n * {@link StringValueResolver} that replaces each value with a supplied\r\n * placeholder and otherwise returns the original value if no placeholder\r\n * is configured.\r\n */\r\nprivate static class StubStringValueResolver implements StringValueResolver {\r\n\r\n    private final Map<String, String> placeholders;\r\n\r\n    StubStringValueResolver() {\r\n        this(Map.of());\r\n    }\r\n\r\n    StubStringValueResolver(Map<String, String> placeholders) {\r\n        this.placeholders = placeholders;\r\n    }\r\n\r\n    @Override\r\n    public String resolveStringValue(String str) {\r\n        return this.placeholders.getOrDefault(str, str);\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link SimpleAliasRegistry}.\n *\n * @author Juergen Hoeller\n * @author Nha Vuong\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#aliasChaining()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid aliasChaining() {\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(ALIAS1, ALIAS2);\r\n    registerAlias(ALIAS2, ALIAS3);\r\n    assertHasAlias(NAME1, ALIAS1);\r\n    assertHasAlias(NAME1, ALIAS2);\r\n    assertHasAlias(NAME1, ALIAS3);\r\n    assertThat(registry.canonicalName(ALIAS1)).isEqualTo(NAME1);\r\n    assertThat(registry.canonicalName(ALIAS2)).isEqualTo(NAME1);\r\n    assertThat(registry.canonicalName(ALIAS3)).isEqualTo(NAME1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderBenchmark#parseSseLines(SseLinesState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void parseSseLines(SseLinesState state, Blackhole blackhole) {\r\n    blackhole.consume(state.parseLines().blockLast());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#aliasChainingWithMultipleAliases()",
+    "entityType": "method",
+    "code": "// SPR-17191\r\n@Test\r\nvoid aliasChainingWithMultipleAliases() {\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME1, ALIAS2);\r\n    assertHasAlias(NAME1, ALIAS1);\r\n    assertHasAlias(NAME1, ALIAS2);\r\n    registerAlias(REAL_NAME, NAME1);\r\n    assertHasAlias(REAL_NAME, NAME1);\r\n    assertHasAlias(REAL_NAME, ALIAS1);\r\n    assertHasAlias(REAL_NAME, ALIAS2);\r\n    registerAlias(NAME1, ALIAS3);\r\n    assertHasAlias(REAL_NAME, NAME1);\r\n    assertHasAlias(REAL_NAME, ALIAS1);\r\n    assertHasAlias(REAL_NAME, ALIAS2);\r\n    assertHasAlias(REAL_NAME, ALIAS3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#removeNullAlias()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeNullAlias() {\r\n    assertThatNullPointerException().isThrownBy(() -> registry.removeAlias(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#removeNonExistentAlias()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeNonExistentAlias() {\r\n    String alias = NICKNAME;\r\n    assertDoesNotHaveAlias(REAL_NAME, alias);\r\n    assertThatIllegalStateException().isThrownBy(() -> registry.removeAlias(alias)).withMessage(\"No alias '%s' registered\", alias);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#removeExistingAlias()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeExistingAlias() {\r\n    registerAlias(REAL_NAME, NICKNAME);\r\n    assertHasAlias(REAL_NAME, NICKNAME);\r\n    registry.removeAlias(NICKNAME);\r\n    assertDoesNotHaveAlias(REAL_NAME, NICKNAME);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#isAlias()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAlias() {\r\n    registerAlias(REAL_NAME, NICKNAME);\r\n    assertThat(registry.isAlias(NICKNAME)).isTrue();\r\n    assertThat(registry.isAlias(REAL_NAME)).isFalse();\r\n    assertThat(registry.isAlias(\"bogus\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#getAliases()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAliases() {\r\n    assertThat(registry.getAliases(NAME1)).isEmpty();\r\n    registerAlias(NAME1, ALIAS1);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS1);\r\n    registerAlias(ALIAS1, ALIAS2);\r\n    registerAlias(ALIAS2, ALIAS3);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS2, ALIAS3);\r\n    assertThat(registry.getAliases(ALIAS1)).containsExactlyInAnyOrder(ALIAS2, ALIAS3);\r\n    assertThat(registry.getAliases(ALIAS2)).containsExactly(ALIAS3);\r\n    assertThat(registry.getAliases(ALIAS3)).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#checkForAliasCircle()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid checkForAliasCircle() {\r\n    // No aliases registered, so no cycles possible.\r\n    assertThatNoException().isThrownBy(() -> registry.checkForAliasCircle(NAME1, ALIAS1));\r\n    // ALIAS1 -> NAME1\r\n    registerAlias(NAME1, ALIAS1);\r\n    // No cycles possible.\r\n    assertThatNoException().isThrownBy(() -> registry.checkForAliasCircle(NAME1, ALIAS1));\r\n    assertThatIllegalStateException().// NAME1 -> ALIAS1 -> NAME1\r\n    isThrownBy(// internally invokes checkForAliasCircle()\r\n    () -> registerAlias(ALIAS1, NAME1)).withMessageContaining(\"'%s' is a direct or indirect alias for '%s'\", ALIAS1, NAME1);\r\n    // ALIAS2 -> ALIAS1 -> NAME1\r\n    registerAlias(ALIAS1, ALIAS2);\r\n    assertThatIllegalStateException().// NAME1 -> ALIAS1 -> ALIAS2 -> NAME1\r\n    isThrownBy(// internally invokes checkForAliasCircle()\r\n    () -> registerAlias(ALIAS2, NAME1)).withMessageContaining(\"'%s' is a direct or indirect alias for '%s'\", ALIAS2, NAME1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesPreconditions()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveAliasesPreconditions() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> registry.resolveAliases(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.SseLinesState",
+    "entityType": "class",
+    "code": "private static final Charset CHARSET = StandardCharsets.UTF_8;\nprivate static final ResolvableType ELEMENT_TYPE = ResolvableType.forClass(String.class);\n@Param(\"10240\")\r\nint totalSize;\n@Param(\"2000\")\r\nint chunkSize;\nList<DataBuffer> chunks;\nStringDecoder decoder = StringDecoder.textPlainOnly(Arrays.asList(\"\\r\\n\", \"\\n\"), false);\nMimeType mimeType = new MimeType(\"text\", \"plain\", CHARSET);\n@Setup(Level.Trial)\r\npublic void setup() {\r\n    String eventTemplate = \"\"\"\r\n        id:$1\r\n        event:some-event\r\n        :some-comment-$1-aa\r\n        :some-comment-$1-bb\r\n        data:abcdefg-$1-hijklmnop-$1-qrstuvw-$1-xyz-$1\r\n        \r\n        \"\"\";\r\n    int eventLength = String.format(eventTemplate, String.format(\"%05d\", 1)).length();\r\n    int eventCount = this.totalSize / eventLength;\r\n    DataBufferFactory bufferFactory = new DefaultDataBufferFactory();\r\n    this.chunks = Flux.range(1, eventCount).map(index -> String.format(eventTemplate, String.format(\"%05d\", index))).buffer(this.chunkSize > eventLength ? this.chunkSize / eventLength : 1).map(strings -> String.join(\"\", strings)).map(chunk -> {\r\n        byte[] bytes = chunk.getBytes(CHARSET);\r\n        DataBuffer buffer = bufferFactory.allocateBuffer(bytes.length);\r\n        buffer.write(bytes);\r\n        return buffer;\r\n    }).collectList().block();\r\n}\npublic Flux<String> parseLines() {\r\n    Flux<DataBuffer> input = Flux.fromIterable(this.chunks).doOnNext(DataBufferUtils::retain);\r\n    return this.decoder.decode(input, ELEMENT_TYPE, this.mimeType, Collections.emptyMap());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithoutPlaceholderReplacement()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveAliasesWithoutPlaceholderReplacement() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver();\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME1, ALIAS3);\r\n    registerAlias(NAME2, ALIAS2);\r\n    registerAlias(NAME2, ALIAS4);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n    registry.removeAlias(ALIAS1);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithPlaceholderReplacement()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveAliasesWithPlaceholderReplacement() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(NAME1, NAME2, ALIAS1, ALIAS2));\r\n    registerAlias(NAME1, ALIAS1);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS1);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).isEmpty();\r\n    assertThat(registry.getAliases(NAME2)).containsExactly(ALIAS2);\r\n    registry.removeAlias(ALIAS2);\r\n    assertThat(registry.getAliases(NAME1)).isEmpty();\r\n    assertThat(registry.getAliases(NAME2)).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithPlaceholderReplacementConflict()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveAliasesWithPlaceholderReplacementConflict() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(ALIAS1, ALIAS2));\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME2, ALIAS2);\r\n    // Original state:\r\n    // ALIAS1 -> NAME1\r\n    // ALIAS2 -> NAME2\r\n    // State after processing original entry (ALIAS1 -> NAME1):\r\n    // ALIAS2 -> NAME1 --> Conflict: entry for ALIAS2 already exists\r\n    // ALIAS2 -> NAME2\r\n    assertThatIllegalStateException().isThrownBy(() -> registry.resolveAliases(valueResolver)).withMessage(\"Cannot register resolved alias '%s' (original: '%s') for name '%s': \" + \"It is already registered for name '%s'.\", ALIAS2, ALIAS1, NAME1, NAME2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.SseLinesState#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Trial)\r\npublic void setup() {\r\n    String eventTemplate = \"\"\"\r\n        id:$1\r\n        event:some-event\r\n        :some-comment-$1-aa\r\n        :some-comment-$1-bb\r\n        data:abcdefg-$1-hijklmnop-$1-qrstuvw-$1-xyz-$1\r\n        \r\n        \"\"\";\r\n    int eventLength = String.format(eventTemplate, String.format(\"%05d\", 1)).length();\r\n    int eventCount = this.totalSize / eventLength;\r\n    DataBufferFactory bufferFactory = new DefaultDataBufferFactory();\r\n    this.chunks = Flux.range(1, eventCount).map(index -> String.format(eventTemplate, String.format(\"%05d\", index))).buffer(this.chunkSize > eventLength ? this.chunkSize / eventLength : 1).map(strings -> String.join(\"\", strings)).map(chunk -> {\r\n        byte[] bytes = chunk.getBytes(CHARSET);\r\n        DataBuffer buffer = bufferFactory.allocateBuffer(bytes.length);\r\n        buffer.write(bytes);\r\n        return buffer;\r\n    }).collectList().block();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.SseLinesState#parseLines()",
+    "entityType": "method",
+    "code": "public Flux<String> parseLines() {\r\n    Flux<DataBuffer> input = Flux.fromIterable(this.chunks).doOnNext(DataBufferUtils::retain);\r\n    return this.decoder.decode(input, ELEMENT_TYPE, this.mimeType, Collections.emptyMap());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithComplexPlaceholderReplacementWithAliasSwitching(String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@ValueSource(strings = { \"alias4\", \"test\", \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" })\r\nvoid resolveAliasesWithComplexPlaceholderReplacementWithAliasSwitching(String aliasX) {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(ALIAS3, ALIAS1, aliasX, ALIAS5, ALIAS5, ALIAS2));\r\n    // Since SimpleAliasRegistry ensures that aliases are processed in declaration\r\n    // order, we need to register ALIAS5 *before* aliasX to support our use case.\r\n    registerAlias(NAME3, ALIAS3);\r\n    registerAlias(NAME5, ALIAS5);\r\n    registerAlias(NAME4, aliasX);\r\n    // Original state:\r\n    // ALIAS3 -> NAME3\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (ALIAS3 -> NAME3):\r\n    // ALIAS1 -> NAME3\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (ALIAS5 -> NAME5):\r\n    // ALIAS1 -> NAME3\r\n    // ALIAS2 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (aliasX -> NAME4):\r\n    // ALIAS1 -> NAME3\r\n    // ALIAS2 -> NAME5\r\n    // ALIAS5 -> NAME4\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME3)).containsExactly(ALIAS1);\r\n    assertThat(registry.getAliases(NAME4)).containsExactly(ALIAS5);\r\n    assertThat(registry.getAliases(NAME5)).containsExactly(ALIAS2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithComplexPlaceholderReplacementWithAliasAndNameSwitching(String)",
+    "entityType": "method",
+    "code": "// gh-32024\r\n@ParameterizedTest\r\n@ValueSource(strings = { \"alias4\", \"test\", \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" })\r\nvoid resolveAliasesWithComplexPlaceholderReplacementWithAliasAndNameSwitching(String aliasX) {\r\n    StringValueResolver valueResolver = new StubStringValueResolver(Map.of(ALIAS3, ALIAS1, aliasX, ALIAS5, ALIAS5, ALIAS2, NAME3, NAME4, NAME4, NAME3));\r\n    // Since SimpleAliasRegistry ensures that aliases are processed in declaration\r\n    // order, we need to register ALIAS5 *before* aliasX to support our use case.\r\n    registerAlias(NAME3, ALIAS3);\r\n    registerAlias(NAME5, ALIAS5);\r\n    registerAlias(NAME4, aliasX);\r\n    // Original state:\r\n    // ALIAS3 -> NAME3\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // State after processing original entry (ALIAS3 -> NAME3):\r\n    // ALIAS5 -> NAME5\r\n    // aliasX -> NAME4\r\n    // ALIAS1 -> NAME4\r\n    // State after processing original entry (ALIAS5 -> NAME5):\r\n    // aliasX -> NAME4\r\n    // ALIAS1 -> NAME4\r\n    // ALIAS2 -> NAME5\r\n    // State after processing original entry (aliasX -> NAME4):\r\n    // ALIAS1 -> NAME4\r\n    // ALIAS2 -> NAME5\r\n    // alias5 -> NAME3\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME3)).containsExactly(ALIAS5);\r\n    assertThat(registry.getAliases(NAME4)).containsExactly(ALIAS1);\r\n    assertThat(registry.getAliases(NAME5)).containsExactly(ALIAS2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#registerAlias(String,String)",
+    "entityType": "method",
+    "code": "private void registerAlias(String name, String alias) {\r\n    registry.registerAlias(name, alias);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#assertHasAlias(String,String)",
+    "entityType": "method",
+    "code": "private void assertHasAlias(String name, String alias) {\r\n    assertThat(registry.hasAlias(name, alias)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SimpleAliasRegistryTests#assertDoesNotHaveAlias(String,String)",
+    "entityType": "method",
+    "code": "private void assertDoesNotHaveAlias(String name, String alias) {\r\n    assertThat(registry.hasAlias(name, alias)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.StubStringValueResolver",
+    "entityType": "class",
+    "code": "private final Map<String, String> placeholders;\nStubStringValueResolver() {\r\n    this(Map.of());\r\n}\nStubStringValueResolver(Map<String, String> placeholders) {\r\n    this.placeholders = placeholders;\r\n}\n@Override\r\npublic String resolveStringValue(String str) {\r\n    return this.placeholders.getOrDefault(str, str);\r\n}",
+    "comment": "\n\t * {@link StringValueResolver} that replaces each value with a supplied\n\t * placeholder and otherwise returns the original value if no placeholder\n\t * is configured.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.StubStringValueResolver#resolveStringValue(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String resolveStringValue(String str) {\r\n    return this.placeholders.getOrDefault(str, str);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic void convertListOfStringToListOfIntegerWithConversionService(ListBenchmarkState state, Blackhole bh) {\r\n    TypeDescriptor sourceTypeDesc = TypeDescriptor.forObject(state.source);\r\n    bh.consume(state.conversionService.convert(state.source, sourceTypeDesc, state.targetTypeDesc));\r\n}\n@Benchmark\r\npublic void convertListOfStringToListOfIntegerBaseline(ListBenchmarkState state, Blackhole bh) {\r\n    List<Integer> target = new ArrayList<>(state.source.size());\r\n    for (String element : state.source) {\r\n        target.add(Integer.valueOf(element));\r\n    }\r\n    bh.consume(target);\r\n}\n@State(Scope.Benchmark)\r\npublic static class ListBenchmarkState extends BenchmarkState {\r\n\r\n    List<String> source;\r\n\r\n    @Setup(Level.Trial)\r\n    public void setup() throws Exception {\r\n        this.source = IntStream.rangeClosed(1, collectionSize).mapToObj(String::valueOf).toList();\r\n        List<Integer> target = new ArrayList<>();\r\n        this.targetTypeDesc = TypeDescriptor.forObject(target);\r\n    }\r\n}\n@Benchmark\r\npublic void convertMapOfStringToListOfIntegerWithConversionService(MapBenchmarkState state, Blackhole bh) {\r\n    TypeDescriptor sourceTypeDesc = TypeDescriptor.forObject(state.source);\r\n    bh.consume(state.conversionService.convert(state.source, sourceTypeDesc, state.targetTypeDesc));\r\n}\n@Benchmark\r\npublic void convertMapOfStringToListOfIntegerBaseline(MapBenchmarkState state, Blackhole bh) {\r\n    Map<String, Integer> target = CollectionUtils.newHashMap(state.source.size());\r\n    state.source.forEach((k, v) -> target.put(k, Integer.valueOf(v)));\r\n    bh.consume(target);\r\n}\n@State(Scope.Benchmark)\r\npublic static class MapBenchmarkState extends BenchmarkState {\r\n\r\n    Map<String, String> source;\r\n\r\n    @Setup(Level.Trial)\r\n    public void setup() throws Exception {\r\n        this.source = CollectionUtils.newHashMap(this.collectionSize);\r\n        Map<String, Integer> target = new HashMap<>();\r\n        this.targetTypeDesc = TypeDescriptor.forObject(target);\r\n        this.source = IntStream.rangeClosed(1, collectionSize).mapToObj(String::valueOf).collect(Collectors.toMap(String::valueOf, String::valueOf));\r\n    }\r\n}\n@State(Scope.Benchmark)\r\npublic static class BenchmarkState {\r\n\r\n    GenericConversionService conversionService = new GenericConversionService();\r\n\r\n    @Param({ \"10\" })\r\n    int collectionSize;\r\n\r\n    TypeDescriptor targetTypeDesc;\r\n}",
+    "comment": "\n * Benchmarks for {@link GenericConversionService}.\n *\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceBenchmark#convertListOfStringToListOfIntegerWithConversionService(ListBenchmarkState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void convertListOfStringToListOfIntegerWithConversionService(ListBenchmarkState state, Blackhole bh) {\r\n    TypeDescriptor sourceTypeDesc = TypeDescriptor.forObject(state.source);\r\n    bh.consume(state.conversionService.convert(state.source, sourceTypeDesc, state.targetTypeDesc));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceBenchmark#convertListOfStringToListOfIntegerBaseline(ListBenchmarkState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void convertListOfStringToListOfIntegerBaseline(ListBenchmarkState state, Blackhole bh) {\r\n    List<Integer> target = new ArrayList<>(state.source.size());\r\n    for (String element : state.source) {\r\n        target.add(Integer.valueOf(element));\r\n    }\r\n    bh.consume(target);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceBenchmark#convertMapOfStringToListOfIntegerWithConversionService(MapBenchmarkState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void convertMapOfStringToListOfIntegerWithConversionService(MapBenchmarkState state, Blackhole bh) {\r\n    TypeDescriptor sourceTypeDesc = TypeDescriptor.forObject(state.source);\r\n    bh.consume(state.conversionService.convert(state.source, sourceTypeDesc, state.targetTypeDesc));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceBenchmark#convertMapOfStringToListOfIntegerBaseline(MapBenchmarkState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void convertMapOfStringToListOfIntegerBaseline(MapBenchmarkState state, Blackhole bh) {\r\n    Map<String, Integer> target = CollectionUtils.newHashMap(state.source.size());\r\n    state.source.forEach((k, v) -> target.put(k, Integer.valueOf(v)));\r\n    bh.consume(target);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ListBenchmarkState",
+    "entityType": "class",
+    "code": "List<String> source;\n@Setup(Level.Trial)\r\npublic void setup() throws Exception {\r\n    this.source = IntStream.rangeClosed(1, collectionSize).mapToObj(String::valueOf).toList();\r\n    List<Integer> target = new ArrayList<>();\r\n    this.targetTypeDesc = TypeDescriptor.forObject(target);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ListBenchmarkState#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Trial)\r\npublic void setup() throws Exception {\r\n    this.source = IntStream.rangeClosed(1, collectionSize).mapToObj(String::valueOf).toList();\r\n    List<Integer> target = new ArrayList<>();\r\n    this.targetTypeDesc = TypeDescriptor.forObject(target);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapBenchmarkState",
+    "entityType": "class",
+    "code": "Map<String, String> source;\n@Setup(Level.Trial)\r\npublic void setup() throws Exception {\r\n    this.source = CollectionUtils.newHashMap(this.collectionSize);\r\n    Map<String, Integer> target = new HashMap<>();\r\n    this.targetTypeDesc = TypeDescriptor.forObject(target);\r\n    this.source = IntStream.rangeClosed(1, collectionSize).mapToObj(String::valueOf).collect(Collectors.toMap(String::valueOf, String::valueOf));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapBenchmarkState#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Trial)\r\npublic void setup() throws Exception {\r\n    this.source = CollectionUtils.newHashMap(this.collectionSize);\r\n    Map<String, Integer> target = new HashMap<>();\r\n    this.targetTypeDesc = TypeDescriptor.forObject(target);\r\n    this.source = IntStream.rangeClosed(1, collectionSize).mapToObj(String::valueOf).collect(Collectors.toMap(String::valueOf, String::valueOf));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BenchmarkState",
+    "entityType": "class",
+    "code": "GenericConversionService conversionService = new GenericConversionService();\n@Param({ \"10\" })\r\nint collectionSize;\nTypeDescriptor targetTypeDesc;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid keys() {\r\n    assertKeys(createSortedProps());\r\n}\n@Test\r\nvoid keysFromPrototype() {\r\n    assertKeys(createSortedPropsFromPrototype());\r\n}\n@Test\r\nvoid keySet() {\r\n    assertKeySet(createSortedProps());\r\n}\n@Test\r\nvoid keySetFromPrototype() {\r\n    assertKeySet(createSortedPropsFromPrototype());\r\n}\n@Test\r\nvoid entrySet() {\r\n    assertEntrySet(createSortedProps());\r\n}\n@Test\r\nvoid entrySetFromPrototype() {\r\n    assertEntrySet(createSortedPropsFromPrototype());\r\n}\n@Test\r\nvoid sortsPropertiesUsingOutputStream() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps();\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.store(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).hasSize(7);\r\n    assertThat(lines[0]).isEqualTo(\"#custom comment\");\r\n    assertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\r\n    assertPropsAreSorted(lines);\r\n}\n@Test\r\nvoid sortsPropertiesUsingWriter() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps();\r\n    StringWriter writer = new StringWriter();\r\n    sortedProperties.store(writer, \"custom comment\");\r\n    String[] lines = lines(writer);\r\n    assertThat(lines).hasSize(7);\r\n    assertThat(lines[0]).isEqualTo(\"#custom comment\");\r\n    assertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\r\n    assertPropsAreSorted(lines);\r\n}\n@Test\r\nvoid sortsPropertiesAndOmitsCommentsUsingOutputStream() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps(true);\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.store(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).hasSize(5);\r\n    assertPropsAreSorted(lines);\r\n}\n@Test\r\nvoid sortsPropertiesAndOmitsCommentsUsingWriter() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps(true);\r\n    StringWriter writer = new StringWriter();\r\n    sortedProperties.store(writer, \"custom comment\");\r\n    String[] lines = lines(writer);\r\n    assertThat(lines).hasSize(5);\r\n    assertPropsAreSorted(lines);\r\n}\n@Test\r\nvoid storingAsXmlSortsPropertiesAndOmitsComments() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps(true);\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.storeToXML(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).isNotEmpty();\r\n    // Leniently match first line due to differences between JDK 8 and JDK 9+.\r\n    String regex = \"<\\\\?xml .*\\\\?>\";\r\n    assertThat(lines[0]).matches(regex);\r\n    //\r\n    assertThat(lines).filteredOn(line -> !line.matches(regex)).//\r\n    containsExactly(//\r\n    \"<!DOCTYPE properties SYSTEM \\\"http://java.sun.com/dtd/properties.dtd\\\">\", //\r\n    \"<properties>\", //\r\n    \"<entry key=\\\"color\\\">blue</entry>\", //\r\n    \"<entry key=\\\"fragrance\\\">sweet</entry>\", //\r\n    \"<entry key=\\\"fruit\\\">apple</entry>\", //\r\n    \"<entry key=\\\"size\\\">medium</entry>\", //\r\n    \"<entry key=\\\"vehicle\\\">car</entry>\", //\r\n    \"</properties>\");\r\n}\nprivate SortedProperties createSortedProps() {\r\n    return createSortedProps(false);\r\n}\nprivate SortedProperties createSortedProps(boolean omitComments) {\r\n    SortedProperties sortedProperties = new SortedProperties(omitComments);\r\n    populateProperties(sortedProperties);\r\n    return sortedProperties;\r\n}\nprivate SortedProperties createSortedPropsFromPrototype() {\r\n    Properties properties = new Properties();\r\n    populateProperties(properties);\r\n    return new SortedProperties(properties, false);\r\n}\nprivate void populateProperties(Properties properties) {\r\n    properties.setProperty(\"color\", \"blue\");\r\n    properties.setProperty(\"fragrance\", \"sweet\");\r\n    properties.setProperty(\"fruit\", \"apple\");\r\n    properties.setProperty(\"size\", \"medium\");\r\n    properties.setProperty(\"vehicle\", \"car\");\r\n}\nprivate String[] lines(ByteArrayOutputStream baos) {\r\n    return lines(new String(baos.toByteArray(), StandardCharsets.ISO_8859_1));\r\n}\nprivate String[] lines(StringWriter writer) {\r\n    return lines(writer.toString());\r\n}\nprivate String[] lines(String input) {\r\n    return input.trim().split(SortedProperties.EOL);\r\n}\nprivate void assertKeys(Properties properties) {\r\n    //\r\n    assertThat(Collections.list(properties.keys())).containsExactly(\"color\", \"fragrance\", \"fruit\", \"size\", \"vehicle\");\r\n}\nprivate void assertKeySet(Properties properties) {\r\n    assertThat(properties.keySet()).containsExactly(\"color\", \"fragrance\", \"fruit\", \"size\", \"vehicle\");\r\n}\nprivate void assertEntrySet(Properties properties) {\r\n    //\r\n    assertThat(properties.entrySet()).//\r\n    containsExactly(//\r\n    entry(\"color\", \"blue\"), //\r\n    entry(\"fragrance\", \"sweet\"), //\r\n    entry(\"fruit\", \"apple\"), //\r\n    entry(\"size\", \"medium\"), //\r\n    entry(\"vehicle\", \"car\"));\r\n}\nprivate void assertPropsAreSorted(String[] lines) {\r\n    //\r\n    assertThat(stream(lines).filter(s -> !s.startsWith(\"#\"))).//\r\n    containsExactly(//\r\n    \"color=blue\", //\r\n    \"fragrance=sweet\", //\r\n    \"fruit=apple\", //\r\n    \"size=medium\", //\r\n    \"vehicle=car\");\r\n}",
+    "comment": "\n * Tests for {@link SortedProperties}.\n *\n * @author Sam Brannen\n * @since 5.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#keys()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid keys() {\r\n    assertKeys(createSortedProps());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#keysFromPrototype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid keysFromPrototype() {\r\n    assertKeys(createSortedPropsFromPrototype());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#keySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid keySet() {\r\n    assertKeySet(createSortedProps());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#keySetFromPrototype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid keySetFromPrototype() {\r\n    assertKeySet(createSortedPropsFromPrototype());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#entrySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid entrySet() {\r\n    assertEntrySet(createSortedProps());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#entrySetFromPrototype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid entrySetFromPrototype() {\r\n    assertEntrySet(createSortedPropsFromPrototype());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#sortsPropertiesUsingOutputStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortsPropertiesUsingOutputStream() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps();\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.store(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).hasSize(7);\r\n    assertThat(lines[0]).isEqualTo(\"#custom comment\");\r\n    assertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\r\n    assertPropsAreSorted(lines);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#sortsPropertiesUsingWriter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortsPropertiesUsingWriter() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps();\r\n    StringWriter writer = new StringWriter();\r\n    sortedProperties.store(writer, \"custom comment\");\r\n    String[] lines = lines(writer);\r\n    assertThat(lines).hasSize(7);\r\n    assertThat(lines[0]).isEqualTo(\"#custom comment\");\r\n    assertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\r\n    assertPropsAreSorted(lines);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#sortsPropertiesAndOmitsCommentsUsingOutputStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortsPropertiesAndOmitsCommentsUsingOutputStream() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps(true);\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.store(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).hasSize(5);\r\n    assertPropsAreSorted(lines);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#sortsPropertiesAndOmitsCommentsUsingWriter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortsPropertiesAndOmitsCommentsUsingWriter() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps(true);\r\n    StringWriter writer = new StringWriter();\r\n    sortedProperties.store(writer, \"custom comment\");\r\n    String[] lines = lines(writer);\r\n    assertThat(lines).hasSize(5);\r\n    assertPropsAreSorted(lines);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#storingAsXmlSortsPropertiesAndOmitsComments()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid storingAsXmlSortsPropertiesAndOmitsComments() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps(true);\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.storeToXML(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).isNotEmpty();\r\n    // Leniently match first line due to differences between JDK 8 and JDK 9+.\r\n    String regex = \"<\\\\?xml .*\\\\?>\";\r\n    assertThat(lines[0]).matches(regex);\r\n    //\r\n    assertThat(lines).filteredOn(line -> !line.matches(regex)).//\r\n    containsExactly(//\r\n    \"<!DOCTYPE properties SYSTEM \\\"http://java.sun.com/dtd/properties.dtd\\\">\", //\r\n    \"<properties>\", //\r\n    \"<entry key=\\\"color\\\">blue</entry>\", //\r\n    \"<entry key=\\\"fragrance\\\">sweet</entry>\", //\r\n    \"<entry key=\\\"fruit\\\">apple</entry>\", //\r\n    \"<entry key=\\\"size\\\">medium</entry>\", //\r\n    \"<entry key=\\\"vehicle\\\">car</entry>\", //\r\n    \"</properties>\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#createSortedProps()",
+    "entityType": "method",
+    "code": "private SortedProperties createSortedProps() {\r\n    return createSortedProps(false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#createSortedProps(boolean)",
+    "entityType": "method",
+    "code": "private SortedProperties createSortedProps(boolean omitComments) {\r\n    SortedProperties sortedProperties = new SortedProperties(omitComments);\r\n    populateProperties(sortedProperties);\r\n    return sortedProperties;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#createSortedPropsFromPrototype()",
+    "entityType": "method",
+    "code": "private SortedProperties createSortedPropsFromPrototype() {\r\n    Properties properties = new Properties();\r\n    populateProperties(properties);\r\n    return new SortedProperties(properties, false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#populateProperties(Properties)",
+    "entityType": "method",
+    "code": "private void populateProperties(Properties properties) {\r\n    properties.setProperty(\"color\", \"blue\");\r\n    properties.setProperty(\"fragrance\", \"sweet\");\r\n    properties.setProperty(\"fruit\", \"apple\");\r\n    properties.setProperty(\"size\", \"medium\");\r\n    properties.setProperty(\"vehicle\", \"car\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#lines(ByteArrayOutputStream)",
+    "entityType": "method",
+    "code": "private String[] lines(ByteArrayOutputStream baos) {\r\n    return lines(new String(baos.toByteArray(), StandardCharsets.ISO_8859_1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#lines(StringWriter)",
+    "entityType": "method",
+    "code": "private String[] lines(StringWriter writer) {\r\n    return lines(writer.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#lines(String)",
+    "entityType": "method",
+    "code": "private String[] lines(String input) {\r\n    return input.trim().split(SortedProperties.EOL);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#assertKeys(Properties)",
+    "entityType": "method",
+    "code": "private void assertKeys(Properties properties) {\r\n    //\r\n    assertThat(Collections.list(properties.keys())).containsExactly(\"color\", \"fragrance\", \"fruit\", \"size\", \"vehicle\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#assertKeySet(Properties)",
+    "entityType": "method",
+    "code": "private void assertKeySet(Properties properties) {\r\n    assertThat(properties.keySet()).containsExactly(\"color\", \"fragrance\", \"fruit\", \"size\", \"vehicle\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#assertEntrySet(Properties)",
+    "entityType": "method",
+    "code": "private void assertEntrySet(Properties properties) {\r\n    //\r\n    assertThat(properties.entrySet()).//\r\n    containsExactly(//\r\n    entry(\"color\", \"blue\"), //\r\n    entry(\"fragrance\", \"sweet\"), //\r\n    entry(\"fruit\", \"apple\"), //\r\n    entry(\"size\", \"medium\"), //\r\n    entry(\"vehicle\", \"car\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SortedPropertiesTests#assertPropsAreSorted(String[])",
+    "entityType": "method",
+    "code": "private void assertPropsAreSorted(String[] lines) {\r\n    //\r\n    assertThat(stream(lines).filter(s -> !s.startsWith(\"#\"))).//\r\n    containsExactly(//\r\n    \"color=blue\", //\r\n    \"fragrance=sweet\", //\r\n    \"fruit=apple\", //\r\n    \"size=medium\", //\r\n    \"vehicle=car\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.CompositePropertySourceBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic void getPropertyNames(BenchmarkState state, Blackhole blackhole) {\r\n    blackhole.consume(state.composite.getPropertyNames());\r\n}\n@State(Scope.Benchmark)\r\npublic static class BenchmarkState {\r\n\r\n    private static final IdGenerator ID_GENERATOR = new AlternativeJdkIdGenerator();\r\n\r\n    private static final Object VALUE = new Object();\r\n\r\n    CompositePropertySource composite;\r\n\r\n    @Param({ \"2\", \"5\", \"10\" })\r\n    int numberOfPropertySources;\r\n\r\n    @Param({ \"10\", \"100\", \"1000\" })\r\n    int numberOfPropertyNamesPerSource;\r\n\r\n    @Setup(Level.Trial)\r\n    public void setUp() {\r\n        this.composite = new CompositePropertySource(\"benchmark\");\r\n        for (int i = 0; i < this.numberOfPropertySources; i++) {\r\n            Map<String, Object> map = new HashMap<>(this.numberOfPropertyNamesPerSource);\r\n            for (int j = 0; j < this.numberOfPropertyNamesPerSource; j++) {\r\n                map.put(ID_GENERATOR.generateId().toString(), VALUE);\r\n            }\r\n            PropertySource<?> propertySource = new MapPropertySource(\"propertySource\" + i, map);\r\n            this.composite.addPropertySource(propertySource);\r\n        }\r\n    }\r\n}",
+    "comment": "\n * Benchmarks for {@link CompositePropertySource}.\n *\n * @author Yike Xiao\n "
+  },
+  {
+    "entityId": "org.springframework.core.env.CompositePropertySourceBenchmark#getPropertyNames(BenchmarkState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void getPropertyNames(BenchmarkState state, Blackhole blackhole) {\r\n    blackhole.consume(state.composite.getPropertyNames());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.BenchmarkState",
+    "entityType": "class",
+    "code": "private static final IdGenerator ID_GENERATOR = new AlternativeJdkIdGenerator();\nprivate static final Object VALUE = new Object();\nCompositePropertySource composite;\n@Param({ \"2\", \"5\", \"10\" })\r\nint numberOfPropertySources;\n@Param({ \"10\", \"100\", \"1000\" })\r\nint numberOfPropertyNamesPerSource;\n@Setup(Level.Trial)\r\npublic void setUp() {\r\n    this.composite = new CompositePropertySource(\"benchmark\");\r\n    for (int i = 0; i < this.numberOfPropertySources; i++) {\r\n        Map<String, Object> map = new HashMap<>(this.numberOfPropertyNamesPerSource);\r\n        for (int j = 0; j < this.numberOfPropertyNamesPerSource; j++) {\r\n            map.put(ID_GENERATOR.generateId().toString(), VALUE);\r\n        }\r\n        PropertySource<?> propertySource = new MapPropertySource(\"propertySource\" + i, map);\r\n        this.composite.addPropertySource(propertySource);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.BenchmarkState#setUp()",
+    "entityType": "method",
+    "code": "@Setup(Level.Trial)\r\npublic void setUp() {\r\n    this.composite = new CompositePropertySource(\"benchmark\");\r\n    for (int i = 0; i < this.numberOfPropertySources; i++) {\r\n        Map<String, Object> map = new HashMap<>(this.numberOfPropertyNamesPerSource);\r\n        for (int j = 0; j < this.numberOfPropertyNamesPerSource; j++) {\r\n            map.put(ID_GENERATOR.generateId().toString(), VALUE);\r\n        }\r\n        PropertySource<?> propertySource = new MapPropertySource(\"propertySource\" + i, map);\r\n        this.composite.addPropertySource(propertySource);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentLruCacheBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic void lruCache(BenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        String value = data.lruCache.get(element);\r\n        bh.consume(value);\r\n    }\r\n}\n@State(Scope.Benchmark)\r\npublic static class BenchmarkData {\r\n\r\n    ConcurrentLruCache<String, String> lruCache;\r\n\r\n    @Param({ \"100\" })\r\n    public int capacity;\r\n\r\n    @Param({ \"0.1\" })\r\n    public float cacheMissRate;\r\n\r\n    public List<String> elements;\r\n\r\n    public Function<String, String> generator;\r\n\r\n    @Setup(Level.Iteration)\r\n    public void setup() {\r\n        this.generator = key -> key + \"value\";\r\n        this.lruCache = new ConcurrentLruCache<>(this.capacity, this.generator);\r\n        Assert.isTrue(this.cacheMissRate < 1, \"cache miss rate should be < 1\");\r\n        Random random = new Random();\r\n        int elementsCount = Math.round(this.capacity * (1 + this.cacheMissRate));\r\n        this.elements = new ArrayList<>(elementsCount);\r\n        random.ints(elementsCount).forEach(value -> this.elements.add(String.valueOf(value)));\r\n        this.elements.sort(String::compareTo);\r\n    }\r\n}",
+    "comment": "\n * Benchmarks for {@link ConcurrentLruCache}.\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentLruCacheBenchmark#lruCache(BenchmarkData,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void lruCache(BenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        String value = data.lruCache.get(element);\r\n        bh.consume(value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.BenchmarkData",
+    "entityType": "class",
+    "code": "ConcurrentLruCache<String, String> lruCache;\n@Param({ \"100\" })\r\npublic int capacity;\n@Param({ \"0.1\" })\r\npublic float cacheMissRate;\npublic List<String> elements;\npublic Function<String, String> generator;\n@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.generator = key -> key + \"value\";\r\n    this.lruCache = new ConcurrentLruCache<>(this.capacity, this.generator);\r\n    Assert.isTrue(this.cacheMissRate < 1, \"cache miss rate should be < 1\");\r\n    Random random = new Random();\r\n    int elementsCount = Math.round(this.capacity * (1 + this.cacheMissRate));\r\n    this.elements = new ArrayList<>(elementsCount);\r\n    random.ints(elementsCount).forEach(value -> this.elements.add(String.valueOf(value)));\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.BenchmarkData#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.generator = key -> key + \"value\";\r\n    this.lruCache = new ConcurrentLruCache<>(this.capacity, this.generator);\r\n    Assert.isTrue(this.cacheMissRate < 1, \"cache miss rate should be < 1\");\r\n    Random random = new Random();\r\n    int elementsCount = Math.round(this.capacity * (1 + this.cacheMissRate));\r\n    this.elements = new ArrayList<>(elementsCount);\r\n    random.ints(elementsCount).forEach(value -> this.elements.add(String.valueOf(value)));\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests",
+    "entityType": "class",
+    "code": "@BeforeAll\r\nstatic void setup() {\r\n    BlockHound.builder().with(// Reactor non-blocking thread predicate\r\n    new ReactorBlockHoundIntegration()).with(new ReactiveAdapterRegistry.SpringCoreBlockHoundIntegration()).install();\r\n}\n@Test\r\nvoid blockHoundIsInstalled() {\r\n    assertThatThrownBy(() -> testNonBlockingTask(() -> Thread.sleep(10))).hasMessageContaining(\"Blocking call!\");\r\n}\n@Test\r\nvoid concurrentReferenceHashMapSegmentDoTask() {\r\n    int size = 10000;\r\n    Map<String, String> map = new ConcurrentReferenceHashMap<>(size);\r\n    CompletableFuture<Object> future1 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size / 2; i++) {\r\n            map.put(\"a\" + i, \"bar\");\r\n        }\r\n    }, future1);\r\n    CompletableFuture<Object> future2 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size / 2; i++) {\r\n            map.put(\"b\" + i, \"bar\");\r\n        }\r\n    }, future2);\r\n    CompletableFuture.allOf(future1, future2).join();\r\n    assertThat(map).hasSize(size);\r\n}\n@Test\r\nvoid concurrentReferenceHashMapSegmentClear() {\r\n    int size = 10000;\r\n    Map<String, String> map = new ConcurrentReferenceHashMap<>(size);\r\n    CompletableFuture<Object> future1 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size / 2; i++) {\r\n            map.put(\"a\" + i, \"bar\");\r\n        }\r\n    }, future1);\r\n    CompletableFuture<Object> future2 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size; i++) {\r\n            map.clear();\r\n        }\r\n    }, future2);\r\n    //ensure blockhound doesn't trigger\r\n    final CompletableFuture<Void> allOf = CompletableFuture.allOf(future1, future2);\r\n    assertThatNoException().isThrownBy(allOf::join);\r\n}\nprivate void testNonBlockingTask(NonBlockingTask task) {\r\n    CompletableFuture<Object> future = new CompletableFuture<>();\r\n    testNonBlockingTask(task, future);\r\n    future.join();\r\n}\nprivate void testNonBlockingTask(NonBlockingTask task, CompletableFuture<Object> future) {\r\n    Schedulers.parallel().schedule(() -> {\r\n        try {\r\n            task.run();\r\n            future.complete(null);\r\n        } catch (Throwable ex) {\r\n            future.completeExceptionally(ex);\r\n        }\r\n    });\r\n}\n@FunctionalInterface\r\nprivate interface NonBlockingTask {\r\n\r\n    void run() throws Exception;\r\n}",
+    "comment": "\n * Tests to verify the spring-core BlockHound integration rules.\n *\n * <p>NOTE: to run this test class in the IDE, you need to specify the following\n * JVM argument. For details, see\n * <a href=\"https://github.com/reactor/BlockHound/issues/33\">BlockHound issue 33</a>.\n *\n * <pre style=\"code\">\n * -XX:+AllowRedefinitionToAddDeleteMethods\n * </pre>\n *\n * @author Rossen Stoyanchev\n * @author Sam Brannen\n * @since 5.2.4\n "
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#setup()",
+    "entityType": "method",
+    "code": "@BeforeAll\r\nstatic void setup() {\r\n    BlockHound.builder().with(// Reactor non-blocking thread predicate\r\n    new ReactorBlockHoundIntegration()).with(new ReactiveAdapterRegistry.SpringCoreBlockHoundIntegration()).install();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#blockHoundIsInstalled()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid blockHoundIsInstalled() {\r\n    assertThatThrownBy(() -> testNonBlockingTask(() -> Thread.sleep(10))).hasMessageContaining(\"Blocking call!\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#concurrentReferenceHashMapSegmentDoTask()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid concurrentReferenceHashMapSegmentDoTask() {\r\n    int size = 10000;\r\n    Map<String, String> map = new ConcurrentReferenceHashMap<>(size);\r\n    CompletableFuture<Object> future1 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size / 2; i++) {\r\n            map.put(\"a\" + i, \"bar\");\r\n        }\r\n    }, future1);\r\n    CompletableFuture<Object> future2 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size / 2; i++) {\r\n            map.put(\"b\" + i, \"bar\");\r\n        }\r\n    }, future2);\r\n    CompletableFuture.allOf(future1, future2).join();\r\n    assertThat(map).hasSize(size);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#concurrentReferenceHashMapSegmentClear()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid concurrentReferenceHashMapSegmentClear() {\r\n    int size = 10000;\r\n    Map<String, String> map = new ConcurrentReferenceHashMap<>(size);\r\n    CompletableFuture<Object> future1 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size / 2; i++) {\r\n            map.put(\"a\" + i, \"bar\");\r\n        }\r\n    }, future1);\r\n    CompletableFuture<Object> future2 = new CompletableFuture<>();\r\n    testNonBlockingTask(() -> {\r\n        for (int i = 0; i < size; i++) {\r\n            map.clear();\r\n        }\r\n    }, future2);\r\n    //ensure blockhound doesn't trigger\r\n    final CompletableFuture<Void> allOf = CompletableFuture.allOf(future1, future2);\r\n    assertThatNoException().isThrownBy(allOf::join);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#testNonBlockingTask(NonBlockingTask)",
+    "entityType": "method",
+    "code": "private void testNonBlockingTask(NonBlockingTask task) {\r\n    CompletableFuture<Object> future = new CompletableFuture<>();\r\n    testNonBlockingTask(task, future);\r\n    future.join();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#testNonBlockingTask(NonBlockingTask,CompletableFuture<Object>)",
+    "entityType": "method",
+    "code": "private void testNonBlockingTask(NonBlockingTask task, CompletableFuture<Object> future) {\r\n    Schedulers.parallel().schedule(() -> {\r\n        try {\r\n            task.run();\r\n            future.complete(null);\r\n        } catch (Throwable ex) {\r\n            future.completeExceptionally(ex);\r\n        }\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NonBlockingTask",
+    "entityType": "class",
+    "code": "void run() throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NonBlockingTask#run()",
+    "entityType": "method",
+    "code": "void run() throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.StandardReflectionParameterNameDiscoverTests",
+    "entityType": "class",
+    "code": "private ParameterNameDiscoverer parameterNameDiscoverer;\n@BeforeEach\r\nvoid setup() {\r\n    parameterNameDiscoverer = new StandardReflectionParameterNameDiscoverer();\r\n}\n@Test\r\nvoid getParameterNamesOnInterface() {\r\n    Method method = ReflectionUtils.findMethod(MessageService.class, \"sendMessage\", String.class);\r\n    String[] actualParams = parameterNameDiscoverer.getParameterNames(method);\r\n    assertThat(actualParams).isEqualTo(new String[] { \"message\" });\r\n}\npublic interface MessageService {\r\n\r\n    void sendMessage(String message);\r\n}",
+    "comment": "\n * Tests for StandardReflectionParameterNameDiscoverer\n *\n * @author Rob Winch\n "
+  },
+  {
+    "entityId": "org.springframework.core.StandardReflectionParameterNameDiscoverTests#setup()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setup() {\r\n    parameterNameDiscoverer = new StandardReflectionParameterNameDiscoverer();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.StandardReflectionParameterNameDiscoverTests#getParameterNamesOnInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getParameterNamesOnInterface() {\r\n    Method method = ReflectionUtils.findMethod(MessageService.class, \"sendMessage\", String.class);\r\n    String[] actualParams = parameterNameDiscoverer.getParameterNames(method);\r\n    assertThat(actualParams).isEqualTo(new String[] { \"message\" });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MessageService",
+    "entityType": "class",
+    "code": "void sendMessage(String message);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MessageService#sendMessage(String)",
+    "entityType": "method",
+    "code": "void sendMessage(String message);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentReferenceHashMapBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic void concurrentMap(ConcurrentMapBenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        WeakReference<String> value = data.map.get(element);\r\n        bh.consume(value);\r\n    }\r\n}\n@State(Scope.Benchmark)\r\npublic static class ConcurrentMapBenchmarkData {\r\n\r\n    @Param({ \"500\" })\r\n    public int capacity;\r\n\r\n    private final Function<String, String> generator = key -> key + \"value\";\r\n\r\n    public List<String> elements;\r\n\r\n    public Map<String, WeakReference<String>> map;\r\n\r\n    @Setup(Level.Iteration)\r\n    public void setup() {\r\n        this.elements = new ArrayList<>(this.capacity);\r\n        this.map = new ConcurrentReferenceHashMap<>();\r\n        Random random = new Random();\r\n        random.ints(this.capacity).forEach(value -> {\r\n            String element = String.valueOf(value);\r\n            this.elements.add(element);\r\n            this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n        });\r\n        this.elements.sort(String::compareTo);\r\n    }\r\n}\n@Benchmark\r\npublic void synchronizedMap(SynchronizedMapBenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        WeakReference<String> value = data.map.get(element);\r\n        bh.consume(value);\r\n    }\r\n}\n@State(Scope.Benchmark)\r\npublic static class SynchronizedMapBenchmarkData {\r\n\r\n    @Param({ \"500\" })\r\n    public int capacity;\r\n\r\n    private Function<String, String> generator = key -> key + \"value\";\r\n\r\n    public List<String> elements;\r\n\r\n    public Map<String, WeakReference<String>> map;\r\n\r\n    @Setup(Level.Iteration)\r\n    public void setup() {\r\n        this.elements = new ArrayList<>(this.capacity);\r\n        this.map = Collections.synchronizedMap(new WeakHashMap<>());\r\n        Random random = new Random();\r\n        random.ints(this.capacity).forEach(value -> {\r\n            String element = String.valueOf(value);\r\n            this.elements.add(element);\r\n            this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n        });\r\n        this.elements.sort(String::compareTo);\r\n    }\r\n}",
+    "comment": "\n * Benchmarks for {@link ConcurrentReferenceHashMap}.\n * <p>This benchmark ensures that {@link ConcurrentReferenceHashMap} performs\n * better than {@link java.util.Collections#synchronizedMap(Map)} with\n * concurrent read operations.\n * <p>Typically this can be run with {@code \"java -jar spring-core-jmh.jar -t 30 -f 2 ConcurrentReferenceHashMapBenchmark\"}.\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentReferenceHashMapBenchmark#concurrentMap(ConcurrentMapBenchmarkData,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void concurrentMap(ConcurrentMapBenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        WeakReference<String> value = data.map.get(element);\r\n        bh.consume(value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentReferenceHashMapBenchmark#synchronizedMap(SynchronizedMapBenchmarkData,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void synchronizedMap(SynchronizedMapBenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        WeakReference<String> value = data.map.get(element);\r\n        bh.consume(value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentMapBenchmarkData",
+    "entityType": "class",
+    "code": "@Param({ \"500\" })\r\npublic int capacity;\nprivate final Function<String, String> generator = key -> key + \"value\";\npublic List<String> elements;\npublic Map<String, WeakReference<String>> map;\n@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.elements = new ArrayList<>(this.capacity);\r\n    this.map = new ConcurrentReferenceHashMap<>();\r\n    Random random = new Random();\r\n    random.ints(this.capacity).forEach(value -> {\r\n        String element = String.valueOf(value);\r\n        this.elements.add(element);\r\n        this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n    });\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ConcurrentMapBenchmarkData#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.elements = new ArrayList<>(this.capacity);\r\n    this.map = new ConcurrentReferenceHashMap<>();\r\n    Random random = new Random();\r\n    random.ints(this.capacity).forEach(value -> {\r\n        String element = String.valueOf(value);\r\n        this.elements.add(element);\r\n        this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n    });\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "entityType": "class",
+    "code": "@Param({ \"500\" })\r\npublic int capacity;\nprivate Function<String, String> generator = key -> key + \"value\";\npublic List<String> elements;\npublic Map<String, WeakReference<String>> map;\n@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.elements = new ArrayList<>(this.capacity);\r\n    this.map = Collections.synchronizedMap(new WeakHashMap<>());\r\n    Random random = new Random();\r\n    random.ints(this.capacity).forEach(value -> {\r\n        String element = String.valueOf(value);\r\n        this.elements.add(element);\r\n        this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n    });\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SynchronizedMapBenchmarkData#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.elements = new ArrayList<>(this.capacity);\r\n    this.map = Collections.synchronizedMap(new WeakHashMap<>());\r\n    Random random = new Random();\r\n    random.ints(this.capacity).forEach(value -> {\r\n        String element = String.valueOf(value);\r\n        this.elements.add(element);\r\n        this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n    });\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests",
+    "entityType": "class",
+    "code": "private final DefaultValueStyler styler = new DefaultValueStyler();\n@Test\r\nvoid styleBasics() throws NoSuchMethodException {\r\n    assertThat(styler.style(null)).isEqualTo(\"[null]\");\r\n    assertThat(styler.style(\"str\")).isEqualTo(\"'str'\");\r\n    assertThat(styler.style(String.class)).isEqualTo(\"String\");\r\n    assertThat(styler.style(String.class.getMethod(\"toString\"))).isEqualTo(\"toString@String\");\r\n    assertThat(styler.style(String.class.getMethod(\"getBytes\", Charset.class))).isEqualTo(\"getBytes@String\");\r\n}\n@Test\r\nvoid stylePlainObject() {\r\n    Object obj = new Object();\r\n    assertThat(styler.style(obj)).isEqualTo(String.valueOf(obj));\r\n}\n@Test\r\nvoid styleMaps() {\r\n    assertThat(styler.style(Map.of())).isEqualTo(\"map[[empty]]\");\r\n    assertThat(styler.style(Map.of(\"key\", 1))).isEqualTo(\"map['key' -> 1]\");\r\n    Map<String, Integer> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", 1);\r\n            put(\"key2\", 2);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"map['key1' -> 1, 'key2' -> 2]\");\r\n}\n@Test\r\nvoid styleMapEntries() {\r\n    Map<String, Integer> map = Map.of(\"key1\", 1, \"key2\", 2);\r\n    assertThat(map.entrySet()).map(styler::style).containsExactlyInAnyOrder(\"'key1' -> 1\", \"'key2' -> 2\");\r\n}\n@Test\r\nvoid styleLists() {\r\n    assertThat(styler.style(List.of())).isEqualTo(\"list[[empty]]\");\r\n    assertThat(styler.style(List.of(1))).isEqualTo(\"list[1]\");\r\n    assertThat(styler.style(List.of(1, 2))).isEqualTo(\"list[1, 2]\");\r\n}\n@Test\r\nvoid stylePrimitiveArrays() {\r\n    int[] array = new int[0];\r\n    assertThat(styler.style(array)).isEqualTo(\"array<Object>[[empty]]\");\r\n    array = new int[] { 1 };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<Integer>[1]\");\r\n    array = new int[] { 1, 2 };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<Integer>[1, 2]\");\r\n}\n@Test\r\nvoid styleObjectArrays() {\r\n    String[] array = new String[0];\r\n    assertThat(styler.style(array)).isEqualTo(\"array<String>[[empty]]\");\r\n    array = new String[] { \"str1\" };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<String>['str1']\");\r\n    array = new String[] { \"str1\", \"str2\" };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<String>['str1', 'str2']\");\r\n}",
+    "comment": "\n * Tests for {@link DefaultValueStyler}.\n *\n * @since 5.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#styleBasics()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleBasics() throws NoSuchMethodException {\r\n    assertThat(styler.style(null)).isEqualTo(\"[null]\");\r\n    assertThat(styler.style(\"str\")).isEqualTo(\"'str'\");\r\n    assertThat(styler.style(String.class)).isEqualTo(\"String\");\r\n    assertThat(styler.style(String.class.getMethod(\"toString\"))).isEqualTo(\"toString@String\");\r\n    assertThat(styler.style(String.class.getMethod(\"getBytes\", Charset.class))).isEqualTo(\"getBytes@String\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#stylePlainObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stylePlainObject() {\r\n    Object obj = new Object();\r\n    assertThat(styler.style(obj)).isEqualTo(String.valueOf(obj));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#styleMaps()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleMaps() {\r\n    assertThat(styler.style(Map.of())).isEqualTo(\"map[[empty]]\");\r\n    assertThat(styler.style(Map.of(\"key\", 1))).isEqualTo(\"map['key' -> 1]\");\r\n    Map<String, Integer> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", 1);\r\n            put(\"key2\", 2);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"map['key1' -> 1, 'key2' -> 2]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#styleMapEntries()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleMapEntries() {\r\n    Map<String, Integer> map = Map.of(\"key1\", 1, \"key2\", 2);\r\n    assertThat(map.entrySet()).map(styler::style).containsExactlyInAnyOrder(\"'key1' -> 1\", \"'key2' -> 2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#styleLists()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleLists() {\r\n    assertThat(styler.style(List.of())).isEqualTo(\"list[[empty]]\");\r\n    assertThat(styler.style(List.of(1))).isEqualTo(\"list[1]\");\r\n    assertThat(styler.style(List.of(1, 2))).isEqualTo(\"list[1, 2]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#stylePrimitiveArrays()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stylePrimitiveArrays() {\r\n    int[] array = new int[0];\r\n    assertThat(styler.style(array)).isEqualTo(\"array<Object>[[empty]]\");\r\n    array = new int[] { 1 };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<Integer>[1]\");\r\n    array = new int[] { 1, 2 };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<Integer>[1, 2]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultValueStylerTests#styleObjectArrays()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleObjectArrays() {\r\n    String[] array = new String[0];\r\n    assertThat(styler.style(array)).isEqualTo(\"array<String>[[empty]]\");\r\n    array = new String[] { \"str1\" };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<String>['str1']\");\r\n    array = new String[] { \"str1\", \"str2\" };\r\n    assertThat(styler.style(array)).isEqualTo(\"array<String>['str1', 'str2']\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsUniqueDeclaredMethodsBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic Method[] findMethods() {\r\n    return ReflectionUtils.getUniqueDeclaredMethods(C.class);\r\n}\n@SuppressWarnings(\"unused\")\r\nclass C {\r\n\r\n    void m00() {\r\n    }\r\n\r\n    void m01() {\r\n    }\r\n\r\n    void m02() {\r\n    }\r\n\r\n    void m03() {\r\n    }\r\n\r\n    void m04() {\r\n    }\r\n\r\n    void m05() {\r\n    }\r\n\r\n    void m06() {\r\n    }\r\n\r\n    void m07() {\r\n    }\r\n\r\n    void m08() {\r\n    }\r\n\r\n    void m09() {\r\n    }\r\n\r\n    void m10() {\r\n    }\r\n\r\n    void m11() {\r\n    }\r\n\r\n    void m12() {\r\n    }\r\n\r\n    void m13() {\r\n    }\r\n\r\n    void m14() {\r\n    }\r\n\r\n    void m15() {\r\n    }\r\n\r\n    void m16() {\r\n    }\r\n\r\n    void m17() {\r\n    }\r\n\r\n    void m18() {\r\n    }\r\n\r\n    void m19() {\r\n    }\r\n\r\n    void m20() {\r\n    }\r\n\r\n    void m21() {\r\n    }\r\n\r\n    void m22() {\r\n    }\r\n\r\n    void m23() {\r\n    }\r\n\r\n    void m24() {\r\n    }\r\n\r\n    void m25() {\r\n    }\r\n\r\n    void m26() {\r\n    }\r\n\r\n    void m27() {\r\n    }\r\n\r\n    void m28() {\r\n    }\r\n\r\n    void m29() {\r\n    }\r\n\r\n    void m30() {\r\n    }\r\n\r\n    void m31() {\r\n    }\r\n\r\n    void m32() {\r\n    }\r\n\r\n    void m33() {\r\n    }\r\n\r\n    void m34() {\r\n    }\r\n\r\n    void m35() {\r\n    }\r\n\r\n    void m36() {\r\n    }\r\n\r\n    void m37() {\r\n    }\r\n\r\n    void m38() {\r\n    }\r\n\r\n    void m39() {\r\n    }\r\n\r\n    void m40() {\r\n    }\r\n\r\n    void m41() {\r\n    }\r\n\r\n    void m42() {\r\n    }\r\n\r\n    void m43() {\r\n    }\r\n\r\n    void m44() {\r\n    }\r\n\r\n    void m45() {\r\n    }\r\n\r\n    void m46() {\r\n    }\r\n\r\n    void m47() {\r\n    }\r\n\r\n    void m48() {\r\n    }\r\n\r\n    void m49() {\r\n    }\r\n\r\n    void m50() {\r\n    }\r\n\r\n    void m51() {\r\n    }\r\n\r\n    void m52() {\r\n    }\r\n\r\n    void m53() {\r\n    }\r\n\r\n    void m54() {\r\n    }\r\n\r\n    void m55() {\r\n    }\r\n\r\n    void m56() {\r\n    }\r\n\r\n    void m57() {\r\n    }\r\n\r\n    void m58() {\r\n    }\r\n\r\n    void m59() {\r\n    }\r\n\r\n    void m60() {\r\n    }\r\n\r\n    void m61() {\r\n    }\r\n\r\n    void m62() {\r\n    }\r\n\r\n    void m63() {\r\n    }\r\n\r\n    void m64() {\r\n    }\r\n\r\n    void m65() {\r\n    }\r\n\r\n    void m66() {\r\n    }\r\n\r\n    void m67() {\r\n    }\r\n\r\n    void m68() {\r\n    }\r\n\r\n    void m69() {\r\n    }\r\n\r\n    void m70() {\r\n    }\r\n\r\n    void m71() {\r\n    }\r\n\r\n    void m72() {\r\n    }\r\n\r\n    void m73() {\r\n    }\r\n\r\n    void m74() {\r\n    }\r\n\r\n    void m75() {\r\n    }\r\n\r\n    void m76() {\r\n    }\r\n\r\n    void m77() {\r\n    }\r\n\r\n    void m78() {\r\n    }\r\n\r\n    void m79() {\r\n    }\r\n\r\n    void m80() {\r\n    }\r\n\r\n    void m81() {\r\n    }\r\n\r\n    void m82() {\r\n    }\r\n\r\n    void m83() {\r\n    }\r\n\r\n    void m84() {\r\n    }\r\n\r\n    void m85() {\r\n    }\r\n\r\n    void m86() {\r\n    }\r\n\r\n    void m87() {\r\n    }\r\n\r\n    void m88() {\r\n    }\r\n\r\n    void m89() {\r\n    }\r\n\r\n    void m90() {\r\n    }\r\n\r\n    void m91() {\r\n    }\r\n\r\n    void m92() {\r\n    }\r\n\r\n    void m93() {\r\n    }\r\n\r\n    void m94() {\r\n    }\r\n\r\n    void m95() {\r\n    }\r\n\r\n    void m96() {\r\n    }\r\n\r\n    void m97() {\r\n    }\r\n\r\n    void m98() {\r\n    }\r\n\r\n    void m99() {\r\n    }\r\n}",
+    "comment": "\n * Benchmark for finding declared methods on a class using {@link ReflectionUtils}.\n * This benchmark is using {@link Mode#SingleShotTime} since we want to benchmark\n * cold JVM iterations.\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsUniqueDeclaredMethodsBenchmark#findMethods()",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic Method[] findMethods() {\r\n    return ReflectionUtils.getUniqueDeclaredMethods(C.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C",
+    "entityType": "class",
+    "code": "void m00() ;\nvoid m01() ;\nvoid m02() ;\nvoid m03() ;\nvoid m04() ;\nvoid m05() ;\nvoid m06() ;\nvoid m07() ;\nvoid m08() ;\nvoid m09() ;\nvoid m10() ;\nvoid m11() ;\nvoid m12() ;\nvoid m13() ;\nvoid m14() ;\nvoid m15() ;\nvoid m16() ;\nvoid m17() ;\nvoid m18() ;\nvoid m19() ;\nvoid m20() ;\nvoid m21() ;\nvoid m22() ;\nvoid m23() ;\nvoid m24() ;\nvoid m25() ;\nvoid m26() ;\nvoid m27() ;\nvoid m28() ;\nvoid m29() ;\nvoid m30() ;\nvoid m31() ;\nvoid m32() ;\nvoid m33() ;\nvoid m34() ;\nvoid m35() ;\nvoid m36() ;\nvoid m37() ;\nvoid m38() ;\nvoid m39() ;\nvoid m40() ;\nvoid m41() ;\nvoid m42() ;\nvoid m43() ;\nvoid m44() ;\nvoid m45() ;\nvoid m46() ;\nvoid m47() ;\nvoid m48() ;\nvoid m49() ;\nvoid m50() ;\nvoid m51() ;\nvoid m52() ;\nvoid m53() ;\nvoid m54() ;\nvoid m55() ;\nvoid m56() ;\nvoid m57() ;\nvoid m58() ;\nvoid m59() ;\nvoid m60() ;\nvoid m61() ;\nvoid m62() ;\nvoid m63() ;\nvoid m64() ;\nvoid m65() ;\nvoid m66() ;\nvoid m67() ;\nvoid m68() ;\nvoid m69() ;\nvoid m70() ;\nvoid m71() ;\nvoid m72() ;\nvoid m73() ;\nvoid m74() ;\nvoid m75() ;\nvoid m76() ;\nvoid m77() ;\nvoid m78() ;\nvoid m79() ;\nvoid m80() ;\nvoid m81() ;\nvoid m82() ;\nvoid m83() ;\nvoid m84() ;\nvoid m85() ;\nvoid m86() ;\nvoid m87() ;\nvoid m88() ;\nvoid m89() ;\nvoid m90() ;\nvoid m91() ;\nvoid m92() ;\nvoid m93() ;\nvoid m94() ;\nvoid m95() ;\nvoid m96() ;\nvoid m97() ;\nvoid m98() ;\nvoid m99() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#m00()",
+    "entityType": "method",
+    "code": "void m00() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#m01()",
+    "entityType": "method",
+    "code": "void m01() ;",
+    "comment": ""
+  }
+]

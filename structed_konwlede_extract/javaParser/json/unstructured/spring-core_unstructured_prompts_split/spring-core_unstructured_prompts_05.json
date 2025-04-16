@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.type.AbstractClassMetadataMemberClassTests#withNoMemberClasses()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withNoMemberClasses() {\r\n    ClassMetadata metadata = getClassMetadataFor(L0_a.class);\r\n    String[] nestedClasses = metadata.getMemberClassNames();\r\n    assertThat(nestedClasses).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractClassMetadataMemberClassTests#withPublicMemberClasses()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withPublicMemberClasses() {\r\n    ClassMetadata metadata = getClassMetadataFor(L0_b.class);\r\n    String[] nestedClasses = metadata.getMemberClassNames();\r\n    assertThat(nestedClasses).containsOnly(L0_b.L1.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractClassMetadataMemberClassTests#withNonPublicMemberClasses()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withNonPublicMemberClasses() {\r\n    ClassMetadata metadata = getClassMetadataFor(L0_c.class);\r\n    String[] nestedClasses = metadata.getMemberClassNames();\r\n    assertThat(nestedClasses).containsOnly(L0_c.L1.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractClassMetadataMemberClassTests#againstMemberClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid againstMemberClass() {\r\n    ClassMetadata metadata = getClassMetadataFor(L0_b.L1.class);\r\n    String[] nestedClasses = metadata.getMemberClassNames();\r\n    assertThat(nestedClasses).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.L0_a",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.L0_b",
+    "entityType": "class",
+    "code": "public static class L1 {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.L1",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.L0_c",
+    "entityType": "class",
+    "code": "private static class L1 {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.L1",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate final GeneratedClass enclosingClass;\nprivate final ClassName name;\nprivate final GeneratedMethods methods;\nprivate final Consumer<TypeSpec.Builder> type;\nprivate final Map<ClassName, GeneratedClass> declaredClasses;\nprivate final Map<MethodName, AtomicInteger> methodNameSequenceGenerator;\n/**\r\n * Create a new {@link GeneratedClass} instance with the given name. This\r\n * constructor is package-private since names should only be generated via a\r\n * {@link GeneratedClasses}.\r\n * @param name the generated name\r\n * @param type a {@link Consumer} used to build the type\r\n */\r\nGeneratedClass(ClassName name, Consumer<TypeSpec.Builder> type) {\r\n    this(null, name, type);\r\n}\nprivate GeneratedClass(@Nullable GeneratedClass enclosingClass, ClassName name, Consumer<TypeSpec.Builder> type) {\r\n    this.enclosingClass = enclosingClass;\r\n    this.name = name;\r\n    this.type = type;\r\n    this.methods = new GeneratedMethods(name, this::generateSequencedMethodName);\r\n    this.declaredClasses = new ConcurrentHashMap<>();\r\n    this.methodNameSequenceGenerator = new ConcurrentHashMap<>();\r\n}\n/**\r\n * Update this instance with a set of reserved method names that should not\r\n * be used for generated methods. Reserved names are often needed when a\r\n * generated class implements a specific interface.\r\n * @param reservedMethodNames the reserved method names\r\n */\r\npublic void reserveMethodNames(String... reservedMethodNames) {\r\n    for (String reservedMethodName : reservedMethodNames) {\r\n        String generatedName = generateSequencedMethodName(MethodName.of(reservedMethodNames));\r\n        Assert.state(generatedName.equals(reservedMethodName), () -> String.format(\"Unable to reserve method name '%s'\", reservedMethodName));\r\n    }\r\n}\nprivate String generateSequencedMethodName(MethodName name) {\r\n    int sequence = this.methodNameSequenceGenerator.computeIfAbsent(name, key -> new AtomicInteger()).getAndIncrement();\r\n    return (sequence > 0 ? name.toString() + sequence : name.toString());\r\n}\n/**\r\n * Return the enclosing {@link GeneratedClass} or {@code null} if this\r\n * instance represents a top-level class.\r\n * @return the enclosing generated class, if any\r\n */\r\n@Nullable\r\npublic GeneratedClass getEnclosingClass() {\r\n    return this.enclosingClass;\r\n}\n/**\r\n * Return the name of the generated class.\r\n * @return the name of the generated class\r\n */\r\npublic ClassName getName() {\r\n    return this.name;\r\n}\n/**\r\n * Return generated methods for this instance.\r\n * @return the generated methods\r\n */\r\npublic GeneratedMethods getMethods() {\r\n    return this.methods;\r\n}\n/**\r\n * Get or add a nested generated class with the specified name. If this method\r\n * has previously been called with the given {@code name}, the existing class\r\n * will be returned, otherwise a new class will be generated.\r\n * @param name the name of the nested class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class whose enclosing class is this class\r\n */\r\npublic GeneratedClass getOrAdd(String name, Consumer<TypeSpec.Builder> type) {\r\n    ClassName className = this.name.nestedClass(name);\r\n    return this.declaredClasses.computeIfAbsent(className, key -> new GeneratedClass(this, className, type));\r\n}\nJavaFile generateJavaFile() {\r\n    Assert.state(getEnclosingClass() == null, \"Java file cannot be generated for an inner class\");\r\n    TypeSpec.Builder type = apply();\r\n    return JavaFile.builder(this.name.packageName(), type.build()).build();\r\n}\nprivate TypeSpec.Builder apply() {\r\n    TypeSpec.Builder type = getBuilder(this.type);\r\n    type.addAnnotation(Generated.class);\r\n    this.methods.doWithMethodSpecs(type::addMethod);\r\n    this.declaredClasses.values().forEach(declaredClass -> type.addType(declaredClass.apply().build()));\r\n    return type;\r\n}\nprivate TypeSpec.Builder getBuilder(Consumer<TypeSpec.Builder> type) {\r\n    TypeSpec.Builder builder = TypeSpec.classBuilder(this.name);\r\n    type.accept(builder);\r\n    return builder;\r\n}\nvoid assertSameType(Consumer<TypeSpec.Builder> type) {\r\n    Assert.state(type == this.type || getBuilder(this.type).build().equals(getBuilder(type).build()), \"'type' consumer generated different result\");\r\n}",
+    "comment": "\n * A single generated class.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n * @see GeneratedClasses\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#reserveMethodNames(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Update this instance with a set of reserved method names that should not\r\n * be used for generated methods. Reserved names are often needed when a\r\n * generated class implements a specific interface.\r\n * @param reservedMethodNames the reserved method names\r\n */\r\npublic void reserveMethodNames(String... reservedMethodNames) {\r\n    for (String reservedMethodName : reservedMethodNames) {\r\n        String generatedName = generateSequencedMethodName(MethodName.of(reservedMethodNames));\r\n        Assert.state(generatedName.equals(reservedMethodName), () -> String.format(\"Unable to reserve method name '%s'\", reservedMethodName));\r\n    }\r\n}",
+    "comment": "\n\t * Update this instance with a set of reserved method names that should not\n\t * be used for generated methods. Reserved names are often needed when a\n\t * generated class implements a specific interface.\n\t * @param reservedMethodNames the reserved method names\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid verifyEquals() {\r\n    MethodMetadata withMethod1 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethod2 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethodWithTwoArguments1 = getTagged(WithMethodWithTwoArguments.class);\r\n    MethodMetadata withMethodWithTwoArguments2 = getTagged(WithMethodWithTwoArguments.class);\r\n    assertThat(withMethod1).isNotEqualTo(null);\r\n    assertThat(withMethod1).isEqualTo(withMethod1);\r\n    assertThat(withMethod2).isEqualTo(withMethod2);\r\n    assertThat(withMethod1).isEqualTo(withMethod2);\r\n    assertThat(withMethod2).isEqualTo(withMethod1);\r\n    assertThat(withMethodWithTwoArguments1).isEqualTo(withMethodWithTwoArguments1);\r\n    assertThat(withMethodWithTwoArguments2).isEqualTo(withMethodWithTwoArguments2);\r\n    assertThat(withMethodWithTwoArguments1).isEqualTo(withMethodWithTwoArguments2);\r\n    assertThat(withMethodWithTwoArguments2).isEqualTo(withMethodWithTwoArguments1);\r\n    assertThat(withMethod1).isNotEqualTo(withMethodWithTwoArguments1);\r\n    assertThat(withMethodWithTwoArguments1).isNotEqualTo(withMethod1);\r\n}\n@Test\r\nvoid verifyHashCode() {\r\n    MethodMetadata withMethod1 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethod2 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethodWithTwoArguments1 = getTagged(WithMethodWithTwoArguments.class);\r\n    MethodMetadata withMethodWithTwoArguments2 = getTagged(WithMethodWithTwoArguments.class);\r\n    assertThat(withMethod1).hasSameHashCodeAs(withMethod2);\r\n    assertThat(withMethodWithTwoArguments1).hasSameHashCodeAs(withMethodWithTwoArguments2);\r\n    assertThat(withMethod1).doesNotHaveSameHashCodeAs(withMethodWithTwoArguments1);\r\n}\n@Test\r\nvoid verifyToString() {\r\n    assertThat(getTagged(WithMethod.class).toString()).endsWith(WithMethod.class.getName() + \".test()\");\r\n    assertThat(getTagged(WithMethodWithOneArgument.class).toString()).endsWith(WithMethodWithOneArgument.class.getName() + \".test(java.lang.String)\");\r\n    assertThat(getTagged(WithMethodWithTwoArguments.class).toString()).endsWith(WithMethodWithTwoArguments.class.getName() + \".test(java.lang.String,java.lang.Integer)\");\r\n}\n@Test\r\nvoid getMethodNameReturnsMethodName() {\r\n    assertThat(getTagged(WithMethod.class).getMethodName()).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid getDeclaringClassReturnsDeclaringClass() {\r\n    assertThat(getTagged(WithMethod.class).getDeclaringClassName()).isEqualTo(WithMethod.class.getName());\r\n}\n@Test\r\nvoid getReturnTypeReturnsReturnType() {\r\n    assertThat(getTagged(WithMethod.class).getReturnTypeName()).isEqualTo(String.class.getName());\r\n}\n@Test\r\nvoid isAbstractWhenAbstractReturnsTrue() {\r\n    assertThat(getTagged(WithAbstractMethod.class).isAbstract()).isTrue();\r\n}\n@Test\r\nvoid isAbstractWhenNotAbstractReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isAbstract()).isFalse();\r\n}\n@Test\r\nvoid isStatusWhenStaticReturnsTrue() {\r\n    assertThat(getTagged(WithStaticMethod.class).isStatic()).isTrue();\r\n}\n@Test\r\nvoid isStaticWhenNotStaticReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isStatic()).isFalse();\r\n}\n@Test\r\nvoid isFinalWhenFinalReturnsTrue() {\r\n    assertThat(getTagged(WithFinalMethod.class).isFinal()).isTrue();\r\n}\n@Test\r\nvoid isFinalWhenNonFinalReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isFinal()).isFalse();\r\n}\n@Test\r\nvoid isOverridableWhenOverridableReturnsTrue() {\r\n    assertThat(getTagged(WithMethod.class).isOverridable()).isTrue();\r\n}\n@Test\r\nvoid isOverridableWhenNonOverridableReturnsFalse() {\r\n    assertThat(getTagged(WithStaticMethod.class).isOverridable()).isFalse();\r\n    assertThat(getTagged(WithFinalMethod.class).isOverridable()).isFalse();\r\n    assertThat(getTagged(WithPrivateMethod.class).isOverridable()).isFalse();\r\n}\n@Test\r\nvoid getAnnotationsReturnsDirectAnnotations() {\r\n    MethodMetadata metadata = getTagged(WithDirectAnnotation.class);\r\n    assertThat(metadata.getAnnotations().stream().filter(MergedAnnotation::isDirectlyPresent).map(a -> a.getType().getName())).containsExactlyInAnyOrder(Tag.class.getName(), DirectAnnotation.class.getName());\r\n}\n@Test\r\nvoid isAnnotatedWhenMatchesDirectAnnotationReturnsTrue() {\r\n    assertThat(getTagged(WithDirectAnnotation.class).isAnnotated(DirectAnnotation.class.getName())).isTrue();\r\n}\n@Test\r\nvoid isAnnotatedWhenMatchesMetaAnnotationReturnsTrue() {\r\n    assertThat(getTagged(WithMetaAnnotation.class).isAnnotated(DirectAnnotation.class.getName())).isTrue();\r\n}\n@Test\r\nvoid isAnnotatedWhenDoesNotMatchDirectOrMetaAnnotationReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isAnnotated(DirectAnnotation.class.getName())).isFalse();\r\n}\n@Test\r\nvoid getAnnotationAttributesReturnsAttributes() {\r\n    assertThat(getTagged(WithAnnotationAttributes.class).getAnnotationAttributes(AnnotationAttributes.class.getName())).containsOnly(entry(\"name\", \"test\"), entry(\"size\", 1));\r\n}\n@Test\r\nvoid getAllAnnotationAttributesReturnsAllAttributes() {\r\n    MultiValueMap<String, Object> attributes = getTagged(WithMetaAnnotationAttributes.class).getAllAnnotationAttributes(AnnotationAttributes.class.getName());\r\n    assertThat(attributes).containsOnlyKeys(\"name\", \"size\");\r\n    assertThat(attributes.get(\"name\")).containsExactlyInAnyOrder(\"m1\", \"m2\");\r\n    assertThat(attributes.get(\"size\")).containsExactlyInAnyOrder(1, 2);\r\n}\n// gh-24375\r\n@Test\r\npublic void metadataLoadsForNestedAnnotations() {\r\n    AnnotationMetadata annotationMetadata = get(AnnotatedComponent.class);\r\n    assertThat(annotationMetadata.getAnnotationTypes()).containsExactly(EnclosingAnnotation.class.getName());\r\n}\nprotected MethodMetadata getTagged(Class<?> source) {\r\n    return get(source, Tag.class.getName());\r\n}\nprotected MethodMetadata get(Class<?> source, String annotationName) {\r\n    return get(source).getAnnotatedMethods(annotationName).iterator().next();\r\n}\nprotected abstract AnnotationMetadata get(Class<?> source);\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Tag {\r\n}\npublic static class WithMethod {\r\n\r\n    @Tag\r\n    public String test() {\r\n        return \"\";\r\n    }\r\n}\npublic static class WithMethodWithOneArgument {\r\n\r\n    @Tag\r\n    public String test(String text) {\r\n        return \"\";\r\n    }\r\n}\npublic static class WithMethodWithTwoArguments {\r\n\r\n    @Tag\r\n    public String test(String text, Integer num) {\r\n        return \"\";\r\n    }\r\n}\npublic abstract static class WithAbstractMethod {\r\n\r\n    @Tag\r\n    public abstract String test();\r\n}\npublic static class WithStaticMethod {\r\n\r\n    @Tag\r\n    public static String test() {\r\n        return \"\";\r\n    }\r\n}\npublic static class WithFinalMethod {\r\n\r\n    @Tag\r\n    public final String test() {\r\n        return \"\";\r\n    }\r\n}\npublic static class WithPrivateMethod {\r\n\r\n    @Tag\r\n    private String test() {\r\n        return \"\";\r\n    }\r\n}\npublic abstract static class WithDirectAnnotation {\r\n\r\n    @Tag\r\n    @DirectAnnotation\r\n    public abstract String test();\r\n}\npublic abstract static class WithMetaAnnotation {\r\n\r\n    @Tag\r\n    @MetaAnnotation\r\n    public abstract String test();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface DirectAnnotation {\r\n}\n@DirectAnnotation\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MetaAnnotation {\r\n}\npublic abstract static class WithAnnotationAttributes {\r\n\r\n    @Tag\r\n    @AnnotationAttributes(name = \"test\", size = 1)\r\n    public abstract String test();\r\n}\npublic abstract static class WithMetaAnnotationAttributes {\r\n\r\n    @Tag\r\n    @MetaAnnotationAttributes1\r\n    @MetaAnnotationAttributes2\r\n    public abstract String test();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AnnotationAttributes(name = \"m1\", size = 1)\r\n@interface MetaAnnotationAttributes1 {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AnnotationAttributes(name = \"m2\", size = 2)\r\n@interface MetaAnnotationAttributes2 {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AnnotationAttributes {\r\n\r\n    String name();\r\n\r\n    int size();\r\n}",
+    "comment": "\n * Base class for {@link MethodMetadata} tests.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#generateSequencedMethodName(MethodName)",
+    "entityType": "method",
+    "code": "private String generateSequencedMethodName(MethodName name) {\r\n    int sequence = this.methodNameSequenceGenerator.computeIfAbsent(name, key -> new AtomicInteger()).getAndIncrement();\r\n    return (sequence > 0 ? name.toString() + sequence : name.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#getEnclosingClass()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the enclosing {@link GeneratedClass} or {@code null} if this\r\n * instance represents a top-level class.\r\n * @return the enclosing generated class, if any\r\n */\r\n@Nullable\r\npublic GeneratedClass getEnclosingClass() {\r\n    return this.enclosingClass;\r\n}",
+    "comment": "\n\t * Return the enclosing {@link GeneratedClass} or {@code null} if this\n\t * instance represents a top-level class.\n\t * @return the enclosing generated class, if any\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#getName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the name of the generated class.\r\n * @return the name of the generated class\r\n */\r\npublic ClassName getName() {\r\n    return this.name;\r\n}",
+    "comment": "\n\t * Return the name of the generated class.\n\t * @return the name of the generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#getMethods()",
+    "entityType": "method",
+    "code": "/**\r\n * Return generated methods for this instance.\r\n * @return the generated methods\r\n */\r\npublic GeneratedMethods getMethods() {\r\n    return this.methods;\r\n}",
+    "comment": "\n\t * Return generated methods for this instance.\n\t * @return the generated methods\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#verifyEquals()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid verifyEquals() {\r\n    MethodMetadata withMethod1 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethod2 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethodWithTwoArguments1 = getTagged(WithMethodWithTwoArguments.class);\r\n    MethodMetadata withMethodWithTwoArguments2 = getTagged(WithMethodWithTwoArguments.class);\r\n    assertThat(withMethod1).isNotEqualTo(null);\r\n    assertThat(withMethod1).isEqualTo(withMethod1);\r\n    assertThat(withMethod2).isEqualTo(withMethod2);\r\n    assertThat(withMethod1).isEqualTo(withMethod2);\r\n    assertThat(withMethod2).isEqualTo(withMethod1);\r\n    assertThat(withMethodWithTwoArguments1).isEqualTo(withMethodWithTwoArguments1);\r\n    assertThat(withMethodWithTwoArguments2).isEqualTo(withMethodWithTwoArguments2);\r\n    assertThat(withMethodWithTwoArguments1).isEqualTo(withMethodWithTwoArguments2);\r\n    assertThat(withMethodWithTwoArguments2).isEqualTo(withMethodWithTwoArguments1);\r\n    assertThat(withMethod1).isNotEqualTo(withMethodWithTwoArguments1);\r\n    assertThat(withMethodWithTwoArguments1).isNotEqualTo(withMethod1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#getOrAdd(String,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Get or add a nested generated class with the specified name. If this method\r\n * has previously been called with the given {@code name}, the existing class\r\n * will be returned, otherwise a new class will be generated.\r\n * @param name the name of the nested class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class whose enclosing class is this class\r\n */\r\npublic GeneratedClass getOrAdd(String name, Consumer<TypeSpec.Builder> type) {\r\n    ClassName className = this.name.nestedClass(name);\r\n    return this.declaredClasses.computeIfAbsent(className, key -> new GeneratedClass(this, className, type));\r\n}",
+    "comment": "\n\t * Get or add a nested generated class with the specified name. If this method\n\t * has previously been called with the given {@code name}, the existing class\n\t * will be returned, otherwise a new class will be generated.\n\t * @param name the name of the nested class\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class whose enclosing class is this class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#generateJavaFile()",
+    "entityType": "method",
+    "code": "JavaFile generateJavaFile() {\r\n    Assert.state(getEnclosingClass() == null, \"Java file cannot be generated for an inner class\");\r\n    TypeSpec.Builder type = apply();\r\n    return JavaFile.builder(this.name.packageName(), type.build()).build();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#verifyHashCode()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid verifyHashCode() {\r\n    MethodMetadata withMethod1 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethod2 = getTagged(WithMethod.class);\r\n    MethodMetadata withMethodWithTwoArguments1 = getTagged(WithMethodWithTwoArguments.class);\r\n    MethodMetadata withMethodWithTwoArguments2 = getTagged(WithMethodWithTwoArguments.class);\r\n    assertThat(withMethod1).hasSameHashCodeAs(withMethod2);\r\n    assertThat(withMethodWithTwoArguments1).hasSameHashCodeAs(withMethodWithTwoArguments2);\r\n    assertThat(withMethod1).doesNotHaveSameHashCodeAs(withMethodWithTwoArguments1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#apply()",
+    "entityType": "method",
+    "code": "private TypeSpec.Builder apply() {\r\n    TypeSpec.Builder type = getBuilder(this.type);\r\n    type.addAnnotation(Generated.class);\r\n    this.methods.doWithMethodSpecs(type::addMethod);\r\n    this.declaredClasses.values().forEach(declaredClass -> type.addType(declaredClass.apply().build()));\r\n    return type;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#verifyToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid verifyToString() {\r\n    assertThat(getTagged(WithMethod.class).toString()).endsWith(WithMethod.class.getName() + \".test()\");\r\n    assertThat(getTagged(WithMethodWithOneArgument.class).toString()).endsWith(WithMethodWithOneArgument.class.getName() + \".test(java.lang.String)\");\r\n    assertThat(getTagged(WithMethodWithTwoArguments.class).toString()).endsWith(WithMethodWithTwoArguments.class.getName() + \".test(java.lang.String,java.lang.Integer)\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#getBuilder(Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "private TypeSpec.Builder getBuilder(Consumer<TypeSpec.Builder> type) {\r\n    TypeSpec.Builder builder = TypeSpec.classBuilder(this.name);\r\n    type.accept(builder);\r\n    return builder;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getMethodNameReturnsMethodName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMethodNameReturnsMethodName() {\r\n    assertThat(getTagged(WithMethod.class).getMethodName()).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClass#assertSameType(Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "void assertSameType(Consumer<TypeSpec.Builder> type) {\r\n    Assert.state(type == this.type || getBuilder(this.type).build().equals(getBuilder(type).build()), \"'type' consumer generated different result\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getDeclaringClassReturnsDeclaringClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getDeclaringClassReturnsDeclaringClass() {\r\n    assertThat(getTagged(WithMethod.class).getDeclaringClassName()).isEqualTo(WithMethod.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getReturnTypeReturnsReturnType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getReturnTypeReturnsReturnType() {\r\n    assertThat(getTagged(WithMethod.class).getReturnTypeName()).isEqualTo(String.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isAbstractWhenAbstractReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAbstractWhenAbstractReturnsTrue() {\r\n    assertThat(getTagged(WithAbstractMethod.class).isAbstract()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isAbstractWhenNotAbstractReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAbstractWhenNotAbstractReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isAbstract()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isStatusWhenStaticReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isStatusWhenStaticReturnsTrue() {\r\n    assertThat(getTagged(WithStaticMethod.class).isStatic()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isStaticWhenNotStaticReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isStaticWhenNotStaticReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isStatic()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isFinalWhenFinalReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isFinalWhenFinalReturnsTrue() {\r\n    assertThat(getTagged(WithFinalMethod.class).isFinal()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isFinalWhenNonFinalReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isFinalWhenNonFinalReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isFinal()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isOverridableWhenOverridableReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isOverridableWhenOverridableReturnsTrue() {\r\n    assertThat(getTagged(WithMethod.class).isOverridable()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isOverridableWhenNonOverridableReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isOverridableWhenNonOverridableReturnsFalse() {\r\n    assertThat(getTagged(WithStaticMethod.class).isOverridable()).isFalse();\r\n    assertThat(getTagged(WithFinalMethod.class).isOverridable()).isFalse();\r\n    assertThat(getTagged(WithPrivateMethod.class).isOverridable()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getAnnotationsReturnsDirectAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationsReturnsDirectAnnotations() {\r\n    MethodMetadata metadata = getTagged(WithDirectAnnotation.class);\r\n    assertThat(metadata.getAnnotations().stream().filter(MergedAnnotation::isDirectlyPresent).map(a -> a.getType().getName())).containsExactlyInAnyOrder(Tag.class.getName(), DirectAnnotation.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isAnnotatedWhenMatchesDirectAnnotationReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAnnotatedWhenMatchesDirectAnnotationReturnsTrue() {\r\n    assertThat(getTagged(WithDirectAnnotation.class).isAnnotated(DirectAnnotation.class.getName())).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isAnnotatedWhenMatchesMetaAnnotationReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAnnotatedWhenMatchesMetaAnnotationReturnsTrue() {\r\n    assertThat(getTagged(WithMetaAnnotation.class).isAnnotated(DirectAnnotation.class.getName())).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#isAnnotatedWhenDoesNotMatchDirectOrMetaAnnotationReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAnnotatedWhenDoesNotMatchDirectOrMetaAnnotationReturnsFalse() {\r\n    assertThat(getTagged(WithMethod.class).isAnnotated(DirectAnnotation.class.getName())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getAnnotationAttributesReturnsAttributes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationAttributesReturnsAttributes() {\r\n    assertThat(getTagged(WithAnnotationAttributes.class).getAnnotationAttributes(AnnotationAttributes.class.getName())).containsOnly(entry(\"name\", \"test\"), entry(\"size\", 1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getAllAnnotationAttributesReturnsAllAttributes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAllAnnotationAttributesReturnsAllAttributes() {\r\n    MultiValueMap<String, Object> attributes = getTagged(WithMetaAnnotationAttributes.class).getAllAnnotationAttributes(AnnotationAttributes.class.getName());\r\n    assertThat(attributes).containsOnlyKeys(\"name\", \"size\");\r\n    assertThat(attributes.get(\"name\")).containsExactlyInAnyOrder(\"m1\", \"m2\");\r\n    assertThat(attributes.get(\"size\")).containsExactlyInAnyOrder(1, 2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#metadataLoadsForNestedAnnotations()",
+    "entityType": "method",
+    "code": "// gh-24375\r\n@Test\r\npublic void metadataLoadsForNestedAnnotations() {\r\n    AnnotationMetadata annotationMetadata = get(AnnotatedComponent.class);\r\n    assertThat(annotationMetadata.getAnnotationTypes()).containsExactly(EnclosingAnnotation.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#getTagged(Class<?>)",
+    "entityType": "method",
+    "code": "protected MethodMetadata getTagged(Class<?> source) {\r\n    return get(source, Tag.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#get(Class<?>,String)",
+    "entityType": "method",
+    "code": "protected MethodMetadata get(Class<?> source, String annotationName) {\r\n    return get(source).getAnnotatedMethods(annotationName).iterator().next();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AbstractMethodMetadataTests#get(Class<?>)",
+    "entityType": "method",
+    "code": "protected abstract AnnotationMetadata get(Class<?> source);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMethod",
+    "entityType": "class",
+    "code": "@Tag\r\npublic String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMethod#test()",
+    "entityType": "method",
+    "code": "@Tag\r\npublic String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMethodWithOneArgument",
+    "entityType": "class",
+    "code": "@Tag\r\npublic String test(String text) {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMethodWithOneArgument#test(String)",
+    "entityType": "method",
+    "code": "@Tag\r\npublic String test(String text) {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMethodWithTwoArguments",
+    "entityType": "class",
+    "code": "@Tag\r\npublic String test(String text, Integer num) {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMethodWithTwoArguments#test(String,Integer)",
+    "entityType": "method",
+    "code": "@Tag\r\npublic String test(String text, Integer num) {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithAbstractMethod",
+    "entityType": "class",
+    "code": "@Tag\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithAbstractMethod#test()",
+    "entityType": "method",
+    "code": "@Tag\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithStaticMethod",
+    "entityType": "class",
+    "code": "@Tag\r\npublic static String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithStaticMethod#test()",
+    "entityType": "method",
+    "code": "@Tag\r\npublic static String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithFinalMethod",
+    "entityType": "class",
+    "code": "@Tag\r\npublic final String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithFinalMethod#test()",
+    "entityType": "method",
+    "code": "@Tag\r\npublic final String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithPrivateMethod",
+    "entityType": "class",
+    "code": "@Tag\r\nprivate String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithPrivateMethod#test()",
+    "entityType": "method",
+    "code": "@Tag\r\nprivate String test() {\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithDirectAnnotation",
+    "entityType": "class",
+    "code": "@Tag\r\n@DirectAnnotation\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithDirectAnnotation#test()",
+    "entityType": "method",
+    "code": "@Tag\r\n@DirectAnnotation\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMetaAnnotation",
+    "entityType": "class",
+    "code": "@Tag\r\n@MetaAnnotation\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMetaAnnotation#test()",
+    "entityType": "method",
+    "code": "@Tag\r\n@MetaAnnotation\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithAnnotationAttributes",
+    "entityType": "class",
+    "code": "@Tag\r\n@AnnotationAttributes(name = \"test\", size = 1)\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithAnnotationAttributes#test()",
+    "entityType": "method",
+    "code": "@Tag\r\n@AnnotationAttributes(name = \"test\", size = 1)\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMetaAnnotationAttributes",
+    "entityType": "class",
+    "code": "@Tag\r\n@MetaAnnotationAttributes1\r\n@MetaAnnotationAttributes2\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.WithMetaAnnotationAttributes#test()",
+    "entityType": "method",
+    "code": "@Tag\r\n@MetaAnnotationAttributes1\r\n@MetaAnnotationAttributes2\r\npublic abstract String test();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses",
+    "entityType": "class",
+    "code": "private final ClassNameGenerator classNameGenerator;\nprivate final List<GeneratedClass> classes;\nprivate final Map<Owner, GeneratedClass> classesByOwner;\n/**\r\n * Create a new instance using the specified naming conventions.\r\n * @param classNameGenerator the class name generator to use\r\n */\r\nGeneratedClasses(ClassNameGenerator classNameGenerator) {\r\n    this(classNameGenerator, new ArrayList<>(), new ConcurrentHashMap<>());\r\n}\nprivate GeneratedClasses(ClassNameGenerator classNameGenerator, List<GeneratedClass> classes, Map<Owner, GeneratedClass> classesByOwner) {\r\n    Assert.notNull(classNameGenerator, \"'classNameGenerator' must not be null\");\r\n    this.classNameGenerator = classNameGenerator;\r\n    this.classes = classes;\r\n    this.classesByOwner = classesByOwner;\r\n}\n/**\r\n * Get or add a generated class for the specified {@code featureName} and no\r\n * particular component. If this method has previously been called with the\r\n * given {@code featureName} the existing class will be returned, otherwise\r\n * a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    Owner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, null);\r\n    GeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, null, type));\r\n    generatedClass.assertSameType(type);\r\n    return generatedClass;\r\n}\n/**\r\n * Get or add a generated class for the specified {@code featureName}\r\n * targeting the specified {@code component}. If this method has previously\r\n * been called with the given {@code featureName}/{@code target} the\r\n * existing class will be returned, otherwise a new class will be generated,\r\n * otherwise a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeatureComponent(String featureName, ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(targetComponent, \"'targetComponent' must not be null\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    Owner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, targetComponent);\r\n    GeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, targetComponent, type));\r\n    generatedClass.assertSameType(type);\r\n    return generatedClass;\r\n}\n/**\r\n * Get or add a generated class for the specified {@code featureName}\r\n * targeting the specified {@code component}. If this method has previously\r\n * been called with the given {@code featureName}/{@code target} the\r\n * existing class will be returned, otherwise a new class will be generated,\r\n * otherwise a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeatureComponent(String featureName, Class<?> targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    return getOrAddForFeatureComponent(featureName, ClassName.get(targetComponent), type);\r\n}\n/**\r\n * Add a new generated class for the specified {@code featureName} and no\r\n * particular component.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return createAndAddGeneratedClass(featureName, null, type);\r\n}\n/**\r\n * Add a new generated class for the specified {@code featureName} targeting\r\n * the specified {@code component}.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeatureComponent(String featureName, ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(targetComponent, \"'targetComponent' must not be null\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return createAndAddGeneratedClass(featureName, targetComponent, type);\r\n}\n/**\r\n * Add a new generated class for the specified {@code featureName} targeting\r\n * the specified {@code component}.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeatureComponent(String featureName, Class<?> targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    return addForFeatureComponent(featureName, ClassName.get(targetComponent), type);\r\n}\nprivate GeneratedClass createAndAddGeneratedClass(String featureName, @Nullable ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    ClassName className = this.classNameGenerator.generateClassName(featureName, targetComponent);\r\n    GeneratedClass generatedClass = new GeneratedClass(className, type);\r\n    this.classes.add(generatedClass);\r\n    return generatedClass;\r\n}\n/**\r\n * Write the {@link GeneratedClass generated classes} using the given\r\n * {@link GeneratedFiles} instance.\r\n * @param generatedFiles where to write the generated classes\r\n */\r\nvoid writeTo(GeneratedFiles generatedFiles) {\r\n    Assert.notNull(generatedFiles, \"'generatedFiles' must not be null\");\r\n    List<GeneratedClass> generatedClasses = new ArrayList<>(this.classes);\r\n    generatedClasses.sort(Comparator.comparing(GeneratedClass::getName));\r\n    for (GeneratedClass generatedClass : generatedClasses) {\r\n        generatedFiles.addSourceFile(generatedClass.generateJavaFile());\r\n    }\r\n}\n/**\r\n * Create a new {@link GeneratedClasses} instance using the specified feature\r\n * name prefix to qualify generated class names for a dedicated round of code\r\n * generation.\r\n * @param featureNamePrefix the feature name prefix to use\r\n * @return a new instance for the specified feature name prefix\r\n */\r\nGeneratedClasses withFeatureNamePrefix(String featureNamePrefix) {\r\n    return new GeneratedClasses(this.classNameGenerator.withFeatureNamePrefix(featureNamePrefix), this.classes, this.classesByOwner);\r\n}\nprivate record Owner(String featureNamePrefix, String featureName, @Nullable ClassName target) {\r\n}",
+    "comment": "\n * A managed collection of generated classes.\n *\n * <p>This class is stateful, so the same instance should be used for all class\n * generation.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n * @see GeneratedClass\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeature(String,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Get or add a generated class for the specified {@code featureName} and no\r\n * particular component. If this method has previously been called with the\r\n * given {@code featureName} the existing class will be returned, otherwise\r\n * a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    Owner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, null);\r\n    GeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, null, type));\r\n    generatedClass.assertSameType(type);\r\n    return generatedClass;\r\n}",
+    "comment": "\n\t * Get or add a generated class for the specified {@code featureName} and no\n\t * particular component. If this method has previously been called with the\n\t * given {@code featureName} the existing class will be returned, otherwise\n\t * a new class will be generated.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeatureComponent(String,ClassName,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Get or add a generated class for the specified {@code featureName}\r\n * targeting the specified {@code component}. If this method has previously\r\n * been called with the given {@code featureName}/{@code target} the\r\n * existing class will be returned, otherwise a new class will be generated,\r\n * otherwise a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeatureComponent(String featureName, ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(targetComponent, \"'targetComponent' must not be null\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    Owner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, targetComponent);\r\n    GeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, targetComponent, type));\r\n    generatedClass.assertSameType(type);\r\n    return generatedClass;\r\n}",
+    "comment": "\n\t * Get or add a generated class for the specified {@code featureName}\n\t * targeting the specified {@code component}. If this method has previously\n\t * been called with the given {@code featureName}/{@code target} the\n\t * existing class will be returned, otherwise a new class will be generated,\n\t * otherwise a new class will be generated.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeatureComponent(String,Class<?>,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Get or add a generated class for the specified {@code featureName}\r\n * targeting the specified {@code component}. If this method has previously\r\n * been called with the given {@code featureName}/{@code target} the\r\n * existing class will be returned, otherwise a new class will be generated,\r\n * otherwise a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeatureComponent(String featureName, Class<?> targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    return getOrAddForFeatureComponent(featureName, ClassName.get(targetComponent), type);\r\n}",
+    "comment": "\n\t * Get or add a generated class for the specified {@code featureName}\n\t * targeting the specified {@code component}. If this method has previously\n\t * been called with the given {@code featureName}/{@code target} the\n\t * existing class will be returned, otherwise a new class will be generated,\n\t * otherwise a new class will be generated.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#addForFeature(String,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a new generated class for the specified {@code featureName} and no\r\n * particular component.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return createAndAddGeneratedClass(featureName, null, type);\r\n}",
+    "comment": "\n\t * Add a new generated class for the specified {@code featureName} and no\n\t * particular component.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param type a {@link Consumer} used to build the type\n\t * @return the newly generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#addForFeatureComponent(String,ClassName,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a new generated class for the specified {@code featureName} targeting\r\n * the specified {@code component}.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeatureComponent(String featureName, ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(targetComponent, \"'targetComponent' must not be null\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return createAndAddGeneratedClass(featureName, targetComponent, type);\r\n}",
+    "comment": "\n\t * Add a new generated class for the specified {@code featureName} targeting\n\t * the specified {@code component}.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return the newly generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#addForFeatureComponent(String,Class<?>,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a new generated class for the specified {@code featureName} targeting\r\n * the specified {@code component}.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeatureComponent(String featureName, Class<?> targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    return addForFeatureComponent(featureName, ClassName.get(targetComponent), type);\r\n}",
+    "comment": "\n\t * Add a new generated class for the specified {@code featureName} targeting\n\t * the specified {@code component}.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return the newly generated class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#createAndAddGeneratedClass(String,ClassName,Consumer<TypeSpec.Builder>)",
+    "entityType": "method",
+    "code": "private GeneratedClass createAndAddGeneratedClass(String featureName, @Nullable ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    ClassName className = this.classNameGenerator.generateClassName(featureName, targetComponent);\r\n    GeneratedClass generatedClass = new GeneratedClass(className, type);\r\n    this.classes.add(generatedClass);\r\n    return generatedClass;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#writeTo(GeneratedFiles)",
+    "entityType": "method",
+    "code": "/**\r\n * Write the {@link GeneratedClass generated classes} using the given\r\n * {@link GeneratedFiles} instance.\r\n * @param generatedFiles where to write the generated classes\r\n */\r\nvoid writeTo(GeneratedFiles generatedFiles) {\r\n    Assert.notNull(generatedFiles, \"'generatedFiles' must not be null\");\r\n    List<GeneratedClass> generatedClasses = new ArrayList<>(this.classes);\r\n    generatedClasses.sort(Comparator.comparing(GeneratedClass::getName));\r\n    for (GeneratedClass generatedClass : generatedClasses) {\r\n        generatedFiles.addSourceFile(generatedClass.generateJavaFile());\r\n    }\r\n}",
+    "comment": "\n\t * Write the {@link GeneratedClass generated classes} using the given\n\t * {@link GeneratedFiles} instance.\n\t * @param generatedFiles where to write the generated classes\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedClasses#withFeatureNamePrefix(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new {@link GeneratedClasses} instance using the specified feature\r\n * name prefix to qualify generated class names for a dedicated round of code\r\n * generation.\r\n * @param featureNamePrefix the feature name prefix to use\r\n * @return a new instance for the specified feature name prefix\r\n */\r\nGeneratedClasses withFeatureNamePrefix(String featureNamePrefix) {\r\n    return new GeneratedClasses(this.classNameGenerator.withFeatureNamePrefix(featureNamePrefix), this.classes, this.classesByOwner);\r\n}",
+    "comment": "\n\t * Create a new {@link GeneratedClasses} instance using the specified feature\n\t * name prefix to qualify generated class names for a dedicated round of code\n\t * generation.\n\t * @param featureNamePrefix the feature name prefix to use\n\t * @return a new instance for the specified feature name prefix\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles",
+    "entityType": "class",
+    "code": "/**\r\n * Add a generated {@link Kind#SOURCE source file} with content from the\r\n * given {@link JavaFile}.\r\n * @param javaFile the java file to add\r\n */\r\ndefault void addSourceFile(JavaFile javaFile) {\r\n    validatePackage(javaFile.packageName, javaFile.typeSpec.name);\r\n    String className = javaFile.packageName + \".\" + javaFile.typeSpec.name;\r\n    addSourceFile(className, javaFile::writeTo);\r\n}\n/**\r\n * Add a generated {@link Kind#SOURCE source file} with content from the\r\n * given {@link CharSequence}.\r\n * @param className the class name that should be used to determine the path\r\n * of the file\r\n * @param content the contents of the file\r\n */\r\ndefault void addSourceFile(String className, CharSequence content) {\r\n    addSourceFile(className, appendable -> appendable.append(content));\r\n}\n/**\r\n * Add a generated {@link Kind#SOURCE source file} with content written to\r\n * an {@link Appendable} passed to the given {@link ThrowingConsumer}.\r\n * @param className the class name that should be used to determine the path\r\n * of the file\r\n * @param content a {@link ThrowingConsumer} that accepts an\r\n * {@link Appendable} which will receive the file contents\r\n */\r\ndefault void addSourceFile(String className, ThrowingConsumer<Appendable> content) {\r\n    addFile(Kind.SOURCE, getClassNamePath(className), content);\r\n}\n/**\r\n * Add a generated {@link Kind#SOURCE source file} with content from the\r\n * given {@link InputStreamSource}.\r\n * @param className the class name that should be used to determine the path\r\n * of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addSourceFile(String className, InputStreamSource content) {\r\n    addFile(Kind.SOURCE, getClassNamePath(className), content);\r\n}\n/**\r\n * Add a generated {@link Kind#RESOURCE resource file} with content from the\r\n * given {@link CharSequence}.\r\n * @param path the relative path of the file\r\n * @param content the contents of the file\r\n */\r\ndefault void addResourceFile(String path, CharSequence content) {\r\n    addResourceFile(path, appendable -> appendable.append(content));\r\n}\n/**\r\n * Add a generated {@link Kind#RESOURCE resource file} with content written\r\n * to an {@link Appendable} passed to the given {@link ThrowingConsumer}.\r\n * @param path the relative path of the file\r\n * @param content a {@link ThrowingConsumer} that accepts an\r\n * {@link Appendable} which will receive the file contents\r\n */\r\ndefault void addResourceFile(String path, ThrowingConsumer<Appendable> content) {\r\n    addFile(Kind.RESOURCE, path, content);\r\n}\n/**\r\n * Add a generated {@link Kind#RESOURCE resource file} with content from the\r\n * given {@link InputStreamSource}.\r\n * @param path the relative path of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addResourceFile(String path, InputStreamSource content) {\r\n    addFile(Kind.RESOURCE, path, content);\r\n}\n/**\r\n * Add a generated {@link Kind#CLASS class file} with content from the given\r\n * {@link InputStreamSource}.\r\n * @param path the relative path of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addClassFile(String path, InputStreamSource content) {\r\n    addFile(Kind.CLASS, path, content);\r\n}\n/**\r\n * Add a generated file of the specified {@link Kind} with content from the\r\n * given {@link CharSequence}.\r\n * @param kind the kind of file being written\r\n * @param path the relative path of the file\r\n * @param content the contents of the file\r\n */\r\ndefault void addFile(Kind kind, String path, CharSequence content) {\r\n    addFile(kind, path, appendable -> appendable.append(content));\r\n}\n/**\r\n * Add a generated file of the specified {@link Kind} with content written\r\n * to an {@link Appendable} passed to the given {@link ThrowingConsumer}.\r\n * @param kind the kind of file being written\r\n * @param path the relative path of the file\r\n * @param content a {@link ThrowingConsumer} that accepts an\r\n * {@link Appendable} which will receive the file contents\r\n */\r\ndefault void addFile(Kind kind, String path, ThrowingConsumer<Appendable> content) {\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    addFile(kind, path, new AppendableConsumerInputStreamSource(content));\r\n}\n/**\r\n * Add a generated file of the specified {@link Kind} with content from the\r\n * given {@link InputStreamSource}.\r\n * @param kind the kind of file being written\r\n * @param path the relative path of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addFile(Kind kind, String path, InputStreamSource content) {\r\n    Assert.notNull(kind, \"'kind' must not be null\");\r\n    Assert.hasLength(path, \"'path' must not be empty\");\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    handleFile(kind, path, handler -> handler.create(content));\r\n}\n/**\r\n * Handle a generated file of the specified {@link Kind} with the given\r\n * {@linkplain FileHandler handler}. The file handler lets you consume\r\n * the content of the already generated file, if any and provide a way\r\n * to override its content if necessary.\r\n * @param kind the kind of file\r\n * @param path the relative path of the file\r\n * @param handler a consumer of a {@link FileHandler} for the file\r\n * @since 6.2\r\n */\r\nvoid handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler);\nprivate static String getClassNamePath(String className) {\r\n    Assert.hasLength(className, \"'className' must not be empty\");\r\n    validatePackage(ClassUtils.getPackageName(className), className);\r\n    Assert.isTrue(isJavaIdentifier(className), \"'className' must be a valid identifier, got '\" + className + \"'\");\r\n    return ClassUtils.convertClassNameToResourcePath(className) + \".java\";\r\n}\nprivate static void validatePackage(String packageName, String className) {\r\n    if (!StringUtils.hasLength(packageName)) {\r\n        throw new IllegalArgumentException(\"Could not add '\" + className + \"', \" + \"processing classes in the default package is not supported. \" + \"Did you forget to add a package statement?\");\r\n    }\r\n}\nprivate static boolean isJavaIdentifier(String className) {\r\n    char[] chars = className.toCharArray();\r\n    for (int i = 0; i < chars.length; i++) {\r\n        if (i == 0 && !Character.isJavaIdentifierStart(chars[i])) {\r\n            return false;\r\n        }\r\n        if (i > 0 && chars[i] != '.' && !Character.isJavaIdentifierPart(chars[i])) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}\n/**\r\n * The various kinds of generated files that are supported.\r\n */\r\nenum Kind {\r\n\r\n    /**\r\n     * A source file containing Java code that should be compiled.\r\n     */\r\n    SOURCE,\r\n    /**\r\n     * A resource file that should be directly added to the final application.\r\n     * For example, a {@code .properties} file.\r\n     */\r\n    RESOURCE,\r\n    /**\r\n     * A class file containing bytecode. For example, the result of a proxy\r\n     * generated using CGLIB.\r\n     */\r\n    CLASS\r\n}\n/**\r\n * Provide access to a particular file and offer convenient methods to retrieve,\r\n * save, or override its content.\r\n * @since 6.2\r\n */\r\nabstract class FileHandler {\r\n\r\n    private final boolean exists;\r\n\r\n    private final Supplier<InputStreamSource> existingContent;\r\n\r\n    protected FileHandler(boolean exists, Supplier<InputStreamSource> existingContent) {\r\n        this.exists = exists;\r\n        this.existingContent = existingContent;\r\n    }\r\n\r\n    /**\r\n     * Specify whether the file already exists.\r\n     * @return {@code true} if the file already exists\r\n     */\r\n    public boolean exists() {\r\n        return this.exists;\r\n    }\r\n\r\n    /**\r\n     * Return an {@link InputStreamSource} for the content of the file or\r\n     * {@code null} if the file does not exist.\r\n     */\r\n    @Nullable\r\n    public InputStreamSource getContent() {\r\n        return (exists() ? this.existingContent.get() : null);\r\n    }\r\n\r\n    /**\r\n     * Create a file with the given {@linkplain InputStreamSource content}.\r\n     * @throws IllegalStateException if the file already exists\r\n     */\r\n    public void create(InputStreamSource content) {\r\n        Assert.notNull(content, \"'content' must not be null\");\r\n        if (exists()) {\r\n            throw new IllegalStateException(\"%s already exists\".formatted(this));\r\n        }\r\n        copy(content, false);\r\n    }\r\n\r\n    /**\r\n     * Override the content of the file handled by this instance using the\r\n     * given {@linkplain InputStreamSource content}. If the file does not\r\n     * exist, it is created.\r\n     */\r\n    public void override(InputStreamSource content) {\r\n        Assert.notNull(content, \"'content' must not be null\");\r\n        copy(content, true);\r\n    }\r\n\r\n    protected abstract void copy(InputStreamSource content, boolean override);\r\n}",
+    "comment": "\n * Repository of generated files. Can be used to add {@link Kind#SOURCE source},\n * {@link Kind#RESOURCE resource}, or {@link Kind#CLASS class} files generated\n * during ahead-of-time processing. Source and resource files are written using\n * {@code UTF-8} encoding.\n *\n * @author Phillip Webb\n * @author Brian Clozel\n * @author Stephane Nicoll\n * @since 6.0\n * @see InMemoryGeneratedFiles\n * @see FileSystemGeneratedFiles\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addSourceFile(JavaFile)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#SOURCE source file} with content from the\r\n * given {@link JavaFile}.\r\n * @param javaFile the java file to add\r\n */\r\ndefault void addSourceFile(JavaFile javaFile) {\r\n    validatePackage(javaFile.packageName, javaFile.typeSpec.name);\r\n    String className = javaFile.packageName + \".\" + javaFile.typeSpec.name;\r\n    addSourceFile(className, javaFile::writeTo);\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#SOURCE source file} with content from the\n\t * given {@link JavaFile}.\n\t * @param javaFile the java file to add\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addSourceFile(String,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#SOURCE source file} with content from the\r\n * given {@link CharSequence}.\r\n * @param className the class name that should be used to determine the path\r\n * of the file\r\n * @param content the contents of the file\r\n */\r\ndefault void addSourceFile(String className, CharSequence content) {\r\n    addSourceFile(className, appendable -> appendable.append(content));\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#SOURCE source file} with content from the\n\t * given {@link CharSequence}.\n\t * @param className the class name that should be used to determine the path\n\t * of the file\n\t * @param content the contents of the file\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addSourceFile(String,ThrowingConsumer<Appendable>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#SOURCE source file} with content written to\r\n * an {@link Appendable} passed to the given {@link ThrowingConsumer}.\r\n * @param className the class name that should be used to determine the path\r\n * of the file\r\n * @param content a {@link ThrowingConsumer} that accepts an\r\n * {@link Appendable} which will receive the file contents\r\n */\r\ndefault void addSourceFile(String className, ThrowingConsumer<Appendable> content) {\r\n    addFile(Kind.SOURCE, getClassNamePath(className), content);\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#SOURCE source file} with content written to\n\t * an {@link Appendable} passed to the given {@link ThrowingConsumer}.\n\t * @param className the class name that should be used to determine the path\n\t * of the file\n\t * @param content a {@link ThrowingConsumer} that accepts an\n\t * {@link Appendable} which will receive the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addSourceFile(String,InputStreamSource)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#SOURCE source file} with content from the\r\n * given {@link InputStreamSource}.\r\n * @param className the class name that should be used to determine the path\r\n * of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addSourceFile(String className, InputStreamSource content) {\r\n    addFile(Kind.SOURCE, getClassNamePath(className), content);\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#SOURCE source file} with content from the\n\t * given {@link InputStreamSource}.\n\t * @param className the class name that should be used to determine the path\n\t * of the file\n\t * @param content an {@link InputStreamSource} that will provide an input\n\t * stream containing the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addResourceFile(String,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#RESOURCE resource file} with content from the\r\n * given {@link CharSequence}.\r\n * @param path the relative path of the file\r\n * @param content the contents of the file\r\n */\r\ndefault void addResourceFile(String path, CharSequence content) {\r\n    addResourceFile(path, appendable -> appendable.append(content));\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#RESOURCE resource file} with content from the\n\t * given {@link CharSequence}.\n\t * @param path the relative path of the file\n\t * @param content the contents of the file\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addResourceFile(String,ThrowingConsumer<Appendable>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#RESOURCE resource file} with content written\r\n * to an {@link Appendable} passed to the given {@link ThrowingConsumer}.\r\n * @param path the relative path of the file\r\n * @param content a {@link ThrowingConsumer} that accepts an\r\n * {@link Appendable} which will receive the file contents\r\n */\r\ndefault void addResourceFile(String path, ThrowingConsumer<Appendable> content) {\r\n    addFile(Kind.RESOURCE, path, content);\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#RESOURCE resource file} with content written\n\t * to an {@link Appendable} passed to the given {@link ThrowingConsumer}.\n\t * @param path the relative path of the file\n\t * @param content a {@link ThrowingConsumer} that accepts an\n\t * {@link Appendable} which will receive the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addResourceFile(String,InputStreamSource)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#RESOURCE resource file} with content from the\r\n * given {@link InputStreamSource}.\r\n * @param path the relative path of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addResourceFile(String path, InputStreamSource content) {\r\n    addFile(Kind.RESOURCE, path, content);\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#RESOURCE resource file} with content from the\n\t * given {@link InputStreamSource}.\n\t * @param path the relative path of the file\n\t * @param content an {@link InputStreamSource} that will provide an input\n\t * stream containing the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addClassFile(String,InputStreamSource)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated {@link Kind#CLASS class file} with content from the given\r\n * {@link InputStreamSource}.\r\n * @param path the relative path of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addClassFile(String path, InputStreamSource content) {\r\n    addFile(Kind.CLASS, path, content);\r\n}",
+    "comment": "\n\t * Add a generated {@link Kind#CLASS class file} with content from the given\n\t * {@link InputStreamSource}.\n\t * @param path the relative path of the file\n\t * @param content an {@link InputStreamSource} that will provide an input\n\t * stream containing the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addFile(Kind,String,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated file of the specified {@link Kind} with content from the\r\n * given {@link CharSequence}.\r\n * @param kind the kind of file being written\r\n * @param path the relative path of the file\r\n * @param content the contents of the file\r\n */\r\ndefault void addFile(Kind kind, String path, CharSequence content) {\r\n    addFile(kind, path, appendable -> appendable.append(content));\r\n}",
+    "comment": "\n\t * Add a generated file of the specified {@link Kind} with content from the\n\t * given {@link CharSequence}.\n\t * @param kind the kind of file being written\n\t * @param path the relative path of the file\n\t * @param content the contents of the file\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addFile(Kind,String,ThrowingConsumer<Appendable>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated file of the specified {@link Kind} with content written\r\n * to an {@link Appendable} passed to the given {@link ThrowingConsumer}.\r\n * @param kind the kind of file being written\r\n * @param path the relative path of the file\r\n * @param content a {@link ThrowingConsumer} that accepts an\r\n * {@link Appendable} which will receive the file contents\r\n */\r\ndefault void addFile(Kind kind, String path, ThrowingConsumer<Appendable> content) {\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    addFile(kind, path, new AppendableConsumerInputStreamSource(content));\r\n}",
+    "comment": "\n\t * Add a generated file of the specified {@link Kind} with content written\n\t * to an {@link Appendable} passed to the given {@link ThrowingConsumer}.\n\t * @param kind the kind of file being written\n\t * @param path the relative path of the file\n\t * @param content a {@link ThrowingConsumer} that accepts an\n\t * {@link Appendable} which will receive the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#addFile(Kind,String,InputStreamSource)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a generated file of the specified {@link Kind} with content from the\r\n * given {@link InputStreamSource}.\r\n * @param kind the kind of file being written\r\n * @param path the relative path of the file\r\n * @param content an {@link InputStreamSource} that will provide an input\r\n * stream containing the file contents\r\n */\r\ndefault void addFile(Kind kind, String path, InputStreamSource content) {\r\n    Assert.notNull(kind, \"'kind' must not be null\");\r\n    Assert.hasLength(path, \"'path' must not be empty\");\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    handleFile(kind, path, handler -> handler.create(content));\r\n}",
+    "comment": "\n\t * Add a generated file of the specified {@link Kind} with content from the\n\t * given {@link InputStreamSource}.\n\t * @param kind the kind of file being written\n\t * @param path the relative path of the file\n\t * @param content an {@link InputStreamSource} that will provide an input\n\t * stream containing the file contents\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#handleFile(Kind,String,ThrowingConsumer<FileHandler>)",
+    "entityType": "method",
+    "code": "/**\r\n * Handle a generated file of the specified {@link Kind} with the given\r\n * {@linkplain FileHandler handler}. The file handler lets you consume\r\n * the content of the already generated file, if any and provide a way\r\n * to override its content if necessary.\r\n * @param kind the kind of file\r\n * @param path the relative path of the file\r\n * @param handler a consumer of a {@link FileHandler} for the file\r\n * @since 6.2\r\n */\r\nvoid handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler);",
+    "comment": "\n\t * Handle a generated file of the specified {@link Kind} with the given\n\t * {@linkplain FileHandler handler}. The file handler lets you consume\n\t * the content of the already generated file, if any and provide a way\n\t * to override its content if necessary.\n\t * @param kind the kind of file\n\t * @param path the relative path of the file\n\t * @param handler a consumer of a {@link FileHandler} for the file\n\t * @since 6.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#getClassNamePath(String)",
+    "entityType": "method",
+    "code": "private static String getClassNamePath(String className) {\r\n    Assert.hasLength(className, \"'className' must not be empty\");\r\n    validatePackage(ClassUtils.getPackageName(className), className);\r\n    Assert.isTrue(isJavaIdentifier(className), \"'className' must be a valid identifier, got '\" + className + \"'\");\r\n    return ClassUtils.convertClassNameToResourcePath(className) + \".java\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#validatePackage(String,String)",
+    "entityType": "method",
+    "code": "private static void validatePackage(String packageName, String className) {\r\n    if (!StringUtils.hasLength(packageName)) {\r\n        throw new IllegalArgumentException(\"Could not add '\" + className + \"', \" + \"processing classes in the default package is not supported. \" + \"Did you forget to add a package statement?\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFiles#isJavaIdentifier(String)",
+    "entityType": "method",
+    "code": "private static boolean isJavaIdentifier(String className) {\r\n    char[] chars = className.toCharArray();\r\n    for (int i = 0; i < chars.length; i++) {\r\n        if (i == 0 && !Character.isJavaIdentifierStart(chars[i])) {\r\n            return false;\r\n        }\r\n        if (i > 0 && chars[i] != '.' && !Character.isJavaIdentifierPart(chars[i])) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.FileHandler",
+    "entityType": "class",
+    "code": "private final boolean exists;\nprivate final Supplier<InputStreamSource> existingContent;\nprotected FileHandler(boolean exists, Supplier<InputStreamSource> existingContent) {\r\n    this.exists = exists;\r\n    this.existingContent = existingContent;\r\n}\n/**\r\n * Specify whether the file already exists.\r\n * @return {@code true} if the file already exists\r\n */\r\npublic boolean exists() {\r\n    return this.exists;\r\n}\n/**\r\n * Return an {@link InputStreamSource} for the content of the file or\r\n * {@code null} if the file does not exist.\r\n */\r\n@Nullable\r\npublic InputStreamSource getContent() {\r\n    return (exists() ? this.existingContent.get() : null);\r\n}\n/**\r\n * Create a file with the given {@linkplain InputStreamSource content}.\r\n * @throws IllegalStateException if the file already exists\r\n */\r\npublic void create(InputStreamSource content) {\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    if (exists()) {\r\n        throw new IllegalStateException(\"%s already exists\".formatted(this));\r\n    }\r\n    copy(content, false);\r\n}\n/**\r\n * Override the content of the file handled by this instance using the\r\n * given {@linkplain InputStreamSource content}. If the file does not\r\n * exist, it is created.\r\n */\r\npublic void override(InputStreamSource content) {\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    copy(content, true);\r\n}\nprotected abstract void copy(InputStreamSource content, boolean override);",
+    "comment": "\n\t * Provide access to a particular file and offer convenient methods to retrieve,\n\t * save, or override its content.\n\t * @since 6.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.FileHandler#exists()",
+    "entityType": "method",
+    "code": "/**\r\n * Specify whether the file already exists.\r\n * @return {@code true} if the file already exists\r\n */\r\npublic boolean exists() {\r\n    return this.exists;\r\n}",
+    "comment": "\n\t\t * Specify whether the file already exists.\n\t\t * @return {@code true} if the file already exists\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.FileHandler#getContent()",
+    "entityType": "method",
+    "code": "/**\r\n * Return an {@link InputStreamSource} for the content of the file or\r\n * {@code null} if the file does not exist.\r\n */\r\n@Nullable\r\npublic InputStreamSource getContent() {\r\n    return (exists() ? this.existingContent.get() : null);\r\n}",
+    "comment": "\n\t\t * Return an {@link InputStreamSource} for the content of the file or\n\t\t * {@code null} if the file does not exist.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.FileHandler#create(InputStreamSource)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a file with the given {@linkplain InputStreamSource content}.\r\n * @throws IllegalStateException if the file already exists\r\n */\r\npublic void create(InputStreamSource content) {\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    if (exists()) {\r\n        throw new IllegalStateException(\"%s already exists\".formatted(this));\r\n    }\r\n    copy(content, false);\r\n}",
+    "comment": "\n\t\t * Create a file with the given {@linkplain InputStreamSource content}.\n\t\t * @throws IllegalStateException if the file already exists\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.FileHandler#override(InputStreamSource)",
+    "entityType": "method",
+    "code": "/**\r\n * Override the content of the file handled by this instance using the\r\n * given {@linkplain InputStreamSource content}. If the file does not\r\n * exist, it is created.\r\n */\r\npublic void override(InputStreamSource content) {\r\n    Assert.notNull(content, \"'content' must not be null\");\r\n    copy(content, true);\r\n}",
+    "comment": "\n\t\t * Override the content of the file handled by this instance using the\n\t\t * given {@linkplain InputStreamSource content}. If the file does not\n\t\t * exist, it is created.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.FileHandler#copy(InputStreamSource,boolean)",
+    "entityType": "method",
+    "code": "protected abstract void copy(InputStreamSource content, boolean override);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadataTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid standardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(AnnotatedComponent.class);\r\n    doTestAnnotationInfo(metadata);\r\n    doTestMethodAnnotationInfo(metadata);\r\n}\n@Test\r\nvoid asmAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(AnnotatedComponent.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    doTestAnnotationInfo(metadata);\r\n    doTestMethodAnnotationInfo(metadata);\r\n}\n@Test\r\nvoid standardAnnotationMetadataForSubclass() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(AnnotatedComponentSubClass.class);\r\n    doTestSubClassAnnotationInfo(metadata, false);\r\n}\n@Test\r\nvoid asmAnnotationMetadataForSubclass() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(AnnotatedComponentSubClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    doTestSubClassAnnotationInfo(metadata, true);\r\n}\nprivate void doTestSubClassAnnotationInfo(AnnotationMetadata metadata, boolean asm) {\r\n    assertThat(metadata.getClassName()).isEqualTo(AnnotatedComponentSubClass.class.getName());\r\n    assertThat(metadata.isInterface()).isFalse();\r\n    assertThat(metadata.isAnnotation()).isFalse();\r\n    assertThat(metadata.isAbstract()).isFalse();\r\n    assertThat(metadata.isConcrete()).isTrue();\r\n    assertThat(metadata.hasSuperClass()).isTrue();\r\n    assertThat(metadata.getSuperClassName()).isEqualTo(AnnotatedComponent.class.getName());\r\n    assertThat(metadata.getInterfaceNames()).isEmpty();\r\n    assertThat(metadata.isAnnotated(Component.class.getName())).isFalse();\r\n    assertThat(metadata.isAnnotated(Scope.class.getName())).isFalse();\r\n    assertThat(metadata.isAnnotated(SpecialAttr.class.getName())).isFalse();\r\n    if (asm) {\r\n        assertThat(metadata.isAnnotated(NamedComposedAnnotation.class.getName())).isFalse();\r\n        assertThat(metadata.hasAnnotation(NamedComposedAnnotation.class.getName())).isFalse();\r\n        assertThat(metadata.getAnnotationTypes()).isEmpty();\r\n    } else {\r\n        assertThat(metadata.isAnnotated(NamedComposedAnnotation.class.getName())).isTrue();\r\n        assertThat(metadata.hasAnnotation(NamedComposedAnnotation.class.getName())).isTrue();\r\n        assertThat(metadata.getAnnotationTypes()).containsExactly(NamedComposedAnnotation.class.getName());\r\n    }\r\n    assertThat(metadata.hasAnnotation(Component.class.getName())).isFalse();\r\n    assertThat(metadata.hasAnnotation(Scope.class.getName())).isFalse();\r\n    assertThat(metadata.hasAnnotation(SpecialAttr.class.getName())).isFalse();\r\n    assertThat(metadata.hasMetaAnnotation(Component.class.getName())).isFalse();\r\n    assertThat(metadata.hasMetaAnnotation(MetaAnnotation.class.getName())).isFalse();\r\n    assertThat(metadata.getAnnotationAttributes(Component.class.getName())).isNull();\r\n    assertThat(metadata.getAnnotationAttributes(MetaAnnotation.class.getName(), false)).isNull();\r\n    assertThat(metadata.getAnnotationAttributes(MetaAnnotation.class.getName(), true)).isNull();\r\n    assertThat(metadata.getAnnotatedMethods(DirectAnnotation.class.getName())).isEmpty();\r\n    assertThat(metadata.isAnnotated(IsAnnotatedAnnotation.class.getName())).isFalse();\r\n    assertThat(metadata.getAllAnnotationAttributes(DirectAnnotation.class.getName())).isNull();\r\n}\n@Test\r\nvoid standardAnnotationMetadataForInterface() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(AnnotationMetadata.class);\r\n    doTestMetadataForInterfaceClass(metadata);\r\n}\n@Test\r\nvoid asmAnnotationMetadataForInterface() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(AnnotationMetadata.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    doTestMetadataForInterfaceClass(metadata);\r\n}\nprivate void doTestMetadataForInterfaceClass(AnnotationMetadata metadata) {\r\n    assertThat(metadata.getClassName()).isEqualTo(AnnotationMetadata.class.getName());\r\n    assertThat(metadata.isInterface()).isTrue();\r\n    assertThat(metadata.isAnnotation()).isFalse();\r\n    assertThat(metadata.isAbstract()).isTrue();\r\n    assertThat(metadata.isConcrete()).isFalse();\r\n    assertThat(metadata.hasSuperClass()).isFalse();\r\n    assertThat(metadata.getSuperClassName()).isNull();\r\n    assertThat(metadata.getInterfaceNames()).hasSize(2);\r\n    assertThat(metadata.getInterfaceNames()[0]).isEqualTo(ClassMetadata.class.getName());\r\n    assertThat(metadata.getInterfaceNames()[1]).isEqualTo(AnnotatedTypeMetadata.class.getName());\r\n    assertThat(metadata.getAnnotationTypes()).isEmpty();\r\n}\n@Test\r\nvoid standardAnnotationMetadataForAnnotation() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(Component.class);\r\n    doTestMetadataForAnnotationClass(metadata);\r\n}\n@Test\r\nvoid asmAnnotationMetadataForAnnotation() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(Component.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    doTestMetadataForAnnotationClass(metadata);\r\n}\nprivate void doTestMetadataForAnnotationClass(AnnotationMetadata metadata) {\r\n    assertThat(metadata.getClassName()).isEqualTo(Component.class.getName());\r\n    assertThat(metadata.isInterface()).isTrue();\r\n    assertThat(metadata.isAnnotation()).isTrue();\r\n    assertThat(metadata.isAbstract()).isTrue();\r\n    assertThat(metadata.isConcrete()).isFalse();\r\n    assertThat(metadata.hasSuperClass()).isFalse();\r\n    assertThat(metadata.getSuperClassName()).isNull();\r\n    assertThat(metadata.getInterfaceNames()).hasSize(1);\r\n    assertThat(metadata.getInterfaceNames()[0]).isEqualTo(Annotation.class.getName());\r\n    assertThat(metadata.isAnnotated(Documented.class.getName())).isFalse();\r\n    assertThat(metadata.isAnnotated(Scope.class.getName())).isFalse();\r\n    assertThat(metadata.isAnnotated(SpecialAttr.class.getName())).isFalse();\r\n    assertThat(metadata.hasAnnotation(Documented.class.getName())).isFalse();\r\n    assertThat(metadata.hasAnnotation(Scope.class.getName())).isFalse();\r\n    assertThat(metadata.hasAnnotation(SpecialAttr.class.getName())).isFalse();\r\n    assertThat(metadata.getAnnotationTypes()).hasSize(1);\r\n}\n/**\r\n * In order to preserve backward-compatibility, {@link StandardAnnotationMetadata}\r\n * defaults to return nested annotations and annotation arrays as actual\r\n * Annotation instances. It is recommended for compatibility with ASM-based\r\n * AnnotationMetadata implementations to set the 'nestedAnnotationsAsMap' flag to\r\n * 'true' as is done in the main test above.\r\n */\r\n@Test\r\nvoid standardAnnotationMetadata_nestedAnnotationsAsMap_false() {\r\n    @SuppressWarnings(\"deprecation\")\r\n    AnnotationMetadata metadata = new StandardAnnotationMetadata(AnnotatedComponent.class);\r\n    AnnotationAttributes specialAttrs = (AnnotationAttributes) metadata.getAnnotationAttributes(SpecialAttr.class.getName());\r\n    Annotation[] nestedAnnoArray = (Annotation[]) specialAttrs.get(\"nestedAnnoArray\");\r\n    assertThat(nestedAnnoArray[0]).isInstanceOf(NestedAnno.class);\r\n}\n@Test\r\nvoid metaAnnotationOverridesUsingStandardAnnotationMetadata() {\r\n    @SuppressWarnings(\"deprecation\")\r\n    AnnotationMetadata metadata = new StandardAnnotationMetadata(ComposedConfigurationWithAttributeOverridesClass.class);\r\n    assertMetaAnnotationOverrides(metadata);\r\n}\n@Test\r\nvoid metaAnnotationOverridesUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(ComposedConfigurationWithAttributeOverridesClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertMetaAnnotationOverrides(metadata);\r\n}\nprivate void assertMetaAnnotationOverrides(AnnotationMetadata metadata) {\r\n    AnnotationAttributes attributes = (AnnotationAttributes) metadata.getAnnotationAttributes(TestComponentScan.class.getName(), false);\r\n    assertThat(attributes.getStringArray(\"value\")).containsExactly(\"org.example.componentscan\");\r\n    assertThat(attributes.getStringArray(\"basePackages\")).containsExactly(\"org.example.componentscan\");\r\n    assertThat(attributes.getClassArray(\"basePackageClasses\")).isEmpty();\r\n}\n// SPR-11649\r\n@Test\r\nvoid multipleAnnotationsWithIdenticalAttributeNamesUsingStandardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(NamedAnnotationsClass.class);\r\n    assertMultipleAnnotationsWithIdenticalAttributeNames(metadata);\r\n}\n// SPR-11649\r\n@Test\r\nvoid multipleAnnotationsWithIdenticalAttributeNamesUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(NamedAnnotationsClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertMultipleAnnotationsWithIdenticalAttributeNames(metadata);\r\n}\n// SPR-11649\r\n@Test\r\nvoid composedAnnotationWithMetaAnnotationsWithIdenticalAttributeNamesUsingStandardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(NamedComposedAnnotationClass.class);\r\n    assertMultipleAnnotationsWithIdenticalAttributeNames(metadata);\r\n}\n// SPR-11649\r\n@Test\r\nvoid composedAnnotationWithMetaAnnotationsWithIdenticalAttributeNamesUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(NamedComposedAnnotationClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertMultipleAnnotationsWithIdenticalAttributeNames(metadata);\r\n}\n// gh-31041\r\n@Test\r\nvoid multipleComposedRepeatableAnnotationsUsingStandardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(MultipleComposedRepeatableAnnotationsClass.class);\r\n    assertRepeatableAnnotations(metadata);\r\n}\n// gh-31041\r\n@Test\r\nvoid multipleComposedRepeatableAnnotationsUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(MultipleComposedRepeatableAnnotationsClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertRepeatableAnnotations(metadata);\r\n}\n// gh-31074\r\n@Test\r\nvoid multipleComposedRepeatableAnnotationsSortedByReversedMetaDistanceUsingStandardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(MultipleComposedRepeatableAnnotationsClass.class);\r\n    assertRepeatableAnnotationsSortedByReversedMetaDistance(metadata);\r\n}\n// gh-31074\r\n@Test\r\nvoid multipleComposedRepeatableAnnotationsSortedByReversedMetaDistanceUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(MultipleComposedRepeatableAnnotationsClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertRepeatableAnnotationsSortedByReversedMetaDistance(metadata);\r\n}\n// gh-31041\r\n@Test\r\nvoid multipleRepeatableAnnotationsInContainersUsingStandardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(MultipleRepeatableAnnotationsInContainersClass.class);\r\n    assertRepeatableAnnotations(metadata);\r\n}\n// gh-31041\r\n@Test\r\nvoid multipleRepeatableAnnotationsInContainersUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(MultipleRepeatableAnnotationsInContainersClass.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertRepeatableAnnotations(metadata);\r\n}\n/**\r\n * Tests {@code AnnotatedElementUtils#getMergedRepeatableAnnotations()} variants to ensure that\r\n * {@link AnnotationMetadata#getMergedRepeatableAnnotationAttributes(Class, Class, boolean)}\r\n * behaves the same.\r\n */\r\n// gh-31041\r\n@Test\r\nvoid multipleComposedRepeatableAnnotationsUsingAnnotatedElementUtils() {\r\n    Class<?> element = MultipleComposedRepeatableAnnotationsClass.class;\r\n    Set<TestComponentScan> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(element, TestComponentScan.class);\r\n    assertRepeatableAnnotations(annotations);\r\n    annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(element, TestComponentScan.class, TestComponentScans.class);\r\n    assertRepeatableAnnotations(annotations);\r\n}\n/**\r\n * Tests {@code AnnotatedElementUtils#getMergedRepeatableAnnotations()} variants to ensure that\r\n * {@link AnnotationMetadata#getMergedRepeatableAnnotationAttributes(Class, Class, boolean)}\r\n * behaves the same.\r\n */\r\n// gh-31041\r\n@Test\r\nvoid multipleRepeatableAnnotationsInContainersUsingAnnotatedElementUtils() {\r\n    Class<?> element = MultipleRepeatableAnnotationsInContainersClass.class;\r\n    Set<TestComponentScan> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(element, TestComponentScan.class);\r\n    assertRepeatableAnnotations(annotations);\r\n    annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(element, TestComponentScan.class, TestComponentScans.class);\r\n    assertRepeatableAnnotations(annotations);\r\n}\nprivate static void assertRepeatableAnnotations(AnnotationMetadata metadata) {\r\n    Set<AnnotationAttributes> attributesSet = metadata.getMergedRepeatableAnnotationAttributes(TestComponentScan.class, TestComponentScans.class, true);\r\n    assertThat(attributesSet.stream().map(attributes -> attributes.getStringArray(\"value\")).flatMap(Arrays::stream)).containsExactly(\"A\", \"B\", \"C\", \"D\");\r\n    assertThat(attributesSet.stream().map(attributes -> attributes.getStringArray(\"basePackages\")).flatMap(Arrays::stream)).containsExactly(\"A\", \"B\", \"C\", \"D\");\r\n    assertThat(attributesSet.stream().map(attributes -> attributes.getStringArray(\"basePackageClasses\")).flatMap(Arrays::stream)).containsExactly(\"java.lang.String\", \"java.lang.Integer\");\r\n}\nprivate static void assertRepeatableAnnotationsSortedByReversedMetaDistance(AnnotationMetadata metadata) {\r\n    // Note: although the real @ComponentScan annotation is not looked up using\r\n    // \"sortByReversedMetaDistance\" semantics, we can still use @TestComponentScan\r\n    // to verify the expected behavior.\r\n    Set<AnnotationAttributes> attributesSet = metadata.getMergedRepeatableAnnotationAttributes(TestComponentScan.class, TestComponentScans.class, false, true);\r\n    assertThat(attributesSet.stream().map(attributes -> attributes.getStringArray(\"value\")).flatMap(Arrays::stream)).containsExactly(\"C\", \"D\", \"A\", \"B\");\r\n    assertThat(attributesSet.stream().map(attributes -> attributes.getStringArray(\"basePackages\")).flatMap(Arrays::stream)).containsExactly(\"C\", \"D\", \"A\", \"B\");\r\n}\nprivate static void assertRepeatableAnnotations(Set<TestComponentScan> annotations) {\r\n    assertThat(annotations.stream().map(TestComponentScan::value).flatMap(Arrays::stream)).containsExactly(\"A\", \"B\", \"C\", \"D\");\r\n    assertThat(annotations.stream().map(TestComponentScan::basePackages).flatMap(Arrays::stream)).containsExactly(\"A\", \"B\", \"C\", \"D\");\r\n}\n@Test\r\nvoid inheritedAnnotationWithMetaAnnotationsWithIdenticalAttributeNamesUsingStandardAnnotationMetadata() {\r\n    AnnotationMetadata metadata = AnnotationMetadata.introspect(NamedComposedAnnotationExtended.class);\r\n    assertThat(metadata.hasAnnotation(NamedComposedAnnotation.class.getName())).isTrue();\r\n}\n@Test\r\nvoid inheritedAnnotationWithMetaAnnotationsWithIdenticalAttributeNamesUsingSimpleAnnotationMetadata() throws Exception {\r\n    MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();\r\n    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(NamedComposedAnnotationExtended.class.getName());\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    assertThat(metadata.hasAnnotation(NamedComposedAnnotation.class.getName())).isFalse();\r\n}\nprivate void assertMultipleAnnotationsWithIdenticalAttributeNames(AnnotationMetadata metadata) {\r\n    AnnotationAttributes attributes1 = (AnnotationAttributes) metadata.getAnnotationAttributes(NamedAnnotation1.class.getName(), false);\r\n    String name1 = attributes1.getString(\"name\");\r\n    assertThat(name1).as(\"name of NamedAnnotation1\").isEqualTo(\"name 1\");\r\n    AnnotationAttributes attributes2 = (AnnotationAttributes) metadata.getAnnotationAttributes(NamedAnnotation2.class.getName(), false);\r\n    String name2 = attributes2.getString(\"name\");\r\n    assertThat(name2).as(\"name of NamedAnnotation2\").isEqualTo(\"name 2\");\r\n    AnnotationAttributes attributes3 = (AnnotationAttributes) metadata.getAnnotationAttributes(NamedAnnotation3.class.getName(), false);\r\n    String name3 = attributes3.getString(\"name\");\r\n    assertThat(name3).as(\"name of NamedAnnotation3\").isEqualTo(\"name 3\");\r\n}\nprivate void doTestAnnotationInfo(AnnotationMetadata metadata) {\r\n    assertThat(metadata.getClassName()).isEqualTo(AnnotatedComponent.class.getName());\r\n    assertThat(metadata.isInterface()).isFalse();\r\n    assertThat(metadata.isAnnotation()).isFalse();\r\n    assertThat(metadata.isAbstract()).isFalse();\r\n    assertThat(metadata.isConcrete()).isTrue();\r\n    assertThat(metadata.hasSuperClass()).isTrue();\r\n    assertThat(metadata.getSuperClassName()).isEqualTo(Object.class.getName());\r\n    assertThat(metadata.getInterfaceNames()).hasSize(1);\r\n    assertThat(metadata.getInterfaceNames()[0]).isEqualTo(Serializable.class.getName());\r\n    assertThat(metadata.isAnnotated(Component.class.getName())).isTrue();\r\n    assertThat(metadata.isAnnotated(NamedComposedAnnotation.class.getName())).isTrue();\r\n    assertThat(metadata.hasAnnotation(Component.class.getName())).isTrue();\r\n    assertThat(metadata.hasAnnotation(Scope.class.getName())).isTrue();\r\n    assertThat(metadata.hasAnnotation(SpecialAttr.class.getName())).isTrue();\r\n    assertThat(metadata.hasAnnotation(NamedComposedAnnotation.class.getName())).isTrue();\r\n    assertThat(metadata.getAnnotationTypes()).containsExactlyInAnyOrder(Component.class.getName(), Scope.class.getName(), SpecialAttr.class.getName(), DirectAnnotation.class.getName(), MetaMetaAnnotation.class.getName(), EnumSubclasses.class.getName(), NamedComposedAnnotation.class.getName());\r\n    AnnotationAttributes compAttrs = (AnnotationAttributes) metadata.getAnnotationAttributes(Component.class.getName());\r\n    assertThat(compAttrs).hasSize(1);\r\n    assertThat(compAttrs.getString(\"value\")).isEqualTo(\"myName\");\r\n    AnnotationAttributes scopeAttrs = (AnnotationAttributes) metadata.getAnnotationAttributes(Scope.class.getName());\r\n    assertThat(scopeAttrs).hasSize(1);\r\n    assertThat(scopeAttrs.getString(\"value\")).isEqualTo(\"myScope\");\r\n    Set<MethodMetadata> methods = metadata.getAnnotatedMethods(DirectAnnotation.class.getName());\r\n    MethodMetadata method = methods.iterator().next();\r\n    assertThat(method.getAnnotationAttributes(DirectAnnotation.class.getName()).get(\"value\")).isEqualTo(\"direct\");\r\n    assertThat(method.getAnnotationAttributes(DirectAnnotation.class.getName()).get(\"myValue\")).isEqualTo(\"direct\");\r\n    List<Object> allMeta = method.getAllAnnotationAttributes(DirectAnnotation.class.getName()).get(\"value\");\r\n    assertThat(new HashSet<>(allMeta)).isEqualTo(new HashSet<>(Arrays.asList(\"direct\", \"meta\")));\r\n    allMeta = method.getAllAnnotationAttributes(DirectAnnotation.class.getName()).get(\"additional\");\r\n    assertThat(new HashSet<>(allMeta)).isEqualTo(new HashSet<>(List.of(\"direct\")));\r\n    assertThat(metadata.isAnnotated(IsAnnotatedAnnotation.class.getName())).isTrue();\r\n    {\r\n        // perform tests with classValuesAsString = false (the default)\r\n        AnnotationAttributes specialAttrs = (AnnotationAttributes) metadata.getAnnotationAttributes(SpecialAttr.class.getName());\r\n        assertThat(specialAttrs).hasSize(6);\r\n        assertThat(String.class.isAssignableFrom(specialAttrs.getClass(\"clazz\"))).isTrue();\r\n        assertThat(specialAttrs.getEnum(\"state\").equals(Thread.State.NEW)).isTrue();\r\n        AnnotationAttributes nestedAnno = specialAttrs.getAnnotation(\"nestedAnno\");\r\n        assertThat(nestedAnno.getString(\"value\")).isEqualTo(\"na\");\r\n        assertThat(nestedAnno.getEnum(\"anEnum\").equals(SomeEnum.LABEL1)).isTrue();\r\n        assertThat((Class<?>[]) nestedAnno.get(\"classArray\")).isEqualTo(new Class<?>[] { String.class });\r\n        AnnotationAttributes[] nestedAnnoArray = specialAttrs.getAnnotationArray(\"nestedAnnoArray\");\r\n        assertThat(nestedAnnoArray).hasSize(2);\r\n        assertThat(nestedAnnoArray[0].getString(\"value\")).isEqualTo(\"default\");\r\n        assertThat(nestedAnnoArray[0].getEnum(\"anEnum\").equals(SomeEnum.DEFAULT)).isTrue();\r\n        assertThat((Class<?>[]) nestedAnnoArray[0].get(\"classArray\")).isEqualTo(new Class<?>[] { Void.class });\r\n        assertThat(nestedAnnoArray[1].getString(\"value\")).isEqualTo(\"na1\");\r\n        assertThat(nestedAnnoArray[1].getEnum(\"anEnum\").equals(SomeEnum.LABEL2)).isTrue();\r\n        assertThat((Class<?>[]) nestedAnnoArray[1].get(\"classArray\")).isEqualTo(new Class<?>[] { Number.class });\r\n        assertThat(nestedAnnoArray[1].getClassArray(\"classArray\")).isEqualTo(new Class<?>[] { Number.class });\r\n        AnnotationAttributes optional = specialAttrs.getAnnotation(\"optional\");\r\n        assertThat(optional.getString(\"value\")).isEqualTo(\"optional\");\r\n        assertThat(optional.getEnum(\"anEnum\").equals(SomeEnum.DEFAULT)).isTrue();\r\n        assertThat((Class<?>[]) optional.get(\"classArray\")).isEqualTo(new Class<?>[] { Void.class });\r\n        assertThat(optional.getClassArray(\"classArray\")).isEqualTo(new Class<?>[] { Void.class });\r\n        AnnotationAttributes[] optionalArray = specialAttrs.getAnnotationArray(\"optionalArray\");\r\n        assertThat(optionalArray).hasSize(1);\r\n        assertThat(optionalArray[0].getString(\"value\")).isEqualTo(\"optional\");\r\n        assertThat(optionalArray[0].getEnum(\"anEnum\").equals(SomeEnum.DEFAULT)).isTrue();\r\n        assertThat((Class<?>[]) optionalArray[0].get(\"classArray\")).isEqualTo(new Class<?>[] { Void.class });\r\n        assertThat(optionalArray[0].getClassArray(\"classArray\")).isEqualTo(new Class<?>[] { Void.class });\r\n        assertThat(metadata.getAnnotationAttributes(DirectAnnotation.class.getName()).get(\"value\")).isEqualTo(\"direct\");\r\n        allMeta = metadata.getAllAnnotationAttributes(DirectAnnotation.class.getName()).get(\"value\");\r\n        assertThat(new HashSet<>(allMeta)).isEqualTo(new HashSet<>(Arrays.asList(\"direct\", \"meta\")));\r\n        allMeta = metadata.getAllAnnotationAttributes(DirectAnnotation.class.getName()).get(\"additional\");\r\n        assertThat(new HashSet<>(allMeta)).isEqualTo(new HashSet<>(Arrays.asList(\"direct\", \"\")));\r\n        assertThat(metadata.getAnnotationAttributes(DirectAnnotation.class.getName()).get(\"additional\")).isEqualTo(\"\");\r\n        assertThat(((String[]) metadata.getAnnotationAttributes(DirectAnnotation.class.getName()).get(\"additionalArray\"))).isEmpty();\r\n    }\r\n    {\r\n        // perform tests with classValuesAsString = true\r\n        AnnotationAttributes specialAttrs = (AnnotationAttributes) metadata.getAnnotationAttributes(SpecialAttr.class.getName(), true);\r\n        assertThat(specialAttrs).hasSize(6);\r\n        assertThat(specialAttrs.get(\"clazz\")).isEqualTo(String.class.getName());\r\n        assertThat(specialAttrs.getString(\"clazz\")).isEqualTo(String.class.getName());\r\n        AnnotationAttributes nestedAnno = specialAttrs.getAnnotation(\"nestedAnno\");\r\n        assertThat(nestedAnno.getStringArray(\"classArray\")).isEqualTo(new String[] { String.class.getName() });\r\n        assertThat(nestedAnno.getStringArray(\"classArray\")).isEqualTo(new String[] { String.class.getName() });\r\n        AnnotationAttributes[] nestedAnnoArray = specialAttrs.getAnnotationArray(\"nestedAnnoArray\");\r\n        assertThat((String[]) nestedAnnoArray[0].get(\"classArray\")).isEqualTo(new String[] { Void.class.getName() });\r\n        assertThat(nestedAnnoArray[0].getStringArray(\"classArray\")).isEqualTo(new String[] { Void.class.getName() });\r\n        assertThat((String[]) nestedAnnoArray[1].get(\"classArray\")).isEqualTo(new String[] { Number.class.getName() });\r\n        assertThat(nestedAnnoArray[1].getStringArray(\"classArray\")).isEqualTo(new String[] { Number.class.getName() });\r\n        AnnotationAttributes optional = specialAttrs.getAnnotation(\"optional\");\r\n        assertThat((String[]) optional.get(\"classArray\")).isEqualTo(new String[] { Void.class.getName() });\r\n        assertThat(optional.getStringArray(\"classArray\")).isEqualTo(new String[] { Void.class.getName() });\r\n        AnnotationAttributes[] optionalArray = specialAttrs.getAnnotationArray(\"optionalArray\");\r\n        assertThat((String[]) optionalArray[0].get(\"classArray\")).isEqualTo(new String[] { Void.class.getName() });\r\n        assertThat(optionalArray[0].getStringArray(\"classArray\")).isEqualTo(new String[] { Void.class.getName() });\r\n        assertThat(metadata.getAnnotationAttributes(DirectAnnotation.class.getName()).get(\"value\")).isEqualTo(\"direct\");\r\n        allMeta = metadata.getAllAnnotationAttributes(DirectAnnotation.class.getName()).get(\"value\");\r\n        assertThat(new HashSet<>(allMeta)).isEqualTo(new HashSet<>(Arrays.asList(\"direct\", \"meta\")));\r\n    }\r\n}\nprivate void doTestMethodAnnotationInfo(AnnotationMetadata classMetadata) {\r\n    assertThat(classMetadata.getDeclaredMethods()).hasSize(3);\r\n    Set<MethodMetadata> methods = classMetadata.getAnnotatedMethods(TestAutowired.class.getName());\r\n    assertThat(methods).hasSize(1);\r\n    for (MethodMetadata methodMetadata : methods) {\r\n        assertThat(methodMetadata.isAnnotated(TestAutowired.class.getName())).isTrue();\r\n    }\r\n}\n// -------------------------------------------------------------------------\r\npublic enum SomeEnum {\r\n\r\n    LABEL1, LABEL2, DEFAULT\r\n}\n@Target({})\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface NestedAnno {\r\n\r\n    String value() default \"default\";\r\n\r\n    SomeEnum anEnum() default SomeEnum.DEFAULT;\r\n\r\n    Class<?>[] classArray() default Void.class;\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface SpecialAttr {\r\n\r\n    Class<?> clazz();\r\n\r\n    Thread.State state();\r\n\r\n    NestedAnno nestedAnno();\r\n\r\n    NestedAnno[] nestedAnnoArray();\r\n\r\n    NestedAnno optional() default @NestedAnno(value = \"optional\", anEnum = SomeEnum.DEFAULT, classArray = Void.class);\r\n\r\n    NestedAnno[] optionalArray() default { @NestedAnno(value = \"optional\", anEnum = SomeEnum.DEFAULT, classArray = Void.class) };\r\n}\n@Target({ ElementType.TYPE, ElementType.METHOD })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface DirectAnnotation {\r\n\r\n    @AliasFor(\"myValue\")\r\n    String value() default \"\";\r\n\r\n    @AliasFor(\"value\")\r\n    String myValue() default \"\";\r\n\r\n    String additional() default \"direct\";\r\n\r\n    String[] additionalArray() default \"direct\";\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface IsAnnotatedAnnotation {\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@DirectAnnotation(\"meta\")\r\n@IsAnnotatedAnnotation\r\npublic @interface MetaAnnotation {\r\n\r\n    String additional() default \"meta\";\r\n}\n@Target({ ElementType.TYPE, ElementType.METHOD })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@MetaAnnotation\r\npublic @interface MetaMetaAnnotation {\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface EnumSubclasses {\r\n\r\n    SubclassEnum[] value();\r\n}\n// SPR-10914\r\npublic enum SubclassEnum {\r\n\r\n    FOO, BAR\r\n}\n@Component(\"myName\")\r\n@Scope(\"myScope\")\r\n@SpecialAttr(clazz = String.class, state = Thread.State.NEW, nestedAnno = @NestedAnno(value = \"na\", anEnum = SomeEnum.LABEL1, classArray = { String.class }), nestedAnnoArray = { @NestedAnno, @NestedAnno(value = \"na1\", anEnum = SomeEnum.LABEL2, classArray = { Number.class }) })\r\n@SuppressWarnings({ \"serial\", \"unused\" })\r\n@DirectAnnotation(value = \"direct\", additional = \"\", additionalArray = {})\r\n@MetaMetaAnnotation\r\n@EnumSubclasses({ SubclassEnum.FOO, SubclassEnum.BAR })\r\n@NamedComposedAnnotation\r\nprivate static class AnnotatedComponent implements Serializable {\r\n\r\n    public AnnotatedComponent() {\r\n    }\r\n\r\n    @TestAutowired\r\n    public void doWork(@TestQualifier(\"myColor\") java.awt.Color color) {\r\n    }\r\n\r\n    public void doSleep() {\r\n    }\r\n\r\n    @DirectAnnotation(\"direct\")\r\n    @MetaMetaAnnotation\r\n    public void meta() {\r\n    }\r\n}\n@SuppressWarnings(\"serial\")\r\nprivate static class AnnotatedComponentSubClass extends AnnotatedComponent {\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Component\r\npublic @interface TestConfiguration {\r\n\r\n    String value() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\npublic @interface TestComponentScans {\r\n\r\n    TestComponentScan[] value();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\n@Repeatable(TestComponentScans.class)\r\npublic @interface TestComponentScan {\r\n\r\n    @AliasFor(\"basePackages\")\r\n    String[] value() default {};\r\n\r\n    @AliasFor(\"value\")\r\n    String[] basePackages() default {};\r\n\r\n    Class<?>[] basePackageClasses() default {};\r\n}\n@TestConfiguration\r\n@TestComponentScan(basePackages = \"bogus\")\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\npublic @interface ComposedConfigurationWithAttributeOverrides {\r\n\r\n    // Do NOT use @AliasFor here until Spring 6.1\r\n    // @AliasFor(annotation = TestComponentScan.class)\r\n    String[] basePackages() default {};\r\n}\n@ComposedConfigurationWithAttributeOverrides(basePackages = \"org.example.componentscan\")\r\npublic static class ComposedConfigurationWithAttributeOverridesClass {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\n@TestComponentScan(\"C\")\r\npublic @interface ScanPackageC {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\n@TestComponentScan(\"D\")\r\npublic @interface ScanPackageD {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\n@TestComponentScans({ @TestComponentScan(\"C\"), @TestComponentScan(\"D\") })\r\npublic @interface ScanPackagesCandD {\r\n}\n@TestComponentScan(basePackages = \"A\", basePackageClasses = String.class)\r\n@ScanPackageC\r\n@ScanPackageD\r\n@TestComponentScan(basePackages = \"B\", basePackageClasses = Integer.class)\r\nstatic class MultipleComposedRepeatableAnnotationsClass {\r\n}\n@TestComponentScan(basePackages = \"A\", basePackageClasses = String.class)\r\n@ScanPackagesCandD\r\n@TestComponentScans(@TestComponentScan(basePackages = \"B\", basePackageClasses = Integer.class))\r\nstatic class MultipleRepeatableAnnotationsInContainersClass {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\npublic @interface NamedAnnotation1 {\r\n\r\n    String name() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\npublic @interface NamedAnnotation2 {\r\n\r\n    String name() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\npublic @interface NamedAnnotation3 {\r\n\r\n    String name() default \"\";\r\n}\n@NamedAnnotation1(name = \"name 1\")\r\n@NamedAnnotation2(name = \"name 2\")\r\n@NamedAnnotation3(name = \"name 3\")\r\npublic static class NamedAnnotationsClass {\r\n}\n@NamedAnnotation1(name = \"name 1\")\r\n@NamedAnnotation2(name = \"name 2\")\r\n@NamedAnnotation3(name = \"name 3\")\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.TYPE)\r\n@Inherited\r\npublic @interface NamedComposedAnnotation {\r\n}\n@NamedComposedAnnotation\r\npublic static class NamedComposedAnnotationClass {\r\n}\npublic static class NamedComposedAnnotationExtended extends NamedComposedAnnotationClass {\r\n}",
+    "comment": "\n * Unit tests demonstrating that the reflection-based {@link StandardAnnotationMetadata}\n * and ASM-based {@code SimpleAnnotationMetadata} produce <em>almost</em> identical output.\n *\n * @author Juergen Hoeller\n * @author Chris Beams\n * @author Phillip Webb\n * @author Sam Brannen\n * @see InheritedAnnotationsAnnotationMetadataTests\n "
+  }
+]

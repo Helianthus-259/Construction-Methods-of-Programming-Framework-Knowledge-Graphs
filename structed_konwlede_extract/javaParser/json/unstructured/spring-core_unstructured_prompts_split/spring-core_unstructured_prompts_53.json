@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.convert.support.EnumToStringConverter",
+    "entityType": "class",
+    "code": "public EnumToStringConverter(ConversionService conversionService) {\r\n    super(conversionService);\r\n}\n@Override\r\npublic String convert(Enum<?> source) {\r\n    return source.name();\r\n}",
+    "comment": "\n * Calls {@link Enum#name()} to convert a source Enum to a String.\n * This converter will not match enums with interfaces that can be converted.\n *\n * @author Keith Donald\n * @author Phillip Webb\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.EnumToStringConverter#convert(Enum<?>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String convert(Enum<?> source) {\r\n    return source.name();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.FallbackObjectToStringConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, String.class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Class<?> sourceClass = sourceType.getObjectType();\r\n    if (String.class == sourceClass) {\r\n        // no conversion required\r\n        return false;\r\n    }\r\n    return (CharSequence.class.isAssignableFrom(sourceClass) || StringWriter.class.isAssignableFrom(sourceClass) || ObjectToObjectConverter.hasConversionMethodOrConstructor(sourceClass, String.class));\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (source != null ? source.toString() : null);\r\n}",
+    "comment": "\n * Simply calls {@link Object#toString()} to convert any supported object\n * to a {@link String}.\n *\n * <p>Supports {@link CharSequence}, {@link StringWriter}, and any class\n * with a String constructor or one of the following static factory methods:\n * {@code valueOf(String)}, {@code of(String)}, {@code from(String)}.\n *\n * <p>Used by the {@link DefaultConversionService} as a fallback if there\n * are no other explicit to-String converters registered.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 3.0\n * @see ObjectToObjectConverter\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.FallbackObjectToStringConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, String.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.FallbackObjectToStringConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Class<?> sourceClass = sourceType.getObjectType();\r\n    if (String.class == sourceClass) {\r\n        // no conversion required\r\n        return false;\r\n    }\r\n    return (CharSequence.class.isAssignableFrom(sourceClass) || StringWriter.class.isAssignableFrom(sourceClass) || ObjectToObjectConverter.hasConversionMethodOrConstructor(sourceClass, String.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.FallbackObjectToStringConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (source != null ? source.toString() : null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService",
+    "entityType": "class",
+    "code": "/**\r\n * General NO-OP converter used when conversion is not required.\r\n */\r\nprivate static final GenericConverter NO_OP_CONVERTER = new NoOpConverter(\"NO_OP\");\n/**\r\n * Used as a cache entry when no converter is available.\r\n * This converter is never returned.\r\n */\r\nprivate static final GenericConverter NO_MATCH = new NoOpConverter(\"NO_MATCH\");\nprivate final Converters converters = new Converters();\nprivate final Map<ConverterCacheKey, GenericConverter> converterCache = new ConcurrentReferenceHashMap<>(64);\n// ConverterRegistry implementation\r\n@Override\r\npublic void addConverter(Converter<?, ?> converter) {\r\n    ResolvableType[] typeInfo = getRequiredTypeInfo(converter.getClass(), Converter.class);\r\n    if (typeInfo == null && converter instanceof DecoratingProxy decoratingProxy) {\r\n        typeInfo = getRequiredTypeInfo(decoratingProxy.getDecoratedClass(), Converter.class);\r\n    }\r\n    if (typeInfo == null) {\r\n        throw new IllegalArgumentException(\"Unable to determine source type <S> and target type <T> for your \" + \"Converter [\" + converter.getClass().getName() + \"]; does the class parameterize those types?\");\r\n    }\r\n    addConverter(new ConverterAdapter(converter, typeInfo[0], typeInfo[1]));\r\n}\n@Override\r\npublic <S, T> void addConverter(Class<S> sourceType, Class<T> targetType, Converter<? super S, ? extends T> converter) {\r\n    addConverter(new ConverterAdapter(converter, ResolvableType.forClass(sourceType), ResolvableType.forClass(targetType)));\r\n}\n@Override\r\npublic void addConverter(GenericConverter converter) {\r\n    this.converters.add(converter);\r\n    invalidateCache();\r\n}\n@Override\r\npublic void addConverterFactory(ConverterFactory<?, ?> factory) {\r\n    ResolvableType[] typeInfo = getRequiredTypeInfo(factory.getClass(), ConverterFactory.class);\r\n    if (typeInfo == null && factory instanceof DecoratingProxy decoratingProxy) {\r\n        typeInfo = getRequiredTypeInfo(decoratingProxy.getDecoratedClass(), ConverterFactory.class);\r\n    }\r\n    if (typeInfo == null) {\r\n        throw new IllegalArgumentException(\"Unable to determine source type <S> and target type <T> for your \" + \"ConverterFactory [\" + factory.getClass().getName() + \"]; does the class parameterize those types?\");\r\n    }\r\n    addConverter(new ConverterFactoryAdapter(factory, new ConvertiblePair(typeInfo[0].toClass(), typeInfo[1].toClass())));\r\n}\n@Override\r\npublic void removeConvertible(Class<?> sourceType, Class<?> targetType) {\r\n    this.converters.remove(sourceType, targetType);\r\n    invalidateCache();\r\n}\n// ConversionService implementation\r\n@Override\r\npublic boolean canConvert(@Nullable Class<?> sourceType, Class<?> targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return canConvert((sourceType != null ? TypeDescriptor.valueOf(sourceType) : null), TypeDescriptor.valueOf(targetType));\r\n}\n@Override\r\npublic boolean canConvert(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return (sourceType == null || getConverter(sourceType, targetType) != null);\r\n}\n/**\r\n * Return whether conversion between the source type and the target type can be bypassed.\r\n * <p>More precisely, this method will return true if objects of sourceType can be\r\n * converted to the target type by returning the source object unchanged.\r\n * @param sourceType context about the source type to convert from\r\n * (may be {@code null} if source is {@code null})\r\n * @param targetType context about the target type to convert to (required)\r\n * @return {@code true} if conversion can be bypassed; {@code false} otherwise\r\n * @throws IllegalArgumentException if targetType is {@code null}\r\n * @since 3.2\r\n */\r\npublic boolean canBypassConvert(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return (sourceType == null || getConverter(sourceType, targetType) == NO_OP_CONVERTER);\r\n}\n@SuppressWarnings(\"unchecked\")\r\n@Override\r\n@Nullable\r\npublic <T> T convert(@Nullable Object source, Class<T> targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return (T) convert(source, TypeDescriptor.forObject(source), TypeDescriptor.valueOf(targetType));\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, @Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    if (sourceType == null) {\r\n        Assert.isTrue(source == null, \"Source must be [null] if source type == [null]\");\r\n        return handleResult(null, targetType, convertNullSource(null, targetType));\r\n    }\r\n    if (source != null && !sourceType.getObjectType().isInstance(source)) {\r\n        throw new IllegalArgumentException(\"Source to convert from must be an instance of [\" + sourceType + \"]; instead it was a [\" + source.getClass().getName() + \"]\");\r\n    }\r\n    GenericConverter converter = getConverter(sourceType, targetType);\r\n    if (converter != null) {\r\n        Object result = ConversionUtils.invokeConverter(converter, source, sourceType, targetType);\r\n        return handleResult(sourceType, targetType, result);\r\n    }\r\n    return handleConverterNotFound(source, sourceType, targetType);\r\n}\n@Override\r\npublic String toString() {\r\n    return this.converters.toString();\r\n}\n// Protected template methods\r\n/**\r\n * Template method to convert a {@code null} source.\r\n * <p>The default implementation returns {@code null} or the Java 8\r\n * {@link java.util.Optional#empty()} instance if the target type is\r\n * {@code java.util.Optional}. Subclasses may override this to return\r\n * custom {@code null} objects for specific target types.\r\n * @param sourceType the source type to convert from\r\n * @param targetType the target type to convert to\r\n * @return the converted null object\r\n */\r\n@Nullable\r\nprotected Object convertNullSource(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (targetType.getObjectType() == Optional.class) {\r\n        return Optional.empty();\r\n    }\r\n    return null;\r\n}\n/**\r\n * Hook method to look up the converter for a given sourceType/targetType pair.\r\n * First queries this ConversionService's converter cache.\r\n * On a cache miss, then performs an exhaustive search for a matching converter.\r\n * If no converter matches, returns the default converter.\r\n * @param sourceType the source type to convert from\r\n * @param targetType the target type to convert to\r\n * @return the generic converter that will perform the conversion,\r\n * or {@code null} if no suitable converter was found\r\n * @see #getDefaultConverter(TypeDescriptor, TypeDescriptor)\r\n */\r\n@Nullable\r\nprotected GenericConverter getConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    ConverterCacheKey key = new ConverterCacheKey(sourceType, targetType);\r\n    GenericConverter converter = this.converterCache.get(key);\r\n    if (converter != null) {\r\n        return (converter != NO_MATCH ? converter : null);\r\n    }\r\n    converter = this.converters.find(sourceType, targetType);\r\n    if (converter == null) {\r\n        converter = getDefaultConverter(sourceType, targetType);\r\n    }\r\n    if (converter != null) {\r\n        this.converterCache.put(key, converter);\r\n        return converter;\r\n    }\r\n    this.converterCache.put(key, NO_MATCH);\r\n    return null;\r\n}\n/**\r\n * Return the default converter if no converter is found for the given sourceType/targetType pair.\r\n * <p>Returns a NO_OP Converter if the source type is assignable to the target type.\r\n * Returns {@code null} otherwise, indicating no suitable converter could be found.\r\n * @param sourceType the source type to convert from\r\n * @param targetType the target type to convert to\r\n * @return the default generic converter that will perform the conversion\r\n */\r\n@Nullable\r\nprotected GenericConverter getDefaultConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (sourceType.isAssignableTo(targetType) ? NO_OP_CONVERTER : null);\r\n}\n// Internal helpers\r\nprivate ResolvableType @Nullable [] getRequiredTypeInfo(Class<?> converterClass, Class<?> genericIfc) {\r\n    ResolvableType resolvableType = ResolvableType.forClass(converterClass).as(genericIfc);\r\n    ResolvableType[] generics = resolvableType.getGenerics();\r\n    if (generics.length < 2) {\r\n        return null;\r\n    }\r\n    Class<?> sourceType = generics[0].resolve();\r\n    Class<?> targetType = generics[1].resolve();\r\n    if (sourceType == null || targetType == null) {\r\n        return null;\r\n    }\r\n    return generics;\r\n}\nprivate void invalidateCache() {\r\n    this.converterCache.clear();\r\n}\n@Nullable\r\nprivate Object handleConverterNotFound(@Nullable Object source, @Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        assertNotPrimitiveTargetType(sourceType, targetType);\r\n        return null;\r\n    }\r\n    if ((sourceType == null || sourceType.isAssignableTo(targetType)) && targetType.getObjectType().isInstance(source)) {\r\n        return source;\r\n    }\r\n    throw new ConverterNotFoundException(sourceType, targetType);\r\n}\n@Nullable\r\nprivate Object handleResult(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType, @Nullable Object result) {\r\n    if (result == null) {\r\n        assertNotPrimitiveTargetType(sourceType, targetType);\r\n    }\r\n    return result;\r\n}\nprivate void assertNotPrimitiveTargetType(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (targetType.isPrimitive()) {\r\n        throw new ConversionFailedException(sourceType, targetType, null, new IllegalArgumentException(\"A null value cannot be assigned to a primitive type\"));\r\n    }\r\n}\n/**\r\n * Adapts a {@link Converter} to a {@link GenericConverter}.\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\nprivate final class ConverterAdapter implements ConditionalGenericConverter {\r\n\r\n    private final Converter<Object, Object> converter;\r\n\r\n    private final ConvertiblePair typeInfo;\r\n\r\n    private final ResolvableType targetType;\r\n\r\n    public ConverterAdapter(Converter<?, ?> converter, ResolvableType sourceType, ResolvableType targetType) {\r\n        this.converter = (Converter<Object, Object>) converter;\r\n        this.typeInfo = new ConvertiblePair(sourceType.toClass(), targetType.toClass());\r\n        this.targetType = targetType;\r\n    }\r\n\r\n    @Override\r\n    public Set<ConvertiblePair> getConvertibleTypes() {\r\n        return Collections.singleton(this.typeInfo);\r\n    }\r\n\r\n    @Override\r\n    public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        // Check raw type first...\r\n        if (this.typeInfo.getTargetType() != targetType.getObjectType()) {\r\n            return false;\r\n        }\r\n        // Full check for complex generic type match required?\r\n        ResolvableType rt = targetType.getResolvableType();\r\n        if (!(rt.getType() instanceof Class) && !rt.isAssignableFromResolvedPart(this.targetType)) {\r\n            return false;\r\n        }\r\n        return !(this.converter instanceof ConditionalConverter conditionalConverter) || conditionalConverter.matches(sourceType, targetType);\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        if (source == null) {\r\n            return convertNullSource(sourceType, targetType);\r\n        }\r\n        return this.converter.convert(source);\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return this.typeInfo + \" : \" + this.converter;\r\n    }\r\n}\n/**\r\n * Adapts a {@link ConverterFactory} to a {@link GenericConverter}.\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\nprivate final class ConverterFactoryAdapter implements ConditionalGenericConverter {\r\n\r\n    private final ConverterFactory<Object, Object> converterFactory;\r\n\r\n    private final ConvertiblePair typeInfo;\r\n\r\n    public ConverterFactoryAdapter(ConverterFactory<?, ?> converterFactory, ConvertiblePair typeInfo) {\r\n        this.converterFactory = (ConverterFactory<Object, Object>) converterFactory;\r\n        this.typeInfo = typeInfo;\r\n    }\r\n\r\n    @Override\r\n    public Set<ConvertiblePair> getConvertibleTypes() {\r\n        return Collections.singleton(this.typeInfo);\r\n    }\r\n\r\n    @Override\r\n    public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        boolean matches = true;\r\n        if (this.converterFactory instanceof ConditionalConverter conditionalConverter) {\r\n            matches = conditionalConverter.matches(sourceType, targetType);\r\n        }\r\n        if (matches) {\r\n            Converter<?, ?> converter = this.converterFactory.getConverter(targetType.getType());\r\n            if (converter instanceof ConditionalConverter conditionalConverter) {\r\n                matches = conditionalConverter.matches(sourceType, targetType);\r\n            }\r\n        }\r\n        return matches;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        if (source == null) {\r\n            return convertNullSource(sourceType, targetType);\r\n        }\r\n        return this.converterFactory.getConverter(targetType.getObjectType()).convert(source);\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return this.typeInfo + \" : \" + this.converterFactory;\r\n    }\r\n}\n/**\r\n * Key for use with the converter cache.\r\n */\r\nprivate static final class ConverterCacheKey implements Comparable<ConverterCacheKey> {\r\n\r\n    private final TypeDescriptor sourceType;\r\n\r\n    private final TypeDescriptor targetType;\r\n\r\n    public ConverterCacheKey(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        this.sourceType = sourceType;\r\n        this.targetType = targetType;\r\n    }\r\n\r\n    @Override\r\n    public boolean equals(@Nullable Object other) {\r\n        return (this == other || (other instanceof ConverterCacheKey that && this.sourceType.equals(that.sourceType)) && this.targetType.equals(that.targetType));\r\n    }\r\n\r\n    @Override\r\n    public int hashCode() {\r\n        return this.sourceType.hashCode() * 29 + this.targetType.hashCode();\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return \"ConverterCacheKey [sourceType = \" + this.sourceType + \", targetType = \" + this.targetType + \"]\";\r\n    }\r\n\r\n    @Override\r\n    public int compareTo(ConverterCacheKey other) {\r\n        int result = this.sourceType.getResolvableType().toString().compareTo(other.sourceType.getResolvableType().toString());\r\n        if (result == 0) {\r\n            result = this.targetType.getResolvableType().toString().compareTo(other.targetType.getResolvableType().toString());\r\n        }\r\n        return result;\r\n    }\r\n}\n/**\r\n * Manages all converters registered with the service.\r\n */\r\nprivate static class Converters {\r\n\r\n    private final Set<GenericConverter> globalConverters = new CopyOnWriteArraySet<>();\r\n\r\n    private final Map<ConvertiblePair, ConvertersForPair> converters = new ConcurrentHashMap<>(256);\r\n\r\n    public void add(GenericConverter converter) {\r\n        Set<ConvertiblePair> convertibleTypes = converter.getConvertibleTypes();\r\n        if (convertibleTypes == null) {\r\n            Assert.state(converter instanceof ConditionalConverter, \"Only conditional converters may return null convertible types\");\r\n            this.globalConverters.add(converter);\r\n        } else {\r\n            for (ConvertiblePair convertiblePair : convertibleTypes) {\r\n                getMatchableConverters(convertiblePair).add(converter);\r\n            }\r\n        }\r\n    }\r\n\r\n    private ConvertersForPair getMatchableConverters(ConvertiblePair convertiblePair) {\r\n        return this.converters.computeIfAbsent(convertiblePair, k -> new ConvertersForPair());\r\n    }\r\n\r\n    public void remove(Class<?> sourceType, Class<?> targetType) {\r\n        this.converters.remove(new ConvertiblePair(sourceType, targetType));\r\n    }\r\n\r\n    /**\r\n     * Find a {@link GenericConverter} given a source and target type.\r\n     * <p>This method will attempt to match all possible converters by working\r\n     * through the class and interface hierarchy of the types.\r\n     * @param sourceType the source type\r\n     * @param targetType the target type\r\n     * @return a matching {@link GenericConverter}, or {@code null} if none found\r\n     */\r\n    @Nullable\r\n    public GenericConverter find(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        // Search the full type hierarchy\r\n        List<Class<?>> sourceCandidates = getClassHierarchy(sourceType.getType());\r\n        List<Class<?>> targetCandidates = getClassHierarchy(targetType.getType());\r\n        for (Class<?> sourceCandidate : sourceCandidates) {\r\n            for (Class<?> targetCandidate : targetCandidates) {\r\n                ConvertiblePair convertiblePair = new ConvertiblePair(sourceCandidate, targetCandidate);\r\n                GenericConverter converter = getRegisteredConverter(sourceType, targetType, convertiblePair);\r\n                if (converter != null) {\r\n                    return converter;\r\n                }\r\n            }\r\n        }\r\n        return null;\r\n    }\r\n\r\n    @Nullable\r\n    private GenericConverter getRegisteredConverter(TypeDescriptor sourceType, TypeDescriptor targetType, ConvertiblePair convertiblePair) {\r\n        // Check specifically registered converters\r\n        ConvertersForPair convertersForPair = this.converters.get(convertiblePair);\r\n        if (convertersForPair != null) {\r\n            GenericConverter converter = convertersForPair.getConverter(sourceType, targetType);\r\n            if (converter != null) {\r\n                return converter;\r\n            }\r\n        }\r\n        // Check ConditionalConverters for a dynamic match\r\n        for (GenericConverter globalConverter : this.globalConverters) {\r\n            if (((ConditionalConverter) globalConverter).matches(sourceType, targetType)) {\r\n                return globalConverter;\r\n            }\r\n        }\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Returns an ordered class hierarchy for the given type.\r\n     * @param type the type\r\n     * @return an ordered list of all classes that the given type extends or implements\r\n     */\r\n    private List<Class<?>> getClassHierarchy(Class<?> type) {\r\n        List<Class<?>> hierarchy = new ArrayList<>(20);\r\n        Set<Class<?>> visited = new HashSet<>(20);\r\n        addToClassHierarchy(0, ClassUtils.resolvePrimitiveIfNecessary(type), false, hierarchy, visited);\r\n        boolean array = type.isArray();\r\n        int i = 0;\r\n        while (i < hierarchy.size()) {\r\n            Class<?> candidate = hierarchy.get(i);\r\n            candidate = (array ? candidate.componentType() : ClassUtils.resolvePrimitiveIfNecessary(candidate));\r\n            Class<?> superclass = candidate.getSuperclass();\r\n            if (superclass != null && superclass != Object.class && superclass != Enum.class) {\r\n                addToClassHierarchy(i + 1, candidate.getSuperclass(), array, hierarchy, visited);\r\n            }\r\n            addInterfacesToClassHierarchy(candidate, array, hierarchy, visited);\r\n            i++;\r\n        }\r\n        if (Enum.class.isAssignableFrom(type)) {\r\n            addToClassHierarchy(hierarchy.size(), Enum.class, false, hierarchy, visited);\r\n            addInterfacesToClassHierarchy(Enum.class, false, hierarchy, visited);\r\n        }\r\n        addToClassHierarchy(hierarchy.size(), Object.class, array, hierarchy, visited);\r\n        addToClassHierarchy(hierarchy.size(), Object.class, false, hierarchy, visited);\r\n        return hierarchy;\r\n    }\r\n\r\n    private void addInterfacesToClassHierarchy(Class<?> type, boolean asArray, List<Class<?>> hierarchy, Set<Class<?>> visited) {\r\n        for (Class<?> implementedInterface : type.getInterfaces()) {\r\n            addToClassHierarchy(hierarchy.size(), implementedInterface, asArray, hierarchy, visited);\r\n        }\r\n    }\r\n\r\n    private void addToClassHierarchy(int index, Class<?> type, boolean asArray, List<Class<?>> hierarchy, Set<Class<?>> visited) {\r\n        if (asArray) {\r\n            type = type.arrayType();\r\n        }\r\n        if (visited.add(type)) {\r\n            hierarchy.add(index, type);\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        StringBuilder builder = new StringBuilder();\r\n        builder.append(\"ConversionService converters =\\n\");\r\n        for (String converterString : getConverterStrings()) {\r\n            builder.append('\\t').append(converterString).append('\\n');\r\n        }\r\n        return builder.toString();\r\n    }\r\n\r\n    private List<String> getConverterStrings() {\r\n        List<String> converterStrings = new ArrayList<>();\r\n        for (ConvertersForPair convertersForPair : this.converters.values()) {\r\n            converterStrings.add(convertersForPair.toString());\r\n        }\r\n        Collections.sort(converterStrings);\r\n        return converterStrings;\r\n    }\r\n}\n/**\r\n * Manages converters registered with a specific {@link ConvertiblePair}.\r\n */\r\nprivate static class ConvertersForPair {\r\n\r\n    private final Deque<GenericConverter> converters = new ConcurrentLinkedDeque<>();\r\n\r\n    public void add(GenericConverter converter) {\r\n        this.converters.addFirst(converter);\r\n    }\r\n\r\n    @Nullable\r\n    public GenericConverter getConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        for (GenericConverter converter : this.converters) {\r\n            if (!(converter instanceof ConditionalGenericConverter genericConverter) || genericConverter.matches(sourceType, targetType)) {\r\n                return converter;\r\n            }\r\n        }\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return StringUtils.collectionToCommaDelimitedString(this.converters);\r\n    }\r\n}\n/**\r\n * Internal converter that performs no operation.\r\n */\r\nprivate static class NoOpConverter implements GenericConverter {\r\n\r\n    private final String name;\r\n\r\n    public NoOpConverter(String name) {\r\n        this.name = name;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public Set<ConvertiblePair> getConvertibleTypes() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        return source;\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return this.name;\r\n    }\r\n}",
+    "comment": "\n * Base {@link ConversionService} implementation suitable for use in most environments.\n * Indirectly implements {@link ConverterRegistry} as registration API through the\n * {@link ConfigurableConversionService} interface.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Chris Beams\n * @author Phillip Webb\n * @author David Haraburda\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#addConverter(Converter<?,?>)",
+    "entityType": "method",
+    "code": "// ConverterRegistry implementation\r\n@Override\r\npublic void addConverter(Converter<?, ?> converter) {\r\n    ResolvableType[] typeInfo = getRequiredTypeInfo(converter.getClass(), Converter.class);\r\n    if (typeInfo == null && converter instanceof DecoratingProxy decoratingProxy) {\r\n        typeInfo = getRequiredTypeInfo(decoratingProxy.getDecoratedClass(), Converter.class);\r\n    }\r\n    if (typeInfo == null) {\r\n        throw new IllegalArgumentException(\"Unable to determine source type <S> and target type <T> for your \" + \"Converter [\" + converter.getClass().getName() + \"]; does the class parameterize those types?\");\r\n    }\r\n    addConverter(new ConverterAdapter(converter, typeInfo[0], typeInfo[1]));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#addConverter(Class<S>,Class<T>,Converter<? super S,? extends T>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic <S, T> void addConverter(Class<S> sourceType, Class<T> targetType, Converter<? super S, ? extends T> converter) {\r\n    addConverter(new ConverterAdapter(converter, ResolvableType.forClass(sourceType), ResolvableType.forClass(targetType)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#addConverter(GenericConverter)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void addConverter(GenericConverter converter) {\r\n    this.converters.add(converter);\r\n    invalidateCache();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#addConverterFactory(ConverterFactory<?,?>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void addConverterFactory(ConverterFactory<?, ?> factory) {\r\n    ResolvableType[] typeInfo = getRequiredTypeInfo(factory.getClass(), ConverterFactory.class);\r\n    if (typeInfo == null && factory instanceof DecoratingProxy decoratingProxy) {\r\n        typeInfo = getRequiredTypeInfo(decoratingProxy.getDecoratedClass(), ConverterFactory.class);\r\n    }\r\n    if (typeInfo == null) {\r\n        throw new IllegalArgumentException(\"Unable to determine source type <S> and target type <T> for your \" + \"ConverterFactory [\" + factory.getClass().getName() + \"]; does the class parameterize those types?\");\r\n    }\r\n    addConverter(new ConverterFactoryAdapter(factory, new ConvertiblePair(typeInfo[0].toClass(), typeInfo[1].toClass())));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#removeConvertible(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void removeConvertible(Class<?> sourceType, Class<?> targetType) {\r\n    this.converters.remove(sourceType, targetType);\r\n    invalidateCache();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#canConvert(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "// ConversionService implementation\r\n@Override\r\npublic boolean canConvert(@Nullable Class<?> sourceType, Class<?> targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return canConvert((sourceType != null ? TypeDescriptor.valueOf(sourceType) : null), TypeDescriptor.valueOf(targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#canConvert(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canConvert(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return (sourceType == null || getConverter(sourceType, targetType) != null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#canBypassConvert(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether conversion between the source type and the target type can be bypassed.\r\n * <p>More precisely, this method will return true if objects of sourceType can be\r\n * converted to the target type by returning the source object unchanged.\r\n * @param sourceType context about the source type to convert from\r\n * (may be {@code null} if source is {@code null})\r\n * @param targetType context about the target type to convert to (required)\r\n * @return {@code true} if conversion can be bypassed; {@code false} otherwise\r\n * @throws IllegalArgumentException if targetType is {@code null}\r\n * @since 3.2\r\n */\r\npublic boolean canBypassConvert(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return (sourceType == null || getConverter(sourceType, targetType) == NO_OP_CONVERTER);\r\n}",
+    "comment": "\n\t * Return whether conversion between the source type and the target type can be bypassed.\n\t * <p>More precisely, this method will return true if objects of sourceType can be\n\t * converted to the target type by returning the source object unchanged.\n\t * @param sourceType context about the source type to convert from\n\t * (may be {@code null} if source is {@code null})\n\t * @param targetType context about the target type to convert to (required)\n\t * @return {@code true} if conversion can be bypassed; {@code false} otherwise\n\t * @throws IllegalArgumentException if targetType is {@code null}\n\t * @since 3.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#convert(Object,Class<T>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unchecked\")\r\n@Override\r\n@Nullable\r\npublic <T> T convert(@Nullable Object source, Class<T> targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    return (T) convert(source, TypeDescriptor.forObject(source), TypeDescriptor.valueOf(targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, @Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Assert.notNull(targetType, \"Target type to convert to cannot be null\");\r\n    if (sourceType == null) {\r\n        Assert.isTrue(source == null, \"Source must be [null] if source type == [null]\");\r\n        return handleResult(null, targetType, convertNullSource(null, targetType));\r\n    }\r\n    if (source != null && !sourceType.getObjectType().isInstance(source)) {\r\n        throw new IllegalArgumentException(\"Source to convert from must be an instance of [\" + sourceType + \"]; instead it was a [\" + source.getClass().getName() + \"]\");\r\n    }\r\n    GenericConverter converter = getConverter(sourceType, targetType);\r\n    if (converter != null) {\r\n        Object result = ConversionUtils.invokeConverter(converter, source, sourceType, targetType);\r\n        return handleResult(sourceType, targetType, result);\r\n    }\r\n    return handleConverterNotFound(source, sourceType, targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.converters.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#convertNullSource(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "// Protected template methods\r\n/**\r\n * Template method to convert a {@code null} source.\r\n * <p>The default implementation returns {@code null} or the Java 8\r\n * {@link java.util.Optional#empty()} instance if the target type is\r\n * {@code java.util.Optional}. Subclasses may override this to return\r\n * custom {@code null} objects for specific target types.\r\n * @param sourceType the source type to convert from\r\n * @param targetType the target type to convert to\r\n * @return the converted null object\r\n */\r\n@Nullable\r\nprotected Object convertNullSource(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (targetType.getObjectType() == Optional.class) {\r\n        return Optional.empty();\r\n    }\r\n    return null;\r\n}",
+    "comment": "\n\t * Template method to convert a {@code null} source.\n\t * <p>The default implementation returns {@code null} or the Java 8\n\t * {@link java.util.Optional#empty()} instance if the target type is\n\t * {@code java.util.Optional}. Subclasses may override this to return\n\t * custom {@code null} objects for specific target types.\n\t * @param sourceType the source type to convert from\n\t * @param targetType the target type to convert to\n\t * @return the converted null object\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#getConverter(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Hook method to look up the converter for a given sourceType/targetType pair.\r\n * First queries this ConversionService's converter cache.\r\n * On a cache miss, then performs an exhaustive search for a matching converter.\r\n * If no converter matches, returns the default converter.\r\n * @param sourceType the source type to convert from\r\n * @param targetType the target type to convert to\r\n * @return the generic converter that will perform the conversion,\r\n * or {@code null} if no suitable converter was found\r\n * @see #getDefaultConverter(TypeDescriptor, TypeDescriptor)\r\n */\r\n@Nullable\r\nprotected GenericConverter getConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    ConverterCacheKey key = new ConverterCacheKey(sourceType, targetType);\r\n    GenericConverter converter = this.converterCache.get(key);\r\n    if (converter != null) {\r\n        return (converter != NO_MATCH ? converter : null);\r\n    }\r\n    converter = this.converters.find(sourceType, targetType);\r\n    if (converter == null) {\r\n        converter = getDefaultConverter(sourceType, targetType);\r\n    }\r\n    if (converter != null) {\r\n        this.converterCache.put(key, converter);\r\n        return converter;\r\n    }\r\n    this.converterCache.put(key, NO_MATCH);\r\n    return null;\r\n}",
+    "comment": "\n\t * Hook method to look up the converter for a given sourceType/targetType pair.\n\t * First queries this ConversionService's converter cache.\n\t * On a cache miss, then performs an exhaustive search for a matching converter.\n\t * If no converter matches, returns the default converter.\n\t * @param sourceType the source type to convert from\n\t * @param targetType the target type to convert to\n\t * @return the generic converter that will perform the conversion,\n\t * or {@code null} if no suitable converter was found\n\t * @see #getDefaultConverter(TypeDescriptor, TypeDescriptor)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#getDefaultConverter(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Return the default converter if no converter is found for the given sourceType/targetType pair.\r\n * <p>Returns a NO_OP Converter if the source type is assignable to the target type.\r\n * Returns {@code null} otherwise, indicating no suitable converter could be found.\r\n * @param sourceType the source type to convert from\r\n * @param targetType the target type to convert to\r\n * @return the default generic converter that will perform the conversion\r\n */\r\n@Nullable\r\nprotected GenericConverter getDefaultConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (sourceType.isAssignableTo(targetType) ? NO_OP_CONVERTER : null);\r\n}",
+    "comment": "\n\t * Return the default converter if no converter is found for the given sourceType/targetType pair.\n\t * <p>Returns a NO_OP Converter if the source type is assignable to the target type.\n\t * Returns {@code null} otherwise, indicating no suitable converter could be found.\n\t * @param sourceType the source type to convert from\n\t * @param targetType the target type to convert to\n\t * @return the default generic converter that will perform the conversion\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#getRequiredTypeInfo(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "// Internal helpers\r\nprivate ResolvableType @Nullable [] getRequiredTypeInfo(Class<?> converterClass, Class<?> genericIfc) {\r\n    ResolvableType resolvableType = ResolvableType.forClass(converterClass).as(genericIfc);\r\n    ResolvableType[] generics = resolvableType.getGenerics();\r\n    if (generics.length < 2) {\r\n        return null;\r\n    }\r\n    Class<?> sourceType = generics[0].resolve();\r\n    Class<?> targetType = generics[1].resolve();\r\n    if (sourceType == null || targetType == null) {\r\n        return null;\r\n    }\r\n    return generics;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#invalidateCache()",
+    "entityType": "method",
+    "code": "private void invalidateCache() {\r\n    this.converterCache.clear();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#handleConverterNotFound(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate Object handleConverterNotFound(@Nullable Object source, @Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        assertNotPrimitiveTargetType(sourceType, targetType);\r\n        return null;\r\n    }\r\n    if ((sourceType == null || sourceType.isAssignableTo(targetType)) && targetType.getObjectType().isInstance(source)) {\r\n        return source;\r\n    }\r\n    throw new ConverterNotFoundException(sourceType, targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#handleResult(TypeDescriptor,TypeDescriptor,Object)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate Object handleResult(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType, @Nullable Object result) {\r\n    if (result == null) {\r\n        assertNotPrimitiveTargetType(sourceType, targetType);\r\n    }\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionService#assertNotPrimitiveTargetType(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "private void assertNotPrimitiveTargetType(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (targetType.isPrimitive()) {\r\n        throw new ConversionFailedException(sourceType, targetType, null, new IllegalArgumentException(\"A null value cannot be assigned to a primitive type\"));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterAdapter",
+    "entityType": "class",
+    "code": "private final Converter<Object, Object> converter;\nprivate final ConvertiblePair typeInfo;\nprivate final ResolvableType targetType;\npublic ConverterAdapter(Converter<?, ?> converter, ResolvableType sourceType, ResolvableType targetType) {\r\n    this.converter = (Converter<Object, Object>) converter;\r\n    this.typeInfo = new ConvertiblePair(sourceType.toClass(), targetType.toClass());\r\n    this.targetType = targetType;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(this.typeInfo);\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    // Check raw type first...\r\n    if (this.typeInfo.getTargetType() != targetType.getObjectType()) {\r\n        return false;\r\n    }\r\n    // Full check for complex generic type match required?\r\n    ResolvableType rt = targetType.getResolvableType();\r\n    if (!(rt.getType() instanceof Class) && !rt.isAssignableFromResolvedPart(this.targetType)) {\r\n        return false;\r\n    }\r\n    return !(this.converter instanceof ConditionalConverter conditionalConverter) || conditionalConverter.matches(sourceType, targetType);\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return convertNullSource(sourceType, targetType);\r\n    }\r\n    return this.converter.convert(source);\r\n}\n@Override\r\npublic String toString() {\r\n    return this.typeInfo + \" : \" + this.converter;\r\n}",
+    "comment": "\n\t * Adapts a {@link Converter} to a {@link GenericConverter}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterAdapter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(this.typeInfo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterAdapter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    // Check raw type first...\r\n    if (this.typeInfo.getTargetType() != targetType.getObjectType()) {\r\n        return false;\r\n    }\r\n    // Full check for complex generic type match required?\r\n    ResolvableType rt = targetType.getResolvableType();\r\n    if (!(rt.getType() instanceof Class) && !rt.isAssignableFromResolvedPart(this.targetType)) {\r\n        return false;\r\n    }\r\n    return !(this.converter instanceof ConditionalConverter conditionalConverter) || conditionalConverter.matches(sourceType, targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterAdapter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return convertNullSource(sourceType, targetType);\r\n    }\r\n    return this.converter.convert(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterAdapter#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.typeInfo + \" : \" + this.converter;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterFactoryAdapter",
+    "entityType": "class",
+    "code": "private final ConverterFactory<Object, Object> converterFactory;\nprivate final ConvertiblePair typeInfo;\npublic ConverterFactoryAdapter(ConverterFactory<?, ?> converterFactory, ConvertiblePair typeInfo) {\r\n    this.converterFactory = (ConverterFactory<Object, Object>) converterFactory;\r\n    this.typeInfo = typeInfo;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(this.typeInfo);\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    boolean matches = true;\r\n    if (this.converterFactory instanceof ConditionalConverter conditionalConverter) {\r\n        matches = conditionalConverter.matches(sourceType, targetType);\r\n    }\r\n    if (matches) {\r\n        Converter<?, ?> converter = this.converterFactory.getConverter(targetType.getType());\r\n        if (converter instanceof ConditionalConverter conditionalConverter) {\r\n            matches = conditionalConverter.matches(sourceType, targetType);\r\n        }\r\n    }\r\n    return matches;\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return convertNullSource(sourceType, targetType);\r\n    }\r\n    return this.converterFactory.getConverter(targetType.getObjectType()).convert(source);\r\n}\n@Override\r\npublic String toString() {\r\n    return this.typeInfo + \" : \" + this.converterFactory;\r\n}",
+    "comment": "\n\t * Adapts a {@link ConverterFactory} to a {@link GenericConverter}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterFactoryAdapter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(this.typeInfo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterFactoryAdapter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    boolean matches = true;\r\n    if (this.converterFactory instanceof ConditionalConverter conditionalConverter) {\r\n        matches = conditionalConverter.matches(sourceType, targetType);\r\n    }\r\n    if (matches) {\r\n        Converter<?, ?> converter = this.converterFactory.getConverter(targetType.getType());\r\n        if (converter instanceof ConditionalConverter conditionalConverter) {\r\n            matches = conditionalConverter.matches(sourceType, targetType);\r\n        }\r\n    }\r\n    return matches;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterFactoryAdapter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return convertNullSource(sourceType, targetType);\r\n    }\r\n    return this.converterFactory.getConverter(targetType.getObjectType()).convert(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterFactoryAdapter#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.typeInfo + \" : \" + this.converterFactory;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterCacheKey",
+    "entityType": "class",
+    "code": "private final TypeDescriptor sourceType;\nprivate final TypeDescriptor targetType;\npublic ConverterCacheKey(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    this.sourceType = sourceType;\r\n    this.targetType = targetType;\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ConverterCacheKey that && this.sourceType.equals(that.sourceType)) && this.targetType.equals(that.targetType));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return this.sourceType.hashCode() * 29 + this.targetType.hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    return \"ConverterCacheKey [sourceType = \" + this.sourceType + \", targetType = \" + this.targetType + \"]\";\r\n}\n@Override\r\npublic int compareTo(ConverterCacheKey other) {\r\n    int result = this.sourceType.getResolvableType().toString().compareTo(other.sourceType.getResolvableType().toString());\r\n    if (result == 0) {\r\n        result = this.targetType.getResolvableType().toString().compareTo(other.targetType.getResolvableType().toString());\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n\t * Key for use with the converter cache.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterCacheKey#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ConverterCacheKey that && this.sourceType.equals(that.sourceType)) && this.targetType.equals(that.targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterCacheKey#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return this.sourceType.hashCode() * 29 + this.targetType.hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterCacheKey#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return \"ConverterCacheKey [sourceType = \" + this.sourceType + \", targetType = \" + this.targetType + \"]\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConverterCacheKey#compareTo(ConverterCacheKey)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int compareTo(ConverterCacheKey other) {\r\n    int result = this.sourceType.getResolvableType().toString().compareTo(other.sourceType.getResolvableType().toString());\r\n    if (result == 0) {\r\n        result = this.targetType.getResolvableType().toString().compareTo(other.targetType.getResolvableType().toString());\r\n    }\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters",
+    "entityType": "class",
+    "code": "private final Set<GenericConverter> globalConverters = new CopyOnWriteArraySet<>();\nprivate final Map<ConvertiblePair, ConvertersForPair> converters = new ConcurrentHashMap<>(256);\npublic void add(GenericConverter converter) {\r\n    Set<ConvertiblePair> convertibleTypes = converter.getConvertibleTypes();\r\n    if (convertibleTypes == null) {\r\n        Assert.state(converter instanceof ConditionalConverter, \"Only conditional converters may return null convertible types\");\r\n        this.globalConverters.add(converter);\r\n    } else {\r\n        for (ConvertiblePair convertiblePair : convertibleTypes) {\r\n            getMatchableConverters(convertiblePair).add(converter);\r\n        }\r\n    }\r\n}\nprivate ConvertersForPair getMatchableConverters(ConvertiblePair convertiblePair) {\r\n    return this.converters.computeIfAbsent(convertiblePair, k -> new ConvertersForPair());\r\n}\npublic void remove(Class<?> sourceType, Class<?> targetType) {\r\n    this.converters.remove(new ConvertiblePair(sourceType, targetType));\r\n}\n/**\r\n * Find a {@link GenericConverter} given a source and target type.\r\n * <p>This method will attempt to match all possible converters by working\r\n * through the class and interface hierarchy of the types.\r\n * @param sourceType the source type\r\n * @param targetType the target type\r\n * @return a matching {@link GenericConverter}, or {@code null} if none found\r\n */\r\n@Nullable\r\npublic GenericConverter find(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    // Search the full type hierarchy\r\n    List<Class<?>> sourceCandidates = getClassHierarchy(sourceType.getType());\r\n    List<Class<?>> targetCandidates = getClassHierarchy(targetType.getType());\r\n    for (Class<?> sourceCandidate : sourceCandidates) {\r\n        for (Class<?> targetCandidate : targetCandidates) {\r\n            ConvertiblePair convertiblePair = new ConvertiblePair(sourceCandidate, targetCandidate);\r\n            GenericConverter converter = getRegisteredConverter(sourceType, targetType, convertiblePair);\r\n            if (converter != null) {\r\n                return converter;\r\n            }\r\n        }\r\n    }\r\n    return null;\r\n}\n@Nullable\r\nprivate GenericConverter getRegisteredConverter(TypeDescriptor sourceType, TypeDescriptor targetType, ConvertiblePair convertiblePair) {\r\n    // Check specifically registered converters\r\n    ConvertersForPair convertersForPair = this.converters.get(convertiblePair);\r\n    if (convertersForPair != null) {\r\n        GenericConverter converter = convertersForPair.getConverter(sourceType, targetType);\r\n        if (converter != null) {\r\n            return converter;\r\n        }\r\n    }\r\n    // Check ConditionalConverters for a dynamic match\r\n    for (GenericConverter globalConverter : this.globalConverters) {\r\n        if (((ConditionalConverter) globalConverter).matches(sourceType, targetType)) {\r\n            return globalConverter;\r\n        }\r\n    }\r\n    return null;\r\n}\n/**\r\n * Returns an ordered class hierarchy for the given type.\r\n * @param type the type\r\n * @return an ordered list of all classes that the given type extends or implements\r\n */\r\nprivate List<Class<?>> getClassHierarchy(Class<?> type) {\r\n    List<Class<?>> hierarchy = new ArrayList<>(20);\r\n    Set<Class<?>> visited = new HashSet<>(20);\r\n    addToClassHierarchy(0, ClassUtils.resolvePrimitiveIfNecessary(type), false, hierarchy, visited);\r\n    boolean array = type.isArray();\r\n    int i = 0;\r\n    while (i < hierarchy.size()) {\r\n        Class<?> candidate = hierarchy.get(i);\r\n        candidate = (array ? candidate.componentType() : ClassUtils.resolvePrimitiveIfNecessary(candidate));\r\n        Class<?> superclass = candidate.getSuperclass();\r\n        if (superclass != null && superclass != Object.class && superclass != Enum.class) {\r\n            addToClassHierarchy(i + 1, candidate.getSuperclass(), array, hierarchy, visited);\r\n        }\r\n        addInterfacesToClassHierarchy(candidate, array, hierarchy, visited);\r\n        i++;\r\n    }\r\n    if (Enum.class.isAssignableFrom(type)) {\r\n        addToClassHierarchy(hierarchy.size(), Enum.class, false, hierarchy, visited);\r\n        addInterfacesToClassHierarchy(Enum.class, false, hierarchy, visited);\r\n    }\r\n    addToClassHierarchy(hierarchy.size(), Object.class, array, hierarchy, visited);\r\n    addToClassHierarchy(hierarchy.size(), Object.class, false, hierarchy, visited);\r\n    return hierarchy;\r\n}\nprivate void addInterfacesToClassHierarchy(Class<?> type, boolean asArray, List<Class<?>> hierarchy, Set<Class<?>> visited) {\r\n    for (Class<?> implementedInterface : type.getInterfaces()) {\r\n        addToClassHierarchy(hierarchy.size(), implementedInterface, asArray, hierarchy, visited);\r\n    }\r\n}\nprivate void addToClassHierarchy(int index, Class<?> type, boolean asArray, List<Class<?>> hierarchy, Set<Class<?>> visited) {\r\n    if (asArray) {\r\n        type = type.arrayType();\r\n    }\r\n    if (visited.add(type)) {\r\n        hierarchy.add(index, type);\r\n    }\r\n}\n@Override\r\npublic String toString() {\r\n    StringBuilder builder = new StringBuilder();\r\n    builder.append(\"ConversionService converters =\\n\");\r\n    for (String converterString : getConverterStrings()) {\r\n        builder.append('\\t').append(converterString).append('\\n');\r\n    }\r\n    return builder.toString();\r\n}\nprivate List<String> getConverterStrings() {\r\n    List<String> converterStrings = new ArrayList<>();\r\n    for (ConvertersForPair convertersForPair : this.converters.values()) {\r\n        converterStrings.add(convertersForPair.toString());\r\n    }\r\n    Collections.sort(converterStrings);\r\n    return converterStrings;\r\n}",
+    "comment": "\n\t * Manages all converters registered with the service.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#add(GenericConverter)",
+    "entityType": "method",
+    "code": "public void add(GenericConverter converter) {\r\n    Set<ConvertiblePair> convertibleTypes = converter.getConvertibleTypes();\r\n    if (convertibleTypes == null) {\r\n        Assert.state(converter instanceof ConditionalConverter, \"Only conditional converters may return null convertible types\");\r\n        this.globalConverters.add(converter);\r\n    } else {\r\n        for (ConvertiblePair convertiblePair : convertibleTypes) {\r\n            getMatchableConverters(convertiblePair).add(converter);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#getMatchableConverters(ConvertiblePair)",
+    "entityType": "method",
+    "code": "private ConvertersForPair getMatchableConverters(ConvertiblePair convertiblePair) {\r\n    return this.converters.computeIfAbsent(convertiblePair, k -> new ConvertersForPair());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#remove(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "public void remove(Class<?> sourceType, Class<?> targetType) {\r\n    this.converters.remove(new ConvertiblePair(sourceType, targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#find(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "/**\r\n * Find a {@link GenericConverter} given a source and target type.\r\n * <p>This method will attempt to match all possible converters by working\r\n * through the class and interface hierarchy of the types.\r\n * @param sourceType the source type\r\n * @param targetType the target type\r\n * @return a matching {@link GenericConverter}, or {@code null} if none found\r\n */\r\n@Nullable\r\npublic GenericConverter find(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    // Search the full type hierarchy\r\n    List<Class<?>> sourceCandidates = getClassHierarchy(sourceType.getType());\r\n    List<Class<?>> targetCandidates = getClassHierarchy(targetType.getType());\r\n    for (Class<?> sourceCandidate : sourceCandidates) {\r\n        for (Class<?> targetCandidate : targetCandidates) {\r\n            ConvertiblePair convertiblePair = new ConvertiblePair(sourceCandidate, targetCandidate);\r\n            GenericConverter converter = getRegisteredConverter(sourceType, targetType, convertiblePair);\r\n            if (converter != null) {\r\n                return converter;\r\n            }\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": "\n\t\t * Find a {@link GenericConverter} given a source and target type.\n\t\t * <p>This method will attempt to match all possible converters by working\n\t\t * through the class and interface hierarchy of the types.\n\t\t * @param sourceType the source type\n\t\t * @param targetType the target type\n\t\t * @return a matching {@link GenericConverter}, or {@code null} if none found\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#getRegisteredConverter(TypeDescriptor,TypeDescriptor,ConvertiblePair)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate GenericConverter getRegisteredConverter(TypeDescriptor sourceType, TypeDescriptor targetType, ConvertiblePair convertiblePair) {\r\n    // Check specifically registered converters\r\n    ConvertersForPair convertersForPair = this.converters.get(convertiblePair);\r\n    if (convertersForPair != null) {\r\n        GenericConverter converter = convertersForPair.getConverter(sourceType, targetType);\r\n        if (converter != null) {\r\n            return converter;\r\n        }\r\n    }\r\n    // Check ConditionalConverters for a dynamic match\r\n    for (GenericConverter globalConverter : this.globalConverters) {\r\n        if (((ConditionalConverter) globalConverter).matches(sourceType, targetType)) {\r\n            return globalConverter;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#getClassHierarchy(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Returns an ordered class hierarchy for the given type.\r\n * @param type the type\r\n * @return an ordered list of all classes that the given type extends or implements\r\n */\r\nprivate List<Class<?>> getClassHierarchy(Class<?> type) {\r\n    List<Class<?>> hierarchy = new ArrayList<>(20);\r\n    Set<Class<?>> visited = new HashSet<>(20);\r\n    addToClassHierarchy(0, ClassUtils.resolvePrimitiveIfNecessary(type), false, hierarchy, visited);\r\n    boolean array = type.isArray();\r\n    int i = 0;\r\n    while (i < hierarchy.size()) {\r\n        Class<?> candidate = hierarchy.get(i);\r\n        candidate = (array ? candidate.componentType() : ClassUtils.resolvePrimitiveIfNecessary(candidate));\r\n        Class<?> superclass = candidate.getSuperclass();\r\n        if (superclass != null && superclass != Object.class && superclass != Enum.class) {\r\n            addToClassHierarchy(i + 1, candidate.getSuperclass(), array, hierarchy, visited);\r\n        }\r\n        addInterfacesToClassHierarchy(candidate, array, hierarchy, visited);\r\n        i++;\r\n    }\r\n    if (Enum.class.isAssignableFrom(type)) {\r\n        addToClassHierarchy(hierarchy.size(), Enum.class, false, hierarchy, visited);\r\n        addInterfacesToClassHierarchy(Enum.class, false, hierarchy, visited);\r\n    }\r\n    addToClassHierarchy(hierarchy.size(), Object.class, array, hierarchy, visited);\r\n    addToClassHierarchy(hierarchy.size(), Object.class, false, hierarchy, visited);\r\n    return hierarchy;\r\n}",
+    "comment": "\n\t\t * Returns an ordered class hierarchy for the given type.\n\t\t * @param type the type\n\t\t * @return an ordered list of all classes that the given type extends or implements\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#addInterfacesToClassHierarchy(Class<?>,boolean,List<Class<?>>,Set<Class<?>>)",
+    "entityType": "method",
+    "code": "private void addInterfacesToClassHierarchy(Class<?> type, boolean asArray, List<Class<?>> hierarchy, Set<Class<?>> visited) {\r\n    for (Class<?> implementedInterface : type.getInterfaces()) {\r\n        addToClassHierarchy(hierarchy.size(), implementedInterface, asArray, hierarchy, visited);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#addToClassHierarchy(int,Class<?>,boolean,List<Class<?>>,Set<Class<?>>)",
+    "entityType": "method",
+    "code": "private void addToClassHierarchy(int index, Class<?> type, boolean asArray, List<Class<?>> hierarchy, Set<Class<?>> visited) {\r\n    if (asArray) {\r\n        type = type.arrayType();\r\n    }\r\n    if (visited.add(type)) {\r\n        hierarchy.add(index, type);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    StringBuilder builder = new StringBuilder();\r\n    builder.append(\"ConversionService converters =\\n\");\r\n    for (String converterString : getConverterStrings()) {\r\n        builder.append('\\t').append(converterString).append('\\n');\r\n    }\r\n    return builder.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Converters#getConverterStrings()",
+    "entityType": "method",
+    "code": "private List<String> getConverterStrings() {\r\n    List<String> converterStrings = new ArrayList<>();\r\n    for (ConvertersForPair convertersForPair : this.converters.values()) {\r\n        converterStrings.add(convertersForPair.toString());\r\n    }\r\n    Collections.sort(converterStrings);\r\n    return converterStrings;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConvertersForPair",
+    "entityType": "class",
+    "code": "private final Deque<GenericConverter> converters = new ConcurrentLinkedDeque<>();\npublic void add(GenericConverter converter) {\r\n    this.converters.addFirst(converter);\r\n}\n@Nullable\r\npublic GenericConverter getConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    for (GenericConverter converter : this.converters) {\r\n        if (!(converter instanceof ConditionalGenericConverter genericConverter) || genericConverter.matches(sourceType, targetType)) {\r\n            return converter;\r\n        }\r\n    }\r\n    return null;\r\n}\n@Override\r\npublic String toString() {\r\n    return StringUtils.collectionToCommaDelimitedString(this.converters);\r\n}",
+    "comment": "\n\t * Manages converters registered with a specific {@link ConvertiblePair}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConvertersForPair#add(GenericConverter)",
+    "entityType": "method",
+    "code": "public void add(GenericConverter converter) {\r\n    this.converters.addFirst(converter);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConvertersForPair#getConverter(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Nullable\r\npublic GenericConverter getConverter(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    for (GenericConverter converter : this.converters) {\r\n        if (!(converter instanceof ConditionalGenericConverter genericConverter) || genericConverter.matches(sourceType, targetType)) {\r\n            return converter;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ConvertersForPair#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return StringUtils.collectionToCommaDelimitedString(this.converters);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NoOpConverter",
+    "entityType": "class",
+    "code": "private final String name;\npublic NoOpConverter(String name) {\r\n    this.name = name;\r\n}\n@Override\r\n@Nullable\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return null;\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return source;\r\n}\n@Override\r\npublic String toString() {\r\n    return this.name;\r\n}",
+    "comment": "\n\t * Internal converter that performs no operation.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NoOpConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NoOpConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return source;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NoOpConverter#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IdToEntityConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic IdToEntityConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object.class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Method finder = getFinder(targetType.getType());\r\n    return (finder != null && this.conversionService.canConvert(sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0])));\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    Method finder = getFinder(targetType.getType());\r\n    Assert.state(finder != null, \"No finder method\");\r\n    Object id = this.conversionService.convert(source, sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0]));\r\n    return ReflectionUtils.invokeMethod(finder, source, id);\r\n}\n@Nullable\r\nprivate Method getFinder(Class<?> entityClass) {\r\n    String finderMethod = \"find\" + getEntityName(entityClass);\r\n    Method[] methods;\r\n    boolean localOnlyFiltered;\r\n    try {\r\n        methods = entityClass.getDeclaredMethods();\r\n        localOnlyFiltered = true;\r\n    } catch (SecurityException ex) {\r\n        // Not allowed to access non-public methods...\r\n        // Fallback: check locally declared public methods only.\r\n        methods = entityClass.getMethods();\r\n        localOnlyFiltered = false;\r\n    }\r\n    for (Method method : methods) {\r\n        if (Modifier.isStatic(method.getModifiers()) && method.getName().equals(finderMethod) && method.getParameterCount() == 1 && method.getReturnType().equals(entityClass) && (localOnlyFiltered || method.getDeclaringClass().equals(entityClass))) {\r\n            return method;\r\n        }\r\n    }\r\n    return null;\r\n}\nprivate String getEntityName(Class<?> entityClass) {\r\n    String shortName = ClassUtils.getShortName(entityClass);\r\n    int lastDot = shortName.lastIndexOf('.');\r\n    if (lastDot != -1) {\r\n        return shortName.substring(lastDot + 1);\r\n    } else {\r\n        return shortName;\r\n    }\r\n}",
+    "comment": "\n * Converts an entity identifier to an entity reference by calling a static finder method\n * on the target entity type.\n *\n * <p>For this converter to match, the finder method must be static, have the signature\n * {@code find[EntityName]([IdType])}, and return an instance of the desired entity type.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IdToEntityConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IdToEntityConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    Method finder = getFinder(targetType.getType());\r\n    return (finder != null && this.conversionService.canConvert(sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0])));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IdToEntityConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    Method finder = getFinder(targetType.getType());\r\n    Assert.state(finder != null, \"No finder method\");\r\n    Object id = this.conversionService.convert(source, sourceType, TypeDescriptor.valueOf(finder.getParameterTypes()[0]));\r\n    return ReflectionUtils.invokeMethod(finder, source, id);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IdToEntityConverter#getFinder(Class<?>)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate Method getFinder(Class<?> entityClass) {\r\n    String finderMethod = \"find\" + getEntityName(entityClass);\r\n    Method[] methods;\r\n    boolean localOnlyFiltered;\r\n    try {\r\n        methods = entityClass.getDeclaredMethods();\r\n        localOnlyFiltered = true;\r\n    } catch (SecurityException ex) {\r\n        // Not allowed to access non-public methods...\r\n        // Fallback: check locally declared public methods only.\r\n        methods = entityClass.getMethods();\r\n        localOnlyFiltered = false;\r\n    }\r\n    for (Method method : methods) {\r\n        if (Modifier.isStatic(method.getModifiers()) && method.getName().equals(finderMethod) && method.getParameterCount() == 1 && method.getReturnType().equals(entityClass) && (localOnlyFiltered || method.getDeclaringClass().equals(entityClass))) {\r\n            return method;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IdToEntityConverter#getEntityName(Class<?>)",
+    "entityType": "method",
+    "code": "private String getEntityName(Class<?> entityClass) {\r\n    String shortName = ClassUtils.getShortName(entityClass);\r\n    int lastDot = shortName.lastIndexOf('.');\r\n    if (lastDot != -1) {\r\n        return shortName.substring(lastDot + 1);\r\n    } else {\r\n        return shortName;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IntegerToEnumConverterFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic <T extends Enum> Converter<Integer, T> getConverter(Class<T> targetType) {\r\n    return new IntegerToEnum(ConversionUtils.getEnumType(targetType));\r\n}\nprivate static class IntegerToEnum<T extends Enum> implements Converter<Integer, T> {\r\n\r\n    private final Class<T> enumType;\r\n\r\n    public IntegerToEnum(Class<T> enumType) {\r\n        this.enumType = enumType;\r\n    }\r\n\r\n    @Override\r\n    public T convert(Integer source) {\r\n        return this.enumType.getEnumConstants()[source];\r\n    }\r\n}",
+    "comment": "\n * Converts from an Integer to a {@link java.lang.Enum} by calling {@link Class#getEnumConstants()}.\n *\n * @author Yanming Zhou\n * @author Stephane Nicoll\n * @since 4.3\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IntegerToEnumConverterFactory#getConverter(Class<T>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic <T extends Enum> Converter<Integer, T> getConverter(Class<T> targetType) {\r\n    return new IntegerToEnum(ConversionUtils.getEnumType(targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IntegerToEnum",
+    "entityType": "class",
+    "code": "private final Class<T> enumType;\npublic IntegerToEnum(Class<T> enumType) {\r\n    this.enumType = enumType;\r\n}\n@Override\r\npublic T convert(Integer source) {\r\n    return this.enumType.getEnumConstants()[source];\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.IntegerToEnum#convert(Integer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic T convert(Integer source) {\r\n    return this.enumType.getEnumConstants()[source];\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic MapToMapConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Map.class, Map.class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return canConvertKey(sourceType, targetType) && canConvertValue(sourceType, targetType);\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    @SuppressWarnings(\"unchecked\")\r\n    Map<Object, Object> sourceMap = (Map<Object, Object>) source;\r\n    // Shortcut if possible...\r\n    boolean copyRequired = !targetType.getType().isInstance(source);\r\n    if (!copyRequired && sourceMap.isEmpty()) {\r\n        return sourceMap;\r\n    }\r\n    TypeDescriptor keyDesc = targetType.getMapKeyTypeDescriptor();\r\n    TypeDescriptor valueDesc = targetType.getMapValueTypeDescriptor();\r\n    List<MapEntry> targetEntries = new ArrayList<>(sourceMap.size());\r\n    for (Map.Entry<Object, Object> entry : sourceMap.entrySet()) {\r\n        Object sourceKey = entry.getKey();\r\n        Object sourceValue = entry.getValue();\r\n        Object targetKey = convertKey(sourceKey, sourceType, keyDesc);\r\n        Object targetValue = convertValue(sourceValue, sourceType, valueDesc);\r\n        targetEntries.add(new MapEntry(targetKey, targetValue));\r\n        if (sourceKey != targetKey || sourceValue != targetValue) {\r\n            copyRequired = true;\r\n        }\r\n    }\r\n    if (!copyRequired) {\r\n        return sourceMap;\r\n    }\r\n    Map<Object, Object> targetMap = CollectionFactory.createMap(targetType.getType(), (keyDesc != null ? keyDesc.getType() : null), sourceMap.size());\r\n    for (MapEntry entry : targetEntries) {\r\n        entry.addToMap(targetMap);\r\n    }\r\n    return targetMap;\r\n}\n// internal helpers\r\nprivate boolean canConvertKey(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType.getMapKeyTypeDescriptor(), targetType.getMapKeyTypeDescriptor(), this.conversionService);\r\n}\nprivate boolean canConvertValue(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType.getMapValueTypeDescriptor(), targetType.getMapValueTypeDescriptor(), this.conversionService);\r\n}\n@Nullable\r\nprivate Object convertKey(Object sourceKey, TypeDescriptor sourceType, @Nullable TypeDescriptor targetType) {\r\n    if (targetType == null) {\r\n        return sourceKey;\r\n    }\r\n    return this.conversionService.convert(sourceKey, sourceType.getMapKeyTypeDescriptor(sourceKey), targetType);\r\n}\n@Nullable\r\nprivate Object convertValue(Object sourceValue, TypeDescriptor sourceType, @Nullable TypeDescriptor targetType) {\r\n    if (targetType == null) {\r\n        return sourceValue;\r\n    }\r\n    return this.conversionService.convert(sourceValue, sourceType.getMapValueTypeDescriptor(sourceValue), targetType);\r\n}\nprivate static class MapEntry {\r\n\r\n    @Nullable\r\n    private final Object key;\r\n\r\n    @Nullable\r\n    private final Object value;\r\n\r\n    public MapEntry(@Nullable Object key, @Nullable Object value) {\r\n        this.key = key;\r\n        this.value = value;\r\n    }\r\n\r\n    public void addToMap(Map<Object, Object> map) {\r\n        map.put(this.key, this.value);\r\n    }\r\n}",
+    "comment": "\n * Converts a Map to another Map.\n *\n * <p>First, creates a new Map of the requested targetType with a size equal to the\n * size of the source Map. Then copies each element in the source map to the target map.\n * Will perform a conversion from the source map's parameterized K,V types to the target\n * map's parameterized types K,V if necessary.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Map.class, Map.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return canConvertKey(sourceType, targetType) && canConvertValue(sourceType, targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    @SuppressWarnings(\"unchecked\")\r\n    Map<Object, Object> sourceMap = (Map<Object, Object>) source;\r\n    // Shortcut if possible...\r\n    boolean copyRequired = !targetType.getType().isInstance(source);\r\n    if (!copyRequired && sourceMap.isEmpty()) {\r\n        return sourceMap;\r\n    }\r\n    TypeDescriptor keyDesc = targetType.getMapKeyTypeDescriptor();\r\n    TypeDescriptor valueDesc = targetType.getMapValueTypeDescriptor();\r\n    List<MapEntry> targetEntries = new ArrayList<>(sourceMap.size());\r\n    for (Map.Entry<Object, Object> entry : sourceMap.entrySet()) {\r\n        Object sourceKey = entry.getKey();\r\n        Object sourceValue = entry.getValue();\r\n        Object targetKey = convertKey(sourceKey, sourceType, keyDesc);\r\n        Object targetValue = convertValue(sourceValue, sourceType, valueDesc);\r\n        targetEntries.add(new MapEntry(targetKey, targetValue));\r\n        if (sourceKey != targetKey || sourceValue != targetValue) {\r\n            copyRequired = true;\r\n        }\r\n    }\r\n    if (!copyRequired) {\r\n        return sourceMap;\r\n    }\r\n    Map<Object, Object> targetMap = CollectionFactory.createMap(targetType.getType(), (keyDesc != null ? keyDesc.getType() : null), sourceMap.size());\r\n    for (MapEntry entry : targetEntries) {\r\n        entry.addToMap(targetMap);\r\n    }\r\n    return targetMap;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#canConvertKey(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "// internal helpers\r\nprivate boolean canConvertKey(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType.getMapKeyTypeDescriptor(), targetType.getMapKeyTypeDescriptor(), this.conversionService);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#canConvertValue(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "private boolean canConvertValue(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType.getMapValueTypeDescriptor(), targetType.getMapValueTypeDescriptor(), this.conversionService);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#convertKey(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate Object convertKey(Object sourceKey, TypeDescriptor sourceType, @Nullable TypeDescriptor targetType) {\r\n    if (targetType == null) {\r\n        return sourceKey;\r\n    }\r\n    return this.conversionService.convert(sourceKey, sourceType.getMapKeyTypeDescriptor(sourceKey), targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapToMapConverter#convertValue(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate Object convertValue(Object sourceValue, TypeDescriptor sourceType, @Nullable TypeDescriptor targetType) {\r\n    if (targetType == null) {\r\n        return sourceValue;\r\n    }\r\n    return this.conversionService.convert(sourceValue, sourceType.getMapValueTypeDescriptor(sourceValue), targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapEntry",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate final Object key;\n@Nullable\r\nprivate final Object value;\npublic MapEntry(@Nullable Object key, @Nullable Object value) {\r\n    this.key = key;\r\n    this.value = value;\r\n}\npublic void addToMap(Map<Object, Object> map) {\r\n    map.put(this.key, this.value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.MapEntry#addToMap(Map<Object,Object>)",
+    "entityType": "method",
+    "code": "public void addToMap(Map<Object, Object> map) {\r\n    map.put(this.key, this.value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToCharacterConverter",
+    "entityType": "class",
+    "code": "@Override\r\npublic Character convert(Number source) {\r\n    return (char) source.shortValue();\r\n}",
+    "comment": "\n * Converts from any JDK-standard Number implementation to a Character.\n *\n * @author Keith Donald\n * @since 3.0\n * @see java.lang.Character\n * @see java.lang.Short\n * @see java.lang.Integer\n * @see java.lang.Long\n * @see java.math.BigInteger\n * @see java.lang.Float\n * @see java.lang.Double\n * @see java.math.BigDecimal\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToCharacterConverter#convert(Number)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Character convert(Number source) {\r\n    return (char) source.shortValue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToNumberConverterFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic <T extends Number> Converter<Number, T> getConverter(Class<T> targetType) {\r\n    return new NumberToNumber<>(targetType);\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return !sourceType.equals(targetType);\r\n}\nprivate static final class NumberToNumber<T extends Number> implements Converter<Number, T> {\r\n\r\n    private final Class<T> targetType;\r\n\r\n    NumberToNumber(Class<T> targetType) {\r\n        this.targetType = targetType;\r\n    }\r\n\r\n    @Override\r\n    public T convert(Number source) {\r\n        return NumberUtils.convertNumberToTargetClass(source, this.targetType);\r\n    }\r\n}",
+    "comment": "\n * Converts from any JDK-standard Number implementation to any other JDK-standard Number implementation.\n *\n * <p>Support Number classes including Byte, Short, Integer, Float, Double, Long, BigInteger, BigDecimal. This class\n * delegates to {@link NumberUtils#convertNumberToTargetClass(Number, Class)} to perform the conversion.\n *\n * @author Keith Donald\n * @since 3.0\n * @see java.lang.Byte\n * @see java.lang.Short\n * @see java.lang.Integer\n * @see java.lang.Long\n * @see java.math.BigInteger\n * @see java.lang.Float\n * @see java.lang.Double\n * @see java.math.BigDecimal\n * @see NumberUtils\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToNumberConverterFactory#getConverter(Class<T>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic <T extends Number> Converter<Number, T> getConverter(Class<T> targetType) {\r\n    return new NumberToNumber<>(targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToNumberConverterFactory#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return !sourceType.equals(targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToNumber",
+    "entityType": "class",
+    "code": "private final Class<T> targetType;\nNumberToNumber(Class<T> targetType) {\r\n    this.targetType = targetType;\r\n}\n@Override\r\npublic T convert(Number source) {\r\n    return NumberUtils.convertNumberToTargetClass(source, this.targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.NumberToNumber#convert(Number)",
+    "entityType": "method",
+    "code": "@Override\r\npublic T convert(Number source) {\r\n    return NumberUtils.convertNumberToTargetClass(source, this.targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToArrayConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic ObjectToArrayConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object[].class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType, targetType.getElementTypeDescriptor(), this.conversionService);\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    TypeDescriptor targetElementType = targetType.getElementTypeDescriptor();\r\n    Assert.state(targetElementType != null, \"No target element type\");\r\n    Object target = Array.newInstance(targetElementType.getType(), 1);\r\n    Object targetElement = this.conversionService.convert(source, sourceType, targetElementType);\r\n    Array.set(target, 0, targetElement);\r\n    return target;\r\n}",
+    "comment": "\n * Converts an Object to a single-element array containing the Object.\n * Will convert the Object to the target array's component type if necessary.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToArrayConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object[].class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToArrayConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType, targetType.getElementTypeDescriptor(), this.conversionService);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToArrayConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    TypeDescriptor targetElementType = targetType.getElementTypeDescriptor();\r\n    Assert.state(targetElementType != null, \"No target element type\");\r\n    Object target = Array.newInstance(targetElementType.getType(), 1);\r\n    Object targetElement = this.conversionService.convert(source, sourceType, targetElementType);\r\n    Array.set(target, 0, targetElement);\r\n    return target;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToCollectionConverter",
+    "entityType": "class",
+    "code": "private final ConversionService conversionService;\npublic ObjectToCollectionConverter(ConversionService conversionService) {\r\n    this.conversionService = conversionService;\r\n}\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Collection.class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType, targetType.getElementTypeDescriptor(), this.conversionService);\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    TypeDescriptor elementDesc = targetType.getElementTypeDescriptor();\r\n    Collection<Object> target = CollectionFactory.createCollection(targetType.getType(), (elementDesc != null ? elementDesc.getType() : null), 1);\r\n    if (elementDesc == null || elementDesc.isCollection()) {\r\n        target.add(source);\r\n    } else {\r\n        Object singleElement = this.conversionService.convert(source, sourceType, elementDesc);\r\n        target.add(singleElement);\r\n    }\r\n    return target;\r\n}",
+    "comment": "\n * Converts an Object to a single-element Collection containing the Object.\n * Will convert the Object to the target Collection's parameterized type if necessary.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToCollectionConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Collection.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToCollectionConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return ConversionUtils.canConvertElements(sourceType, targetType.getElementTypeDescriptor(), this.conversionService);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToCollectionConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    TypeDescriptor elementDesc = targetType.getElementTypeDescriptor();\r\n    Collection<Object> target = CollectionFactory.createCollection(targetType.getType(), (elementDesc != null ? elementDesc.getType() : null), 1);\r\n    if (elementDesc == null || elementDesc.isCollection()) {\r\n        target.add(source);\r\n    } else {\r\n        Object singleElement = this.conversionService.convert(source, sourceType, elementDesc);\r\n        target.add(singleElement);\r\n    }\r\n    return target;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter",
+    "entityType": "class",
+    "code": "// Cache for the latest to-method, static factory method, or factory constructor\r\n// resolved on a given Class\r\nprivate static final Map<Class<?>, Executable> conversionExecutableCache = new ConcurrentReferenceHashMap<>(32);\n@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object.class));\r\n}\n@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (sourceType.getType() != targetType.getType() && hasConversionMethodOrConstructor(targetType.getType(), sourceType.getType()));\r\n}\n@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    Class<?> sourceClass = sourceType.getType();\r\n    Class<?> targetClass = targetType.getType();\r\n    Executable executable = getValidatedExecutable(targetClass, sourceClass);\r\n    try {\r\n        if (executable instanceof Method method) {\r\n            ReflectionUtils.makeAccessible(method);\r\n            if (!Modifier.isStatic(method.getModifiers())) {\r\n                return method.invoke(source);\r\n            } else {\r\n                return method.invoke(null, source);\r\n            }\r\n        } else if (executable instanceof Constructor<?> constructor) {\r\n            ReflectionUtils.makeAccessible(constructor);\r\n            return constructor.newInstance(source);\r\n        }\r\n    } catch (InvocationTargetException ex) {\r\n        throw new ConversionFailedException(sourceType, targetType, source, ex.getTargetException());\r\n    } catch (Throwable ex) {\r\n        throw new ConversionFailedException(sourceType, targetType, source, ex);\r\n    }\r\n    // If sourceClass is Number and targetClass is Integer, the following message should expand to:\r\n    // No toInteger() method exists on java.lang.Number, and no static valueOf/of/from(java.lang.Number)\r\n    // method or Integer(java.lang.Number) constructor exists on java.lang.Integer.\r\n    throw new IllegalStateException(String.format(\"No to%3$s() method exists on %1$s, \" + \"and no static valueOf/of/from(%1$s) method or %3$s(%1$s) constructor exists on %2$s.\", sourceClass.getName(), targetClass.getName(), targetClass.getSimpleName()));\r\n}\nstatic boolean hasConversionMethodOrConstructor(Class<?> targetClass, Class<?> sourceClass) {\r\n    return (getValidatedExecutable(targetClass, sourceClass) != null);\r\n}\n@Nullable\r\nprivate static Executable getValidatedExecutable(Class<?> targetClass, Class<?> sourceClass) {\r\n    Executable executable = conversionExecutableCache.get(targetClass);\r\n    if (executable != null && isApplicable(executable, sourceClass)) {\r\n        return executable;\r\n    }\r\n    executable = determineToMethod(targetClass, sourceClass);\r\n    if (executable == null) {\r\n        executable = determineFactoryMethod(targetClass, sourceClass);\r\n        if (executable == null) {\r\n            executable = determineFactoryConstructor(targetClass, sourceClass);\r\n            if (executable == null) {\r\n                return null;\r\n            }\r\n        }\r\n    }\r\n    conversionExecutableCache.put(targetClass, executable);\r\n    return executable;\r\n}\nprivate static boolean isApplicable(Executable executable, Class<?> sourceClass) {\r\n    if (executable instanceof Method method) {\r\n        return (!Modifier.isStatic(method.getModifiers()) ? ClassUtils.isAssignable(method.getDeclaringClass(), sourceClass) : method.getParameterTypes()[0] == sourceClass);\r\n    } else if (executable instanceof Constructor<?> constructor) {\r\n        return (constructor.getParameterTypes()[0] == sourceClass);\r\n    } else {\r\n        return false;\r\n    }\r\n}\n@Nullable\r\nprivate static Method determineToMethod(Class<?> targetClass, Class<?> sourceClass) {\r\n    if (String.class == targetClass || String.class == sourceClass) {\r\n        // Do not accept a toString() method or any to methods on String itself\r\n        return null;\r\n    }\r\n    Method method = ClassUtils.getMethodIfAvailable(sourceClass, \"to\" + targetClass.getSimpleName());\r\n    return (method != null && !Modifier.isStatic(method.getModifiers()) && ClassUtils.isAssignable(targetClass, method.getReturnType()) ? method : null);\r\n}\n@Nullable\r\nprivate static Method determineFactoryMethod(Class<?> targetClass, Class<?> sourceClass) {\r\n    if (String.class == targetClass) {\r\n        // Do not accept the String.valueOf(Object) method\r\n        return null;\r\n    }\r\n    Method method = ClassUtils.getStaticMethod(targetClass, \"valueOf\", sourceClass);\r\n    if (method == null) {\r\n        method = ClassUtils.getStaticMethod(targetClass, \"of\", sourceClass);\r\n        if (method == null) {\r\n            method = ClassUtils.getStaticMethod(targetClass, \"from\", sourceClass);\r\n        }\r\n    }\r\n    return (method != null && areRelatedTypes(targetClass, method.getReturnType()) ? method : null);\r\n}\n/**\r\n * Determine if the two types reside in the same type hierarchy (i.e., type 1\r\n * is assignable to type 2 or vice versa).\r\n * @since 5.3.21\r\n * @see ClassUtils#isAssignable(Class, Class)\r\n */\r\nprivate static boolean areRelatedTypes(Class<?> type1, Class<?> type2) {\r\n    return (ClassUtils.isAssignable(type1, type2) || ClassUtils.isAssignable(type2, type1));\r\n}\n@Nullable\r\nprivate static Constructor<?> determineFactoryConstructor(Class<?> targetClass, Class<?> sourceClass) {\r\n    return ClassUtils.getConstructorIfAvailable(targetClass, sourceClass);\r\n}",
+    "comment": "\n * Generic converter that uses conventions to convert a source object to a\n * {@code targetType} by delegating to a method on the source object or to\n * a static factory method or constructor on the {@code targetType}.\n *\n * <h3>Conversion Algorithm</h3>\n * <ol>\n * <li>Invoke a non-static {@code to[targetType.simpleName]()} method on the\n * source object that has a return type assignable to {@code targetType}, if such\n * a method exists. For example, {@code org.example.Bar Foo#toBar()} is a\n * method that follows this convention.\n * <li>Otherwise invoke a <em>static</em> {@code valueOf(sourceType)} or Java\n * 8 style <em>static</em> {@code of(sourceType)} or {@code from(sourceType)}\n * method on the {@code targetType} that has a return type <em>related</em> to\n * {@code targetType}, if such a method exists. For example, a static\n * {@code Foo.of(sourceType)} method that returns a {@code Foo},\n * {@code SuperFooType}, or {@code SubFooType} is a method that follows this\n * convention. {@link java.time.ZoneId#of(String)} is a concrete example of\n * such a static factory method which returns a subtype of {@code ZoneId}.\n * <li>Otherwise invoke a constructor on the {@code targetType} that accepts\n * a single {@code sourceType} argument, if such a constructor exists.\n * <li>Otherwise throw a {@link ConversionFailedException} or\n * {@link IllegalStateException}.\n * </ol>\n *\n * <p><strong>Warning</strong>: this converter does <em>not</em> support the\n * {@link Object#toString()} or {@link String#valueOf(Object)} methods for converting\n * from a {@code sourceType} to {@code java.lang.String}. For {@code toString()}\n * support, use {@link FallbackObjectToStringConverter} instead.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 3.0\n * @see FallbackObjectToStringConverter\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#getConvertibleTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Set<ConvertiblePair> getConvertibleTypes() {\r\n    return Collections.singleton(new ConvertiblePair(Object.class, Object.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#matches(TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    return (sourceType.getType() != targetType.getType() && hasConversionMethodOrConstructor(targetType.getType(), sourceType.getType()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#convert(Object,TypeDescriptor,TypeDescriptor)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    Class<?> sourceClass = sourceType.getType();\r\n    Class<?> targetClass = targetType.getType();\r\n    Executable executable = getValidatedExecutable(targetClass, sourceClass);\r\n    try {\r\n        if (executable instanceof Method method) {\r\n            ReflectionUtils.makeAccessible(method);\r\n            if (!Modifier.isStatic(method.getModifiers())) {\r\n                return method.invoke(source);\r\n            } else {\r\n                return method.invoke(null, source);\r\n            }\r\n        } else if (executable instanceof Constructor<?> constructor) {\r\n            ReflectionUtils.makeAccessible(constructor);\r\n            return constructor.newInstance(source);\r\n        }\r\n    } catch (InvocationTargetException ex) {\r\n        throw new ConversionFailedException(sourceType, targetType, source, ex.getTargetException());\r\n    } catch (Throwable ex) {\r\n        throw new ConversionFailedException(sourceType, targetType, source, ex);\r\n    }\r\n    // If sourceClass is Number and targetClass is Integer, the following message should expand to:\r\n    // No toInteger() method exists on java.lang.Number, and no static valueOf/of/from(java.lang.Number)\r\n    // method or Integer(java.lang.Number) constructor exists on java.lang.Integer.\r\n    throw new IllegalStateException(String.format(\"No to%3$s() method exists on %1$s, \" + \"and no static valueOf/of/from(%1$s) method or %3$s(%1$s) constructor exists on %2$s.\", sourceClass.getName(), targetClass.getName(), targetClass.getSimpleName()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.ObjectToObjectConverter#hasConversionMethodOrConstructor(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "static boolean hasConversionMethodOrConstructor(Class<?> targetClass, Class<?> sourceClass) {\r\n    return (getValidatedExecutable(targetClass, sourceClass) != null);\r\n}",
+    "comment": ""
+  }
+]

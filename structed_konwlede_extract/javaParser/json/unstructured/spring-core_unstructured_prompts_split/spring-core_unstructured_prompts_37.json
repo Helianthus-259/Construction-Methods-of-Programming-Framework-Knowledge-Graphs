@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain)",
+    "entityType": "method",
+    "code": "public static Class defineClass(String className, byte[] b, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {\r\n    return defineClass(className, b, loader, protectionDomain, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader,ProtectionDomain,Class<?>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings({ \"deprecation\", \"serial\" })\r\npublic static Class defineClass(String className, byte[] b, ClassLoader loader, ProtectionDomain protectionDomain, Class<?> contextClass) throws Exception {\r\n    Class c = null;\r\n    Throwable t = THROWABLE;\r\n    BiConsumer<String, byte[]> handlerToUse = generatedClassHandler;\r\n    if (handlerToUse != null) {\r\n        handlerToUse.accept(className, b);\r\n    }\r\n    // Preferred option: JDK 9+ Lookup.defineClass API if ClassLoader matches\r\n    if (contextClass != null && contextClass.getClassLoader() == loader) {\r\n        try {\r\n            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(contextClass, MethodHandles.lookup());\r\n            c = lookup.defineClass(b);\r\n        } catch (LinkageError | IllegalArgumentException ex) {\r\n            // in case of plain LinkageError (class already defined)\r\n            // or IllegalArgumentException (class in different package):\r\n            // fall through to traditional ClassLoader.defineClass below\r\n            t = ex;\r\n        } catch (Throwable ex) {\r\n            throw new CodeGenerationException(ex);\r\n        }\r\n    }\r\n    // Direct defineClass attempt on the target Classloader\r\n    if (c == null) {\r\n        if (protectionDomain == null) {\r\n            protectionDomain = PROTECTION_DOMAIN;\r\n        }\r\n        // Look for publicDefineClass(String name, byte[] b, ProtectionDomain protectionDomain)\r\n        try {\r\n            Method publicDefineClass = loader.getClass().getMethod(\"publicDefineClass\", String.class, byte[].class, ProtectionDomain.class);\r\n            c = (Class) publicDefineClass.invoke(loader, className, b, protectionDomain);\r\n        } catch (InvocationTargetException ex) {\r\n            if (!(ex.getTargetException() instanceof UnsupportedOperationException)) {\r\n                throw new CodeGenerationException(ex.getTargetException());\r\n            }\r\n            // in case of UnsupportedOperationException, fall through\r\n            t = ex.getTargetException();\r\n        } catch (Throwable ex) {\r\n            // publicDefineClass method not available -> fall through\r\n            t = ex;\r\n        }\r\n        // Classic option: protected ClassLoader.defineClass method\r\n        if (c == null && classLoaderDefineClassMethod != null) {\r\n            Object[] args = new Object[] { className, b, 0, b.length, protectionDomain };\r\n            try {\r\n                if (!classLoaderDefineClassMethod.isAccessible()) {\r\n                    classLoaderDefineClassMethod.setAccessible(true);\r\n                }\r\n                c = (Class) classLoaderDefineClassMethod.invoke(loader, args);\r\n            } catch (InvocationTargetException ex) {\r\n                throw new CodeGenerationException(ex.getTargetException());\r\n            } catch (InaccessibleObjectException ex) {\r\n                // setAccessible failed with JDK 9+ InaccessibleObjectException -> fall through\r\n                // Avoid through JVM startup with --add-opens=java.base/java.lang=ALL-UNNAMED\r\n                t = ex;\r\n            } catch (Throwable ex) {\r\n                throw new CodeGenerationException(ex);\r\n            }\r\n        }\r\n    }\r\n    // Fallback option: JDK 9+ Lookup.defineClass API even if ClassLoader does not match\r\n    if (c == null && contextClass != null && contextClass.getClassLoader() != loader) {\r\n        try {\r\n            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(contextClass, MethodHandles.lookup());\r\n            c = lookup.defineClass(b);\r\n        } catch (LinkageError | IllegalAccessException ex) {\r\n            throw new CodeGenerationException(ex) {\r\n\r\n                @Override\r\n                public String getMessage() {\r\n                    return \"ClassLoader mismatch for [\" + contextClass.getName() + \"]: JVM should be started with --add-opens=java.base/java.lang=ALL-UNNAMED \" + \"for ClassLoader.defineClass to be accessible on \" + loader.getClass().getName() + \"; consider co-locating the affected class in that target ClassLoader instead.\";\r\n                }\r\n            };\r\n        } catch (Throwable ex) {\r\n            throw new CodeGenerationException(ex);\r\n        }\r\n    }\r\n    // No defineClass variant available at all?\r\n    if (c == null) {\r\n        throw new CodeGenerationException(t) {\r\n\r\n            @Override\r\n            public String getMessage() {\r\n                return \"No compatible defineClass mechanism detected: \" + \"JVM should be started with --add-opens=java.base/java.lang=ALL-UNNAMED \" + \"for ClassLoader.defineClass to be accessible. On the module path, \" + \"you may not be able to define this CGLIB-generated class at all.\";\r\n            }\r\n        };\r\n    }\r\n    // Force static initializers to run.\r\n    Class.forName(className, true, loader);\r\n    return c;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#setLoadedClassHandler(Consumer<Class<?>>)",
+    "entityType": "method",
+    "code": "public static void setLoadedClassHandler(Consumer<Class<?>> loadedClassHandler) {\r\n    ReflectUtils.loadedClassHandler = loadedClassHandler;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#loadClass(String,ClassLoader)",
+    "entityType": "method",
+    "code": "public static Class<?> loadClass(String className, ClassLoader classLoader) throws ClassNotFoundException {\r\n    // Force static initializers to run.\r\n    Class<?> clazz = Class.forName(className, true, classLoader);\r\n    Consumer<Class<?>> handlerToUse = loadedClassHandler;\r\n    if (handlerToUse != null) {\r\n        handlerToUse.accept(clazz);\r\n    }\r\n    return clazz;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findPackageProtected(Class[])",
+    "entityType": "method",
+    "code": "// SPRING PATCH END\r\npublic static int findPackageProtected(Class[] classes) {\r\n    for (int i = 0; i < classes.length; i++) {\r\n        if (!Modifier.isPublic(classes[i].getModifiers())) {\r\n            return i;\r\n        }\r\n    }\r\n    return 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getMethodInfo(Member,int)",
+    "entityType": "method",
+    "code": "public static MethodInfo getMethodInfo(final Member member, final int modifiers) {\r\n    final Signature sig = getSignature(member);\r\n    return new MethodInfo() {\r\n\r\n        private ClassInfo ci;\r\n\r\n        @Override\r\n        public ClassInfo getClassInfo() {\r\n            if (ci == null) {\r\n                ci = ReflectUtils.getClassInfo(member.getDeclaringClass());\r\n            }\r\n            return ci;\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return modifiers;\r\n        }\r\n\r\n        @Override\r\n        public Signature getSignature() {\r\n            return sig;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getExceptionTypes() {\r\n            return ReflectUtils.getExceptionTypes(member);\r\n        }\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getMethodInfo(Member)",
+    "entityType": "method",
+    "code": "public static MethodInfo getMethodInfo(Member member) {\r\n    return getMethodInfo(member, member.getModifiers());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getClassInfo(Class)",
+    "entityType": "method",
+    "code": "public static ClassInfo getClassInfo(final Class clazz) {\r\n    final Type type = Type.getType(clazz);\r\n    final Type sc = (clazz.getSuperclass() == null) ? null : Type.getType(clazz.getSuperclass());\r\n    return new ClassInfo() {\r\n\r\n        @Override\r\n        public Type getType() {\r\n            return type;\r\n        }\r\n\r\n        @Override\r\n        public Type getSuperType() {\r\n            return sc;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getInterfaces() {\r\n            return TypeUtils.getTypes(clazz.getInterfaces());\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return clazz.getModifiers();\r\n        }\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findMethods(String[],Method[])",
+    "entityType": "method",
+    "code": "// used by MethodInterceptorGenerated generated code\r\npublic static Method[] findMethods(String[] namesAndDescriptors, Method[] methods) {\r\n    Map map = new HashMap();\r\n    for (Method method : methods) {\r\n        map.put(method.getName() + Type.getMethodDescriptor(method), method);\r\n    }\r\n    Method[] result = new Method[namesAndDescriptors.length / 2];\r\n    for (int i = 0; i < result.length; i++) {\r\n        result[i] = (Method) map.get(namesAndDescriptors[i * 2] + namesAndDescriptors[i * 2 + 1]);\r\n        if (result[i] == null) {\r\n            // TODO: error?\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "comment": " used by MethodInterceptorGenerated generated code"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.RejectModifierPredicate",
+    "entityType": "class",
+    "code": "private int rejectMask;\npublic RejectModifierPredicate(int rejectMask) {\r\n    this.rejectMask = rejectMask;\r\n}\n@Override\r\npublic boolean evaluate(Object arg) {\r\n    return (((Member) arg).getModifiers() & rejectMask) == 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.RejectModifierPredicate#evaluate(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean evaluate(Object arg) {\r\n    return (((Member) arg).getModifiers() & rejectMask) == 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature",
+    "entityType": "class",
+    "code": "private String name;\nprivate String desc;\npublic Signature(String name, String desc) {\r\n    // TODO: better error checking\r\n    if (name.indexOf('(') >= 0) {\r\n        throw new IllegalArgumentException(\"Name '\" + name + \"' is invalid\");\r\n    }\r\n    this.name = name;\r\n    this.desc = desc;\r\n}\npublic Signature(String name, Type returnType, Type[] argumentTypes) {\r\n    this(name, Type.getMethodDescriptor(returnType, argumentTypes));\r\n}\npublic String getName() {\r\n    return name;\r\n}\npublic String getDescriptor() {\r\n    return desc;\r\n}\npublic Type getReturnType() {\r\n    return Type.getReturnType(desc);\r\n}\npublic Type[] getArgumentTypes() {\r\n    return Type.getArgumentTypes(desc);\r\n}\n@Override\r\npublic String toString() {\r\n    return name + desc;\r\n}\n@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof Signature other)) {\r\n        return false;\r\n    }\r\n    return name.equals(other.name) && desc.equals(other.desc);\r\n}\n@Override\r\npublic int hashCode() {\r\n    return name.hashCode() ^ desc.hashCode();\r\n}",
+    "comment": "\n * A representation of a method signature, containing the method name,\n * return type, and parameter types.\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#getName()",
+    "entityType": "method",
+    "code": "public String getName() {\r\n    return name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#getDescriptor()",
+    "entityType": "method",
+    "code": "public String getDescriptor() {\r\n    return desc;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#getReturnType()",
+    "entityType": "method",
+    "code": "public Type getReturnType() {\r\n    return Type.getReturnType(desc);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#getArgumentTypes()",
+    "entityType": "method",
+    "code": "public Type[] getArgumentTypes() {\r\n    return Type.getArgumentTypes(desc);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return name + desc;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof Signature other)) {\r\n        return false;\r\n    }\r\n    return name.equals(other.name) && desc.equals(other.desc);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Signature#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return name.hashCode() ^ desc.hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.SpringNamingPolicy",
+    "entityType": "class",
+    "code": "public static final SpringNamingPolicy INSTANCE = new SpringNamingPolicy();\nprivate static final String SPRING_LABEL = \"$$SpringCGLIB$$\";\nprivate static final String FAST_CLASS_SUFFIX = \"FastClass$$\";\nprivate SpringNamingPolicy() {\r\n}\n@Override\r\npublic String getClassName(String prefix, String source, Object key, Predicate names) {\r\n    if (prefix == null) {\r\n        prefix = \"org.springframework.cglib.empty.Object\";\r\n    } else if (prefix.startsWith(\"java.\") || prefix.startsWith(\"javax.\")) {\r\n        prefix = \"_\" + prefix;\r\n    }\r\n    String base;\r\n    int existingLabel = prefix.indexOf(SPRING_LABEL);\r\n    if (existingLabel >= 0) {\r\n        base = prefix.substring(0, existingLabel + SPRING_LABEL.length());\r\n    } else {\r\n        base = prefix + SPRING_LABEL;\r\n    }\r\n    // When the generated class name is for a FastClass, the source is\r\n    // \"org.springframework.cglib.reflect.FastClass\".\r\n    boolean isFastClass = (source != null && source.endsWith(\".FastClass\"));\r\n    if (isFastClass && !prefix.contains(FAST_CLASS_SUFFIX)) {\r\n        base += FAST_CLASS_SUFFIX;\r\n    }\r\n    int index = 0;\r\n    String attempt = base + index;\r\n    while (names.evaluate(attempt)) {\r\n        attempt = base + index++;\r\n    }\r\n    return attempt;\r\n}",
+    "comment": "\n * Custom variant of CGLIB's {@link DefaultNamingPolicy}, modifying the tag\n * in generated class names from \"EnhancerByCGLIB\" etc to a \"SpringCGLIB\" tag\n * and using a plain counter suffix instead of a hash code suffix (as of 6.0).\n *\n * <p>This allows for reliably discovering pre-generated Spring proxy classes\n * in the classpath.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 3.2.8 / 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.SpringNamingPolicy#getClassName(String,String,Object,Predicate)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getClassName(String prefix, String source, Object key, Predicate names) {\r\n    if (prefix == null) {\r\n        prefix = \"org.springframework.cglib.empty.Object\";\r\n    } else if (prefix.startsWith(\"java.\") || prefix.startsWith(\"javax.\")) {\r\n        prefix = \"_\" + prefix;\r\n    }\r\n    String base;\r\n    int existingLabel = prefix.indexOf(SPRING_LABEL);\r\n    if (existingLabel >= 0) {\r\n        base = prefix.substring(0, existingLabel + SPRING_LABEL.length());\r\n    } else {\r\n        base = prefix + SPRING_LABEL;\r\n    }\r\n    // When the generated class name is for a FastClass, the source is\r\n    // \"org.springframework.cglib.reflect.FastClass\".\r\n    boolean isFastClass = (source != null && source.endsWith(\".FastClass\"));\r\n    if (isFastClass && !prefix.contains(FAST_CLASS_SUFFIX)) {\r\n        base += FAST_CLASS_SUFFIX;\r\n    }\r\n    int index = 0;\r\n    String attempt = base + index;\r\n    while (names.evaluate(attempt)) {\r\n        attempt = base + index++;\r\n    }\r\n    return attempt;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet",
+    "entityType": "class",
+    "code": "private static final int[] T = new int[256];\nprivate int value = 0;\nprivate static int gcount(int x) {\r\n    int c = 0;\r\n    while (x != 0) {\r\n        c++;\r\n        x &= (x - 1);\r\n    }\r\n    return c;\r\n}\nstatic {\r\n    for (int j = 0; j < 256; j++) {\r\n        T[j] = gcount(j);\r\n    }\r\n}\nprivate static int topbit(int i) {\r\n    int j;\r\n    for (j = 0; i != 0; i ^= j) {\r\n        j = i & -i;\r\n    }\r\n    return j;\r\n}\nprivate static int log2(int i) {\r\n    int j = 0;\r\n    for (j = 0; i != 0; i >>= 1) {\r\n        j++;\r\n    }\r\n    return j;\r\n}\npublic int length() {\r\n    return log2(topbit(value));\r\n}\n/**\r\n * If bit 31 is set then this method results in an infinite loop.\r\n *\r\n * @return the number of bits set to <code>true</code> in this TinyBitSet.\r\n */\r\npublic int cardinality() {\r\n    int w = value;\r\n    int c = 0;\r\n    while (w != 0) {\r\n        c += T[w & 255];\r\n        w >>= 8;\r\n    }\r\n    return c;\r\n}\npublic boolean get(int index) {\r\n    return (value & (1 << index)) != 0;\r\n}\npublic void set(int index) {\r\n    value |= (1 << index);\r\n}\npublic void clear(int index) {\r\n    value &= ~(1 << index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#gcount(int)",
+    "entityType": "method",
+    "code": "private static int gcount(int x) {\r\n    int c = 0;\r\n    while (x != 0) {\r\n        c++;\r\n        x &= (x - 1);\r\n    }\r\n    return c;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#topbit(int)",
+    "entityType": "method",
+    "code": "private static int topbit(int i) {\r\n    int j;\r\n    for (j = 0; i != 0; i ^= j) {\r\n        j = i & -i;\r\n    }\r\n    return j;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#log2(int)",
+    "entityType": "method",
+    "code": "private static int log2(int i) {\r\n    int j = 0;\r\n    for (j = 0; i != 0; i >>= 1) {\r\n        j++;\r\n    }\r\n    return j;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#length()",
+    "entityType": "method",
+    "code": "public int length() {\r\n    return log2(topbit(value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#cardinality()",
+    "entityType": "method",
+    "code": "/**\r\n * If bit 31 is set then this method results in an infinite loop.\r\n *\r\n * @return the number of bits set to <code>true</code> in this TinyBitSet.\r\n */\r\npublic int cardinality() {\r\n    int w = value;\r\n    int c = 0;\r\n    while (w != 0) {\r\n        c += T[w & 255];\r\n        w >>= 8;\r\n    }\r\n    return c;\r\n}",
+    "comment": "\n     * If bit 31 is set then this method results in an infinite loop.\n     *\n     * @return the number of bits set to <code>true</code> in this TinyBitSet.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#get(int)",
+    "entityType": "method",
+    "code": "public boolean get(int index) {\r\n    return (value & (1 << index)) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#set(int)",
+    "entityType": "method",
+    "code": "public void set(int index) {\r\n    value |= (1 << index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TinyBitSet#clear(int)",
+    "entityType": "method",
+    "code": "public void clear(int index) {\r\n    value &= ~(1 << index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Transformer",
+    "entityType": "class",
+    "code": "Object transform(Object value);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Transformer#transform(Object)",
+    "entityType": "method",
+    "code": "Object transform(Object value);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils",
+    "entityType": "class",
+    "code": "private static final Map transforms = new HashMap();\nprivate static final Map rtransforms = new HashMap();\nprivate TypeUtils() {\r\n}\nstatic {\r\n    transforms.put(\"void\", \"V\");\r\n    transforms.put(\"byte\", \"B\");\r\n    transforms.put(\"char\", \"C\");\r\n    transforms.put(\"double\", \"D\");\r\n    transforms.put(\"float\", \"F\");\r\n    transforms.put(\"int\", \"I\");\r\n    transforms.put(\"long\", \"J\");\r\n    transforms.put(\"short\", \"S\");\r\n    transforms.put(\"boolean\", \"Z\");\r\n    CollectionUtils.reverse(transforms, rtransforms);\r\n}\npublic static Type getType(String className) {\r\n    return Type.getType(\"L\" + className.replace('.', '/') + \";\");\r\n}\npublic static boolean isFinal(int access) {\r\n    return (Constants.ACC_FINAL & access) != 0;\r\n}\npublic static boolean isStatic(int access) {\r\n    return (Constants.ACC_STATIC & access) != 0;\r\n}\npublic static boolean isProtected(int access) {\r\n    return (Constants.ACC_PROTECTED & access) != 0;\r\n}\npublic static boolean isPublic(int access) {\r\n    return (Constants.ACC_PUBLIC & access) != 0;\r\n}\npublic static boolean isAbstract(int access) {\r\n    return (Constants.ACC_ABSTRACT & access) != 0;\r\n}\npublic static boolean isInterface(int access) {\r\n    return (Constants.ACC_INTERFACE & access) != 0;\r\n}\npublic static boolean isPrivate(int access) {\r\n    return (Constants.ACC_PRIVATE & access) != 0;\r\n}\npublic static boolean isSynthetic(int access) {\r\n    return (Constants.ACC_SYNTHETIC & access) != 0;\r\n}\npublic static boolean isBridge(int access) {\r\n    return (Constants.ACC_BRIDGE & access) != 0;\r\n}\n// getPackage returns null on JDK 1.2\r\npublic static String getPackageName(Type type) {\r\n    return getPackageName(getClassName(type));\r\n}\npublic static String getPackageName(String className) {\r\n    int idx = className.lastIndexOf('.');\r\n    return (idx < 0) ? \"\" : className.substring(0, idx);\r\n}\npublic static String upperFirst(String s) {\r\n    if (s == null || s.isEmpty()) {\r\n        return s;\r\n    }\r\n    return Character.toUpperCase(s.charAt(0)) + s.substring(1);\r\n}\npublic static String getClassName(Type type) {\r\n    if (isPrimitive(type)) {\r\n        return (String) rtransforms.get(type.getDescriptor());\r\n    } else if (isArray(type)) {\r\n        return getClassName(getComponentType(type)) + \"[]\";\r\n    } else {\r\n        return type.getClassName();\r\n    }\r\n}\npublic static Type[] add(Type[] types, Type extra) {\r\n    if (types == null) {\r\n        return new Type[] { extra };\r\n    } else {\r\n        List list = Arrays.asList(types);\r\n        if (list.contains(extra)) {\r\n            return types;\r\n        }\r\n        Type[] copy = new Type[types.length + 1];\r\n        System.arraycopy(types, 0, copy, 0, types.length);\r\n        copy[types.length] = extra;\r\n        return copy;\r\n    }\r\n}\npublic static Type[] add(Type[] t1, Type[] t2) {\r\n    // TODO: set semantics?\r\n    Type[] all = new Type[t1.length + t2.length];\r\n    System.arraycopy(t1, 0, all, 0, t1.length);\r\n    System.arraycopy(t2, 0, all, t1.length, t2.length);\r\n    return all;\r\n}\npublic static Type fromInternalName(String name) {\r\n    // TODO; primitives?\r\n    return Type.getType(\"L\" + name + \";\");\r\n}\npublic static Type[] fromInternalNames(String[] names) {\r\n    if (names == null) {\r\n        return null;\r\n    }\r\n    Type[] types = new Type[names.length];\r\n    for (int i = 0; i < names.length; i++) {\r\n        types[i] = fromInternalName(names[i]);\r\n    }\r\n    return types;\r\n}\npublic static int getStackSize(Type[] types) {\r\n    int size = 0;\r\n    for (Type type : types) {\r\n        size += type.getSize();\r\n    }\r\n    return size;\r\n}\npublic static String[] toInternalNames(Type[] types) {\r\n    if (types == null) {\r\n        return null;\r\n    }\r\n    String[] names = new String[types.length];\r\n    for (int i = 0; i < types.length; i++) {\r\n        names[i] = types[i].getInternalName();\r\n    }\r\n    return names;\r\n}\npublic static Signature parseSignature(String s) {\r\n    int space = s.indexOf(' ');\r\n    int lparen = s.indexOf('(', space);\r\n    int rparen = s.indexOf(')', lparen);\r\n    String returnType = s.substring(0, space);\r\n    String methodName = s.substring(space + 1, lparen);\r\n    StringBuilder sb = new StringBuilder();\r\n    sb.append('(');\r\n    for (Iterator it = parseTypes(s, lparen + 1, rparen).iterator(); it.hasNext(); ) {\r\n        sb.append(it.next());\r\n    }\r\n    sb.append(')');\r\n    sb.append(map(returnType));\r\n    return new Signature(methodName, sb.toString());\r\n}\npublic static Type parseType(String s) {\r\n    return Type.getType(map(s));\r\n}\npublic static Type[] parseTypes(String s) {\r\n    List names = parseTypes(s, 0, s.length());\r\n    Type[] types = new Type[names.size()];\r\n    for (int i = 0; i < types.length; i++) {\r\n        types[i] = Type.getType((String) names.get(i));\r\n    }\r\n    return types;\r\n}\npublic static Signature parseConstructor(Type[] types) {\r\n    StringBuilder sb = new StringBuilder();\r\n    sb.append(\"(\");\r\n    for (Type type : types) {\r\n        sb.append(type.getDescriptor());\r\n    }\r\n    sb.append(\")\");\r\n    sb.append(\"V\");\r\n    return new Signature(Constants.CONSTRUCTOR_NAME, sb.toString());\r\n}\npublic static Signature parseConstructor(String sig) {\r\n    // TODO\r\n    return parseSignature(\"void <init>(\" + sig + \")\");\r\n}\nprivate static List parseTypes(String s, int mark, int end) {\r\n    List types = new ArrayList(5);\r\n    for (; ; ) {\r\n        int next = s.indexOf(',', mark);\r\n        if (next < 0) {\r\n            break;\r\n        }\r\n        types.add(map(s.substring(mark, next).trim()));\r\n        mark = next + 1;\r\n    }\r\n    types.add(map(s.substring(mark, end).trim()));\r\n    return types;\r\n}\nprivate static String map(String type) {\r\n    if (type.isEmpty()) {\r\n        return type;\r\n    }\r\n    String t = (String) transforms.get(type);\r\n    if (t != null) {\r\n        return t;\r\n    } else if (type.indexOf('.') < 0) {\r\n        return map(\"java.lang.\" + type);\r\n    } else {\r\n        StringBuilder sb = new StringBuilder();\r\n        int index = 0;\r\n        while ((index = type.indexOf(\"[]\", index) + 1) > 0) {\r\n            sb.append('[');\r\n        }\r\n        type = type.substring(0, type.length() - sb.length() * 2);\r\n        sb.append('L').append(type.replace('.', '/')).append(';');\r\n        return sb.toString();\r\n    }\r\n}\npublic static Type getBoxedType(Type type) {\r\n    return switch(type.getSort()) {\r\n        case Type.CHAR ->\r\n            Constants.TYPE_CHARACTER;\r\n        case Type.BOOLEAN ->\r\n            Constants.TYPE_BOOLEAN;\r\n        case Type.DOUBLE ->\r\n            Constants.TYPE_DOUBLE;\r\n        case Type.FLOAT ->\r\n            Constants.TYPE_FLOAT;\r\n        case Type.LONG ->\r\n            Constants.TYPE_LONG;\r\n        case Type.INT ->\r\n            Constants.TYPE_INTEGER;\r\n        case Type.SHORT ->\r\n            Constants.TYPE_SHORT;\r\n        case Type.BYTE ->\r\n            Constants.TYPE_BYTE;\r\n        default ->\r\n            type;\r\n    };\r\n}\npublic static Type getUnboxedType(Type type) {\r\n    if (Constants.TYPE_INTEGER.equals(type)) {\r\n        return Type.INT_TYPE;\r\n    } else if (Constants.TYPE_BOOLEAN.equals(type)) {\r\n        return Type.BOOLEAN_TYPE;\r\n    } else if (Constants.TYPE_DOUBLE.equals(type)) {\r\n        return Type.DOUBLE_TYPE;\r\n    } else if (Constants.TYPE_LONG.equals(type)) {\r\n        return Type.LONG_TYPE;\r\n    } else if (Constants.TYPE_CHARACTER.equals(type)) {\r\n        return Type.CHAR_TYPE;\r\n    } else if (Constants.TYPE_BYTE.equals(type)) {\r\n        return Type.BYTE_TYPE;\r\n    } else if (Constants.TYPE_FLOAT.equals(type)) {\r\n        return Type.FLOAT_TYPE;\r\n    } else if (Constants.TYPE_SHORT.equals(type)) {\r\n        return Type.SHORT_TYPE;\r\n    } else {\r\n        return type;\r\n    }\r\n}\npublic static boolean isArray(Type type) {\r\n    return type.getSort() == Type.ARRAY;\r\n}\npublic static Type getComponentType(Type type) {\r\n    if (!isArray(type)) {\r\n        throw new IllegalArgumentException(\"Type \" + type + \" is not an array\");\r\n    }\r\n    return Type.getType(type.getDescriptor().substring(1));\r\n}\npublic static boolean isPrimitive(Type type) {\r\n    return switch(type.getSort()) {\r\n        case Type.ARRAY, Type.OBJECT ->\r\n            false;\r\n        default ->\r\n            true;\r\n    };\r\n}\npublic static String emulateClassGetName(Type type) {\r\n    if (isArray(type)) {\r\n        return type.getDescriptor().replace('/', '.');\r\n    } else {\r\n        return getClassName(type);\r\n    }\r\n}\npublic static boolean isConstructor(MethodInfo method) {\r\n    return method.getSignature().getName().equals(Constants.CONSTRUCTOR_NAME);\r\n}\npublic static Type[] getTypes(Class[] classes) {\r\n    if (classes == null) {\r\n        return null;\r\n    }\r\n    Type[] types = new Type[classes.length];\r\n    for (int i = 0; i < classes.length; i++) {\r\n        types[i] = Type.getType(classes[i]);\r\n    }\r\n    return types;\r\n}\npublic static int ICONST(int value) {\r\n    return switch(value) {\r\n        case -1 ->\r\n            Constants.ICONST_M1;\r\n        case 0 ->\r\n            Constants.ICONST_0;\r\n        case 1 ->\r\n            Constants.ICONST_1;\r\n        case 2 ->\r\n            Constants.ICONST_2;\r\n        case 3 ->\r\n            Constants.ICONST_3;\r\n        case 4 ->\r\n            Constants.ICONST_4;\r\n        case 5 ->\r\n            Constants.ICONST_5;\r\n        // error\r\n        default ->\r\n            -1;\r\n    };\r\n}\npublic static int LCONST(long value) {\r\n    if (value == 0L) {\r\n        return Constants.LCONST_0;\r\n    } else if (value == 1L) {\r\n        return Constants.LCONST_1;\r\n    } else {\r\n        // error\r\n        return -1;\r\n    }\r\n}\npublic static int FCONST(float value) {\r\n    if (value == 0f) {\r\n        return Constants.FCONST_0;\r\n    } else if (value == 1f) {\r\n        return Constants.FCONST_1;\r\n    } else if (value == 2f) {\r\n        return Constants.FCONST_2;\r\n    } else {\r\n        // error\r\n        return -1;\r\n    }\r\n}\npublic static int DCONST(double value) {\r\n    if (value == 0d) {\r\n        return Constants.DCONST_0;\r\n    } else if (value == 1d) {\r\n        return Constants.DCONST_1;\r\n    } else {\r\n        // error\r\n        return -1;\r\n    }\r\n}\npublic static int NEWARRAY(Type type) {\r\n    return switch(type.getSort()) {\r\n        case Type.BYTE ->\r\n            Constants.T_BYTE;\r\n        case Type.CHAR ->\r\n            Constants.T_CHAR;\r\n        case Type.DOUBLE ->\r\n            Constants.T_DOUBLE;\r\n        case Type.FLOAT ->\r\n            Constants.T_FLOAT;\r\n        case Type.INT ->\r\n            Constants.T_INT;\r\n        case Type.LONG ->\r\n            Constants.T_LONG;\r\n        case Type.SHORT ->\r\n            Constants.T_SHORT;\r\n        case Type.BOOLEAN ->\r\n            Constants.T_BOOLEAN;\r\n        // error\r\n        default ->\r\n            -1;\r\n    };\r\n}\npublic static String escapeType(String s) {\r\n    StringBuilder sb = new StringBuilder();\r\n    for (int i = 0, len = s.length(); i < len; i++) {\r\n        char c = s.charAt(i);\r\n        switch(c) {\r\n            case '$' ->\r\n                sb.append(\"$24\");\r\n            case '.' ->\r\n                sb.append(\"$2E\");\r\n            case '[' ->\r\n                sb.append(\"$5B\");\r\n            case ';' ->\r\n                sb.append(\"$3B\");\r\n            case '(' ->\r\n                sb.append(\"$28\");\r\n            case ')' ->\r\n                sb.append(\"$29\");\r\n            case '/' ->\r\n                sb.append(\"$2F\");\r\n            default ->\r\n                sb.append(c);\r\n        }\r\n    }\r\n    return sb.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getType(String)",
+    "entityType": "method",
+    "code": "public static Type getType(String className) {\r\n    return Type.getType(\"L\" + className.replace('.', '/') + \";\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isFinal(int)",
+    "entityType": "method",
+    "code": "public static boolean isFinal(int access) {\r\n    return (Constants.ACC_FINAL & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isStatic(int)",
+    "entityType": "method",
+    "code": "public static boolean isStatic(int access) {\r\n    return (Constants.ACC_STATIC & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isProtected(int)",
+    "entityType": "method",
+    "code": "public static boolean isProtected(int access) {\r\n    return (Constants.ACC_PROTECTED & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isPublic(int)",
+    "entityType": "method",
+    "code": "public static boolean isPublic(int access) {\r\n    return (Constants.ACC_PUBLIC & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isAbstract(int)",
+    "entityType": "method",
+    "code": "public static boolean isAbstract(int access) {\r\n    return (Constants.ACC_ABSTRACT & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isInterface(int)",
+    "entityType": "method",
+    "code": "public static boolean isInterface(int access) {\r\n    return (Constants.ACC_INTERFACE & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isPrivate(int)",
+    "entityType": "method",
+    "code": "public static boolean isPrivate(int access) {\r\n    return (Constants.ACC_PRIVATE & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isSynthetic(int)",
+    "entityType": "method",
+    "code": "public static boolean isSynthetic(int access) {\r\n    return (Constants.ACC_SYNTHETIC & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isBridge(int)",
+    "entityType": "method",
+    "code": "public static boolean isBridge(int access) {\r\n    return (Constants.ACC_BRIDGE & access) != 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getPackageName(Type)",
+    "entityType": "method",
+    "code": "// getPackage returns null on JDK 1.2\r\npublic static String getPackageName(Type type) {\r\n    return getPackageName(getClassName(type));\r\n}",
+    "comment": " getPackage returns null on JDK 1.2"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getPackageName(String)",
+    "entityType": "method",
+    "code": "public static String getPackageName(String className) {\r\n    int idx = className.lastIndexOf('.');\r\n    return (idx < 0) ? \"\" : className.substring(0, idx);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#upperFirst(String)",
+    "entityType": "method",
+    "code": "public static String upperFirst(String s) {\r\n    if (s == null || s.isEmpty()) {\r\n        return s;\r\n    }\r\n    return Character.toUpperCase(s.charAt(0)) + s.substring(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getClassName(Type)",
+    "entityType": "method",
+    "code": "public static String getClassName(Type type) {\r\n    if (isPrimitive(type)) {\r\n        return (String) rtransforms.get(type.getDescriptor());\r\n    } else if (isArray(type)) {\r\n        return getClassName(getComponentType(type)) + \"[]\";\r\n    } else {\r\n        return type.getClassName();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#add(Type[],Type)",
+    "entityType": "method",
+    "code": "public static Type[] add(Type[] types, Type extra) {\r\n    if (types == null) {\r\n        return new Type[] { extra };\r\n    } else {\r\n        List list = Arrays.asList(types);\r\n        if (list.contains(extra)) {\r\n            return types;\r\n        }\r\n        Type[] copy = new Type[types.length + 1];\r\n        System.arraycopy(types, 0, copy, 0, types.length);\r\n        copy[types.length] = extra;\r\n        return copy;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#add(Type[],Type[])",
+    "entityType": "method",
+    "code": "public static Type[] add(Type[] t1, Type[] t2) {\r\n    // TODO: set semantics?\r\n    Type[] all = new Type[t1.length + t2.length];\r\n    System.arraycopy(t1, 0, all, 0, t1.length);\r\n    System.arraycopy(t2, 0, all, t1.length, t2.length);\r\n    return all;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#fromInternalName(String)",
+    "entityType": "method",
+    "code": "public static Type fromInternalName(String name) {\r\n    // TODO; primitives?\r\n    return Type.getType(\"L\" + name + \";\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#fromInternalNames(String[])",
+    "entityType": "method",
+    "code": "public static Type[] fromInternalNames(String[] names) {\r\n    if (names == null) {\r\n        return null;\r\n    }\r\n    Type[] types = new Type[names.length];\r\n    for (int i = 0; i < names.length; i++) {\r\n        types[i] = fromInternalName(names[i]);\r\n    }\r\n    return types;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getStackSize(Type[])",
+    "entityType": "method",
+    "code": "public static int getStackSize(Type[] types) {\r\n    int size = 0;\r\n    for (Type type : types) {\r\n        size += type.getSize();\r\n    }\r\n    return size;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#toInternalNames(Type[])",
+    "entityType": "method",
+    "code": "public static String[] toInternalNames(Type[] types) {\r\n    if (types == null) {\r\n        return null;\r\n    }\r\n    String[] names = new String[types.length];\r\n    for (int i = 0; i < types.length; i++) {\r\n        names[i] = types[i].getInternalName();\r\n    }\r\n    return names;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#parseSignature(String)",
+    "entityType": "method",
+    "code": "public static Signature parseSignature(String s) {\r\n    int space = s.indexOf(' ');\r\n    int lparen = s.indexOf('(', space);\r\n    int rparen = s.indexOf(')', lparen);\r\n    String returnType = s.substring(0, space);\r\n    String methodName = s.substring(space + 1, lparen);\r\n    StringBuilder sb = new StringBuilder();\r\n    sb.append('(');\r\n    for (Iterator it = parseTypes(s, lparen + 1, rparen).iterator(); it.hasNext(); ) {\r\n        sb.append(it.next());\r\n    }\r\n    sb.append(')');\r\n    sb.append(map(returnType));\r\n    return new Signature(methodName, sb.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#parseType(String)",
+    "entityType": "method",
+    "code": "public static Type parseType(String s) {\r\n    return Type.getType(map(s));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#parseTypes(String)",
+    "entityType": "method",
+    "code": "public static Type[] parseTypes(String s) {\r\n    List names = parseTypes(s, 0, s.length());\r\n    Type[] types = new Type[names.size()];\r\n    for (int i = 0; i < types.length; i++) {\r\n        types[i] = Type.getType((String) names.get(i));\r\n    }\r\n    return types;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#parseConstructor(Type[])",
+    "entityType": "method",
+    "code": "public static Signature parseConstructor(Type[] types) {\r\n    StringBuilder sb = new StringBuilder();\r\n    sb.append(\"(\");\r\n    for (Type type : types) {\r\n        sb.append(type.getDescriptor());\r\n    }\r\n    sb.append(\")\");\r\n    sb.append(\"V\");\r\n    return new Signature(Constants.CONSTRUCTOR_NAME, sb.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#parseConstructor(String)",
+    "entityType": "method",
+    "code": "public static Signature parseConstructor(String sig) {\r\n    // TODO\r\n    return parseSignature(\"void <init>(\" + sig + \")\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#parseTypes(String,int,int)",
+    "entityType": "method",
+    "code": "private static List parseTypes(String s, int mark, int end) {\r\n    List types = new ArrayList(5);\r\n    for (; ; ) {\r\n        int next = s.indexOf(',', mark);\r\n        if (next < 0) {\r\n            break;\r\n        }\r\n        types.add(map(s.substring(mark, next).trim()));\r\n        mark = next + 1;\r\n    }\r\n    types.add(map(s.substring(mark, end).trim()));\r\n    return types;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#map(String)",
+    "entityType": "method",
+    "code": "private static String map(String type) {\r\n    if (type.isEmpty()) {\r\n        return type;\r\n    }\r\n    String t = (String) transforms.get(type);\r\n    if (t != null) {\r\n        return t;\r\n    } else if (type.indexOf('.') < 0) {\r\n        return map(\"java.lang.\" + type);\r\n    } else {\r\n        StringBuilder sb = new StringBuilder();\r\n        int index = 0;\r\n        while ((index = type.indexOf(\"[]\", index) + 1) > 0) {\r\n            sb.append('[');\r\n        }\r\n        type = type.substring(0, type.length() - sb.length() * 2);\r\n        sb.append('L').append(type.replace('.', '/')).append(';');\r\n        return sb.toString();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getBoxedType(Type)",
+    "entityType": "method",
+    "code": "public static Type getBoxedType(Type type) {\r\n    return switch(type.getSort()) {\r\n        case Type.CHAR ->\r\n            Constants.TYPE_CHARACTER;\r\n        case Type.BOOLEAN ->\r\n            Constants.TYPE_BOOLEAN;\r\n        case Type.DOUBLE ->\r\n            Constants.TYPE_DOUBLE;\r\n        case Type.FLOAT ->\r\n            Constants.TYPE_FLOAT;\r\n        case Type.LONG ->\r\n            Constants.TYPE_LONG;\r\n        case Type.INT ->\r\n            Constants.TYPE_INTEGER;\r\n        case Type.SHORT ->\r\n            Constants.TYPE_SHORT;\r\n        case Type.BYTE ->\r\n            Constants.TYPE_BYTE;\r\n        default ->\r\n            type;\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getUnboxedType(Type)",
+    "entityType": "method",
+    "code": "public static Type getUnboxedType(Type type) {\r\n    if (Constants.TYPE_INTEGER.equals(type)) {\r\n        return Type.INT_TYPE;\r\n    } else if (Constants.TYPE_BOOLEAN.equals(type)) {\r\n        return Type.BOOLEAN_TYPE;\r\n    } else if (Constants.TYPE_DOUBLE.equals(type)) {\r\n        return Type.DOUBLE_TYPE;\r\n    } else if (Constants.TYPE_LONG.equals(type)) {\r\n        return Type.LONG_TYPE;\r\n    } else if (Constants.TYPE_CHARACTER.equals(type)) {\r\n        return Type.CHAR_TYPE;\r\n    } else if (Constants.TYPE_BYTE.equals(type)) {\r\n        return Type.BYTE_TYPE;\r\n    } else if (Constants.TYPE_FLOAT.equals(type)) {\r\n        return Type.FLOAT_TYPE;\r\n    } else if (Constants.TYPE_SHORT.equals(type)) {\r\n        return Type.SHORT_TYPE;\r\n    } else {\r\n        return type;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isArray(Type)",
+    "entityType": "method",
+    "code": "public static boolean isArray(Type type) {\r\n    return type.getSort() == Type.ARRAY;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getComponentType(Type)",
+    "entityType": "method",
+    "code": "public static Type getComponentType(Type type) {\r\n    if (!isArray(type)) {\r\n        throw new IllegalArgumentException(\"Type \" + type + \" is not an array\");\r\n    }\r\n    return Type.getType(type.getDescriptor().substring(1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isPrimitive(Type)",
+    "entityType": "method",
+    "code": "public static boolean isPrimitive(Type type) {\r\n    return switch(type.getSort()) {\r\n        case Type.ARRAY, Type.OBJECT ->\r\n            false;\r\n        default ->\r\n            true;\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#emulateClassGetName(Type)",
+    "entityType": "method",
+    "code": "public static String emulateClassGetName(Type type) {\r\n    if (isArray(type)) {\r\n        return type.getDescriptor().replace('/', '.');\r\n    } else {\r\n        return getClassName(type);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#isConstructor(MethodInfo)",
+    "entityType": "method",
+    "code": "public static boolean isConstructor(MethodInfo method) {\r\n    return method.getSignature().getName().equals(Constants.CONSTRUCTOR_NAME);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#getTypes(Class[])",
+    "entityType": "method",
+    "code": "public static Type[] getTypes(Class[] classes) {\r\n    if (classes == null) {\r\n        return null;\r\n    }\r\n    Type[] types = new Type[classes.length];\r\n    for (int i = 0; i < classes.length; i++) {\r\n        types[i] = Type.getType(classes[i]);\r\n    }\r\n    return types;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#ICONST(int)",
+    "entityType": "method",
+    "code": "public static int ICONST(int value) {\r\n    return switch(value) {\r\n        case -1 ->\r\n            Constants.ICONST_M1;\r\n        case 0 ->\r\n            Constants.ICONST_0;\r\n        case 1 ->\r\n            Constants.ICONST_1;\r\n        case 2 ->\r\n            Constants.ICONST_2;\r\n        case 3 ->\r\n            Constants.ICONST_3;\r\n        case 4 ->\r\n            Constants.ICONST_4;\r\n        case 5 ->\r\n            Constants.ICONST_5;\r\n        // error\r\n        default ->\r\n            -1;\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#LCONST(long)",
+    "entityType": "method",
+    "code": "public static int LCONST(long value) {\r\n    if (value == 0L) {\r\n        return Constants.LCONST_0;\r\n    } else if (value == 1L) {\r\n        return Constants.LCONST_1;\r\n    } else {\r\n        // error\r\n        return -1;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#FCONST(float)",
+    "entityType": "method",
+    "code": "public static int FCONST(float value) {\r\n    if (value == 0f) {\r\n        return Constants.FCONST_0;\r\n    } else if (value == 1f) {\r\n        return Constants.FCONST_1;\r\n    } else if (value == 2f) {\r\n        return Constants.FCONST_2;\r\n    } else {\r\n        // error\r\n        return -1;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#DCONST(double)",
+    "entityType": "method",
+    "code": "public static int DCONST(double value) {\r\n    if (value == 0d) {\r\n        return Constants.DCONST_0;\r\n    } else if (value == 1d) {\r\n        return Constants.DCONST_1;\r\n    } else {\r\n        // error\r\n        return -1;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#NEWARRAY(Type)",
+    "entityType": "method",
+    "code": "public static int NEWARRAY(Type type) {\r\n    return switch(type.getSort()) {\r\n        case Type.BYTE ->\r\n            Constants.T_BYTE;\r\n        case Type.CHAR ->\r\n            Constants.T_CHAR;\r\n        case Type.DOUBLE ->\r\n            Constants.T_DOUBLE;\r\n        case Type.FLOAT ->\r\n            Constants.T_FLOAT;\r\n        case Type.INT ->\r\n            Constants.T_INT;\r\n        case Type.LONG ->\r\n            Constants.T_LONG;\r\n        case Type.SHORT ->\r\n            Constants.T_SHORT;\r\n        case Type.BOOLEAN ->\r\n            Constants.T_BOOLEAN;\r\n        // error\r\n        default ->\r\n            -1;\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.TypeUtils#escapeType(String)",
+    "entityType": "method",
+    "code": "public static String escapeType(String s) {\r\n    StringBuilder sb = new StringBuilder();\r\n    for (int i = 0, len = s.length(); i < len; i++) {\r\n        char c = s.charAt(i);\r\n        switch(c) {\r\n            case '$' ->\r\n                sb.append(\"$24\");\r\n            case '.' ->\r\n                sb.append(\"$2E\");\r\n            case '[' ->\r\n                sb.append(\"$5B\");\r\n            case ';' ->\r\n                sb.append(\"$3B\");\r\n            case '(' ->\r\n                sb.append(\"$28\");\r\n            case ')' ->\r\n                sb.append(\"$29\");\r\n            case '/' ->\r\n                sb.append(\"$2F\");\r\n            default ->\r\n                sb.append(c);\r\n        }\r\n    }\r\n    return sb.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.VisibilityPredicate",
+    "entityType": "class",
+    "code": "private boolean protectedOk;\nprivate String pkg;\nprivate boolean samePackageOk;\npublic VisibilityPredicate(Class source, boolean protectedOk) {\r\n    this.protectedOk = protectedOk;\r\n    // same package is not ok for the bootstrap loaded classes.  In all other cases we are\r\n    // generating classes in the same classloader\r\n    this.samePackageOk = source.getClassLoader() != null;\r\n    pkg = TypeUtils.getPackageName(Type.getType(source));\r\n}\n@Override\r\npublic boolean evaluate(Object arg) {\r\n    Member member = (Member) arg;\r\n    int mod = member.getModifiers();\r\n    if (Modifier.isPrivate(mod)) {\r\n        return false;\r\n    } else if (Modifier.isPublic(mod)) {\r\n        return true;\r\n    } else if (Modifier.isProtected(mod) && protectedOk) {\r\n        // protected is fine if 'protectedOk' is true (for subclasses)\r\n        return true;\r\n    } else {\r\n        // protected/package private if the member is in the same package as the source class\r\n        // and we are generating into the same classloader.\r\n        return samePackageOk && pkg.equals(TypeUtils.getPackageName(Type.getType(member.getDeclaringClass())));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.VisibilityPredicate#evaluate(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean evaluate(Object arg) {\r\n    Member member = (Member) arg;\r\n    int mod = member.getModifiers();\r\n    if (Modifier.isPrivate(mod)) {\r\n        return false;\r\n    } else if (Modifier.isPublic(mod)) {\r\n        return true;\r\n    } else if (Modifier.isProtected(mod) && protectedOk) {\r\n        // protected is fine if 'protectedOk' is true (for subclasses)\r\n        return true;\r\n    } else {\r\n        // protected/package private if the member is in the same package as the source class\r\n        // and we are generating into the same classloader.\r\n        return samePackageOk && pkg.equals(TypeUtils.getPackageName(Type.getType(member.getDeclaringClass())));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.WeakCacheKey",
+    "entityType": "class",
+    "code": "private final int hash;\npublic WeakCacheKey(T referent) {\r\n    super(referent);\r\n    this.hash = referent.hashCode();\r\n}\n@Override\r\npublic boolean equals(Object obj) {\r\n    if (!(obj instanceof WeakCacheKey<?> weakCacheKey)) {\r\n        return false;\r\n    }\r\n    Object ours = get();\r\n    Object theirs = weakCacheKey.get();\r\n    return ours != null && theirs != null && ours.equals(theirs);\r\n}\n@Override\r\npublic int hashCode() {\r\n    return hash;\r\n}\n@Override\r\npublic String toString() {\r\n    T t = get();\r\n    return t == null ? \"Clean WeakIdentityKey, hash: \" + hash : t.toString();\r\n}",
+    "comment": "\n * Allows to check for object equality, yet the class does not keep strong reference to the target.\n * {@link #equals(Object)} returns true if and only if the reference is not yet expired and target\n * objects are equal in terms of {@link #equals(Object)}.\n * <p>\n * This an internal class, thus it might disappear in future cglib releases.\n *\n * @param <T> type of the reference\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.WeakCacheKey#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(Object obj) {\r\n    if (!(obj instanceof WeakCacheKey<?> weakCacheKey)) {\r\n        return false;\r\n    }\r\n    Object ours = get();\r\n    Object theirs = weakCacheKey.get();\r\n    return ours != null && theirs != null && ours.equals(theirs);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.WeakCacheKey#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return hash;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.WeakCacheKey#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    T t = get();\r\n    return t == null ? \"Clean WeakIdentityKey, hash: \" + hash : t.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.BridgeMethodResolver",
+    "entityType": "class",
+    "code": "private final Map /* <Class, Set<Signature> */\r\ndeclToBridge;\nprivate final ClassLoader classLoader;\npublic BridgeMethodResolver(Map declToBridge, ClassLoader classLoader) {\r\n    this.declToBridge = declToBridge;\r\n    this.classLoader = classLoader;\r\n}\n/**\r\n * Finds all bridge methods that are being called with invokespecial &\r\n * returns them.\r\n */\r\npublic Map /*<Signature, Signature>*/\r\nresolveAll() {\r\n    Map resolved = new HashMap();\r\n    for (Iterator entryIter = declToBridge.entrySet().iterator(); entryIter.hasNext(); ) {\r\n        Map.Entry entry = (Map.Entry) entryIter.next();\r\n        Class owner = (Class) entry.getKey();\r\n        Set bridges = (Set) entry.getValue();\r\n        try {\r\n            InputStream is = classLoader.getResourceAsStream(owner.getName().replace('.', '/') + \".class\");\r\n            if (is == null) {\r\n                return resolved;\r\n            }\r\n            try {\r\n                new ClassReader(is).accept(new BridgedFinder(bridges, resolved), ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\r\n            } finally {\r\n                is.close();\r\n            }\r\n        } catch (IOException ignored) ;\r\n    }\r\n    return resolved;\r\n}\nprivate static class BridgedFinder extends ClassVisitor {\r\n\r\n    private Map /*<Signature, Signature>*/\r\n    resolved;\r\n\r\n    private Set /*<Signature>*/\r\n    eligibleMethods;\r\n\r\n    private Signature currentMethod = null;\r\n\r\n    BridgedFinder(Set eligibleMethods, Map resolved) {\r\n        super(Constants.ASM_API);\r\n        this.resolved = resolved;\r\n        this.eligibleMethods = eligibleMethods;\r\n    }\r\n\r\n    @Override\r\n    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n    }\r\n\r\n    @Override\r\n    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {\r\n        Signature sig = new Signature(name, desc);\r\n        if (eligibleMethods.remove(sig)) {\r\n            currentMethod = sig;\r\n            return new MethodVisitor(Constants.ASM_API) {\r\n\r\n                @Override\r\n                public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {\r\n                    if ((opcode == Opcodes.INVOKESPECIAL || (itf && opcode == Opcodes.INVOKEINTERFACE)) && currentMethod != null) {\r\n                        Signature target = new Signature(name, desc);\r\n                        // If the target signature is the same as the current,\r\n                        // we shouldn't change our bridge becaues invokespecial\r\n                        // is the only way to make progress (otherwise we'll\r\n                        // get infinite recursion).  This would typically\r\n                        // only happen when a bridge method is created to widen\r\n                        // the visibility of a superclass' method.\r\n                        if (!target.equals(currentMethod)) {\r\n                            resolved.put(currentMethod, target);\r\n                        }\r\n                        currentMethod = null;\r\n                    }\r\n                }\r\n            };\r\n        } else {\r\n            return null;\r\n        }\r\n    }\r\n}",
+    "comment": "\n * Uses bytecode reflection to figure out the targets of all bridge methods that use invokespecial\n * and invokeinterface, so that we can later rewrite them to use invokevirtual.\n *\n * <p>For interface bridges, using invokesuper will fail since the method being bridged to is in a\n * superinterface, not a superclass. Starting in Java 8, javac emits default bridge methods in\n * interfaces, which use invokeinterface to bridge to the target method.\n *\n * @author sberlin@gmail.com (Sam Berlin)\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.BridgeMethodResolver#resolveAll()",
+    "entityType": "method",
+    "code": "/**\r\n * Finds all bridge methods that are being called with invokespecial &\r\n * returns them.\r\n */\r\npublic Map /*<Signature, Signature>*/\r\nresolveAll() {\r\n    Map resolved = new HashMap();\r\n    for (Iterator entryIter = declToBridge.entrySet().iterator(); entryIter.hasNext(); ) {\r\n        Map.Entry entry = (Map.Entry) entryIter.next();\r\n        Class owner = (Class) entry.getKey();\r\n        Set bridges = (Set) entry.getValue();\r\n        try {\r\n            InputStream is = classLoader.getResourceAsStream(owner.getName().replace('.', '/') + \".class\");\r\n            if (is == null) {\r\n                return resolved;\r\n            }\r\n            try {\r\n                new ClassReader(is).accept(new BridgedFinder(bridges, resolved), ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);\r\n            } finally {\r\n                is.close();\r\n            }\r\n        } catch (IOException ignored) ;\r\n    }\r\n    return resolved;\r\n}",
+    "comment": "\n     * Finds all bridge methods that are being called with invokespecial &\n     * returns them.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.BridgedFinder",
+    "entityType": "class",
+    "code": "private Map /*<Signature, Signature>*/\r\nresolved;\nprivate Set /*<Signature>*/\r\neligibleMethods;\nprivate Signature currentMethod = null;\nBridgedFinder(Set eligibleMethods, Map resolved) {\r\n    super(Constants.ASM_API);\r\n    this.resolved = resolved;\r\n    this.eligibleMethods = eligibleMethods;\r\n}\n@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) ;\n@Override\r\npublic MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {\r\n    Signature sig = new Signature(name, desc);\r\n    if (eligibleMethods.remove(sig)) {\r\n        currentMethod = sig;\r\n        return new MethodVisitor(Constants.ASM_API) {\r\n\r\n            @Override\r\n            public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {\r\n                if ((opcode == Opcodes.INVOKESPECIAL || (itf && opcode == Opcodes.INVOKEINTERFACE)) && currentMethod != null) {\r\n                    Signature target = new Signature(name, desc);\r\n                    // If the target signature is the same as the current,\r\n                    // we shouldn't change our bridge becaues invokespecial\r\n                    // is the only way to make progress (otherwise we'll\r\n                    // get infinite recursion).  This would typically\r\n                    // only happen when a bridge method is created to widen\r\n                    // the visibility of a superclass' method.\r\n                    if (!target.equals(currentMethod)) {\r\n                        resolved.put(currentMethod, target);\r\n                    }\r\n                    currentMethod = null;\r\n                }\r\n            }\r\n        };\r\n    } else {\r\n        return null;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.BridgedFinder#visit(int,int,String,String,String,String[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.BridgedFinder#visitMethod(int,String,String,String,String[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {\r\n    Signature sig = new Signature(name, desc);\r\n    if (eligibleMethods.remove(sig)) {\r\n        currentMethod = sig;\r\n        return new MethodVisitor(Constants.ASM_API) {\r\n\r\n            @Override\r\n            public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {\r\n                if ((opcode == Opcodes.INVOKESPECIAL || (itf && opcode == Opcodes.INVOKEINTERFACE)) && currentMethod != null) {\r\n                    Signature target = new Signature(name, desc);\r\n                    // If the target signature is the same as the current,\r\n                    // we shouldn't change our bridge becaues invokespecial\r\n                    // is the only way to make progress (otherwise we'll\r\n                    // get infinite recursion).  This would typically\r\n                    // only happen when a bridge method is created to widen\r\n                    // the visibility of a superclass' method.\r\n                    if (!target.equals(currentMethod)) {\r\n                        resolved.put(currentMethod, target);\r\n                    }\r\n                    currentMethod = null;\r\n                }\r\n            }\r\n        };\r\n    } else {\r\n        return null;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Callback",
+    "entityType": "class",
+    "code": "",
+    "comment": "\n * All callback interfaces used by {@link Enhancer} extend this interface.\n * @see MethodInterceptor\n * @see NoOp\n * @see LazyLoader\n * @see Dispatcher\n * @see InvocationHandler\n * @see FixedValue\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.CallbackFilter",
+    "entityType": "class",
+    "code": "/**\r\n * Map a method to a callback.\r\n * @param method the intercepted method\r\n * @return the index into the array of callbacks (as specified by {@link Enhancer#setCallbacks}) to use for the method,\r\n */\r\nint accept(Method method);\n/**\r\n * The <code>CallbackFilter</code> in use affects which cached class\r\n * the <code>Enhancer</code> will use, so this is a reminder that\r\n * you should correctly implement <code>equals</code> and\r\n * <code>hashCode</code> for custom <code>CallbackFilter</code>\r\n * implementations in order to improve performance.\r\n */\r\n@Override\r\nboolean equals(Object o);",
+    "comment": "\n * Map methods of subclasses generated by {@link Enhancer} to a particular\n * callback. The type of the callbacks chosen for each method affects\n * the bytecode generated for that method in the subclass, and cannot\n * change for the life of the class.\n * <p>Note: {@link CallbackFilter} implementations are supposed to be\n * lightweight as cglib might keep {@link CallbackFilter} objects\n * alive to enable caching of generated classes. Prefer using {@code static}\n * classes for implementation of {@link CallbackFilter}.</p>\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.CallbackFilter#accept(Method)",
+    "entityType": "method",
+    "code": "/**\r\n * Map a method to a callback.\r\n * @param method the intercepted method\r\n * @return the index into the array of callbacks (as specified by {@link Enhancer#setCallbacks}) to use for the method,\r\n */\r\nint accept(Method method);",
+    "comment": "\n     * Map a method to a callback.\n     * @param method the intercepted method\n     * @return the index into the array of callbacks (as specified by {@link Enhancer#setCallbacks}) to use for the method,\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.CallbackFilter#equals(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * The <code>CallbackFilter</code> in use affects which cached class\r\n * the <code>Enhancer</code> will use, so this is a reminder that\r\n * you should correctly implement <code>equals</code> and\r\n * <code>hashCode</code> for custom <code>CallbackFilter</code>\r\n * implementations in order to improve performance.\r\n */\r\n@Override\r\nboolean equals(Object o);",
+    "comment": "\n     * The <code>CallbackFilter</code> in use affects which cached class\n     * the <code>Enhancer</code> will use, so this is a reminder that\n     * you should correctly implement <code>equals</code> and\n     * <code>hashCode</code> for custom <code>CallbackFilter</code>\n     * implementations in order to improve performance.\n    "
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.CallbackGenerator",
+    "entityType": "class",
+    "code": "void generate(ClassEmitter ce, Context context, List methods) throws Exception;\nvoid generateStatic(CodeEmitter e, Context context, List methods) throws Exception;\ninterface Context {\r\n\r\n    ClassLoader getClassLoader();\r\n\r\n    CodeEmitter beginMethod(ClassEmitter ce, MethodInfo method);\r\n\r\n    int getOriginalModifiers(MethodInfo method);\r\n\r\n    int getIndex(MethodInfo method);\r\n\r\n    void emitCallback(CodeEmitter ce, int index);\r\n\r\n    Signature getImplSignature(MethodInfo method);\r\n\r\n    void emitLoadArgsAndInvoke(CodeEmitter e, MethodInfo method);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.CallbackGenerator#generate(ClassEmitter,Context,List)",
+    "entityType": "method",
+    "code": "void generate(ClassEmitter ce, Context context, List methods) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.CallbackGenerator#generateStatic(CodeEmitter,Context,List)",
+    "entityType": "method",
+    "code": "void generateStatic(CodeEmitter e, Context context, List methods) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context",
+    "entityType": "class",
+    "code": "ClassLoader getClassLoader();\nCodeEmitter beginMethod(ClassEmitter ce, MethodInfo method);\nint getOriginalModifiers(MethodInfo method);\nint getIndex(MethodInfo method);\nvoid emitCallback(CodeEmitter ce, int index);\nSignature getImplSignature(MethodInfo method);\nvoid emitLoadArgsAndInvoke(CodeEmitter e, MethodInfo method);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#getClassLoader()",
+    "entityType": "method",
+    "code": "ClassLoader getClassLoader();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#beginMethod(ClassEmitter,MethodInfo)",
+    "entityType": "method",
+    "code": "CodeEmitter beginMethod(ClassEmitter ce, MethodInfo method);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#getOriginalModifiers(MethodInfo)",
+    "entityType": "method",
+    "code": "int getOriginalModifiers(MethodInfo method);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#getIndex(MethodInfo)",
+    "entityType": "method",
+    "code": "int getIndex(MethodInfo method);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#emitCallback(CodeEmitter,int)",
+    "entityType": "method",
+    "code": "void emitCallback(CodeEmitter ce, int index);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#getImplSignature(MethodInfo)",
+    "entityType": "method",
+    "code": "Signature getImplSignature(MethodInfo method);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.proxy.Context#emitLoadArgsAndInvoke(CodeEmitter,MethodInfo)",
+    "entityType": "method",
+    "code": "void emitLoadArgsAndInvoke(CodeEmitter e, MethodInfo method);",
+    "comment": ""
+  }
+]

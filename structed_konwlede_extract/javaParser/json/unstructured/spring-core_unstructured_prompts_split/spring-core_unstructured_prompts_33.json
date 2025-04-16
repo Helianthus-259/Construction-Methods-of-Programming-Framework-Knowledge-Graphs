@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.testfixture.xml.XmlContentAssert#isSimilarTo(String,DifferenceEvaluator)",
+    "entityType": "method",
+    "code": "public XmlContentAssert isSimilarTo(String control, DifferenceEvaluator differenceEvaluator) {\r\n    XmlAssert.assertThat(super.actual).and(control).withDifferenceEvaluator(differenceEvaluator).areSimilar();\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.xml.XmlContentAssert#isSimilarToIgnoringWhitespace(Object)",
+    "entityType": "method",
+    "code": "public XmlContentAssert isSimilarToIgnoringWhitespace(Object control) {\r\n    XmlAssert.assertThat(super.actual).and(control).ignoreWhitespace().areSimilar();\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.xml.XmlContentAssert#isSimilarToIgnoringWhitespace(String,NodeMatcher)",
+    "entityType": "method",
+    "code": "public XmlContentAssert isSimilarToIgnoringWhitespace(String control, NodeMatcher nodeMatcher) {\r\n    XmlAssert.assertThat(super.actual).and(control).ignoreWhitespace().withNodeMatcher(nodeMatcher).areSimilar();\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.FixedKeySet",
+    "entityType": "class",
+    "code": "private Set set;\nprivate int size;\npublic FixedKeySet(String[] keys) {\r\n    size = keys.length;\r\n    set = Collections.unmodifiableSet(new HashSet(Arrays.asList(keys)));\r\n}\n@Override\r\npublic Iterator iterator() {\r\n    return set.iterator();\r\n}\n@Override\r\npublic int size() {\r\n    return size;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.FixedKeySet#iterator()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Iterator iterator() {\r\n    return set.iterator();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.FixedKeySet#size()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int size() {\r\n    return size;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.ImmutableBean",
+    "entityType": "class",
+    "code": "private static final Type ILLEGAL_STATE_EXCEPTION = TypeUtils.parseType(\"IllegalStateException\");\nprivate static final Signature CSTRUCT_OBJECT = TypeUtils.parseConstructor(\"Object\");\nprivate static final Class[] OBJECT_CLASSES = { Object.class };\nprivate static final String FIELD_NAME = \"CGLIB$RWBean\";\nprivate ImmutableBean() {\r\n}\npublic static Object create(Object bean) {\r\n    Generator gen = new Generator();\r\n    gen.setBean(bean);\r\n    return gen.create();\r\n}\npublic static class Generator extends AbstractClassGenerator {\r\n\r\n    private static final Source SOURCE = new Source(ImmutableBean.class.getName());\r\n\r\n    private Object bean;\r\n\r\n    private Class target;\r\n\r\n    public Generator() {\r\n        super(SOURCE);\r\n    }\r\n\r\n    public void setBean(Object bean) {\r\n        this.bean = bean;\r\n        target = bean.getClass();\r\n        // SPRING PATCH BEGIN\r\n        setContextClass(target);\r\n        // SPRING PATCH END\r\n    }\r\n\r\n    @Override\r\n    protected ClassLoader getDefaultClassLoader() {\r\n        return target.getClassLoader();\r\n    }\r\n\r\n    @Override\r\n    protected ProtectionDomain getProtectionDomain() {\r\n        return ReflectUtils.getProtectionDomain(target);\r\n    }\r\n\r\n    public Object create() {\r\n        String name = target.getName();\r\n        setNamePrefix(name);\r\n        return super.create(name);\r\n    }\r\n\r\n    @Override\r\n    public void generateClass(ClassVisitor v) {\r\n        Type targetType = Type.getType(target);\r\n        ClassEmitter ce = new ClassEmitter(v);\r\n        ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), targetType, null, Constants.SOURCE_FILE);\r\n        ce.declare_field(Constants.ACC_FINAL | Constants.ACC_PRIVATE, FIELD_NAME, targetType, null);\r\n        CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT, null);\r\n        e.load_this();\r\n        e.super_invoke_constructor();\r\n        e.load_this();\r\n        e.load_arg(0);\r\n        e.checkcast(targetType);\r\n        e.putfield(FIELD_NAME);\r\n        e.return_value();\r\n        e.end_method();\r\n        PropertyDescriptor[] descriptors = ReflectUtils.getBeanProperties(target);\r\n        Method[] getters = ReflectUtils.getPropertyMethods(descriptors, true, false);\r\n        Method[] setters = ReflectUtils.getPropertyMethods(descriptors, false, true);\r\n        for (Method getter2 : getters) {\r\n            MethodInfo getter = ReflectUtils.getMethodInfo(getter2);\r\n            e = EmitUtils.begin_method(ce, getter, Constants.ACC_PUBLIC);\r\n            e.load_this();\r\n            e.getfield(FIELD_NAME);\r\n            e.invoke(getter);\r\n            e.return_value();\r\n            e.end_method();\r\n        }\r\n        for (Method setter2 : setters) {\r\n            MethodInfo setter = ReflectUtils.getMethodInfo(setter2);\r\n            e = EmitUtils.begin_method(ce, setter, Constants.ACC_PUBLIC);\r\n            e.throw_exception(ILLEGAL_STATE_EXCEPTION, \"Bean is immutable\");\r\n            e.end_method();\r\n        }\r\n        ce.end_class();\r\n    }\r\n\r\n    @Override\r\n    protected Object firstInstance(Class type) {\r\n        return ReflectUtils.newInstance(type, OBJECT_CLASSES, new Object[] { bean });\r\n    }\r\n\r\n    // TODO: optimize\r\n    @Override\r\n    protected Object nextInstance(Object instance) {\r\n        return firstInstance(instance.getClass());\r\n    }\r\n}",
+    "comment": "\n * @author Chris Nokleberg\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.ImmutableBean#create(Object)",
+    "entityType": "method",
+    "code": "public static Object create(Object bean) {\r\n    Generator gen = new Generator();\r\n    gen.setBean(bean);\r\n    return gen.create();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator",
+    "entityType": "class",
+    "code": "private static final Source SOURCE = new Source(ImmutableBean.class.getName());\nprivate Object bean;\nprivate Class target;\npublic Generator() {\r\n    super(SOURCE);\r\n}\npublic void setBean(Object bean) {\r\n    this.bean = bean;\r\n    target = bean.getClass();\r\n    // SPRING PATCH BEGIN\r\n    setContextClass(target);\r\n    // SPRING PATCH END\r\n}\n@Override\r\nprotected ClassLoader getDefaultClassLoader() {\r\n    return target.getClassLoader();\r\n}\n@Override\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return ReflectUtils.getProtectionDomain(target);\r\n}\npublic Object create() {\r\n    String name = target.getName();\r\n    setNamePrefix(name);\r\n    return super.create(name);\r\n}\n@Override\r\npublic void generateClass(ClassVisitor v) {\r\n    Type targetType = Type.getType(target);\r\n    ClassEmitter ce = new ClassEmitter(v);\r\n    ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), targetType, null, Constants.SOURCE_FILE);\r\n    ce.declare_field(Constants.ACC_FINAL | Constants.ACC_PRIVATE, FIELD_NAME, targetType, null);\r\n    CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT, null);\r\n    e.load_this();\r\n    e.super_invoke_constructor();\r\n    e.load_this();\r\n    e.load_arg(0);\r\n    e.checkcast(targetType);\r\n    e.putfield(FIELD_NAME);\r\n    e.return_value();\r\n    e.end_method();\r\n    PropertyDescriptor[] descriptors = ReflectUtils.getBeanProperties(target);\r\n    Method[] getters = ReflectUtils.getPropertyMethods(descriptors, true, false);\r\n    Method[] setters = ReflectUtils.getPropertyMethods(descriptors, false, true);\r\n    for (Method getter2 : getters) {\r\n        MethodInfo getter = ReflectUtils.getMethodInfo(getter2);\r\n        e = EmitUtils.begin_method(ce, getter, Constants.ACC_PUBLIC);\r\n        e.load_this();\r\n        e.getfield(FIELD_NAME);\r\n        e.invoke(getter);\r\n        e.return_value();\r\n        e.end_method();\r\n    }\r\n    for (Method setter2 : setters) {\r\n        MethodInfo setter = ReflectUtils.getMethodInfo(setter2);\r\n        e = EmitUtils.begin_method(ce, setter, Constants.ACC_PUBLIC);\r\n        e.throw_exception(ILLEGAL_STATE_EXCEPTION, \"Bean is immutable\");\r\n        e.end_method();\r\n    }\r\n    ce.end_class();\r\n}\n@Override\r\nprotected Object firstInstance(Class type) {\r\n    return ReflectUtils.newInstance(type, OBJECT_CLASSES, new Object[] { bean });\r\n}\n// TODO: optimize\r\n@Override\r\nprotected Object nextInstance(Object instance) {\r\n    return firstInstance(instance.getClass());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#setBean(Object)",
+    "entityType": "method",
+    "code": "public void setBean(Object bean) {\r\n    this.bean = bean;\r\n    target = bean.getClass();\r\n    // SPRING PATCH BEGIN\r\n    setContextClass(target);\r\n    // SPRING PATCH END\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#getDefaultClassLoader()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected ClassLoader getDefaultClassLoader() {\r\n    return target.getClassLoader();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#getProtectionDomain()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return ReflectUtils.getProtectionDomain(target);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#create()",
+    "entityType": "method",
+    "code": "public Object create() {\r\n    String name = target.getName();\r\n    setNamePrefix(name);\r\n    return super.create(name);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#generateClass(ClassVisitor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void generateClass(ClassVisitor v) {\r\n    Type targetType = Type.getType(target);\r\n    ClassEmitter ce = new ClassEmitter(v);\r\n    ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), targetType, null, Constants.SOURCE_FILE);\r\n    ce.declare_field(Constants.ACC_FINAL | Constants.ACC_PRIVATE, FIELD_NAME, targetType, null);\r\n    CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, CSTRUCT_OBJECT, null);\r\n    e.load_this();\r\n    e.super_invoke_constructor();\r\n    e.load_this();\r\n    e.load_arg(0);\r\n    e.checkcast(targetType);\r\n    e.putfield(FIELD_NAME);\r\n    e.return_value();\r\n    e.end_method();\r\n    PropertyDescriptor[] descriptors = ReflectUtils.getBeanProperties(target);\r\n    Method[] getters = ReflectUtils.getPropertyMethods(descriptors, true, false);\r\n    Method[] setters = ReflectUtils.getPropertyMethods(descriptors, false, true);\r\n    for (Method getter2 : getters) {\r\n        MethodInfo getter = ReflectUtils.getMethodInfo(getter2);\r\n        e = EmitUtils.begin_method(ce, getter, Constants.ACC_PUBLIC);\r\n        e.load_this();\r\n        e.getfield(FIELD_NAME);\r\n        e.invoke(getter);\r\n        e.return_value();\r\n        e.end_method();\r\n    }\r\n    for (Method setter2 : setters) {\r\n        MethodInfo setter = ReflectUtils.getMethodInfo(setter2);\r\n        e = EmitUtils.begin_method(ce, setter, Constants.ACC_PUBLIC);\r\n        e.throw_exception(ILLEGAL_STATE_EXCEPTION, \"Bean is immutable\");\r\n        e.end_method();\r\n    }\r\n    ce.end_class();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#firstInstance(Class)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected Object firstInstance(Class type) {\r\n    return ReflectUtils.newInstance(type, OBJECT_CLASSES, new Object[] { bean });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.beans.Generator#nextInstance(Object)",
+    "entityType": "method",
+    "code": "// TODO: optimize\r\n@Override\r\nprotected Object nextInstance(Object instance) {\r\n    return firstInstance(instance.getClass());\r\n}",
+    "comment": " TODO: optimize"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator",
+    "entityType": "class",
+    "code": "private static final ThreadLocal CURRENT = new ThreadLocal();\nprivate static volatile Map<ClassLoader, ClassLoaderData> CACHE = new WeakHashMap<>();\nprivate static final boolean DEFAULT_USE_CACHE = Boolean.parseBoolean(System.getProperty(\"cglib.useCache\", \"true\"));\nprivate static final boolean inNativeImage;\nstatic {\r\n    String imageCode = System.getProperty(\"org.graalvm.nativeimage.imagecode\");\r\n    inNativeImage = \"buildtime\".equals(imageCode) || \"runtime\".equals(imageCode);\r\n}\nprivate GeneratorStrategy strategy = DefaultGeneratorStrategy.INSTANCE;\nprivate NamingPolicy namingPolicy = DefaultNamingPolicy.INSTANCE;\nprivate Source source;\nprivate ClassLoader classLoader;\nprivate Class contextClass;\nprivate String namePrefix;\nprivate Object key;\nprivate boolean useCache = DEFAULT_USE_CACHE;\nprivate String className;\nprivate boolean attemptLoad;\nprotected static class ClassLoaderData {\r\n\r\n    private final Set<String> reservedClassNames = new HashSet<>();\r\n\r\n    /**\r\n     * {@link AbstractClassGenerator} here holds \"cache key\" (for example, {@link org.springframework.cglib.proxy.Enhancer}\r\n     * configuration), and the value is the generated class plus some additional values\r\n     * (see {@link #unwrapCachedValue(Object)}.\r\n     * <p>The generated classes can be reused as long as their classloader is reachable.</p>\r\n     * <p>Note: the only way to access a class is to find it through generatedClasses cache, thus\r\n     * the key should not expire as long as the class itself is alive (its classloader is alive).</p>\r\n     */\r\n    private final LoadingCache<AbstractClassGenerator, Object, Object> generatedClasses;\r\n\r\n    /**\r\n     * Note: ClassLoaderData object is stored as a value of {@code WeakHashMap<ClassLoader, ...>} thus\r\n     * this classLoader reference should be weak otherwise it would make classLoader strongly reachable\r\n     * and alive forever.\r\n     * Reference queue is not required since the cleanup is handled by {@link WeakHashMap}.\r\n     */\r\n    private final WeakReference<ClassLoader> classLoader;\r\n\r\n    private final Predicate uniqueNamePredicate = this.reservedClassNames::contains;\r\n\r\n    private static final Function<AbstractClassGenerator, Object> GET_KEY = gen -> gen.key;\r\n\r\n    public ClassLoaderData(ClassLoader classLoader) {\r\n        if (classLoader == null) {\r\n            throw new IllegalArgumentException(\"classLoader == null is not yet supported\");\r\n        }\r\n        this.classLoader = new WeakReference<>(classLoader);\r\n        Function<AbstractClassGenerator, Object> load = gen -> {\r\n            Class klass = gen.generate(ClassLoaderData.this);\r\n            return gen.wrapCachedClass(klass);\r\n        };\r\n        generatedClasses = new LoadingCache<>(GET_KEY, load);\r\n    }\r\n\r\n    public ClassLoader getClassLoader() {\r\n        return classLoader.get();\r\n    }\r\n\r\n    public void reserveName(String name) {\r\n        reservedClassNames.add(name);\r\n    }\r\n\r\n    public Predicate getUniqueNamePredicate() {\r\n        return uniqueNamePredicate;\r\n    }\r\n\r\n    public Object get(AbstractClassGenerator gen, boolean useCache) {\r\n        if (!useCache) {\r\n            return gen.generate(ClassLoaderData.this);\r\n        } else {\r\n            Object cachedValue = generatedClasses.get(gen);\r\n            return gen.unwrapCachedValue(cachedValue);\r\n        }\r\n    }\r\n}\nprotected T wrapCachedClass(Class klass) {\r\n    return (T) new WeakReference(klass);\r\n}\nprotected Object unwrapCachedValue(T cached) {\r\n    return ((WeakReference) cached).get();\r\n}\nprotected static class Source {\r\n\r\n    String name;\r\n\r\n    public Source(String name) {\r\n        this.name = name;\r\n    }\r\n}\nprotected AbstractClassGenerator(Source source) {\r\n    this.source = source;\r\n}\nprotected void setNamePrefix(String namePrefix) {\r\n    this.namePrefix = namePrefix;\r\n}\nfinal protected String getClassName() {\r\n    return className;\r\n}\nprivate void setClassName(String className) {\r\n    this.className = className;\r\n}\nprivate String generateClassName(Predicate nameTestPredicate) {\r\n    return namingPolicy.getClassName(namePrefix, source.name, key, nameTestPredicate);\r\n}\n/**\r\n * Set the <code>ClassLoader</code> in which the class will be generated.\r\n * Concrete subclasses of <code>AbstractClassGenerator</code> (such as <code>Enhancer</code>)\r\n * will try to choose an appropriate default if this is unset.\r\n * <p>\r\n * Classes are cached per-<code>ClassLoader</code> using a <code>WeakHashMap</code>, to allow\r\n * the generated classes to be removed when the associated loader is garbage collected.\r\n * @param classLoader the loader to generate the new class with, or null to use the default\r\n */\r\npublic void setClassLoader(ClassLoader classLoader) {\r\n    this.classLoader = classLoader;\r\n}\n// SPRING PATCH BEGIN\r\npublic void setContextClass(Class contextClass) {\r\n    this.contextClass = contextClass;\r\n}\n// SPRING PATCH END\r\n/**\r\n * Override the default naming policy.\r\n * @param namingPolicy the custom policy, or null to use the default\r\n * @see DefaultNamingPolicy\r\n */\r\npublic void setNamingPolicy(NamingPolicy namingPolicy) {\r\n    if (namingPolicy == null) {\r\n        namingPolicy = DefaultNamingPolicy.INSTANCE;\r\n    }\r\n    this.namingPolicy = namingPolicy;\r\n}\n/**\r\n * @see #setNamingPolicy\r\n */\r\npublic NamingPolicy getNamingPolicy() {\r\n    return namingPolicy;\r\n}\n/**\r\n * Whether use and update the static cache of generated classes\r\n * for a class with the same properties. Default is <code>true</code>.\r\n */\r\npublic void setUseCache(boolean useCache) {\r\n    this.useCache = useCache;\r\n}\n/**\r\n * @see #setUseCache\r\n */\r\npublic boolean getUseCache() {\r\n    return useCache;\r\n}\n/**\r\n * If set, CGLIB will attempt to load classes from the specified\r\n * <code>ClassLoader</code> before generating them. Because generated\r\n * class names are not guaranteed to be unique, the default is <code>false</code>.\r\n */\r\npublic void setAttemptLoad(boolean attemptLoad) {\r\n    this.attemptLoad = attemptLoad;\r\n}\npublic boolean getAttemptLoad() {\r\n    return attemptLoad;\r\n}\n/**\r\n * Set the strategy to use to create the bytecode from this generator.\r\n * By default an instance of {@link DefaultGeneratorStrategy} is used.\r\n */\r\npublic void setStrategy(GeneratorStrategy strategy) {\r\n    if (strategy == null) {\r\n        strategy = DefaultGeneratorStrategy.INSTANCE;\r\n    }\r\n    this.strategy = strategy;\r\n}\n/**\r\n * @see #setStrategy\r\n */\r\npublic GeneratorStrategy getStrategy() {\r\n    return strategy;\r\n}\n/**\r\n * Used internally by CGLIB. Returns the <code>AbstractClassGenerator</code>\r\n * that is being used to generate a class in the current thread.\r\n */\r\npublic static AbstractClassGenerator getCurrent() {\r\n    return (AbstractClassGenerator) CURRENT.get();\r\n}\npublic ClassLoader getClassLoader() {\r\n    ClassLoader t = classLoader;\r\n    if (t == null) {\r\n        t = getDefaultClassLoader();\r\n    }\r\n    if (t == null) {\r\n        t = getClass().getClassLoader();\r\n    }\r\n    if (t == null) {\r\n        t = Thread.currentThread().getContextClassLoader();\r\n    }\r\n    if (t == null) {\r\n        throw new IllegalStateException(\"Cannot determine classloader\");\r\n    }\r\n    return t;\r\n}\nabstract protected ClassLoader getDefaultClassLoader();\n/**\r\n * Returns the protection domain to use when defining the class.\r\n * <p>\r\n * Default implementation returns <code>null</code> for using a default protection domain. Sub-classes may\r\n * override to use a more specific protection domain.\r\n * </p>\r\n * @return the protection domain (<code>null</code> for using a default)\r\n */\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return null;\r\n}\nprotected Object create(Object key) {\r\n    try {\r\n        ClassLoader loader = getClassLoader();\r\n        Map<ClassLoader, ClassLoaderData> cache = CACHE;\r\n        ClassLoaderData data = cache.get(loader);\r\n        if (data == null) {\r\n            synchronized (AbstractClassGenerator.class) {\r\n                cache = CACHE;\r\n                data = cache.get(loader);\r\n                if (data == null) {\r\n                    Map<ClassLoader, ClassLoaderData> newCache = new WeakHashMap<>(cache);\r\n                    data = new ClassLoaderData(loader);\r\n                    newCache.put(loader, data);\r\n                    CACHE = newCache;\r\n                }\r\n            }\r\n        }\r\n        this.key = key;\r\n        Object obj = data.get(this, getUseCache());\r\n        if (obj instanceof Class<?> clazz) {\r\n            return firstInstance(clazz);\r\n        }\r\n        return nextInstance(obj);\r\n    } catch (RuntimeException | Error ex) {\r\n        throw ex;\r\n    } catch (Exception ex) {\r\n        throw new CodeGenerationException(ex);\r\n    }\r\n}\nprotected Class generate(ClassLoaderData data) {\r\n    Class gen;\r\n    Object save = CURRENT.get();\r\n    CURRENT.set(this);\r\n    try {\r\n        ClassLoader classLoader = data.getClassLoader();\r\n        if (classLoader == null) {\r\n            throw new IllegalStateException(\"ClassLoader is null while trying to define class \" + getClassName() + \". It seems that the loader has been expired from a weak reference somehow. \" + \"Please file an issue at cglib's issue tracker.\");\r\n        }\r\n        synchronized (classLoader) {\r\n            String name = generateClassName(data.getUniqueNamePredicate());\r\n            data.reserveName(name);\r\n            this.setClassName(name);\r\n        }\r\n        if (attemptLoad) {\r\n            try {\r\n                // SPRING PATCH BEGIN\r\n                synchronized (classLoader) {\r\n                    // just in case\r\n                    gen = ReflectUtils.loadClass(getClassName(), classLoader);\r\n                }\r\n                // SPRING PATCH END\r\n                return gen;\r\n            } catch (ClassNotFoundException e) {\r\n                // ignore\r\n            }\r\n        }\r\n        // SPRING PATCH BEGIN\r\n        if (inNativeImage) {\r\n            throw new UnsupportedOperationException(\"CGLIB runtime enhancement not supported on native image. \" + \"Make sure to include a pre-generated class on the classpath instead: \" + getClassName());\r\n        }\r\n        // SPRING PATCH END\r\n        byte[] b = strategy.generate(this);\r\n        String className = ClassNameReader.getClassName(new ClassReader(b));\r\n        ProtectionDomain protectionDomain = getProtectionDomain();\r\n        synchronized (classLoader) {\r\n            // just in case\r\n            // SPRING PATCH BEGIN\r\n            gen = ReflectUtils.defineClass(className, b, classLoader, protectionDomain, contextClass);\r\n            // SPRING PATCH END\r\n        }\r\n        return gen;\r\n    } catch (RuntimeException | Error ex) {\r\n        throw ex;\r\n    } catch (Exception ex) {\r\n        throw new CodeGenerationException(ex);\r\n    } finally {\r\n        CURRENT.set(save);\r\n    }\r\n}\nabstract protected Object firstInstance(Class type) throws Exception;\nabstract protected Object nextInstance(Object instance) throws Exception;",
+    "comment": "\n * Abstract class for all code-generating CGLIB utilities.\n * In addition to caching generated classes for performance, it provides hooks for\n * customizing the <code>ClassLoader</code>, name of the generated class, and transformations\n * applied before generation.\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#wrapCachedClass(Class)",
+    "entityType": "method",
+    "code": "protected T wrapCachedClass(Class klass) {\r\n    return (T) new WeakReference(klass);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#unwrapCachedValue(T)",
+    "entityType": "method",
+    "code": "protected Object unwrapCachedValue(T cached) {\r\n    return ((WeakReference) cached).get();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setNamePrefix(String)",
+    "entityType": "method",
+    "code": "protected void setNamePrefix(String namePrefix) {\r\n    this.namePrefix = namePrefix;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getClassName()",
+    "entityType": "method",
+    "code": "final protected String getClassName() {\r\n    return className;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setClassName(String)",
+    "entityType": "method",
+    "code": "private void setClassName(String className) {\r\n    this.className = className;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#generateClassName(Predicate)",
+    "entityType": "method",
+    "code": "private String generateClassName(Predicate nameTestPredicate) {\r\n    return namingPolicy.getClassName(namePrefix, source.name, key, nameTestPredicate);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setClassLoader(ClassLoader)",
+    "entityType": "method",
+    "code": "/**\r\n * Set the <code>ClassLoader</code> in which the class will be generated.\r\n * Concrete subclasses of <code>AbstractClassGenerator</code> (such as <code>Enhancer</code>)\r\n * will try to choose an appropriate default if this is unset.\r\n * <p>\r\n * Classes are cached per-<code>ClassLoader</code> using a <code>WeakHashMap</code>, to allow\r\n * the generated classes to be removed when the associated loader is garbage collected.\r\n * @param classLoader the loader to generate the new class with, or null to use the default\r\n */\r\npublic void setClassLoader(ClassLoader classLoader) {\r\n    this.classLoader = classLoader;\r\n}",
+    "comment": "\n\t * Set the <code>ClassLoader</code> in which the class will be generated.\n\t * Concrete subclasses of <code>AbstractClassGenerator</code> (such as <code>Enhancer</code>)\n\t * will try to choose an appropriate default if this is unset.\n\t * <p>\n\t * Classes are cached per-<code>ClassLoader</code> using a <code>WeakHashMap</code>, to allow\n\t * the generated classes to be removed when the associated loader is garbage collected.\n\t * @param classLoader the loader to generate the new class with, or null to use the default\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setContextClass(Class)",
+    "entityType": "method",
+    "code": "// SPRING PATCH BEGIN\r\npublic void setContextClass(Class contextClass) {\r\n    this.contextClass = contextClass;\r\n}",
+    "comment": " SPRING PATCH BEGIN"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setNamingPolicy(NamingPolicy)",
+    "entityType": "method",
+    "code": "// SPRING PATCH END\r\n/**\r\n * Override the default naming policy.\r\n * @param namingPolicy the custom policy, or null to use the default\r\n * @see DefaultNamingPolicy\r\n */\r\npublic void setNamingPolicy(NamingPolicy namingPolicy) {\r\n    if (namingPolicy == null) {\r\n        namingPolicy = DefaultNamingPolicy.INSTANCE;\r\n    }\r\n    this.namingPolicy = namingPolicy;\r\n}",
+    "comment": "\n\t * Override the default naming policy.\n\t * @param namingPolicy the custom policy, or null to use the default\n\t * @see DefaultNamingPolicy\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getNamingPolicy()",
+    "entityType": "method",
+    "code": "/**\r\n * @see #setNamingPolicy\r\n */\r\npublic NamingPolicy getNamingPolicy() {\r\n    return namingPolicy;\r\n}",
+    "comment": "\n\t * @see #setNamingPolicy\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setUseCache(boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Whether use and update the static cache of generated classes\r\n * for a class with the same properties. Default is <code>true</code>.\r\n */\r\npublic void setUseCache(boolean useCache) {\r\n    this.useCache = useCache;\r\n}",
+    "comment": "\n\t * Whether use and update the static cache of generated classes\n\t * for a class with the same properties. Default is <code>true</code>.\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getUseCache()",
+    "entityType": "method",
+    "code": "/**\r\n * @see #setUseCache\r\n */\r\npublic boolean getUseCache() {\r\n    return useCache;\r\n}",
+    "comment": "\n\t * @see #setUseCache\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setAttemptLoad(boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * If set, CGLIB will attempt to load classes from the specified\r\n * <code>ClassLoader</code> before generating them. Because generated\r\n * class names are not guaranteed to be unique, the default is <code>false</code>.\r\n */\r\npublic void setAttemptLoad(boolean attemptLoad) {\r\n    this.attemptLoad = attemptLoad;\r\n}",
+    "comment": "\n\t * If set, CGLIB will attempt to load classes from the specified\n\t * <code>ClassLoader</code> before generating them. Because generated\n\t * class names are not guaranteed to be unique, the default is <code>false</code>.\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getAttemptLoad()",
+    "entityType": "method",
+    "code": "public boolean getAttemptLoad() {\r\n    return attemptLoad;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#setStrategy(GeneratorStrategy)",
+    "entityType": "method",
+    "code": "/**\r\n * Set the strategy to use to create the bytecode from this generator.\r\n * By default an instance of {@link DefaultGeneratorStrategy} is used.\r\n */\r\npublic void setStrategy(GeneratorStrategy strategy) {\r\n    if (strategy == null) {\r\n        strategy = DefaultGeneratorStrategy.INSTANCE;\r\n    }\r\n    this.strategy = strategy;\r\n}",
+    "comment": "\n\t * Set the strategy to use to create the bytecode from this generator.\n\t * By default an instance of {@link DefaultGeneratorStrategy} is used.\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getStrategy()",
+    "entityType": "method",
+    "code": "/**\r\n * @see #setStrategy\r\n */\r\npublic GeneratorStrategy getStrategy() {\r\n    return strategy;\r\n}",
+    "comment": "\n\t * @see #setStrategy\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getCurrent()",
+    "entityType": "method",
+    "code": "/**\r\n * Used internally by CGLIB. Returns the <code>AbstractClassGenerator</code>\r\n * that is being used to generate a class in the current thread.\r\n */\r\npublic static AbstractClassGenerator getCurrent() {\r\n    return (AbstractClassGenerator) CURRENT.get();\r\n}",
+    "comment": "\n\t * Used internally by CGLIB. Returns the <code>AbstractClassGenerator</code>\n\t * that is being used to generate a class in the current thread.\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getClassLoader()",
+    "entityType": "method",
+    "code": "public ClassLoader getClassLoader() {\r\n    ClassLoader t = classLoader;\r\n    if (t == null) {\r\n        t = getDefaultClassLoader();\r\n    }\r\n    if (t == null) {\r\n        t = getClass().getClassLoader();\r\n    }\r\n    if (t == null) {\r\n        t = Thread.currentThread().getContextClassLoader();\r\n    }\r\n    if (t == null) {\r\n        throw new IllegalStateException(\"Cannot determine classloader\");\r\n    }\r\n    return t;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getDefaultClassLoader()",
+    "entityType": "method",
+    "code": "abstract protected ClassLoader getDefaultClassLoader();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#getProtectionDomain()",
+    "entityType": "method",
+    "code": "/**\r\n * Returns the protection domain to use when defining the class.\r\n * <p>\r\n * Default implementation returns <code>null</code> for using a default protection domain. Sub-classes may\r\n * override to use a more specific protection domain.\r\n * </p>\r\n * @return the protection domain (<code>null</code> for using a default)\r\n */\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return null;\r\n}",
+    "comment": "\n\t * Returns the protection domain to use when defining the class.\n\t * <p>\n\t * Default implementation returns <code>null</code> for using a default protection domain. Sub-classes may\n\t * override to use a more specific protection domain.\n\t * </p>\n\t * @return the protection domain (<code>null</code> for using a default)\n\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#create(Object)",
+    "entityType": "method",
+    "code": "protected Object create(Object key) {\r\n    try {\r\n        ClassLoader loader = getClassLoader();\r\n        Map<ClassLoader, ClassLoaderData> cache = CACHE;\r\n        ClassLoaderData data = cache.get(loader);\r\n        if (data == null) {\r\n            synchronized (AbstractClassGenerator.class) {\r\n                cache = CACHE;\r\n                data = cache.get(loader);\r\n                if (data == null) {\r\n                    Map<ClassLoader, ClassLoaderData> newCache = new WeakHashMap<>(cache);\r\n                    data = new ClassLoaderData(loader);\r\n                    newCache.put(loader, data);\r\n                    CACHE = newCache;\r\n                }\r\n            }\r\n        }\r\n        this.key = key;\r\n        Object obj = data.get(this, getUseCache());\r\n        if (obj instanceof Class<?> clazz) {\r\n            return firstInstance(clazz);\r\n        }\r\n        return nextInstance(obj);\r\n    } catch (RuntimeException | Error ex) {\r\n        throw ex;\r\n    } catch (Exception ex) {\r\n        throw new CodeGenerationException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#generate(ClassLoaderData)",
+    "entityType": "method",
+    "code": "protected Class generate(ClassLoaderData data) {\r\n    Class gen;\r\n    Object save = CURRENT.get();\r\n    CURRENT.set(this);\r\n    try {\r\n        ClassLoader classLoader = data.getClassLoader();\r\n        if (classLoader == null) {\r\n            throw new IllegalStateException(\"ClassLoader is null while trying to define class \" + getClassName() + \". It seems that the loader has been expired from a weak reference somehow. \" + \"Please file an issue at cglib's issue tracker.\");\r\n        }\r\n        synchronized (classLoader) {\r\n            String name = generateClassName(data.getUniqueNamePredicate());\r\n            data.reserveName(name);\r\n            this.setClassName(name);\r\n        }\r\n        if (attemptLoad) {\r\n            try {\r\n                // SPRING PATCH BEGIN\r\n                synchronized (classLoader) {\r\n                    // just in case\r\n                    gen = ReflectUtils.loadClass(getClassName(), classLoader);\r\n                }\r\n                // SPRING PATCH END\r\n                return gen;\r\n            } catch (ClassNotFoundException e) {\r\n                // ignore\r\n            }\r\n        }\r\n        // SPRING PATCH BEGIN\r\n        if (inNativeImage) {\r\n            throw new UnsupportedOperationException(\"CGLIB runtime enhancement not supported on native image. \" + \"Make sure to include a pre-generated class on the classpath instead: \" + getClassName());\r\n        }\r\n        // SPRING PATCH END\r\n        byte[] b = strategy.generate(this);\r\n        String className = ClassNameReader.getClassName(new ClassReader(b));\r\n        ProtectionDomain protectionDomain = getProtectionDomain();\r\n        synchronized (classLoader) {\r\n            // just in case\r\n            // SPRING PATCH BEGIN\r\n            gen = ReflectUtils.defineClass(className, b, classLoader, protectionDomain, contextClass);\r\n            // SPRING PATCH END\r\n        }\r\n        return gen;\r\n    } catch (RuntimeException | Error ex) {\r\n        throw ex;\r\n    } catch (Exception ex) {\r\n        throw new CodeGenerationException(ex);\r\n    } finally {\r\n        CURRENT.set(save);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#firstInstance(Class)",
+    "entityType": "method",
+    "code": "abstract protected Object firstInstance(Class type) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AbstractClassGenerator#nextInstance(Object)",
+    "entityType": "method",
+    "code": "abstract protected Object nextInstance(Object instance) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderData",
+    "entityType": "class",
+    "code": "private final Set<String> reservedClassNames = new HashSet<>();\n/**\r\n * {@link AbstractClassGenerator} here holds \"cache key\" (for example, {@link org.springframework.cglib.proxy.Enhancer}\r\n * configuration), and the value is the generated class plus some additional values\r\n * (see {@link #unwrapCachedValue(Object)}.\r\n * <p>The generated classes can be reused as long as their classloader is reachable.</p>\r\n * <p>Note: the only way to access a class is to find it through generatedClasses cache, thus\r\n * the key should not expire as long as the class itself is alive (its classloader is alive).</p>\r\n */\r\nprivate final LoadingCache<AbstractClassGenerator, Object, Object> generatedClasses;\n/**\r\n * Note: ClassLoaderData object is stored as a value of {@code WeakHashMap<ClassLoader, ...>} thus\r\n * this classLoader reference should be weak otherwise it would make classLoader strongly reachable\r\n * and alive forever.\r\n * Reference queue is not required since the cleanup is handled by {@link WeakHashMap}.\r\n */\r\nprivate final WeakReference<ClassLoader> classLoader;\nprivate final Predicate uniqueNamePredicate = this.reservedClassNames::contains;\nprivate static final Function<AbstractClassGenerator, Object> GET_KEY = gen -> gen.key;\npublic ClassLoaderData(ClassLoader classLoader) {\r\n    if (classLoader == null) {\r\n        throw new IllegalArgumentException(\"classLoader == null is not yet supported\");\r\n    }\r\n    this.classLoader = new WeakReference<>(classLoader);\r\n    Function<AbstractClassGenerator, Object> load = gen -> {\r\n        Class klass = gen.generate(ClassLoaderData.this);\r\n        return gen.wrapCachedClass(klass);\r\n    };\r\n    generatedClasses = new LoadingCache<>(GET_KEY, load);\r\n}\npublic ClassLoader getClassLoader() {\r\n    return classLoader.get();\r\n}\npublic void reserveName(String name) {\r\n    reservedClassNames.add(name);\r\n}\npublic Predicate getUniqueNamePredicate() {\r\n    return uniqueNamePredicate;\r\n}\npublic Object get(AbstractClassGenerator gen, boolean useCache) {\r\n    if (!useCache) {\r\n        return gen.generate(ClassLoaderData.this);\r\n    } else {\r\n        Object cachedValue = generatedClasses.get(gen);\r\n        return gen.unwrapCachedValue(cachedValue);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderData#getClassLoader()",
+    "entityType": "method",
+    "code": "public ClassLoader getClassLoader() {\r\n    return classLoader.get();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderData#reserveName(String)",
+    "entityType": "method",
+    "code": "public void reserveName(String name) {\r\n    reservedClassNames.add(name);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderData#getUniqueNamePredicate()",
+    "entityType": "method",
+    "code": "public Predicate getUniqueNamePredicate() {\r\n    return uniqueNamePredicate;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderData#get(AbstractClassGenerator,boolean)",
+    "entityType": "method",
+    "code": "public Object get(AbstractClassGenerator gen, boolean useCache) {\r\n    if (!useCache) {\r\n        return gen.generate(ClassLoaderData.this);\r\n    } else {\r\n        Object cachedValue = generatedClasses.get(gen);\r\n        return gen.unwrapCachedValue(cachedValue);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Source",
+    "entityType": "class",
+    "code": "String name;\npublic Source(String name) {\r\n    this.name = name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AsmApi",
+    "entityType": "class",
+    "code": "/**\r\n * SPRING PATCH: always returns ASM9.\r\n */\r\nstatic int value() {\r\n    return Opcodes.ASM9;\r\n}\nprivate AsmApi() {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.AsmApi#value()",
+    "entityType": "method",
+    "code": "/**\r\n * SPRING PATCH: always returns ASM9.\r\n */\r\nstatic int value() {\r\n    return Opcodes.ASM9;\r\n}",
+    "comment": "\n     * SPRING PATCH: always returns ASM9.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Block",
+    "entityType": "class",
+    "code": "private CodeEmitter e;\nprivate Label start;\nprivate Label end;\npublic Block(CodeEmitter e) {\r\n    this.e = e;\r\n    start = e.mark();\r\n}\npublic CodeEmitter getCodeEmitter() {\r\n    return e;\r\n}\npublic void end() {\r\n    if (end != null) {\r\n        throw new IllegalStateException(\"end of label already set\");\r\n    }\r\n    end = e.mark();\r\n}\npublic Label getStart() {\r\n    return start;\r\n}\npublic Label getEnd() {\r\n    return end;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Block#getCodeEmitter()",
+    "entityType": "method",
+    "code": "public CodeEmitter getCodeEmitter() {\r\n    return e;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Block#end()",
+    "entityType": "method",
+    "code": "public void end() {\r\n    if (end != null) {\r\n        throw new IllegalStateException(\"end of label already set\");\r\n    }\r\n    end = e.mark();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Block#getStart()",
+    "entityType": "method",
+    "code": "public Label getStart() {\r\n    return start;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Block#getEnd()",
+    "entityType": "method",
+    "code": "public Label getEnd() {\r\n    return end;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter",
+    "entityType": "class",
+    "code": "private ClassInfo classInfo;\nprivate Map fieldInfo;\nprivate static int hookCounter;\nprivate MethodVisitor rawStaticInit;\nprivate CodeEmitter staticInit;\nprivate CodeEmitter staticHook;\nprivate Signature staticHookSig;\npublic ClassEmitter(ClassVisitor cv) {\r\n    setTarget(cv);\r\n}\npublic ClassEmitter() {\r\n    super(Constants.ASM_API);\r\n}\n@Override\r\npublic void setTarget(ClassVisitor cv) {\r\n    this.cv = cv;\r\n    fieldInfo = new HashMap();\r\n    // just to be safe\r\n    staticInit = staticHook = null;\r\n    staticHookSig = null;\r\n}\nsynchronized private static int getNextHook() {\r\n    return ++hookCounter;\r\n}\npublic ClassInfo getClassInfo() {\r\n    return classInfo;\r\n}\npublic void begin_class(int version, final int access, String className, final Type superType, final Type[] interfaces, String source) {\r\n    final Type classType = Type.getType(\"L\" + className.replace('.', '/') + \";\");\r\n    classInfo = new ClassInfo() {\r\n\r\n        @Override\r\n        public Type getType() {\r\n            return classType;\r\n        }\r\n\r\n        @Override\r\n        public Type getSuperType() {\r\n            return (superType != null) ? superType : Constants.TYPE_OBJECT;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getInterfaces() {\r\n            return interfaces;\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return access;\r\n        }\r\n    };\r\n    cv.visit(version, access, classInfo.getType().getInternalName(), null, classInfo.getSuperType().getInternalName(), TypeUtils.toInternalNames(interfaces));\r\n    if (source != null) {\r\n        cv.visitSource(source, null);\r\n    }\r\n    init();\r\n}\npublic CodeEmitter getStaticHook() {\r\n    if (TypeUtils.isInterface(getAccess())) {\r\n        throw new IllegalStateException(\"static hook is invalid for this class\");\r\n    }\r\n    if (staticHook == null) {\r\n        staticHookSig = new Signature(\"CGLIB$STATICHOOK\" + getNextHook(), \"()V\");\r\n        staticHook = begin_method(Constants.ACC_STATIC, staticHookSig, null);\r\n        if (staticInit != null) {\r\n            staticInit.invoke_static_this(staticHookSig);\r\n        }\r\n    }\r\n    return staticHook;\r\n}\nprotected void init() ;\npublic int getAccess() {\r\n    return classInfo.getModifiers();\r\n}\npublic Type getClassType() {\r\n    return classInfo.getType();\r\n}\npublic Type getSuperType() {\r\n    return classInfo.getSuperType();\r\n}\npublic void end_class() {\r\n    if (staticHook != null && staticInit == null) {\r\n        // force creation of static init\r\n        begin_static();\r\n    }\r\n    if (staticInit != null) {\r\n        staticHook.return_value();\r\n        staticHook.end_method();\r\n        rawStaticInit.visitInsn(Constants.RETURN);\r\n        rawStaticInit.visitMaxs(0, 0);\r\n        staticInit = staticHook = null;\r\n        staticHookSig = null;\r\n    }\r\n    cv.visitEnd();\r\n}\npublic CodeEmitter begin_method(int access, Signature sig, Type[] exceptions) {\r\n    if (classInfo == null) {\r\n        throw new IllegalStateException(\"classInfo is null! \" + this);\r\n    }\r\n    MethodVisitor v = cv.visitMethod(access, sig.getName(), sig.getDescriptor(), null, TypeUtils.toInternalNames(exceptions));\r\n    if (sig.equals(Constants.SIG_STATIC) && !TypeUtils.isInterface(getAccess())) {\r\n        rawStaticInit = v;\r\n        MethodVisitor wrapped = new MethodVisitor(Constants.ASM_API, v) {\r\n\r\n            @Override\r\n            public void visitMaxs(int maxStack, int maxLocals) {\r\n                // ignore\r\n            }\r\n\r\n            @Override\r\n            public void visitInsn(int insn) {\r\n                if (insn != Constants.RETURN) {\r\n                    super.visitInsn(insn);\r\n                }\r\n            }\r\n        };\r\n        staticInit = new CodeEmitter(this, wrapped, access, sig, exceptions);\r\n        if (staticHook == null) {\r\n            // force static hook creation\r\n            getStaticHook();\r\n        } else {\r\n            staticInit.invoke_static_this(staticHookSig);\r\n        }\r\n        return staticInit;\r\n    } else if (sig.equals(staticHookSig)) {\r\n        return new CodeEmitter(this, v, access, sig, exceptions) {\r\n\r\n            @Override\r\n            public boolean isStaticHook() {\r\n                return true;\r\n            }\r\n        };\r\n    } else {\r\n        return new CodeEmitter(this, v, access, sig, exceptions);\r\n    }\r\n}\npublic CodeEmitter begin_static() {\r\n    return begin_method(Constants.ACC_STATIC, Constants.SIG_STATIC, null);\r\n}\npublic void declare_field(int access, String name, Type type, Object value) {\r\n    FieldInfo existing = (FieldInfo) fieldInfo.get(name);\r\n    FieldInfo info = new FieldInfo(access, name, type, value);\r\n    if (existing != null) {\r\n        if (!info.equals(existing)) {\r\n            throw new IllegalArgumentException(\"Field \\\"\" + name + \"\\\" has been declared differently\");\r\n        }\r\n    } else {\r\n        fieldInfo.put(name, info);\r\n        cv.visitField(access, name, type.getDescriptor(), null, value);\r\n    }\r\n}\n// TODO: make public?\r\nboolean isFieldDeclared(String name) {\r\n    return fieldInfo.get(name) != null;\r\n}\nFieldInfo getFieldInfo(String name) {\r\n    FieldInfo field = (FieldInfo) fieldInfo.get(name);\r\n    if (field == null) {\r\n        throw new IllegalArgumentException(\"Field \" + name + \" is not declared in \" + getClassType().getClassName());\r\n    }\r\n    return field;\r\n}\nstatic class FieldInfo {\r\n\r\n    int access;\r\n\r\n    String name;\r\n\r\n    Type type;\r\n\r\n    Object value;\r\n\r\n    public FieldInfo(int access, String name, Type type, Object value) {\r\n        this.access = access;\r\n        this.name = name;\r\n        this.type = type;\r\n        this.value = value;\r\n    }\r\n\r\n    @Override\r\n    public boolean equals(Object o) {\r\n        if (o == null) {\r\n            return false;\r\n        }\r\n        if (!(o instanceof FieldInfo other)) {\r\n            return false;\r\n        }\r\n        if (access != other.access || !name.equals(other.name) || !type.equals(other.type)) {\r\n            return false;\r\n        }\r\n        if ((value == null) ^ (other.value == null)) {\r\n            return false;\r\n        }\r\n        if (value != null && !value.equals(other.value)) {\r\n            return false;\r\n        }\r\n        return true;\r\n    }\r\n\r\n    @Override\r\n    public int hashCode() {\r\n        return access ^ name.hashCode() ^ type.hashCode() ^ ((value == null) ? 0 : value.hashCode());\r\n    }\r\n}\n@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n    begin_class(version, access, name.replace('/', '.'), TypeUtils.fromInternalName(superName), TypeUtils.fromInternalNames(interfaces), // TODO\r\n    null);\r\n}\n@Override\r\npublic void visitEnd() {\r\n    end_class();\r\n}\n@Override\r\npublic FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {\r\n    declare_field(access, name, Type.getType(desc), value);\r\n    // TODO\r\n    return null;\r\n}\n@Override\r\npublic MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {\r\n    return begin_method(access, new Signature(name, desc), TypeUtils.fromInternalNames(exceptions));\r\n}",
+    "comment": "\n * @author Juozas Baliuka, Chris Nokleberg\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#setTarget(ClassVisitor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setTarget(ClassVisitor cv) {\r\n    this.cv = cv;\r\n    fieldInfo = new HashMap();\r\n    // just to be safe\r\n    staticInit = staticHook = null;\r\n    staticHookSig = null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getNextHook()",
+    "entityType": "method",
+    "code": "synchronized private static int getNextHook() {\r\n    return ++hookCounter;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getClassInfo()",
+    "entityType": "method",
+    "code": "public ClassInfo getClassInfo() {\r\n    return classInfo;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#begin_class(int,int,String,Type,Type[],String)",
+    "entityType": "method",
+    "code": "public void begin_class(int version, final int access, String className, final Type superType, final Type[] interfaces, String source) {\r\n    final Type classType = Type.getType(\"L\" + className.replace('.', '/') + \";\");\r\n    classInfo = new ClassInfo() {\r\n\r\n        @Override\r\n        public Type getType() {\r\n            return classType;\r\n        }\r\n\r\n        @Override\r\n        public Type getSuperType() {\r\n            return (superType != null) ? superType : Constants.TYPE_OBJECT;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getInterfaces() {\r\n            return interfaces;\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return access;\r\n        }\r\n    };\r\n    cv.visit(version, access, classInfo.getType().getInternalName(), null, classInfo.getSuperType().getInternalName(), TypeUtils.toInternalNames(interfaces));\r\n    if (source != null) {\r\n        cv.visitSource(source, null);\r\n    }\r\n    init();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getStaticHook()",
+    "entityType": "method",
+    "code": "public CodeEmitter getStaticHook() {\r\n    if (TypeUtils.isInterface(getAccess())) {\r\n        throw new IllegalStateException(\"static hook is invalid for this class\");\r\n    }\r\n    if (staticHook == null) {\r\n        staticHookSig = new Signature(\"CGLIB$STATICHOOK\" + getNextHook(), \"()V\");\r\n        staticHook = begin_method(Constants.ACC_STATIC, staticHookSig, null);\r\n        if (staticInit != null) {\r\n            staticInit.invoke_static_this(staticHookSig);\r\n        }\r\n    }\r\n    return staticHook;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#init()",
+    "entityType": "method",
+    "code": "protected void init() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getAccess()",
+    "entityType": "method",
+    "code": "public int getAccess() {\r\n    return classInfo.getModifiers();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getClassType()",
+    "entityType": "method",
+    "code": "public Type getClassType() {\r\n    return classInfo.getType();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getSuperType()",
+    "entityType": "method",
+    "code": "public Type getSuperType() {\r\n    return classInfo.getSuperType();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#end_class()",
+    "entityType": "method",
+    "code": "public void end_class() {\r\n    if (staticHook != null && staticInit == null) {\r\n        // force creation of static init\r\n        begin_static();\r\n    }\r\n    if (staticInit != null) {\r\n        staticHook.return_value();\r\n        staticHook.end_method();\r\n        rawStaticInit.visitInsn(Constants.RETURN);\r\n        rawStaticInit.visitMaxs(0, 0);\r\n        staticInit = staticHook = null;\r\n        staticHookSig = null;\r\n    }\r\n    cv.visitEnd();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#begin_method(int,Signature,Type[])",
+    "entityType": "method",
+    "code": "public CodeEmitter begin_method(int access, Signature sig, Type[] exceptions) {\r\n    if (classInfo == null) {\r\n        throw new IllegalStateException(\"classInfo is null! \" + this);\r\n    }\r\n    MethodVisitor v = cv.visitMethod(access, sig.getName(), sig.getDescriptor(), null, TypeUtils.toInternalNames(exceptions));\r\n    if (sig.equals(Constants.SIG_STATIC) && !TypeUtils.isInterface(getAccess())) {\r\n        rawStaticInit = v;\r\n        MethodVisitor wrapped = new MethodVisitor(Constants.ASM_API, v) {\r\n\r\n            @Override\r\n            public void visitMaxs(int maxStack, int maxLocals) {\r\n                // ignore\r\n            }\r\n\r\n            @Override\r\n            public void visitInsn(int insn) {\r\n                if (insn != Constants.RETURN) {\r\n                    super.visitInsn(insn);\r\n                }\r\n            }\r\n        };\r\n        staticInit = new CodeEmitter(this, wrapped, access, sig, exceptions);\r\n        if (staticHook == null) {\r\n            // force static hook creation\r\n            getStaticHook();\r\n        } else {\r\n            staticInit.invoke_static_this(staticHookSig);\r\n        }\r\n        return staticInit;\r\n    } else if (sig.equals(staticHookSig)) {\r\n        return new CodeEmitter(this, v, access, sig, exceptions) {\r\n\r\n            @Override\r\n            public boolean isStaticHook() {\r\n                return true;\r\n            }\r\n        };\r\n    } else {\r\n        return new CodeEmitter(this, v, access, sig, exceptions);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#begin_static()",
+    "entityType": "method",
+    "code": "public CodeEmitter begin_static() {\r\n    return begin_method(Constants.ACC_STATIC, Constants.SIG_STATIC, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#declare_field(int,String,Type,Object)",
+    "entityType": "method",
+    "code": "public void declare_field(int access, String name, Type type, Object value) {\r\n    FieldInfo existing = (FieldInfo) fieldInfo.get(name);\r\n    FieldInfo info = new FieldInfo(access, name, type, value);\r\n    if (existing != null) {\r\n        if (!info.equals(existing)) {\r\n            throw new IllegalArgumentException(\"Field \\\"\" + name + \"\\\" has been declared differently\");\r\n        }\r\n    } else {\r\n        fieldInfo.put(name, info);\r\n        cv.visitField(access, name, type.getDescriptor(), null, value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#isFieldDeclared(String)",
+    "entityType": "method",
+    "code": "// TODO: make public?\r\nboolean isFieldDeclared(String name) {\r\n    return fieldInfo.get(name) != null;\r\n}",
+    "comment": " TODO: make public?"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#getFieldInfo(String)",
+    "entityType": "method",
+    "code": "FieldInfo getFieldInfo(String name) {\r\n    FieldInfo field = (FieldInfo) fieldInfo.get(name);\r\n    if (field == null) {\r\n        throw new IllegalArgumentException(\"Field \" + name + \" is not declared in \" + getClassType().getClassName());\r\n    }\r\n    return field;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#visit(int,int,String,String,String,String[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n    begin_class(version, access, name.replace('/', '.'), TypeUtils.fromInternalName(superName), TypeUtils.fromInternalNames(interfaces), // TODO\r\n    null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#visitEnd()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitEnd() {\r\n    end_class();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#visitField(int,String,String,String,Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {\r\n    declare_field(access, name, Type.getType(desc), value);\r\n    // TODO\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassEmitter#visitMethod(int,String,String,String,String[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {\r\n    return begin_method(access, new Signature(name, desc), TypeUtils.fromInternalNames(exceptions));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.FieldInfo",
+    "entityType": "class",
+    "code": "int access;\nString name;\nType type;\nObject value;\npublic FieldInfo(int access, String name, Type type, Object value) {\r\n    this.access = access;\r\n    this.name = name;\r\n    this.type = type;\r\n    this.value = value;\r\n}\n@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof FieldInfo other)) {\r\n        return false;\r\n    }\r\n    if (access != other.access || !name.equals(other.name) || !type.equals(other.type)) {\r\n        return false;\r\n    }\r\n    if ((value == null) ^ (other.value == null)) {\r\n        return false;\r\n    }\r\n    if (value != null && !value.equals(other.value)) {\r\n        return false;\r\n    }\r\n    return true;\r\n}\n@Override\r\npublic int hashCode() {\r\n    return access ^ name.hashCode() ^ type.hashCode() ^ ((value == null) ? 0 : value.hashCode());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.FieldInfo#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof FieldInfo other)) {\r\n        return false;\r\n    }\r\n    if (access != other.access || !name.equals(other.name) || !type.equals(other.type)) {\r\n        return false;\r\n    }\r\n    if ((value == null) ^ (other.value == null)) {\r\n        return false;\r\n    }\r\n    if (value != null && !value.equals(other.value)) {\r\n        return false;\r\n    }\r\n    return true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.FieldInfo#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return access ^ name.hashCode() ^ type.hashCode() ^ ((value == null) ? 0 : value.hashCode());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassesKey",
+    "entityType": "class",
+    "code": "private static final Key FACTORY = (Key) KeyFactory.create(Key.class);\ninterface Key {\r\n\r\n    Object newInstance(Object[] array);\r\n}\nprivate ClassesKey() {\r\n}\npublic static Object create(Object[] array) {\r\n    return FACTORY.newInstance(classNames(array));\r\n}\nprivate static String[] classNames(Object[] objects) {\r\n    if (objects == null) {\r\n        return null;\r\n    }\r\n    String[] classNames = new String[objects.length];\r\n    for (int i = 0; i < objects.length; i++) {\r\n        Object object = objects[i];\r\n        if (object != null) {\r\n            Class<?> aClass = object.getClass();\r\n            classNames[i] = aClass == null ? null : aClass.getName();\r\n        }\r\n    }\r\n    return classNames;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassesKey#create(Object[])",
+    "entityType": "method",
+    "code": "public static Object create(Object[] array) {\r\n    return FACTORY.newInstance(classNames(array));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassesKey#classNames(Object[])",
+    "entityType": "method",
+    "code": "private static String[] classNames(Object[] objects) {\r\n    if (objects == null) {\r\n        return null;\r\n    }\r\n    String[] classNames = new String[objects.length];\r\n    for (int i = 0; i < objects.length; i++) {\r\n        Object object = objects[i];\r\n        if (object != null) {\r\n            Class<?> aClass = object.getClass();\r\n            classNames[i] = aClass == null ? null : aClass.getName();\r\n        }\r\n    }\r\n    return classNames;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Key",
+    "entityType": "class",
+    "code": "Object newInstance(Object[] array);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Key#newInstance(Object[])",
+    "entityType": "method",
+    "code": "Object newInstance(Object[] array);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassGenerator",
+    "entityType": "class",
+    "code": "void generateClass(ClassVisitor v) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassGenerator#generateClass(ClassVisitor)",
+    "entityType": "method",
+    "code": "void generateClass(ClassVisitor v) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo",
+    "entityType": "class",
+    "code": "protected ClassInfo() {\r\n}\nabstract public Type getType();\nabstract public Type getSuperType();\nabstract public Type[] getInterfaces();\nabstract public int getModifiers();\n@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof ClassInfo classInfo)) {\r\n        return false;\r\n    }\r\n    return getType().equals(classInfo.getType());\r\n}\n@Override\r\npublic int hashCode() {\r\n    return getType().hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    // TODO: include modifiers, superType, interfaces\r\n    return getType().getClassName();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#getType()",
+    "entityType": "method",
+    "code": "abstract public Type getType();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#getSuperType()",
+    "entityType": "method",
+    "code": "abstract public Type getSuperType();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#getInterfaces()",
+    "entityType": "method",
+    "code": "abstract public Type[] getInterfaces();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#getModifiers()",
+    "entityType": "method",
+    "code": "abstract public int getModifiers();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof ClassInfo classInfo)) {\r\n        return false;\r\n    }\r\n    return getType().equals(classInfo.getType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return getType().hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassInfo#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    // TODO: include modifiers, superType, interfaces\r\n    return getType().getClassName();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy",
+    "entityType": "class",
+    "code": "private final ClassLoader classLoader;\nprivate final GeneratorStrategy delegate;\n/**\r\n * Create a default GeneratorStrategy, exposing the given ClassLoader.\r\n * @param classLoader the ClassLoader to expose as current thread context ClassLoader\r\n */\r\npublic ClassLoaderAwareGeneratorStrategy(ClassLoader classLoader) {\r\n    this.classLoader = classLoader;\r\n    this.delegate = super::generate;\r\n}\n/**\r\n * Create a decorator for the given GeneratorStrategy delegate, exposing the given ClassLoader.\r\n * @param classLoader the ClassLoader to expose as current thread context ClassLoader\r\n * @since 6.2\r\n */\r\npublic ClassLoaderAwareGeneratorStrategy(ClassLoader classLoader, GeneratorStrategy delegate) {\r\n    this.classLoader = classLoader;\r\n    this.delegate = delegate;\r\n}\n@Override\r\npublic byte[] generate(ClassGenerator cg) throws Exception {\r\n    if (this.classLoader == null) {\r\n        return this.delegate.generate(cg);\r\n    }\r\n    Thread currentThread = Thread.currentThread();\r\n    ClassLoader threadContextClassLoader;\r\n    try {\r\n        threadContextClassLoader = currentThread.getContextClassLoader();\r\n    } catch (Throwable ex) {\r\n        // Cannot access thread context ClassLoader - falling back...\r\n        return this.delegate.generate(cg);\r\n    }\r\n    boolean overrideClassLoader = !this.classLoader.equals(threadContextClassLoader);\r\n    if (overrideClassLoader) {\r\n        currentThread.setContextClassLoader(this.classLoader);\r\n    }\r\n    try {\r\n        return this.delegate.generate(cg);\r\n    } finally {\r\n        if (overrideClassLoader) {\r\n            // Reset original thread context ClassLoader.\r\n            currentThread.setContextClassLoader(threadContextClassLoader);\r\n        }\r\n    }\r\n}",
+    "comment": "\n * CGLIB GeneratorStrategy variant which exposes the application ClassLoader\n * as current thread context ClassLoader for the time of class generation.\n * The ASM ClassWriter in Spring's ASM variant will pick it up when doing\n * common superclass resolution.\n *\n * @author Juergen Hoeller\n * @since 5.2\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy#generate(ClassGenerator)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte[] generate(ClassGenerator cg) throws Exception {\r\n    if (this.classLoader == null) {\r\n        return this.delegate.generate(cg);\r\n    }\r\n    Thread currentThread = Thread.currentThread();\r\n    ClassLoader threadContextClassLoader;\r\n    try {\r\n        threadContextClassLoader = currentThread.getContextClassLoader();\r\n    } catch (Throwable ex) {\r\n        // Cannot access thread context ClassLoader - falling back...\r\n        return this.delegate.generate(cg);\r\n    }\r\n    boolean overrideClassLoader = !this.classLoader.equals(threadContextClassLoader);\r\n    if (overrideClassLoader) {\r\n        currentThread.setContextClassLoader(this.classLoader);\r\n    }\r\n    try {\r\n        return this.delegate.generate(cg);\r\n    } finally {\r\n        if (overrideClassLoader) {\r\n            // Reset original thread context ClassLoader.\r\n            currentThread.setContextClassLoader(threadContextClassLoader);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassNameReader",
+    "entityType": "class",
+    "code": "private ClassNameReader() {\r\n}\nprivate static final EarlyExitException EARLY_EXIT = new EarlyExitException();\n@SuppressWarnings(\"serial\")\r\nprivate static class EarlyExitException extends RuntimeException {\r\n}\npublic static String getClassName(ClassReader r) {\r\n    return getClassInfo(r)[0];\r\n}\npublic static String[] getClassInfo(ClassReader r) {\r\n    final List<String> array = new ArrayList<>();\r\n    try {\r\n        r.accept(new ClassVisitor(Constants.ASM_API, null) {\r\n\r\n            @Override\r\n            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n                array.add(name.replace('/', '.'));\r\n                if (superName != null) {\r\n                    array.add(superName.replace('/', '.'));\r\n                }\r\n                for (String element : interfaces) {\r\n                    array.add(element.replace('/', '.'));\r\n                }\r\n                throw EARLY_EXIT;\r\n            }\r\n        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);\r\n    } catch (EarlyExitException e) ;\r\n    return array.toArray(new String[0]);\r\n}",
+    "comment": " TODO: optimize (ClassReader buffers entire class before accept)"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassNameReader#getClassName(ClassReader)",
+    "entityType": "method",
+    "code": "public static String getClassName(ClassReader r) {\r\n    return getClassInfo(r)[0];\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassNameReader#getClassInfo(ClassReader)",
+    "entityType": "method",
+    "code": "public static String[] getClassInfo(ClassReader r) {\r\n    final List<String> array = new ArrayList<>();\r\n    try {\r\n        r.accept(new ClassVisitor(Constants.ASM_API, null) {\r\n\r\n            @Override\r\n            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {\r\n                array.add(name.replace('/', '.'));\r\n                if (superName != null) {\r\n                    array.add(superName.replace('/', '.'));\r\n                }\r\n                for (String element : interfaces) {\r\n                    array.add(element.replace('/', '.'));\r\n                }\r\n                throw EARLY_EXIT;\r\n            }\r\n        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);\r\n    } catch (EarlyExitException e) ;\r\n    return array.toArray(new String[0]);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.EarlyExitException",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassTransformer",
+    "entityType": "class",
+    "code": "public ClassTransformer() {\r\n    super(Constants.ASM_API);\r\n}\npublic ClassTransformer(int opcode) {\r\n    super(opcode);\r\n}\npublic abstract void setTarget(ClassVisitor target);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ClassTransformer#setTarget(ClassVisitor)",
+    "entityType": "method",
+    "code": "public abstract void setTarget(ClassVisitor target);",
+    "comment": ""
+  }
+]

@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.cglib.core.HashCodeCustomizer#customize(CodeEmitter,Type)",
+    "entityType": "method",
+    "code": "/**\r\n * Customizes calculation of hashcode\r\n * @param e code emitter\r\n * @param type parameter type\r\n */\r\nboolean customize(CodeEmitter e, Type type);",
+    "comment": "\n     * Customizes calculation of hashcode\n     * @param e code emitter\n     * @param type parameter type\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.CustomizerRegistry",
+    "entityType": "class",
+    "code": "private final Class[] customizerTypes;\nprivate Map<Class, List<KeyFactoryCustomizer>> customizers = new HashMap<>();\npublic CustomizerRegistry(Class[] customizerTypes) {\r\n    this.customizerTypes = customizerTypes;\r\n}\npublic void add(KeyFactoryCustomizer customizer) {\r\n    Class<? extends KeyFactoryCustomizer> klass = customizer.getClass();\r\n    for (Class type : customizerTypes) {\r\n        if (type.isAssignableFrom(klass)) {\r\n            List<KeyFactoryCustomizer> list = customizers.computeIfAbsent(type, k -> new ArrayList<>());\r\n            list.add(customizer);\r\n        }\r\n    }\r\n}\npublic <T> List<T> get(Class<T> klass) {\r\n    List<KeyFactoryCustomizer> list = customizers.get(klass);\r\n    if (list == null) {\r\n        return Collections.emptyList();\r\n    }\r\n    return (List<T>) list;\r\n}\n/**\r\n * @deprecated Only to keep backward compatibility.\r\n */\r\n@Deprecated\r\npublic static CustomizerRegistry singleton(Customizer customizer) {\r\n    CustomizerRegistry registry = new CustomizerRegistry(new Class[] { Customizer.class });\r\n    registry.add(customizer);\r\n    return registry;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.CustomizerRegistry#add(KeyFactoryCustomizer)",
+    "entityType": "method",
+    "code": "public void add(KeyFactoryCustomizer customizer) {\r\n    Class<? extends KeyFactoryCustomizer> klass = customizer.getClass();\r\n    for (Class type : customizerTypes) {\r\n        if (type.isAssignableFrom(klass)) {\r\n            List<KeyFactoryCustomizer> list = customizers.computeIfAbsent(type, k -> new ArrayList<>());\r\n            list.add(customizer);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.CustomizerRegistry#get(Class<T>)",
+    "entityType": "method",
+    "code": "public <T> List<T> get(Class<T> klass) {\r\n    List<KeyFactoryCustomizer> list = customizers.get(klass);\r\n    if (list == null) {\r\n        return Collections.emptyList();\r\n    }\r\n    return (List<T>) list;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.CustomizerRegistry#singleton(Customizer)",
+    "entityType": "method",
+    "code": "/**\r\n * @deprecated Only to keep backward compatibility.\r\n */\r\n@Deprecated\r\npublic static CustomizerRegistry singleton(Customizer customizer) {\r\n    CustomizerRegistry registry = new CustomizerRegistry(new Class[] { Customizer.class });\r\n    registry.add(customizer);\r\n    return registry;\r\n}",
+    "comment": "\n     * @deprecated Only to keep backward compatibility.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.Function",
+    "entityType": "class",
+    "code": "V apply(K key);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.Function#apply(K)",
+    "entityType": "method",
+    "code": "V apply(K key);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.LoadingCache",
+    "entityType": "class",
+    "code": "protected final ConcurrentMap<KK, Object> map;\nprotected final Function<K, V> loader;\nprotected final Function<K, KK> keyMapper;\npublic static final Function IDENTITY = key -> key;\npublic LoadingCache(Function<K, KK> keyMapper, Function<K, V> loader) {\r\n    this.keyMapper = keyMapper;\r\n    this.loader = loader;\r\n    this.map = new ConcurrentHashMap<>();\r\n}\n@SuppressWarnings(\"unchecked\")\r\npublic static <K> Function<K, K> identity() {\r\n    return IDENTITY;\r\n}\npublic V get(K key) {\r\n    final KK cacheKey = keyMapper.apply(key);\r\n    Object v = map.get(cacheKey);\r\n    if (v != null && !(v instanceof FutureTask)) {\r\n        return (V) v;\r\n    }\r\n    return createEntry(key, cacheKey, v);\r\n}\n/**\r\n * Loads entry to the cache.\r\n * If entry is missing, put {@link FutureTask} first so other competing thread might wait for the result.\r\n * @param key original key that would be used to load the instance\r\n * @param cacheKey key that would be used to store the entry in internal map\r\n * @param v null or {@link FutureTask<V>}\r\n * @return newly created instance\r\n */\r\nprotected V createEntry(final K key, KK cacheKey, Object v) {\r\n    FutureTask<V> task;\r\n    boolean creator = false;\r\n    if (v != null) {\r\n        // Another thread is already loading an instance\r\n        task = (FutureTask<V>) v;\r\n    } else {\r\n        task = new FutureTask<>(() -> loader.apply(key));\r\n        Object prevTask = map.putIfAbsent(cacheKey, task);\r\n        if (prevTask == null) {\r\n            // creator does the load\r\n            creator = true;\r\n            task.run();\r\n        } else if (prevTask instanceof FutureTask) {\r\n            task = (FutureTask<V>) prevTask;\r\n        } else {\r\n            return (V) prevTask;\r\n        }\r\n    }\r\n    V result;\r\n    try {\r\n        result = task.get();\r\n    } catch (InterruptedException e) {\r\n        throw new IllegalStateException(\"Interrupted while loading cache item\", e);\r\n    } catch (ExecutionException e) {\r\n        Throwable cause = e.getCause();\r\n        if (cause instanceof RuntimeException runtimeException) {\r\n            throw runtimeException;\r\n        }\r\n        throw new IllegalStateException(\"Unable to load cache item\", cause);\r\n    }\r\n    if (creator) {\r\n        map.put(cacheKey, result);\r\n    }\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.LoadingCache#identity()",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unchecked\")\r\npublic static <K> Function<K, K> identity() {\r\n    return IDENTITY;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.LoadingCache#get(K)",
+    "entityType": "method",
+    "code": "public V get(K key) {\r\n    final KK cacheKey = keyMapper.apply(key);\r\n    Object v = map.get(cacheKey);\r\n    if (v != null && !(v instanceof FutureTask)) {\r\n        return (V) v;\r\n    }\r\n    return createEntry(key, cacheKey, v);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.internal.LoadingCache#createEntry(K,KK,Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Loads entry to the cache.\r\n * If entry is missing, put {@link FutureTask} first so other competing thread might wait for the result.\r\n * @param key original key that would be used to load the instance\r\n * @param cacheKey key that would be used to store the entry in internal map\r\n * @param v null or {@link FutureTask<V>}\r\n * @return newly created instance\r\n */\r\nprotected V createEntry(final K key, KK cacheKey, Object v) {\r\n    FutureTask<V> task;\r\n    boolean creator = false;\r\n    if (v != null) {\r\n        // Another thread is already loading an instance\r\n        task = (FutureTask<V>) v;\r\n    } else {\r\n        task = new FutureTask<>(() -> loader.apply(key));\r\n        Object prevTask = map.putIfAbsent(cacheKey, task);\r\n        if (prevTask == null) {\r\n            // creator does the load\r\n            creator = true;\r\n            task.run();\r\n        } else if (prevTask instanceof FutureTask) {\r\n            task = (FutureTask<V>) prevTask;\r\n        } else {\r\n            return (V) prevTask;\r\n        }\r\n    }\r\n    V result;\r\n    try {\r\n        result = task.get();\r\n    } catch (InterruptedException e) {\r\n        throw new IllegalStateException(\"Interrupted while loading cache item\", e);\r\n    } catch (ExecutionException e) {\r\n        Throwable cause = e.getCause();\r\n        if (cause instanceof RuntimeException runtimeException) {\r\n            throw runtimeException;\r\n        }\r\n        throw new IllegalStateException(\"Unable to load cache item\", cause);\r\n    }\r\n    if (creator) {\r\n        map.put(cacheKey, result);\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n     * Loads entry to the cache.\n     * If entry is missing, put {@link FutureTask} first so other competing thread might wait for the result.\n     * @param key original key that would be used to load the instance\n     * @param cacheKey key that would be used to store the entry in internal map\n     * @param v null or {@link FutureTask<V>}\n     * @return newly created instance\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactory",
+    "entityType": "class",
+    "code": "private static final Signature GET_NAME = TypeUtils.parseSignature(\"String getName()\");\nprivate static final Signature GET_CLASS = TypeUtils.parseSignature(\"Class getClass()\");\nprivate static final Signature HASH_CODE = TypeUtils.parseSignature(\"int hashCode()\");\nprivate static final Signature EQUALS = TypeUtils.parseSignature(\"boolean equals(Object)\");\nprivate static final Signature TO_STRING = TypeUtils.parseSignature(\"String toString()\");\nprivate static final Signature APPEND_STRING = TypeUtils.parseSignature(\"StringBuffer append(String)\");\nprivate static final Type KEY_FACTORY = TypeUtils.parseType(\"org.springframework.cglib.core.KeyFactory\");\nprivate static final Signature GET_SORT = TypeUtils.parseSignature(\"int getSort()\");\n//generated numbers:\r\nprivate static final int[] PRIMES = { 11, 73, 179, 331, 521, 787, 1213, 1823, 2609, 3691, 5189, 7247, 10037, 13931, 19289, 26627, 36683, 50441, 69403, 95401, 131129, 180179, 247501, 340057, 467063, 641371, 880603, 1209107, 1660097, 2279161, 3129011, 4295723, 5897291, 8095873, 11114263, 15257791, 20946017, 28754629, 39474179, 54189869, 74391461, 102123817, 140194277, 192456917, 264202273, 362693231, 497900099, 683510293, 938313161, 1288102441, 1768288259 };\npublic static final Customizer CLASS_BY_NAME = (e, type) -> {\r\n    if (type.equals(Constants.TYPE_CLASS)) {\r\n        e.invoke_virtual(Constants.TYPE_CLASS, GET_NAME);\r\n    }\r\n};\npublic static final FieldTypeCustomizer STORE_CLASS_AS_STRING = new FieldTypeCustomizer() {\r\n\r\n    @Override\r\n    public void customize(CodeEmitter e, int index, Type type) {\r\n        if (type.equals(Constants.TYPE_CLASS)) {\r\n            e.invoke_virtual(Constants.TYPE_CLASS, GET_NAME);\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public Type getOutType(int index, Type type) {\r\n        if (type.equals(Constants.TYPE_CLASS)) {\r\n            return Constants.TYPE_STRING;\r\n        }\r\n        return type;\r\n    }\r\n};\n/**\r\n * {@link Type#hashCode()} is very expensive as it traverses full descriptor to calculate hash code.\r\n * This customizer uses {@link Type#getSort()} as a hash code.\r\n */\r\npublic static final HashCodeCustomizer HASH_ASM_TYPE = (e, type) -> {\r\n    if (Constants.TYPE_TYPE.equals(type)) {\r\n        e.invoke_virtual(type, GET_SORT);\r\n        return true;\r\n    }\r\n    return false;\r\n};\n/**\r\n * @deprecated this customizer might result in unexpected class leak since key object still holds a strong reference to the Object and class.\r\n * It is recommended to have pre-processing method that would strip Objects and represent Classes as Strings\r\n */\r\n@Deprecated\r\npublic static final Customizer OBJECT_BY_CLASS = (e, type) -> e.invoke_virtual(Constants.TYPE_OBJECT, GET_CLASS);\nprotected KeyFactory() {\r\n}\npublic static KeyFactory create(Class keyInterface) {\r\n    return create(keyInterface, null);\r\n}\npublic static KeyFactory create(Class keyInterface, Customizer customizer) {\r\n    return create(keyInterface.getClassLoader(), keyInterface, customizer);\r\n}\npublic static KeyFactory create(Class keyInterface, KeyFactoryCustomizer first, List<KeyFactoryCustomizer> next) {\r\n    return create(keyInterface.getClassLoader(), keyInterface, first, next);\r\n}\npublic static KeyFactory create(ClassLoader loader, Class keyInterface, Customizer customizer) {\r\n    return create(loader, keyInterface, customizer, Collections.<KeyFactoryCustomizer>emptyList());\r\n}\npublic static KeyFactory create(ClassLoader loader, Class keyInterface, KeyFactoryCustomizer customizer, List<KeyFactoryCustomizer> next) {\r\n    Generator gen = new Generator();\r\n    gen.setInterface(keyInterface);\r\n    // SPRING PATCH BEGIN\r\n    gen.setContextClass(keyInterface);\r\n    // SPRING PATCH END\r\n    if (customizer != null) {\r\n        gen.addCustomizer(customizer);\r\n    }\r\n    if (next != null && !next.isEmpty()) {\r\n        for (KeyFactoryCustomizer keyFactoryCustomizer : next) {\r\n            gen.addCustomizer(keyFactoryCustomizer);\r\n        }\r\n    }\r\n    gen.setClassLoader(loader);\r\n    return gen.create();\r\n}\npublic static class Generator extends AbstractClassGenerator {\r\n\r\n    private static final Source SOURCE = new Source(KeyFactory.class.getName());\r\n\r\n    private static final Class[] KNOWN_CUSTOMIZER_TYPES = new Class[] { Customizer.class, FieldTypeCustomizer.class };\r\n\r\n    private Class keyInterface;\r\n\r\n    // TODO: Make me final when deprecated methods are removed\r\n    private CustomizerRegistry customizers = new CustomizerRegistry(KNOWN_CUSTOMIZER_TYPES);\r\n\r\n    private int constant;\r\n\r\n    private int multiplier;\r\n\r\n    public Generator() {\r\n        super(SOURCE);\r\n    }\r\n\r\n    @Override\r\n    protected ClassLoader getDefaultClassLoader() {\r\n        return keyInterface.getClassLoader();\r\n    }\r\n\r\n    @Override\r\n    protected ProtectionDomain getProtectionDomain() {\r\n        return ReflectUtils.getProtectionDomain(keyInterface);\r\n    }\r\n\r\n    /**\r\n     * @deprecated Use {@link #addCustomizer(KeyFactoryCustomizer)} instead.\r\n     */\r\n    @Deprecated\r\n    public void setCustomizer(Customizer customizer) {\r\n        customizers = CustomizerRegistry.singleton(customizer);\r\n    }\r\n\r\n    public void addCustomizer(KeyFactoryCustomizer customizer) {\r\n        customizers.add(customizer);\r\n    }\r\n\r\n    public <T> List<T> getCustomizers(Class<T> klass) {\r\n        return customizers.get(klass);\r\n    }\r\n\r\n    public void setInterface(Class keyInterface) {\r\n        this.keyInterface = keyInterface;\r\n    }\r\n\r\n    public KeyFactory create() {\r\n        setNamePrefix(keyInterface.getName());\r\n        return (KeyFactory) super.create(keyInterface.getName());\r\n    }\r\n\r\n    public void setHashConstant(int constant) {\r\n        this.constant = constant;\r\n    }\r\n\r\n    public void setHashMultiplier(int multiplier) {\r\n        this.multiplier = multiplier;\r\n    }\r\n\r\n    @Override\r\n    protected Object firstInstance(Class type) {\r\n        return ReflectUtils.newInstance(type);\r\n    }\r\n\r\n    @Override\r\n    protected Object nextInstance(Object instance) {\r\n        return instance;\r\n    }\r\n\r\n    @Override\r\n    public void generateClass(ClassVisitor v) {\r\n        ClassEmitter ce = new ClassEmitter(v);\r\n        Method newInstance = ReflectUtils.findNewInstance(keyInterface);\r\n        if (!newInstance.getReturnType().equals(Object.class)) {\r\n            throw new IllegalArgumentException(\"newInstance method must return Object\");\r\n        }\r\n        Type[] parameterTypes = TypeUtils.getTypes(newInstance.getParameterTypes());\r\n        ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), KEY_FACTORY, new Type[] { Type.getType(keyInterface) }, Constants.SOURCE_FILE);\r\n        EmitUtils.null_constructor(ce);\r\n        EmitUtils.factory_method(ce, ReflectUtils.getSignature(newInstance));\r\n        int seed = 0;\r\n        CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, TypeUtils.parseConstructor(parameterTypes), null);\r\n        e.load_this();\r\n        e.super_invoke_constructor();\r\n        e.load_this();\r\n        List<FieldTypeCustomizer> fieldTypeCustomizers = getCustomizers(FieldTypeCustomizer.class);\r\n        for (int i = 0; i < parameterTypes.length; i++) {\r\n            Type parameterType = parameterTypes[i];\r\n            Type fieldType = parameterType;\r\n            for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n                fieldType = customizer.getOutType(i, fieldType);\r\n            }\r\n            seed += fieldType.hashCode();\r\n            ce.declare_field(Constants.ACC_PRIVATE | Constants.ACC_FINAL, getFieldName(i), fieldType, null);\r\n            e.dup();\r\n            e.load_arg(i);\r\n            for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n                customizer.customize(e, i, parameterType);\r\n            }\r\n            e.putfield(getFieldName(i));\r\n        }\r\n        e.return_value();\r\n        e.end_method();\r\n        // hash code\r\n        e = ce.begin_method(Constants.ACC_PUBLIC, HASH_CODE, null);\r\n        int hc = (constant != 0) ? constant : PRIMES[(Math.abs(seed) % PRIMES.length)];\r\n        int hm = (multiplier != 0) ? multiplier : PRIMES[(Math.abs(seed * 13) % PRIMES.length)];\r\n        e.push(hc);\r\n        for (int i = 0; i < parameterTypes.length; i++) {\r\n            e.load_this();\r\n            e.getfield(getFieldName(i));\r\n            EmitUtils.hash_code(e, parameterTypes[i], hm, customizers);\r\n        }\r\n        e.return_value();\r\n        e.end_method();\r\n        // equals\r\n        e = ce.begin_method(Constants.ACC_PUBLIC, EQUALS, null);\r\n        Label fail = e.make_label();\r\n        e.load_arg(0);\r\n        e.instance_of_this();\r\n        e.if_jump(CodeEmitter.EQ, fail);\r\n        for (int i = 0; i < parameterTypes.length; i++) {\r\n            e.load_this();\r\n            e.getfield(getFieldName(i));\r\n            e.load_arg(0);\r\n            e.checkcast_this();\r\n            e.getfield(getFieldName(i));\r\n            EmitUtils.not_equals(e, parameterTypes[i], fail, customizers);\r\n        }\r\n        e.push(1);\r\n        e.return_value();\r\n        e.mark(fail);\r\n        e.push(0);\r\n        e.return_value();\r\n        e.end_method();\r\n        // toString\r\n        e = ce.begin_method(Constants.ACC_PUBLIC, TO_STRING, null);\r\n        e.new_instance(Constants.TYPE_STRING_BUFFER);\r\n        e.dup();\r\n        e.invoke_constructor(Constants.TYPE_STRING_BUFFER);\r\n        for (int i = 0; i < parameterTypes.length; i++) {\r\n            if (i > 0) {\r\n                e.push(\", \");\r\n                e.invoke_virtual(Constants.TYPE_STRING_BUFFER, APPEND_STRING);\r\n            }\r\n            e.load_this();\r\n            e.getfield(getFieldName(i));\r\n            EmitUtils.append_string(e, parameterTypes[i], EmitUtils.DEFAULT_DELIMITERS, customizers);\r\n        }\r\n        e.invoke_virtual(Constants.TYPE_STRING_BUFFER, TO_STRING);\r\n        e.return_value();\r\n        e.end_method();\r\n        ce.end_class();\r\n    }\r\n\r\n    private String getFieldName(int arg) {\r\n        return \"FIELD_\" + arg;\r\n    }\r\n}",
+    "comment": "\n * Generates classes to handle multi-valued keys, for use in things such as Maps and Sets.\n * Code for <code>equals</code> and <code>hashCode</code> methods follow the\n * the rules laid out in <i>Effective Java</i> by Joshua Bloch.\n * <p>\n * To generate a <code>KeyFactory</code>, you need to supply an interface which\n * describes the structure of the key. The interface should have a\n * single method named <code>newInstance</code>, which returns an\n * <code>Object</code>. The arguments array can be\n * <i>anything</i>--Objects, primitive values, or single or\n * multi-dimension arrays of either. For example:\n * <p><pre>\n *     private interface IntStringKey {\n *         public Object newInstance(int i, String s);\n *     }\n * </pre><p>\n * Once you have made a <code>KeyFactory</code>, you generate a new key by calling\n * the <code>newInstance</code> method defined by your interface.\n * <p><pre>\n *     IntStringKey factory = (IntStringKey)KeyFactory.create(IntStringKey.class);\n *     Object key1 = factory.newInstance(4, \"Hello\");\n *     Object key2 = factory.newInstance(4, \"World\");\n * </pre><p>\n * <b>Note:</b>\n * <code>hashCode</code> equality between two keys <code>key1</code> and <code>key2</code> is only guaranteed if\n * <code>key1.equals(key2)</code> <i>and</i> the keys were produced by the same factory.\n * @version $Id: KeyFactory.java,v 1.26 2006/03/05 02:43:19 herbyderby Exp $\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactory#create(Class)",
+    "entityType": "method",
+    "code": "public static KeyFactory create(Class keyInterface) {\r\n    return create(keyInterface, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactory#create(Class,Customizer)",
+    "entityType": "method",
+    "code": "public static KeyFactory create(Class keyInterface, Customizer customizer) {\r\n    return create(keyInterface.getClassLoader(), keyInterface, customizer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactory#create(Class,KeyFactoryCustomizer,List<KeyFactoryCustomizer>)",
+    "entityType": "method",
+    "code": "public static KeyFactory create(Class keyInterface, KeyFactoryCustomizer first, List<KeyFactoryCustomizer> next) {\r\n    return create(keyInterface.getClassLoader(), keyInterface, first, next);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactory#create(ClassLoader,Class,Customizer)",
+    "entityType": "method",
+    "code": "public static KeyFactory create(ClassLoader loader, Class keyInterface, Customizer customizer) {\r\n    return create(loader, keyInterface, customizer, Collections.<KeyFactoryCustomizer>emptyList());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactory#create(ClassLoader,Class,KeyFactoryCustomizer,List<KeyFactoryCustomizer>)",
+    "entityType": "method",
+    "code": "public static KeyFactory create(ClassLoader loader, Class keyInterface, KeyFactoryCustomizer customizer, List<KeyFactoryCustomizer> next) {\r\n    Generator gen = new Generator();\r\n    gen.setInterface(keyInterface);\r\n    // SPRING PATCH BEGIN\r\n    gen.setContextClass(keyInterface);\r\n    // SPRING PATCH END\r\n    if (customizer != null) {\r\n        gen.addCustomizer(customizer);\r\n    }\r\n    if (next != null && !next.isEmpty()) {\r\n        for (KeyFactoryCustomizer keyFactoryCustomizer : next) {\r\n            gen.addCustomizer(keyFactoryCustomizer);\r\n        }\r\n    }\r\n    gen.setClassLoader(loader);\r\n    return gen.create();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator",
+    "entityType": "class",
+    "code": "private static final Source SOURCE = new Source(KeyFactory.class.getName());\nprivate static final Class[] KNOWN_CUSTOMIZER_TYPES = new Class[] { Customizer.class, FieldTypeCustomizer.class };\nprivate Class keyInterface;\n// TODO: Make me final when deprecated methods are removed\r\nprivate CustomizerRegistry customizers = new CustomizerRegistry(KNOWN_CUSTOMIZER_TYPES);\nprivate int constant;\nprivate int multiplier;\npublic Generator() {\r\n    super(SOURCE);\r\n}\n@Override\r\nprotected ClassLoader getDefaultClassLoader() {\r\n    return keyInterface.getClassLoader();\r\n}\n@Override\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return ReflectUtils.getProtectionDomain(keyInterface);\r\n}\n/**\r\n * @deprecated Use {@link #addCustomizer(KeyFactoryCustomizer)} instead.\r\n */\r\n@Deprecated\r\npublic void setCustomizer(Customizer customizer) {\r\n    customizers = CustomizerRegistry.singleton(customizer);\r\n}\npublic void addCustomizer(KeyFactoryCustomizer customizer) {\r\n    customizers.add(customizer);\r\n}\npublic <T> List<T> getCustomizers(Class<T> klass) {\r\n    return customizers.get(klass);\r\n}\npublic void setInterface(Class keyInterface) {\r\n    this.keyInterface = keyInterface;\r\n}\npublic KeyFactory create() {\r\n    setNamePrefix(keyInterface.getName());\r\n    return (KeyFactory) super.create(keyInterface.getName());\r\n}\npublic void setHashConstant(int constant) {\r\n    this.constant = constant;\r\n}\npublic void setHashMultiplier(int multiplier) {\r\n    this.multiplier = multiplier;\r\n}\n@Override\r\nprotected Object firstInstance(Class type) {\r\n    return ReflectUtils.newInstance(type);\r\n}\n@Override\r\nprotected Object nextInstance(Object instance) {\r\n    return instance;\r\n}\n@Override\r\npublic void generateClass(ClassVisitor v) {\r\n    ClassEmitter ce = new ClassEmitter(v);\r\n    Method newInstance = ReflectUtils.findNewInstance(keyInterface);\r\n    if (!newInstance.getReturnType().equals(Object.class)) {\r\n        throw new IllegalArgumentException(\"newInstance method must return Object\");\r\n    }\r\n    Type[] parameterTypes = TypeUtils.getTypes(newInstance.getParameterTypes());\r\n    ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), KEY_FACTORY, new Type[] { Type.getType(keyInterface) }, Constants.SOURCE_FILE);\r\n    EmitUtils.null_constructor(ce);\r\n    EmitUtils.factory_method(ce, ReflectUtils.getSignature(newInstance));\r\n    int seed = 0;\r\n    CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, TypeUtils.parseConstructor(parameterTypes), null);\r\n    e.load_this();\r\n    e.super_invoke_constructor();\r\n    e.load_this();\r\n    List<FieldTypeCustomizer> fieldTypeCustomizers = getCustomizers(FieldTypeCustomizer.class);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        Type parameterType = parameterTypes[i];\r\n        Type fieldType = parameterType;\r\n        for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n            fieldType = customizer.getOutType(i, fieldType);\r\n        }\r\n        seed += fieldType.hashCode();\r\n        ce.declare_field(Constants.ACC_PRIVATE | Constants.ACC_FINAL, getFieldName(i), fieldType, null);\r\n        e.dup();\r\n        e.load_arg(i);\r\n        for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n            customizer.customize(e, i, parameterType);\r\n        }\r\n        e.putfield(getFieldName(i));\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n    // hash code\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, HASH_CODE, null);\r\n    int hc = (constant != 0) ? constant : PRIMES[(Math.abs(seed) % PRIMES.length)];\r\n    int hm = (multiplier != 0) ? multiplier : PRIMES[(Math.abs(seed * 13) % PRIMES.length)];\r\n    e.push(hc);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.hash_code(e, parameterTypes[i], hm, customizers);\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n    // equals\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, EQUALS, null);\r\n    Label fail = e.make_label();\r\n    e.load_arg(0);\r\n    e.instance_of_this();\r\n    e.if_jump(CodeEmitter.EQ, fail);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        e.load_arg(0);\r\n        e.checkcast_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.not_equals(e, parameterTypes[i], fail, customizers);\r\n    }\r\n    e.push(1);\r\n    e.return_value();\r\n    e.mark(fail);\r\n    e.push(0);\r\n    e.return_value();\r\n    e.end_method();\r\n    // toString\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, TO_STRING, null);\r\n    e.new_instance(Constants.TYPE_STRING_BUFFER);\r\n    e.dup();\r\n    e.invoke_constructor(Constants.TYPE_STRING_BUFFER);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        if (i > 0) {\r\n            e.push(\", \");\r\n            e.invoke_virtual(Constants.TYPE_STRING_BUFFER, APPEND_STRING);\r\n        }\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.append_string(e, parameterTypes[i], EmitUtils.DEFAULT_DELIMITERS, customizers);\r\n    }\r\n    e.invoke_virtual(Constants.TYPE_STRING_BUFFER, TO_STRING);\r\n    e.return_value();\r\n    e.end_method();\r\n    ce.end_class();\r\n}\nprivate String getFieldName(int arg) {\r\n    return \"FIELD_\" + arg;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#getDefaultClassLoader()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected ClassLoader getDefaultClassLoader() {\r\n    return keyInterface.getClassLoader();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#getProtectionDomain()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected ProtectionDomain getProtectionDomain() {\r\n    return ReflectUtils.getProtectionDomain(keyInterface);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#setCustomizer(Customizer)",
+    "entityType": "method",
+    "code": "/**\r\n * @deprecated Use {@link #addCustomizer(KeyFactoryCustomizer)} instead.\r\n */\r\n@Deprecated\r\npublic void setCustomizer(Customizer customizer) {\r\n    customizers = CustomizerRegistry.singleton(customizer);\r\n}",
+    "comment": "\n\t\t * @deprecated Use {@link #addCustomizer(KeyFactoryCustomizer)} instead.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#addCustomizer(KeyFactoryCustomizer)",
+    "entityType": "method",
+    "code": "public void addCustomizer(KeyFactoryCustomizer customizer) {\r\n    customizers.add(customizer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#getCustomizers(Class<T>)",
+    "entityType": "method",
+    "code": "public <T> List<T> getCustomizers(Class<T> klass) {\r\n    return customizers.get(klass);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#setInterface(Class)",
+    "entityType": "method",
+    "code": "public void setInterface(Class keyInterface) {\r\n    this.keyInterface = keyInterface;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#create()",
+    "entityType": "method",
+    "code": "public KeyFactory create() {\r\n    setNamePrefix(keyInterface.getName());\r\n    return (KeyFactory) super.create(keyInterface.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#setHashConstant(int)",
+    "entityType": "method",
+    "code": "public void setHashConstant(int constant) {\r\n    this.constant = constant;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#setHashMultiplier(int)",
+    "entityType": "method",
+    "code": "public void setHashMultiplier(int multiplier) {\r\n    this.multiplier = multiplier;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#firstInstance(Class)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected Object firstInstance(Class type) {\r\n    return ReflectUtils.newInstance(type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#nextInstance(Object)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected Object nextInstance(Object instance) {\r\n    return instance;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#generateClass(ClassVisitor)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void generateClass(ClassVisitor v) {\r\n    ClassEmitter ce = new ClassEmitter(v);\r\n    Method newInstance = ReflectUtils.findNewInstance(keyInterface);\r\n    if (!newInstance.getReturnType().equals(Object.class)) {\r\n        throw new IllegalArgumentException(\"newInstance method must return Object\");\r\n    }\r\n    Type[] parameterTypes = TypeUtils.getTypes(newInstance.getParameterTypes());\r\n    ce.begin_class(Constants.V1_8, Constants.ACC_PUBLIC, getClassName(), KEY_FACTORY, new Type[] { Type.getType(keyInterface) }, Constants.SOURCE_FILE);\r\n    EmitUtils.null_constructor(ce);\r\n    EmitUtils.factory_method(ce, ReflectUtils.getSignature(newInstance));\r\n    int seed = 0;\r\n    CodeEmitter e = ce.begin_method(Constants.ACC_PUBLIC, TypeUtils.parseConstructor(parameterTypes), null);\r\n    e.load_this();\r\n    e.super_invoke_constructor();\r\n    e.load_this();\r\n    List<FieldTypeCustomizer> fieldTypeCustomizers = getCustomizers(FieldTypeCustomizer.class);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        Type parameterType = parameterTypes[i];\r\n        Type fieldType = parameterType;\r\n        for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n            fieldType = customizer.getOutType(i, fieldType);\r\n        }\r\n        seed += fieldType.hashCode();\r\n        ce.declare_field(Constants.ACC_PRIVATE | Constants.ACC_FINAL, getFieldName(i), fieldType, null);\r\n        e.dup();\r\n        e.load_arg(i);\r\n        for (FieldTypeCustomizer customizer : fieldTypeCustomizers) {\r\n            customizer.customize(e, i, parameterType);\r\n        }\r\n        e.putfield(getFieldName(i));\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n    // hash code\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, HASH_CODE, null);\r\n    int hc = (constant != 0) ? constant : PRIMES[(Math.abs(seed) % PRIMES.length)];\r\n    int hm = (multiplier != 0) ? multiplier : PRIMES[(Math.abs(seed * 13) % PRIMES.length)];\r\n    e.push(hc);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.hash_code(e, parameterTypes[i], hm, customizers);\r\n    }\r\n    e.return_value();\r\n    e.end_method();\r\n    // equals\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, EQUALS, null);\r\n    Label fail = e.make_label();\r\n    e.load_arg(0);\r\n    e.instance_of_this();\r\n    e.if_jump(CodeEmitter.EQ, fail);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        e.load_arg(0);\r\n        e.checkcast_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.not_equals(e, parameterTypes[i], fail, customizers);\r\n    }\r\n    e.push(1);\r\n    e.return_value();\r\n    e.mark(fail);\r\n    e.push(0);\r\n    e.return_value();\r\n    e.end_method();\r\n    // toString\r\n    e = ce.begin_method(Constants.ACC_PUBLIC, TO_STRING, null);\r\n    e.new_instance(Constants.TYPE_STRING_BUFFER);\r\n    e.dup();\r\n    e.invoke_constructor(Constants.TYPE_STRING_BUFFER);\r\n    for (int i = 0; i < parameterTypes.length; i++) {\r\n        if (i > 0) {\r\n            e.push(\", \");\r\n            e.invoke_virtual(Constants.TYPE_STRING_BUFFER, APPEND_STRING);\r\n        }\r\n        e.load_this();\r\n        e.getfield(getFieldName(i));\r\n        EmitUtils.append_string(e, parameterTypes[i], EmitUtils.DEFAULT_DELIMITERS, customizers);\r\n    }\r\n    e.invoke_virtual(Constants.TYPE_STRING_BUFFER, TO_STRING);\r\n    e.return_value();\r\n    e.end_method();\r\n    ce.end_class();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Generator#getFieldName(int)",
+    "entityType": "method",
+    "code": "private String getFieldName(int arg) {\r\n    return \"FIELD_\" + arg;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.KeyFactoryCustomizer",
+    "entityType": "class",
+    "code": "",
+    "comment": "\n * Marker interface for customizers of {@link KeyFactory}\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Local",
+    "entityType": "class",
+    "code": "private Type type;\nprivate int index;\npublic Local(int index, Type type) {\r\n    this.type = type;\r\n    this.index = index;\r\n}\npublic int getIndex() {\r\n    return index;\r\n}\npublic Type getType() {\r\n    return type;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Local#getIndex()",
+    "entityType": "method",
+    "code": "public int getIndex() {\r\n    return index;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Local#getType()",
+    "entityType": "method",
+    "code": "public Type getType() {\r\n    return type;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter",
+    "entityType": "class",
+    "code": "/**\r\n * Mapping from old to new local variable indexes. A local variable at index\r\n * i of size 1 is remapped to 'mapping[2*i]', while a local variable at\r\n * index i of size 2 is remapped to 'mapping[2*i+1]'.\r\n */\r\nprivate static class State {\r\n\r\n    int[] mapping = new int[40];\r\n\r\n    int nextLocal;\r\n}\nprotected final int firstLocal;\nprivate final State state;\npublic LocalVariablesSorter(final int access, final String desc, final MethodVisitor mv) {\r\n    super(Constants.ASM_API, mv);\r\n    state = new State();\r\n    Type[] args = Type.getArgumentTypes(desc);\r\n    state.nextLocal = ((Opcodes.ACC_STATIC & access) != 0) ? 0 : 1;\r\n    for (Type arg : args) {\r\n        state.nextLocal += arg.getSize();\r\n    }\r\n    firstLocal = state.nextLocal;\r\n}\npublic LocalVariablesSorter(LocalVariablesSorter lvs) {\r\n    super(Constants.ASM_API, lvs.mv);\r\n    state = lvs.state;\r\n    firstLocal = lvs.firstLocal;\r\n}\n@Override\r\npublic void visitVarInsn(final int opcode, final int var) {\r\n    int size = switch(opcode) {\r\n        case Opcodes.LLOAD, Opcodes.LSTORE, Opcodes.DLOAD, Opcodes.DSTORE ->\r\n            2;\r\n        default ->\r\n            1;\r\n    };\r\n    mv.visitVarInsn(opcode, remap(var, size));\r\n}\n@Override\r\npublic void visitIincInsn(final int var, final int increment) {\r\n    mv.visitIincInsn(remap(var, 1), increment);\r\n}\n@Override\r\npublic void visitMaxs(final int maxStack, final int maxLocals) {\r\n    mv.visitMaxs(maxStack, state.nextLocal);\r\n}\n@Override\r\npublic void visitLocalVariable(final String name, final String desc, final String signature, final Label start, final Label end, final int index) {\r\n    mv.visitLocalVariable(name, desc, signature, start, end, remap(index));\r\n}\n// -------------\r\nprotected int newLocal(final int size) {\r\n    int var = state.nextLocal;\r\n    state.nextLocal += size;\r\n    return var;\r\n}\nprivate int remap(final int var, final int size) {\r\n    if (var < firstLocal) {\r\n        return var;\r\n    }\r\n    int key = 2 * var + size - 1;\r\n    int length = state.mapping.length;\r\n    if (key >= length) {\r\n        int[] newMapping = new int[Math.max(2 * length, key + 1)];\r\n        System.arraycopy(state.mapping, 0, newMapping, 0, length);\r\n        state.mapping = newMapping;\r\n    }\r\n    int value = state.mapping[key];\r\n    if (value == 0) {\r\n        value = state.nextLocal + 1;\r\n        state.mapping[key] = value;\r\n        state.nextLocal += size;\r\n    }\r\n    return value - 1;\r\n}\nprivate int remap(final int var) {\r\n    if (var < firstLocal) {\r\n        return var;\r\n    }\r\n    int key = 2 * var;\r\n    int value = key < state.mapping.length ? state.mapping[key] : 0;\r\n    if (value == 0) {\r\n        value = key + 1 < state.mapping.length ? state.mapping[key + 1] : 0;\r\n    }\r\n    if (value == 0) {\r\n        throw new IllegalStateException(\"Unknown local variable \" + var);\r\n    }\r\n    return value - 1;\r\n}",
+    "comment": "\n * A {@link MethodVisitor} that renumbers local variables in their order of\n * appearance. This adapter allows one to easily add new local variables to a\n * method.\n *\n * @author Chris Nokleberg\n * @author Eric Bruneton\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#visitVarInsn(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitVarInsn(final int opcode, final int var) {\r\n    int size = switch(opcode) {\r\n        case Opcodes.LLOAD, Opcodes.LSTORE, Opcodes.DLOAD, Opcodes.DSTORE ->\r\n            2;\r\n        default ->\r\n            1;\r\n    };\r\n    mv.visitVarInsn(opcode, remap(var, size));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#visitIincInsn(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitIincInsn(final int var, final int increment) {\r\n    mv.visitIincInsn(remap(var, 1), increment);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#visitMaxs(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitMaxs(final int maxStack, final int maxLocals) {\r\n    mv.visitMaxs(maxStack, state.nextLocal);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#visitLocalVariable(String,String,String,Label,Label,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitLocalVariable(final String name, final String desc, final String signature, final Label start, final Label end, final int index) {\r\n    mv.visitLocalVariable(name, desc, signature, start, end, remap(index));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#newLocal(int)",
+    "entityType": "method",
+    "code": "// -------------\r\nprotected int newLocal(final int size) {\r\n    int var = state.nextLocal;\r\n    state.nextLocal += size;\r\n    return var;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#remap(int,int)",
+    "entityType": "method",
+    "code": "private int remap(final int var, final int size) {\r\n    if (var < firstLocal) {\r\n        return var;\r\n    }\r\n    int key = 2 * var + size - 1;\r\n    int length = state.mapping.length;\r\n    if (key >= length) {\r\n        int[] newMapping = new int[Math.max(2 * length, key + 1)];\r\n        System.arraycopy(state.mapping, 0, newMapping, 0, length);\r\n        state.mapping = newMapping;\r\n    }\r\n    int value = state.mapping[key];\r\n    if (value == 0) {\r\n        value = state.nextLocal + 1;\r\n        state.mapping[key] = value;\r\n        state.nextLocal += size;\r\n    }\r\n    return value - 1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.LocalVariablesSorter#remap(int)",
+    "entityType": "method",
+    "code": "private int remap(final int var) {\r\n    if (var < firstLocal) {\r\n        return var;\r\n    }\r\n    int key = 2 * var;\r\n    int value = key < state.mapping.length ? state.mapping[key] : 0;\r\n    if (value == 0) {\r\n        value = key + 1 < state.mapping.length ? state.mapping[key + 1] : 0;\r\n    }\r\n    if (value == 0) {\r\n        throw new IllegalStateException(\"Unknown local variable \" + var);\r\n    }\r\n    return value - 1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.State",
+    "entityType": "class",
+    "code": "int[] mapping = new int[40];\nint nextLocal;",
+    "comment": "\n     * Mapping from old to new local variable indexes. A local variable at index\n     * i of size 1 is remapped to 'mapping[2*i]', while a local variable at\n     * index i of size 2 is remapped to 'mapping[2*i+1]'.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo",
+    "entityType": "class",
+    "code": "protected MethodInfo() {\r\n}\nabstract public ClassInfo getClassInfo();\nabstract public int getModifiers();\nabstract public Signature getSignature();\nabstract public Type[] getExceptionTypes();\n@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof MethodInfo other)) {\r\n        return false;\r\n    }\r\n    return getSignature().equals(other.getSignature());\r\n}\n@Override\r\npublic int hashCode() {\r\n    return getSignature().hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    // TODO: include modifiers, exceptions\r\n    return getSignature().toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#getClassInfo()",
+    "entityType": "method",
+    "code": "abstract public ClassInfo getClassInfo();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#getModifiers()",
+    "entityType": "method",
+    "code": "abstract public int getModifiers();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#getSignature()",
+    "entityType": "method",
+    "code": "abstract public Signature getSignature();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#getExceptionTypes()",
+    "entityType": "method",
+    "code": "abstract public Type[] getExceptionTypes();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(Object o) {\r\n    if (o == null) {\r\n        return false;\r\n    }\r\n    if (!(o instanceof MethodInfo other)) {\r\n        return false;\r\n    }\r\n    return getSignature().equals(other.getSignature());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return getSignature().hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfo#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    // TODO: include modifiers, exceptions\r\n    return getSignature().toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfoTransformer",
+    "entityType": "class",
+    "code": "private static final MethodInfoTransformer INSTANCE = new MethodInfoTransformer();\npublic static MethodInfoTransformer getInstance() {\r\n    return INSTANCE;\r\n}\n@Override\r\npublic Object transform(Object value) {\r\n    if (value instanceof Method method) {\r\n        return ReflectUtils.getMethodInfo(method);\r\n    } else if (value instanceof Constructor<?> constructor) {\r\n        return ReflectUtils.getMethodInfo(constructor);\r\n    } else {\r\n        throw new IllegalArgumentException(\"cannot get method info for \" + value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfoTransformer#getInstance()",
+    "entityType": "method",
+    "code": "public static MethodInfoTransformer getInstance() {\r\n    return INSTANCE;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodInfoTransformer#transform(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Object transform(Object value) {\r\n    if (value instanceof Method method) {\r\n        return ReflectUtils.getMethodInfo(method);\r\n    } else if (value instanceof Constructor<?> constructor) {\r\n        return ReflectUtils.getMethodInfo(constructor);\r\n    } else {\r\n        throw new IllegalArgumentException(\"cannot get method info for \" + value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodWrapper",
+    "entityType": "class",
+    "code": "// SPRING PATCH BEGIN\r\nprivate record MethodWrapperKey(String name, List<String> parameterTypes, String returnType) {\r\n}\n// SPRING PATCH END\r\nprivate MethodWrapper() {\r\n}\npublic static Object create(Method method) {\r\n    // SPRING PATCH BEGIN\r\n    return new MethodWrapperKey(method.getName(), Arrays.asList(ReflectUtils.getNames(method.getParameterTypes())), method.getReturnType().getName());\r\n    // SPRING PATCH END\r\n}\npublic static Set createSet(Collection methods) {\r\n    Set set = new HashSet();\r\n    for (Iterator it = methods.iterator(); it.hasNext(); ) {\r\n        set.add(create((Method) it.next()));\r\n    }\r\n    return set;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodWrapper#create(Method)",
+    "entityType": "method",
+    "code": "public static Object create(Method method) {\r\n    // SPRING PATCH BEGIN\r\n    return new MethodWrapperKey(method.getName(), Arrays.asList(ReflectUtils.getNames(method.getParameterTypes())), method.getReturnType().getName());\r\n    // SPRING PATCH END\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.MethodWrapper#createSet(Collection)",
+    "entityType": "method",
+    "code": "public static Set createSet(Collection methods) {\r\n    Set set = new HashSet();\r\n    for (Iterator it = methods.iterator(); it.hasNext(); ) {\r\n        set.add(create((Method) it.next()));\r\n    }\r\n    return set;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.NamingPolicy",
+    "entityType": "class",
+    "code": "/**\r\n * Choose a name for a generated class.\r\n * @param prefix a dotted-name chosen by the generating class (possibly to put the generated class in a particular package)\r\n * @param source the fully-qualified class name of the generating class (for example \"org.springframework.cglib.Enhancer\")\r\n * @param key A key object representing the state of the parameters; for caching to work properly, equal keys should result\r\n * in the same generated class name. The default policy incorporates <code>key.hashCode()</code> into the class name.\r\n * @param names a predicate that returns true if the given classname has already been used in the same ClassLoader.\r\n * @return the fully-qualified class name\r\n */\r\nString getClassName(String prefix, String source, Object key, Predicate names);\n/**\r\n * The <code>NamingPolicy</code> in use does not currently, but may\r\n * in the future, affect the caching of classes generated by {@link\r\n * AbstractClassGenerator}, so this is a reminder that you should\r\n * correctly implement <code>equals</code> and <code>hashCode</code>\r\n * to avoid generating too many classes.\r\n */\r\n@Override\r\nboolean equals(Object o);",
+    "comment": "\n * Customize the generated class name for {@link AbstractClassGenerator}-based utilities.\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.NamingPolicy#getClassName(String,String,Object,Predicate)",
+    "entityType": "method",
+    "code": "/**\r\n * Choose a name for a generated class.\r\n * @param prefix a dotted-name chosen by the generating class (possibly to put the generated class in a particular package)\r\n * @param source the fully-qualified class name of the generating class (for example \"org.springframework.cglib.Enhancer\")\r\n * @param key A key object representing the state of the parameters; for caching to work properly, equal keys should result\r\n * in the same generated class name. The default policy incorporates <code>key.hashCode()</code> into the class name.\r\n * @param names a predicate that returns true if the given classname has already been used in the same ClassLoader.\r\n * @return the fully-qualified class name\r\n */\r\nString getClassName(String prefix, String source, Object key, Predicate names);",
+    "comment": "\n     * Choose a name for a generated class.\n     * @param prefix a dotted-name chosen by the generating class (possibly to put the generated class in a particular package)\n     * @param source the fully-qualified class name of the generating class (for example \"org.springframework.cglib.Enhancer\")\n     * @param key A key object representing the state of the parameters; for caching to work properly, equal keys should result\n     * in the same generated class name. The default policy incorporates <code>key.hashCode()</code> into the class name.\n     * @param names a predicate that returns true if the given classname has already been used in the same ClassLoader.\n     * @return the fully-qualified class name\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.NamingPolicy#equals(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * The <code>NamingPolicy</code> in use does not currently, but may\r\n * in the future, affect the caching of classes generated by {@link\r\n * AbstractClassGenerator}, so this is a reminder that you should\r\n * correctly implement <code>equals</code> and <code>hashCode</code>\r\n * to avoid generating too many classes.\r\n */\r\n@Override\r\nboolean equals(Object o);",
+    "comment": "\n     * The <code>NamingPolicy</code> in use does not currently, but may\n     * in the future, affect the caching of classes generated by {@link\n     * AbstractClassGenerator}, so this is a reminder that you should\n     * correctly implement <code>equals</code> and <code>hashCode</code>\n     * to avoid generating too many classes.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ObjectSwitchCallback",
+    "entityType": "class",
+    "code": "void processCase(Object key, Label end) throws Exception;\nvoid processDefault() throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ObjectSwitchCallback#processCase(Object,Label)",
+    "entityType": "method",
+    "code": "void processCase(Object key, Label end) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ObjectSwitchCallback#processDefault()",
+    "entityType": "method",
+    "code": "void processDefault() throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Predicate",
+    "entityType": "class",
+    "code": "boolean evaluate(Object arg);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.Predicate#evaluate(Object)",
+    "entityType": "method",
+    "code": "boolean evaluate(Object arg);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ProcessArrayCallback",
+    "entityType": "class",
+    "code": "void processElement(Type type);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ProcessArrayCallback#processElement(Type)",
+    "entityType": "method",
+    "code": "void processElement(Type type);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ProcessSwitchCallback",
+    "entityType": "class",
+    "code": "void processCase(int key, Label end) throws Exception;\nvoid processDefault() throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ProcessSwitchCallback#processCase(int,Label)",
+    "entityType": "method",
+    "code": "void processCase(int key, Label end) throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ProcessSwitchCallback#processDefault()",
+    "entityType": "method",
+    "code": "void processDefault() throws Exception;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils",
+    "entityType": "class",
+    "code": "private ReflectUtils() {\r\n}\nprivate static final Map primitives = new HashMap(8);\nprivate static final Map transforms = new HashMap(8);\nprivate static final ClassLoader defaultLoader = ReflectUtils.class.getClassLoader();\nprivate static final Method classLoaderDefineClassMethod;\nprivate static final Throwable THROWABLE;\nprivate static final ProtectionDomain PROTECTION_DOMAIN;\nprivate static final List<Method> OBJECT_METHODS = new ArrayList<>();\nprivate static BiConsumer<String, byte[]> generatedClassHandler;\nprivate static Consumer<Class<?>> loadedClassHandler;\n// SPRING PATCH BEGIN\r\nstatic {\r\n    // Resolve protected ClassLoader.defineClass method for fallback use\r\n    // (even if JDK 9+ Lookup.defineClass is preferably used below)\r\n    Method classLoaderDefineClass;\r\n    Throwable throwable = null;\r\n    try {\r\n        classLoaderDefineClass = ClassLoader.class.getDeclaredMethod(\"defineClass\", String.class, byte[].class, Integer.TYPE, Integer.TYPE, ProtectionDomain.class);\r\n    } catch (Throwable t) {\r\n        classLoaderDefineClass = null;\r\n        throwable = t;\r\n    }\r\n    classLoaderDefineClassMethod = classLoaderDefineClass;\r\n    THROWABLE = throwable;\r\n    PROTECTION_DOMAIN = getProtectionDomain(ReflectUtils.class);\r\n    for (Method method : Object.class.getDeclaredMethods()) {\r\n        if (\"finalize\".equals(method.getName()) || (method.getModifiers() & (Modifier.FINAL | Modifier.STATIC)) > 0) {\r\n            continue;\r\n        }\r\n        OBJECT_METHODS.add(method);\r\n    }\r\n}\n// SPRING PATCH END\r\nprivate static final String[] CGLIB_PACKAGES = { \"java.lang\" };\nstatic {\r\n    primitives.put(\"byte\", Byte.TYPE);\r\n    primitives.put(\"char\", Character.TYPE);\r\n    primitives.put(\"double\", Double.TYPE);\r\n    primitives.put(\"float\", Float.TYPE);\r\n    primitives.put(\"int\", Integer.TYPE);\r\n    primitives.put(\"long\", Long.TYPE);\r\n    primitives.put(\"short\", Short.TYPE);\r\n    primitives.put(\"boolean\", Boolean.TYPE);\r\n    transforms.put(\"byte\", \"B\");\r\n    transforms.put(\"char\", \"C\");\r\n    transforms.put(\"double\", \"D\");\r\n    transforms.put(\"float\", \"F\");\r\n    transforms.put(\"int\", \"I\");\r\n    transforms.put(\"long\", \"J\");\r\n    transforms.put(\"short\", \"S\");\r\n    transforms.put(\"boolean\", \"Z\");\r\n}\npublic static ProtectionDomain getProtectionDomain(final Class source) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    return source.getProtectionDomain();\r\n}\npublic static Type[] getExceptionTypes(Member member) {\r\n    if (member instanceof Method method) {\r\n        return TypeUtils.getTypes(method.getExceptionTypes());\r\n    } else if (member instanceof Constructor<?> constructor) {\r\n        return TypeUtils.getTypes(constructor.getExceptionTypes());\r\n    } else {\r\n        throw new IllegalArgumentException(\"Cannot get exception types of a field\");\r\n    }\r\n}\npublic static Signature getSignature(Member member) {\r\n    if (member instanceof Method method) {\r\n        return new Signature(member.getName(), Type.getMethodDescriptor(method));\r\n    } else if (member instanceof Constructor<?> constructor) {\r\n        Type[] types = TypeUtils.getTypes(constructor.getParameterTypes());\r\n        return new Signature(Constants.CONSTRUCTOR_NAME, Type.getMethodDescriptor(Type.VOID_TYPE, types));\r\n    } else {\r\n        throw new IllegalArgumentException(\"Cannot get signature of a field\");\r\n    }\r\n}\npublic static Constructor findConstructor(String desc) {\r\n    return findConstructor(desc, defaultLoader);\r\n}\npublic static Constructor findConstructor(String desc, ClassLoader loader) {\r\n    try {\r\n        int lparen = desc.indexOf('(');\r\n        String className = desc.substring(0, lparen).trim();\r\n        return getClass(className, loader).getConstructor(parseTypes(desc, loader));\r\n    } catch (ClassNotFoundException | NoSuchMethodException ex) {\r\n        throw new CodeGenerationException(ex);\r\n    }\r\n}\npublic static Method findMethod(String desc) {\r\n    return findMethod(desc, defaultLoader);\r\n}\npublic static Method findMethod(String desc, ClassLoader loader) {\r\n    try {\r\n        int lparen = desc.indexOf('(');\r\n        int dot = desc.lastIndexOf('.', lparen);\r\n        String className = desc.substring(0, dot).trim();\r\n        String methodName = desc.substring(dot + 1, lparen).trim();\r\n        return getClass(className, loader).getDeclaredMethod(methodName, parseTypes(desc, loader));\r\n    } catch (ClassNotFoundException | NoSuchMethodException ex) {\r\n        throw new CodeGenerationException(ex);\r\n    }\r\n}\nprivate static Class[] parseTypes(String desc, ClassLoader loader) throws ClassNotFoundException {\r\n    int lparen = desc.indexOf('(');\r\n    int rparen = desc.indexOf(')', lparen);\r\n    List params = new ArrayList();\r\n    int start = lparen + 1;\r\n    for (; ; ) {\r\n        int comma = desc.indexOf(',', start);\r\n        if (comma < 0) {\r\n            break;\r\n        }\r\n        params.add(desc.substring(start, comma).trim());\r\n        start = comma + 1;\r\n    }\r\n    if (start < rparen) {\r\n        params.add(desc.substring(start, rparen).trim());\r\n    }\r\n    Class[] types = new Class[params.size()];\r\n    for (int i = 0; i < types.length; i++) {\r\n        types[i] = getClass((String) params.get(i), loader);\r\n    }\r\n    return types;\r\n}\nprivate static Class getClass(String className, ClassLoader loader) throws ClassNotFoundException {\r\n    return getClass(className, loader, CGLIB_PACKAGES);\r\n}\nprivate static Class getClass(String className, ClassLoader loader, String[] packages) throws ClassNotFoundException {\r\n    String save = className;\r\n    int dimensions = 0;\r\n    int index = 0;\r\n    while ((index = className.indexOf(\"[]\", index) + 1) > 0) {\r\n        dimensions++;\r\n    }\r\n    StringBuilder brackets = new StringBuilder(className.length() - dimensions);\r\n    for (int i = 0; i < dimensions; i++) {\r\n        brackets.append('[');\r\n    }\r\n    className = className.substring(0, className.length() - 2 * dimensions);\r\n    String prefix = (dimensions > 0) ? brackets + \"L\" : \"\";\r\n    String suffix = (dimensions > 0) ? \";\" : \"\";\r\n    try {\r\n        return Class.forName(prefix + className + suffix, false, loader);\r\n    } catch (ClassNotFoundException ignore) ;\r\n    for (String pkg : packages) {\r\n        try {\r\n            return Class.forName(prefix + pkg + '.' + className + suffix, false, loader);\r\n        } catch (ClassNotFoundException ignore) ;\r\n    }\r\n    if (dimensions == 0) {\r\n        Class c = (Class) primitives.get(className);\r\n        if (c != null) {\r\n            return c;\r\n        }\r\n    } else {\r\n        String transform = (String) transforms.get(className);\r\n        if (transform != null) {\r\n            try {\r\n                return Class.forName(brackets + transform, false, loader);\r\n            } catch (ClassNotFoundException ignore) ;\r\n        }\r\n    }\r\n    throw new ClassNotFoundException(save);\r\n}\npublic static Object newInstance(Class type) {\r\n    return newInstance(type, Constants.EMPTY_CLASS_ARRAY, null);\r\n}\npublic static Object newInstance(Class type, Class[] parameterTypes, Object[] args) {\r\n    return newInstance(getConstructor(type, parameterTypes), args);\r\n}\n@SuppressWarnings(\"deprecation\")\r\npublic static Object newInstance(final Constructor cstruct, final Object[] args) {\r\n    boolean flag = cstruct.isAccessible();\r\n    try {\r\n        if (!flag) {\r\n            cstruct.setAccessible(true);\r\n        }\r\n        Object result = cstruct.newInstance(args);\r\n        return result;\r\n    } catch (InstantiationException | IllegalAccessException e) {\r\n        throw new CodeGenerationException(e);\r\n    } catch (InvocationTargetException e) {\r\n        throw new CodeGenerationException(e.getTargetException());\r\n    } finally {\r\n        if (!flag) {\r\n            cstruct.setAccessible(flag);\r\n        }\r\n    }\r\n}\npublic static Constructor getConstructor(Class type, Class[] parameterTypes) {\r\n    try {\r\n        Constructor constructor = type.getDeclaredConstructor(parameterTypes);\r\n        constructor.setAccessible(true);\r\n        return constructor;\r\n    } catch (NoSuchMethodException e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}\npublic static String[] getNames(Class[] classes) {\r\n    if (classes == null) {\r\n        return null;\r\n    }\r\n    String[] names = new String[classes.length];\r\n    for (int i = 0; i < names.length; i++) {\r\n        names[i] = classes[i].getName();\r\n    }\r\n    return names;\r\n}\npublic static Class[] getClasses(Object[] objects) {\r\n    Class[] classes = new Class[objects.length];\r\n    for (int i = 0; i < objects.length; i++) {\r\n        classes[i] = objects[i].getClass();\r\n    }\r\n    return classes;\r\n}\npublic static Method findNewInstance(Class iface) {\r\n    Method m = findInterfaceMethod(iface);\r\n    if (!m.getName().equals(\"newInstance\")) {\r\n        throw new IllegalArgumentException(iface + \" missing newInstance method\");\r\n    }\r\n    return m;\r\n}\npublic static Method[] getPropertyMethods(PropertyDescriptor[] properties, boolean read, boolean write) {\r\n    Set methods = new HashSet();\r\n    for (PropertyDescriptor pd : properties) {\r\n        if (read) {\r\n            methods.add(pd.getReadMethod());\r\n        }\r\n        if (write) {\r\n            methods.add(pd.getWriteMethod());\r\n        }\r\n    }\r\n    methods.remove(null);\r\n    return (Method[]) methods.toArray(new Method[methods.size()]);\r\n}\npublic static PropertyDescriptor[] getBeanProperties(Class type) {\r\n    return getPropertiesHelper(type, true, true);\r\n}\npublic static PropertyDescriptor[] getBeanGetters(Class type) {\r\n    return getPropertiesHelper(type, true, false);\r\n}\npublic static PropertyDescriptor[] getBeanSetters(Class type) {\r\n    return getPropertiesHelper(type, false, true);\r\n}\nprivate static PropertyDescriptor[] getPropertiesHelper(Class type, boolean read, boolean write) {\r\n    try {\r\n        BeanInfo info = Introspector.getBeanInfo(type, Object.class);\r\n        PropertyDescriptor[] all = info.getPropertyDescriptors();\r\n        if (read && write) {\r\n            return all;\r\n        }\r\n        List properties = new ArrayList(all.length);\r\n        for (PropertyDescriptor pd : all) {\r\n            if ((read && pd.getReadMethod() != null) || (write && pd.getWriteMethod() != null)) {\r\n                properties.add(pd);\r\n            }\r\n        }\r\n        return (PropertyDescriptor[]) properties.toArray(new PropertyDescriptor[properties.size()]);\r\n    } catch (IntrospectionException e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}\npublic static Method findDeclaredMethod(final Class type, final String methodName, final Class[] parameterTypes) throws NoSuchMethodException {\r\n    Class cl = type;\r\n    while (cl != null) {\r\n        try {\r\n            return cl.getDeclaredMethod(methodName, parameterTypes);\r\n        } catch (NoSuchMethodException e) {\r\n            cl = cl.getSuperclass();\r\n        }\r\n    }\r\n    throw new NoSuchMethodException(methodName);\r\n}\npublic static List addAllMethods(final Class type, final List list) {\r\n    if (type == Object.class) {\r\n        list.addAll(OBJECT_METHODS);\r\n    } else {\r\n        list.addAll(java.util.Arrays.asList(type.getDeclaredMethods()));\r\n    }\r\n    Class superclass = type.getSuperclass();\r\n    if (superclass != null) {\r\n        addAllMethods(superclass, list);\r\n    }\r\n    Class[] interfaces = type.getInterfaces();\r\n    for (Class element : interfaces) {\r\n        addAllMethods(element, list);\r\n    }\r\n    return list;\r\n}\npublic static List addAllInterfaces(Class type, List list) {\r\n    Class superclass = type.getSuperclass();\r\n    if (superclass != null) {\r\n        list.addAll(Arrays.asList(type.getInterfaces()));\r\n        addAllInterfaces(superclass, list);\r\n    }\r\n    return list;\r\n}\npublic static Method findInterfaceMethod(Class iface) {\r\n    if (!iface.isInterface()) {\r\n        throw new IllegalArgumentException(iface + \" is not an interface\");\r\n    }\r\n    Method[] methods = iface.getDeclaredMethods();\r\n    if (methods.length != 1) {\r\n        throw new IllegalArgumentException(\"expecting exactly 1 method in \" + iface);\r\n    }\r\n    return methods[0];\r\n}\n// SPRING PATCH BEGIN\r\npublic static void setGeneratedClassHandler(BiConsumer<String, byte[]> handler) {\r\n    generatedClassHandler = handler;\r\n}\npublic static Class defineClass(String className, byte[] b, ClassLoader loader) throws Exception {\r\n    return defineClass(className, b, loader, null, null);\r\n}\npublic static Class defineClass(String className, byte[] b, ClassLoader loader, ProtectionDomain protectionDomain) throws Exception {\r\n    return defineClass(className, b, loader, protectionDomain, null);\r\n}\n@SuppressWarnings({ \"deprecation\", \"serial\" })\r\npublic static Class defineClass(String className, byte[] b, ClassLoader loader, ProtectionDomain protectionDomain, Class<?> contextClass) throws Exception {\r\n    Class c = null;\r\n    Throwable t = THROWABLE;\r\n    BiConsumer<String, byte[]> handlerToUse = generatedClassHandler;\r\n    if (handlerToUse != null) {\r\n        handlerToUse.accept(className, b);\r\n    }\r\n    // Preferred option: JDK 9+ Lookup.defineClass API if ClassLoader matches\r\n    if (contextClass != null && contextClass.getClassLoader() == loader) {\r\n        try {\r\n            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(contextClass, MethodHandles.lookup());\r\n            c = lookup.defineClass(b);\r\n        } catch (LinkageError | IllegalArgumentException ex) {\r\n            // in case of plain LinkageError (class already defined)\r\n            // or IllegalArgumentException (class in different package):\r\n            // fall through to traditional ClassLoader.defineClass below\r\n            t = ex;\r\n        } catch (Throwable ex) {\r\n            throw new CodeGenerationException(ex);\r\n        }\r\n    }\r\n    // Direct defineClass attempt on the target Classloader\r\n    if (c == null) {\r\n        if (protectionDomain == null) {\r\n            protectionDomain = PROTECTION_DOMAIN;\r\n        }\r\n        // Look for publicDefineClass(String name, byte[] b, ProtectionDomain protectionDomain)\r\n        try {\r\n            Method publicDefineClass = loader.getClass().getMethod(\"publicDefineClass\", String.class, byte[].class, ProtectionDomain.class);\r\n            c = (Class) publicDefineClass.invoke(loader, className, b, protectionDomain);\r\n        } catch (InvocationTargetException ex) {\r\n            if (!(ex.getTargetException() instanceof UnsupportedOperationException)) {\r\n                throw new CodeGenerationException(ex.getTargetException());\r\n            }\r\n            // in case of UnsupportedOperationException, fall through\r\n            t = ex.getTargetException();\r\n        } catch (Throwable ex) {\r\n            // publicDefineClass method not available -> fall through\r\n            t = ex;\r\n        }\r\n        // Classic option: protected ClassLoader.defineClass method\r\n        if (c == null && classLoaderDefineClassMethod != null) {\r\n            Object[] args = new Object[] { className, b, 0, b.length, protectionDomain };\r\n            try {\r\n                if (!classLoaderDefineClassMethod.isAccessible()) {\r\n                    classLoaderDefineClassMethod.setAccessible(true);\r\n                }\r\n                c = (Class) classLoaderDefineClassMethod.invoke(loader, args);\r\n            } catch (InvocationTargetException ex) {\r\n                throw new CodeGenerationException(ex.getTargetException());\r\n            } catch (InaccessibleObjectException ex) {\r\n                // setAccessible failed with JDK 9+ InaccessibleObjectException -> fall through\r\n                // Avoid through JVM startup with --add-opens=java.base/java.lang=ALL-UNNAMED\r\n                t = ex;\r\n            } catch (Throwable ex) {\r\n                throw new CodeGenerationException(ex);\r\n            }\r\n        }\r\n    }\r\n    // Fallback option: JDK 9+ Lookup.defineClass API even if ClassLoader does not match\r\n    if (c == null && contextClass != null && contextClass.getClassLoader() != loader) {\r\n        try {\r\n            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(contextClass, MethodHandles.lookup());\r\n            c = lookup.defineClass(b);\r\n        } catch (LinkageError | IllegalAccessException ex) {\r\n            throw new CodeGenerationException(ex) {\r\n\r\n                @Override\r\n                public String getMessage() {\r\n                    return \"ClassLoader mismatch for [\" + contextClass.getName() + \"]: JVM should be started with --add-opens=java.base/java.lang=ALL-UNNAMED \" + \"for ClassLoader.defineClass to be accessible on \" + loader.getClass().getName() + \"; consider co-locating the affected class in that target ClassLoader instead.\";\r\n                }\r\n            };\r\n        } catch (Throwable ex) {\r\n            throw new CodeGenerationException(ex);\r\n        }\r\n    }\r\n    // No defineClass variant available at all?\r\n    if (c == null) {\r\n        throw new CodeGenerationException(t) {\r\n\r\n            @Override\r\n            public String getMessage() {\r\n                return \"No compatible defineClass mechanism detected: \" + \"JVM should be started with --add-opens=java.base/java.lang=ALL-UNNAMED \" + \"for ClassLoader.defineClass to be accessible. On the module path, \" + \"you may not be able to define this CGLIB-generated class at all.\";\r\n            }\r\n        };\r\n    }\r\n    // Force static initializers to run.\r\n    Class.forName(className, true, loader);\r\n    return c;\r\n}\npublic static void setLoadedClassHandler(Consumer<Class<?>> loadedClassHandler) {\r\n    ReflectUtils.loadedClassHandler = loadedClassHandler;\r\n}\npublic static Class<?> loadClass(String className, ClassLoader classLoader) throws ClassNotFoundException {\r\n    // Force static initializers to run.\r\n    Class<?> clazz = Class.forName(className, true, classLoader);\r\n    Consumer<Class<?>> handlerToUse = loadedClassHandler;\r\n    if (handlerToUse != null) {\r\n        handlerToUse.accept(clazz);\r\n    }\r\n    return clazz;\r\n}\n// SPRING PATCH END\r\npublic static int findPackageProtected(Class[] classes) {\r\n    for (int i = 0; i < classes.length; i++) {\r\n        if (!Modifier.isPublic(classes[i].getModifiers())) {\r\n            return i;\r\n        }\r\n    }\r\n    return 0;\r\n}\npublic static MethodInfo getMethodInfo(final Member member, final int modifiers) {\r\n    final Signature sig = getSignature(member);\r\n    return new MethodInfo() {\r\n\r\n        private ClassInfo ci;\r\n\r\n        @Override\r\n        public ClassInfo getClassInfo() {\r\n            if (ci == null) {\r\n                ci = ReflectUtils.getClassInfo(member.getDeclaringClass());\r\n            }\r\n            return ci;\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return modifiers;\r\n        }\r\n\r\n        @Override\r\n        public Signature getSignature() {\r\n            return sig;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getExceptionTypes() {\r\n            return ReflectUtils.getExceptionTypes(member);\r\n        }\r\n    };\r\n}\npublic static MethodInfo getMethodInfo(Member member) {\r\n    return getMethodInfo(member, member.getModifiers());\r\n}\npublic static ClassInfo getClassInfo(final Class clazz) {\r\n    final Type type = Type.getType(clazz);\r\n    final Type sc = (clazz.getSuperclass() == null) ? null : Type.getType(clazz.getSuperclass());\r\n    return new ClassInfo() {\r\n\r\n        @Override\r\n        public Type getType() {\r\n            return type;\r\n        }\r\n\r\n        @Override\r\n        public Type getSuperType() {\r\n            return sc;\r\n        }\r\n\r\n        @Override\r\n        public Type[] getInterfaces() {\r\n            return TypeUtils.getTypes(clazz.getInterfaces());\r\n        }\r\n\r\n        @Override\r\n        public int getModifiers() {\r\n            return clazz.getModifiers();\r\n        }\r\n    };\r\n}\n// used by MethodInterceptorGenerated generated code\r\npublic static Method[] findMethods(String[] namesAndDescriptors, Method[] methods) {\r\n    Map map = new HashMap();\r\n    for (Method method : methods) {\r\n        map.put(method.getName() + Type.getMethodDescriptor(method), method);\r\n    }\r\n    Method[] result = new Method[namesAndDescriptors.length / 2];\r\n    for (int i = 0; i < result.length; i++) {\r\n        result[i] = (Method) map.get(namesAndDescriptors[i * 2] + namesAndDescriptors[i * 2 + 1]);\r\n        if (result[i] == null) {\r\n            // TODO: error?\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n * @version $Id: ReflectUtils.java,v 1.30 2009/01/11 19:47:49 herbyderby Exp $\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getProtectionDomain(Class)",
+    "entityType": "method",
+    "code": "public static ProtectionDomain getProtectionDomain(final Class source) {\r\n    if (source == null) {\r\n        return null;\r\n    }\r\n    return source.getProtectionDomain();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getExceptionTypes(Member)",
+    "entityType": "method",
+    "code": "public static Type[] getExceptionTypes(Member member) {\r\n    if (member instanceof Method method) {\r\n        return TypeUtils.getTypes(method.getExceptionTypes());\r\n    } else if (member instanceof Constructor<?> constructor) {\r\n        return TypeUtils.getTypes(constructor.getExceptionTypes());\r\n    } else {\r\n        throw new IllegalArgumentException(\"Cannot get exception types of a field\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getSignature(Member)",
+    "entityType": "method",
+    "code": "public static Signature getSignature(Member member) {\r\n    if (member instanceof Method method) {\r\n        return new Signature(member.getName(), Type.getMethodDescriptor(method));\r\n    } else if (member instanceof Constructor<?> constructor) {\r\n        Type[] types = TypeUtils.getTypes(constructor.getParameterTypes());\r\n        return new Signature(Constants.CONSTRUCTOR_NAME, Type.getMethodDescriptor(Type.VOID_TYPE, types));\r\n    } else {\r\n        throw new IllegalArgumentException(\"Cannot get signature of a field\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findConstructor(String)",
+    "entityType": "method",
+    "code": "public static Constructor findConstructor(String desc) {\r\n    return findConstructor(desc, defaultLoader);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findConstructor(String,ClassLoader)",
+    "entityType": "method",
+    "code": "public static Constructor findConstructor(String desc, ClassLoader loader) {\r\n    try {\r\n        int lparen = desc.indexOf('(');\r\n        String className = desc.substring(0, lparen).trim();\r\n        return getClass(className, loader).getConstructor(parseTypes(desc, loader));\r\n    } catch (ClassNotFoundException | NoSuchMethodException ex) {\r\n        throw new CodeGenerationException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findMethod(String)",
+    "entityType": "method",
+    "code": "public static Method findMethod(String desc) {\r\n    return findMethod(desc, defaultLoader);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findMethod(String,ClassLoader)",
+    "entityType": "method",
+    "code": "public static Method findMethod(String desc, ClassLoader loader) {\r\n    try {\r\n        int lparen = desc.indexOf('(');\r\n        int dot = desc.lastIndexOf('.', lparen);\r\n        String className = desc.substring(0, dot).trim();\r\n        String methodName = desc.substring(dot + 1, lparen).trim();\r\n        return getClass(className, loader).getDeclaredMethod(methodName, parseTypes(desc, loader));\r\n    } catch (ClassNotFoundException | NoSuchMethodException ex) {\r\n        throw new CodeGenerationException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#parseTypes(String,ClassLoader)",
+    "entityType": "method",
+    "code": "private static Class[] parseTypes(String desc, ClassLoader loader) throws ClassNotFoundException {\r\n    int lparen = desc.indexOf('(');\r\n    int rparen = desc.indexOf(')', lparen);\r\n    List params = new ArrayList();\r\n    int start = lparen + 1;\r\n    for (; ; ) {\r\n        int comma = desc.indexOf(',', start);\r\n        if (comma < 0) {\r\n            break;\r\n        }\r\n        params.add(desc.substring(start, comma).trim());\r\n        start = comma + 1;\r\n    }\r\n    if (start < rparen) {\r\n        params.add(desc.substring(start, rparen).trim());\r\n    }\r\n    Class[] types = new Class[params.size()];\r\n    for (int i = 0; i < types.length; i++) {\r\n        types[i] = getClass((String) params.get(i), loader);\r\n    }\r\n    return types;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getClass(String,ClassLoader)",
+    "entityType": "method",
+    "code": "private static Class getClass(String className, ClassLoader loader) throws ClassNotFoundException {\r\n    return getClass(className, loader, CGLIB_PACKAGES);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getClass(String,ClassLoader,String[])",
+    "entityType": "method",
+    "code": "private static Class getClass(String className, ClassLoader loader, String[] packages) throws ClassNotFoundException {\r\n    String save = className;\r\n    int dimensions = 0;\r\n    int index = 0;\r\n    while ((index = className.indexOf(\"[]\", index) + 1) > 0) {\r\n        dimensions++;\r\n    }\r\n    StringBuilder brackets = new StringBuilder(className.length() - dimensions);\r\n    for (int i = 0; i < dimensions; i++) {\r\n        brackets.append('[');\r\n    }\r\n    className = className.substring(0, className.length() - 2 * dimensions);\r\n    String prefix = (dimensions > 0) ? brackets + \"L\" : \"\";\r\n    String suffix = (dimensions > 0) ? \";\" : \"\";\r\n    try {\r\n        return Class.forName(prefix + className + suffix, false, loader);\r\n    } catch (ClassNotFoundException ignore) ;\r\n    for (String pkg : packages) {\r\n        try {\r\n            return Class.forName(prefix + pkg + '.' + className + suffix, false, loader);\r\n        } catch (ClassNotFoundException ignore) ;\r\n    }\r\n    if (dimensions == 0) {\r\n        Class c = (Class) primitives.get(className);\r\n        if (c != null) {\r\n            return c;\r\n        }\r\n    } else {\r\n        String transform = (String) transforms.get(className);\r\n        if (transform != null) {\r\n            try {\r\n                return Class.forName(brackets + transform, false, loader);\r\n            } catch (ClassNotFoundException ignore) ;\r\n        }\r\n    }\r\n    throw new ClassNotFoundException(save);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#newInstance(Class)",
+    "entityType": "method",
+    "code": "public static Object newInstance(Class type) {\r\n    return newInstance(type, Constants.EMPTY_CLASS_ARRAY, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#newInstance(Class,Class[],Object[])",
+    "entityType": "method",
+    "code": "public static Object newInstance(Class type, Class[] parameterTypes, Object[] args) {\r\n    return newInstance(getConstructor(type, parameterTypes), args);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#newInstance(Constructor,Object[])",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"deprecation\")\r\npublic static Object newInstance(final Constructor cstruct, final Object[] args) {\r\n    boolean flag = cstruct.isAccessible();\r\n    try {\r\n        if (!flag) {\r\n            cstruct.setAccessible(true);\r\n        }\r\n        Object result = cstruct.newInstance(args);\r\n        return result;\r\n    } catch (InstantiationException | IllegalAccessException e) {\r\n        throw new CodeGenerationException(e);\r\n    } catch (InvocationTargetException e) {\r\n        throw new CodeGenerationException(e.getTargetException());\r\n    } finally {\r\n        if (!flag) {\r\n            cstruct.setAccessible(flag);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getConstructor(Class,Class[])",
+    "entityType": "method",
+    "code": "public static Constructor getConstructor(Class type, Class[] parameterTypes) {\r\n    try {\r\n        Constructor constructor = type.getDeclaredConstructor(parameterTypes);\r\n        constructor.setAccessible(true);\r\n        return constructor;\r\n    } catch (NoSuchMethodException e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getNames(Class[])",
+    "entityType": "method",
+    "code": "public static String[] getNames(Class[] classes) {\r\n    if (classes == null) {\r\n        return null;\r\n    }\r\n    String[] names = new String[classes.length];\r\n    for (int i = 0; i < names.length; i++) {\r\n        names[i] = classes[i].getName();\r\n    }\r\n    return names;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getClasses(Object[])",
+    "entityType": "method",
+    "code": "public static Class[] getClasses(Object[] objects) {\r\n    Class[] classes = new Class[objects.length];\r\n    for (int i = 0; i < objects.length; i++) {\r\n        classes[i] = objects[i].getClass();\r\n    }\r\n    return classes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findNewInstance(Class)",
+    "entityType": "method",
+    "code": "public static Method findNewInstance(Class iface) {\r\n    Method m = findInterfaceMethod(iface);\r\n    if (!m.getName().equals(\"newInstance\")) {\r\n        throw new IllegalArgumentException(iface + \" missing newInstance method\");\r\n    }\r\n    return m;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getPropertyMethods(PropertyDescriptor[],boolean,boolean)",
+    "entityType": "method",
+    "code": "public static Method[] getPropertyMethods(PropertyDescriptor[] properties, boolean read, boolean write) {\r\n    Set methods = new HashSet();\r\n    for (PropertyDescriptor pd : properties) {\r\n        if (read) {\r\n            methods.add(pd.getReadMethod());\r\n        }\r\n        if (write) {\r\n            methods.add(pd.getWriteMethod());\r\n        }\r\n    }\r\n    methods.remove(null);\r\n    return (Method[]) methods.toArray(new Method[methods.size()]);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getBeanProperties(Class)",
+    "entityType": "method",
+    "code": "public static PropertyDescriptor[] getBeanProperties(Class type) {\r\n    return getPropertiesHelper(type, true, true);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getBeanGetters(Class)",
+    "entityType": "method",
+    "code": "public static PropertyDescriptor[] getBeanGetters(Class type) {\r\n    return getPropertiesHelper(type, true, false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getBeanSetters(Class)",
+    "entityType": "method",
+    "code": "public static PropertyDescriptor[] getBeanSetters(Class type) {\r\n    return getPropertiesHelper(type, false, true);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#getPropertiesHelper(Class,boolean,boolean)",
+    "entityType": "method",
+    "code": "private static PropertyDescriptor[] getPropertiesHelper(Class type, boolean read, boolean write) {\r\n    try {\r\n        BeanInfo info = Introspector.getBeanInfo(type, Object.class);\r\n        PropertyDescriptor[] all = info.getPropertyDescriptors();\r\n        if (read && write) {\r\n            return all;\r\n        }\r\n        List properties = new ArrayList(all.length);\r\n        for (PropertyDescriptor pd : all) {\r\n            if ((read && pd.getReadMethod() != null) || (write && pd.getWriteMethod() != null)) {\r\n                properties.add(pd);\r\n            }\r\n        }\r\n        return (PropertyDescriptor[]) properties.toArray(new PropertyDescriptor[properties.size()]);\r\n    } catch (IntrospectionException e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findDeclaredMethod(Class,String,Class[])",
+    "entityType": "method",
+    "code": "public static Method findDeclaredMethod(final Class type, final String methodName, final Class[] parameterTypes) throws NoSuchMethodException {\r\n    Class cl = type;\r\n    while (cl != null) {\r\n        try {\r\n            return cl.getDeclaredMethod(methodName, parameterTypes);\r\n        } catch (NoSuchMethodException e) {\r\n            cl = cl.getSuperclass();\r\n        }\r\n    }\r\n    throw new NoSuchMethodException(methodName);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#addAllMethods(Class,List)",
+    "entityType": "method",
+    "code": "public static List addAllMethods(final Class type, final List list) {\r\n    if (type == Object.class) {\r\n        list.addAll(OBJECT_METHODS);\r\n    } else {\r\n        list.addAll(java.util.Arrays.asList(type.getDeclaredMethods()));\r\n    }\r\n    Class superclass = type.getSuperclass();\r\n    if (superclass != null) {\r\n        addAllMethods(superclass, list);\r\n    }\r\n    Class[] interfaces = type.getInterfaces();\r\n    for (Class element : interfaces) {\r\n        addAllMethods(element, list);\r\n    }\r\n    return list;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#addAllInterfaces(Class,List)",
+    "entityType": "method",
+    "code": "public static List addAllInterfaces(Class type, List list) {\r\n    Class superclass = type.getSuperclass();\r\n    if (superclass != null) {\r\n        list.addAll(Arrays.asList(type.getInterfaces()));\r\n        addAllInterfaces(superclass, list);\r\n    }\r\n    return list;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#findInterfaceMethod(Class)",
+    "entityType": "method",
+    "code": "public static Method findInterfaceMethod(Class iface) {\r\n    if (!iface.isInterface()) {\r\n        throw new IllegalArgumentException(iface + \" is not an interface\");\r\n    }\r\n    Method[] methods = iface.getDeclaredMethods();\r\n    if (methods.length != 1) {\r\n        throw new IllegalArgumentException(\"expecting exactly 1 method in \" + iface);\r\n    }\r\n    return methods[0];\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#setGeneratedClassHandler(BiConsumer<String,byte[]>)",
+    "entityType": "method",
+    "code": "// SPRING PATCH BEGIN\r\npublic static void setGeneratedClassHandler(BiConsumer<String, byte[]> handler) {\r\n    generatedClassHandler = handler;\r\n}",
+    "comment": " SPRING PATCH BEGIN"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.ReflectUtils#defineClass(String,byte[],ClassLoader)",
+    "entityType": "method",
+    "code": "public static Class defineClass(String className, byte[] b, ClassLoader loader) throws Exception {\r\n    return defineClass(className, b, loader, null, null);\r\n}",
+    "comment": ""
+  }
+]

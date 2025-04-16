@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter",
+    "entityType": "class",
+    "code": "private static final Signature BOOLEAN_VALUE = TypeUtils.parseSignature(\"boolean booleanValue()\");\nprivate static final Signature CHAR_VALUE = TypeUtils.parseSignature(\"char charValue()\");\nprivate static final Signature LONG_VALUE = TypeUtils.parseSignature(\"long longValue()\");\nprivate static final Signature DOUBLE_VALUE = TypeUtils.parseSignature(\"double doubleValue()\");\nprivate static final Signature FLOAT_VALUE = TypeUtils.parseSignature(\"float floatValue()\");\nprivate static final Signature INT_VALUE = TypeUtils.parseSignature(\"int intValue()\");\nprivate static final Signature CSTRUCT_NULL = TypeUtils.parseConstructor(\"\");\nprivate static final Signature CSTRUCT_STRING = TypeUtils.parseConstructor(\"String\");\npublic static final int ADD = Constants.IADD;\npublic static final int MUL = Constants.IMUL;\npublic static final int XOR = Constants.IXOR;\npublic static final int USHR = Constants.IUSHR;\npublic static final int SUB = Constants.ISUB;\npublic static final int DIV = Constants.IDIV;\npublic static final int NEG = Constants.INEG;\npublic static final int REM = Constants.IREM;\npublic static final int AND = Constants.IAND;\npublic static final int OR = Constants.IOR;\npublic static final int GT = Constants.IFGT;\npublic static final int LT = Constants.IFLT;\npublic static final int GE = Constants.IFGE;\npublic static final int LE = Constants.IFLE;\npublic static final int NE = Constants.IFNE;\npublic static final int EQ = Constants.IFEQ;\nprivate ClassEmitter ce;\nprivate State state;\nprivate static class State extends MethodInfo {\r\n\r\n    ClassInfo classInfo;\r\n\r\n    int access;\r\n\r\n    Signature sig;\r\n\r\n    Type[] argumentTypes;\r\n\r\n    int localOffset;\r\n\r\n    Type[] exceptionTypes;\r\n\r\n    State(ClassInfo classInfo, int access, Signature sig, Type[] exceptionTypes) {\r\n        this.classInfo = classInfo;\r\n        this.access = access;\r\n        this.sig = sig;\r\n        this.exceptionTypes = exceptionTypes;\r\n        localOffset = TypeUtils.isStatic(access) ? 0 : 1;\r\n        argumentTypes = sig.getArgumentTypes();\r\n    }\r\n\r\n    @Override\r\n    public ClassInfo getClassInfo() {\r\n        return classInfo;\r\n    }\r\n\r\n    @Override\r\n    public int getModifiers() {\r\n        return access;\r\n    }\r\n\r\n    @Override\r\n    public Signature getSignature() {\r\n        return sig;\r\n    }\r\n\r\n    @Override\r\n    public Type[] getExceptionTypes() {\r\n        return exceptionTypes;\r\n    }\r\n}\nCodeEmitter(ClassEmitter ce, MethodVisitor mv, int access, Signature sig, Type[] exceptionTypes) {\r\n    super(access, sig.getDescriptor(), mv);\r\n    this.ce = ce;\r\n    state = new State(ce.getClassInfo(), access, sig, exceptionTypes);\r\n}\npublic CodeEmitter(CodeEmitter wrap) {\r\n    super(wrap);\r\n    this.ce = wrap.ce;\r\n    this.state = wrap.state;\r\n}\npublic boolean isStaticHook() {\r\n    return false;\r\n}\npublic Signature getSignature() {\r\n    return state.sig;\r\n}\npublic Type getReturnType() {\r\n    return state.sig.getReturnType();\r\n}\npublic MethodInfo getMethodInfo() {\r\n    return state;\r\n}\npublic ClassEmitter getClassEmitter() {\r\n    return ce;\r\n}\npublic void end_method() {\r\n    visitMaxs(0, 0);\r\n}\npublic Block begin_block() {\r\n    return new Block(this);\r\n}\npublic void catch_exception(Block block, Type exception) {\r\n    if (block.getEnd() == null) {\r\n        throw new IllegalStateException(\"end of block is unset\");\r\n    }\r\n    mv.visitTryCatchBlock(block.getStart(), block.getEnd(), mark(), exception.getInternalName());\r\n}\npublic void goTo(Label label) {\r\n    mv.visitJumpInsn(Constants.GOTO, label);\r\n}\npublic void ifnull(Label label) {\r\n    mv.visitJumpInsn(Constants.IFNULL, label);\r\n}\npublic void ifnonnull(Label label) {\r\n    mv.visitJumpInsn(Constants.IFNONNULL, label);\r\n}\npublic void if_jump(int mode, Label label) {\r\n    mv.visitJumpInsn(mode, label);\r\n}\npublic void if_icmp(int mode, Label label) {\r\n    if_cmp(Type.INT_TYPE, mode, label);\r\n}\npublic void if_cmp(Type type, int mode, Label label) {\r\n    int intOp = -1;\r\n    int jumpmode = mode;\r\n    switch(mode) {\r\n        case GE:\r\n            jumpmode = LT;\r\n            break;\r\n        case LE:\r\n            jumpmode = GT;\r\n            break;\r\n    }\r\n    switch(type.getSort()) {\r\n        case Type.LONG:\r\n            mv.visitInsn(Constants.LCMP);\r\n            break;\r\n        case Type.DOUBLE:\r\n            mv.visitInsn(Constants.DCMPG);\r\n            break;\r\n        case Type.FLOAT:\r\n            mv.visitInsn(Constants.FCMPG);\r\n            break;\r\n        case Type.ARRAY:\r\n        case Type.OBJECT:\r\n            switch(mode) {\r\n                case EQ:\r\n                    mv.visitJumpInsn(Constants.IF_ACMPEQ, label);\r\n                    return;\r\n                case NE:\r\n                    mv.visitJumpInsn(Constants.IF_ACMPNE, label);\r\n                    return;\r\n            }\r\n            throw new IllegalArgumentException(\"Bad comparison for type \" + type);\r\n        default:\r\n            switch(mode) {\r\n                case EQ:\r\n                    intOp = Constants.IF_ICMPEQ;\r\n                    break;\r\n                case NE:\r\n                    intOp = Constants.IF_ICMPNE;\r\n                    break;\r\n                case GE:\r\n                    swap();\r\n                /* fall through */\r\n                case LT:\r\n                    intOp = Constants.IF_ICMPLT;\r\n                    break;\r\n                case LE:\r\n                    swap();\r\n                /* fall through */\r\n                case GT:\r\n                    intOp = Constants.IF_ICMPGT;\r\n                    break;\r\n            }\r\n            mv.visitJumpInsn(intOp, label);\r\n            return;\r\n    }\r\n    if_jump(jumpmode, label);\r\n}\npublic void pop() {\r\n    mv.visitInsn(Constants.POP);\r\n}\npublic void pop2() {\r\n    mv.visitInsn(Constants.POP2);\r\n}\npublic void dup() {\r\n    mv.visitInsn(Constants.DUP);\r\n}\npublic void dup2() {\r\n    mv.visitInsn(Constants.DUP2);\r\n}\npublic void dup_x1() {\r\n    mv.visitInsn(Constants.DUP_X1);\r\n}\npublic void dup_x2() {\r\n    mv.visitInsn(Constants.DUP_X2);\r\n}\npublic void dup2_x1() {\r\n    mv.visitInsn(Constants.DUP2_X1);\r\n}\npublic void dup2_x2() {\r\n    mv.visitInsn(Constants.DUP2_X2);\r\n}\npublic void swap() {\r\n    mv.visitInsn(Constants.SWAP);\r\n}\npublic void aconst_null() {\r\n    mv.visitInsn(Constants.ACONST_NULL);\r\n}\npublic void swap(Type prev, Type type) {\r\n    if (type.getSize() == 1) {\r\n        if (prev.getSize() == 1) {\r\n            // same as dup_x1(), pop();\r\n            swap();\r\n        } else {\r\n            dup_x2();\r\n            pop();\r\n        }\r\n    } else {\r\n        if (prev.getSize() == 1) {\r\n            dup2_x1();\r\n            pop2();\r\n        } else {\r\n            dup2_x2();\r\n            pop2();\r\n        }\r\n    }\r\n}\npublic void monitorenter() {\r\n    mv.visitInsn(Constants.MONITORENTER);\r\n}\npublic void monitorexit() {\r\n    mv.visitInsn(Constants.MONITOREXIT);\r\n}\npublic void math(int op, Type type) {\r\n    mv.visitInsn(type.getOpcode(op));\r\n}\npublic void array_load(Type type) {\r\n    mv.visitInsn(type.getOpcode(Constants.IALOAD));\r\n}\npublic void array_store(Type type) {\r\n    mv.visitInsn(type.getOpcode(Constants.IASTORE));\r\n}\n/**\r\n * Casts from one primitive numeric type to another\r\n */\r\npublic void cast_numeric(Type from, Type to) {\r\n    if (from != to) {\r\n        if (from == Type.DOUBLE_TYPE) {\r\n            if (to == Type.FLOAT_TYPE) {\r\n                mv.visitInsn(Constants.D2F);\r\n            } else if (to == Type.LONG_TYPE) {\r\n                mv.visitInsn(Constants.D2L);\r\n            } else {\r\n                mv.visitInsn(Constants.D2I);\r\n                cast_numeric(Type.INT_TYPE, to);\r\n            }\r\n        } else if (from == Type.FLOAT_TYPE) {\r\n            if (to == Type.DOUBLE_TYPE) {\r\n                mv.visitInsn(Constants.F2D);\r\n            } else if (to == Type.LONG_TYPE) {\r\n                mv.visitInsn(Constants.F2L);\r\n            } else {\r\n                mv.visitInsn(Constants.F2I);\r\n                cast_numeric(Type.INT_TYPE, to);\r\n            }\r\n        } else if (from == Type.LONG_TYPE) {\r\n            if (to == Type.DOUBLE_TYPE) {\r\n                mv.visitInsn(Constants.L2D);\r\n            } else if (to == Type.FLOAT_TYPE) {\r\n                mv.visitInsn(Constants.L2F);\r\n            } else {\r\n                mv.visitInsn(Constants.L2I);\r\n                cast_numeric(Type.INT_TYPE, to);\r\n            }\r\n        } else {\r\n            if (to == Type.BYTE_TYPE) {\r\n                mv.visitInsn(Constants.I2B);\r\n            } else if (to == Type.CHAR_TYPE) {\r\n                mv.visitInsn(Constants.I2C);\r\n            } else if (to == Type.DOUBLE_TYPE) {\r\n                mv.visitInsn(Constants.I2D);\r\n            } else if (to == Type.FLOAT_TYPE) {\r\n                mv.visitInsn(Constants.I2F);\r\n            } else if (to == Type.LONG_TYPE) {\r\n                mv.visitInsn(Constants.I2L);\r\n            } else if (to == Type.SHORT_TYPE) {\r\n                mv.visitInsn(Constants.I2S);\r\n            }\r\n        }\r\n    }\r\n}\npublic void push(int i) {\r\n    if (i < -1) {\r\n        mv.visitLdcInsn(i);\r\n    } else if (i <= 5) {\r\n        mv.visitInsn(TypeUtils.ICONST(i));\r\n    } else if (i <= Byte.MAX_VALUE) {\r\n        mv.visitIntInsn(Constants.BIPUSH, i);\r\n    } else if (i <= Short.MAX_VALUE) {\r\n        mv.visitIntInsn(Constants.SIPUSH, i);\r\n    } else {\r\n        mv.visitLdcInsn(i);\r\n    }\r\n}\npublic void push(long value) {\r\n    if (value == 0L || value == 1L) {\r\n        mv.visitInsn(TypeUtils.LCONST(value));\r\n    } else {\r\n        mv.visitLdcInsn(value);\r\n    }\r\n}\npublic void push(float value) {\r\n    if (value == 0f || value == 1f || value == 2f) {\r\n        mv.visitInsn(TypeUtils.FCONST(value));\r\n    } else {\r\n        mv.visitLdcInsn(value);\r\n    }\r\n}\npublic void push(double value) {\r\n    if (value == 0d || value == 1d) {\r\n        mv.visitInsn(TypeUtils.DCONST(value));\r\n    } else {\r\n        mv.visitLdcInsn(value);\r\n    }\r\n}\npublic void push(String value) {\r\n    mv.visitLdcInsn(value);\r\n}\npublic void newarray() {\r\n    newarray(Constants.TYPE_OBJECT);\r\n}\npublic void newarray(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        mv.visitIntInsn(Constants.NEWARRAY, TypeUtils.NEWARRAY(type));\r\n    } else {\r\n        emit_type(Constants.ANEWARRAY, type);\r\n    }\r\n}\npublic void arraylength() {\r\n    mv.visitInsn(Constants.ARRAYLENGTH);\r\n}\npublic void load_this() {\r\n    if (TypeUtils.isStatic(state.access)) {\r\n        throw new IllegalStateException(\"no 'this' pointer within static method\");\r\n    }\r\n    mv.visitVarInsn(Constants.ALOAD, 0);\r\n}\n/**\r\n * Pushes all of the arguments of the current method onto the stack.\r\n */\r\npublic void load_args() {\r\n    load_args(0, state.argumentTypes.length);\r\n}\n/**\r\n * Pushes the specified argument of the current method onto the stack.\r\n * @param index the zero-based index into the argument list\r\n */\r\npublic void load_arg(int index) {\r\n    load_local(state.argumentTypes[index], state.localOffset + skipArgs(index));\r\n}\n// zero-based (see load_this)\r\npublic void load_args(int fromArg, int count) {\r\n    int pos = state.localOffset + skipArgs(fromArg);\r\n    for (int i = 0; i < count; i++) {\r\n        Type t = state.argumentTypes[fromArg + i];\r\n        load_local(t, pos);\r\n        pos += t.getSize();\r\n    }\r\n}\nprivate int skipArgs(int numArgs) {\r\n    int amount = 0;\r\n    for (int i = 0; i < numArgs; i++) {\r\n        amount += state.argumentTypes[i].getSize();\r\n    }\r\n    return amount;\r\n}\nprivate void load_local(Type t, int pos) {\r\n    // TODO: make t == null ok?\r\n    mv.visitVarInsn(t.getOpcode(Constants.ILOAD), pos);\r\n}\nprivate void store_local(Type t, int pos) {\r\n    // TODO: make t == null ok?\r\n    mv.visitVarInsn(t.getOpcode(Constants.ISTORE), pos);\r\n}\npublic void iinc(Local local, int amount) {\r\n    mv.visitIincInsn(local.getIndex(), amount);\r\n}\npublic void store_local(Local local) {\r\n    store_local(local.getType(), local.getIndex());\r\n}\npublic void load_local(Local local) {\r\n    load_local(local.getType(), local.getIndex());\r\n}\npublic void return_value() {\r\n    mv.visitInsn(state.sig.getReturnType().getOpcode(Constants.IRETURN));\r\n}\npublic void getfield(String name) {\r\n    ClassEmitter.FieldInfo info = ce.getFieldInfo(name);\r\n    int opcode = TypeUtils.isStatic(info.access) ? Constants.GETSTATIC : Constants.GETFIELD;\r\n    emit_field(opcode, ce.getClassType(), name, info.type);\r\n}\npublic void putfield(String name) {\r\n    ClassEmitter.FieldInfo info = ce.getFieldInfo(name);\r\n    int opcode = TypeUtils.isStatic(info.access) ? Constants.PUTSTATIC : Constants.PUTFIELD;\r\n    emit_field(opcode, ce.getClassType(), name, info.type);\r\n}\npublic void super_getfield(String name, Type type) {\r\n    emit_field(Constants.GETFIELD, ce.getSuperType(), name, type);\r\n}\npublic void super_putfield(String name, Type type) {\r\n    emit_field(Constants.PUTFIELD, ce.getSuperType(), name, type);\r\n}\npublic void super_getstatic(String name, Type type) {\r\n    emit_field(Constants.GETSTATIC, ce.getSuperType(), name, type);\r\n}\npublic void super_putstatic(String name, Type type) {\r\n    emit_field(Constants.PUTSTATIC, ce.getSuperType(), name, type);\r\n}\npublic void getfield(Type owner, String name, Type type) {\r\n    emit_field(Constants.GETFIELD, owner, name, type);\r\n}\npublic void putfield(Type owner, String name, Type type) {\r\n    emit_field(Constants.PUTFIELD, owner, name, type);\r\n}\npublic void getstatic(Type owner, String name, Type type) {\r\n    emit_field(Constants.GETSTATIC, owner, name, type);\r\n}\npublic void putstatic(Type owner, String name, Type type) {\r\n    emit_field(Constants.PUTSTATIC, owner, name, type);\r\n}\n// package-protected for EmitUtils, try to fix\r\nvoid emit_field(int opcode, Type ctype, String name, Type ftype) {\r\n    mv.visitFieldInsn(opcode, ctype.getInternalName(), name, ftype.getDescriptor());\r\n}\npublic void super_invoke() {\r\n    super_invoke(state.sig);\r\n}\npublic void super_invoke(Signature sig) {\r\n    emit_invoke(Constants.INVOKESPECIAL, ce.getSuperType(), sig, false);\r\n}\npublic void invoke_constructor(Type type) {\r\n    invoke_constructor(type, CSTRUCT_NULL);\r\n}\npublic void super_invoke_constructor() {\r\n    invoke_constructor(ce.getSuperType());\r\n}\npublic void invoke_constructor_this() {\r\n    invoke_constructor(ce.getClassType());\r\n}\nprivate void emit_invoke(int opcode, Type type, Signature sig, boolean isInterface) {\r\n    if (sig.getName().equals(Constants.CONSTRUCTOR_NAME) && ((opcode == Constants.INVOKEVIRTUAL) || (opcode == Constants.INVOKESTATIC))) {\r\n        // TODO: error\r\n    }\r\n    mv.visitMethodInsn(opcode, type.getInternalName(), sig.getName(), sig.getDescriptor(), isInterface);\r\n}\npublic void invoke_interface(Type owner, Signature sig) {\r\n    emit_invoke(Constants.INVOKEINTERFACE, owner, sig, true);\r\n}\npublic void invoke_virtual(Type owner, Signature sig) {\r\n    emit_invoke(Constants.INVOKEVIRTUAL, owner, sig, false);\r\n}\n@Deprecated\r\npublic void invoke_static(Type owner, Signature sig) {\r\n    invoke_static(owner, sig, false);\r\n}\npublic void invoke_static(Type owner, Signature sig, boolean isInterface) {\r\n    emit_invoke(Constants.INVOKESTATIC, owner, sig, isInterface);\r\n}\npublic void invoke_virtual_this(Signature sig) {\r\n    invoke_virtual(ce.getClassType(), sig);\r\n}\npublic void invoke_static_this(Signature sig) {\r\n    invoke_static(ce.getClassType(), sig);\r\n}\npublic void invoke_constructor(Type type, Signature sig) {\r\n    emit_invoke(Constants.INVOKESPECIAL, type, sig, false);\r\n}\npublic void invoke_constructor_this(Signature sig) {\r\n    invoke_constructor(ce.getClassType(), sig);\r\n}\npublic void super_invoke_constructor(Signature sig) {\r\n    invoke_constructor(ce.getSuperType(), sig);\r\n}\npublic void new_instance_this() {\r\n    new_instance(ce.getClassType());\r\n}\npublic void new_instance(Type type) {\r\n    emit_type(Constants.NEW, type);\r\n}\nprivate void emit_type(int opcode, Type type) {\r\n    String desc;\r\n    if (TypeUtils.isArray(type)) {\r\n        desc = type.getDescriptor();\r\n    } else {\r\n        desc = type.getInternalName();\r\n    }\r\n    mv.visitTypeInsn(opcode, desc);\r\n}\npublic void aaload(int index) {\r\n    push(index);\r\n    aaload();\r\n}\npublic void aaload() {\r\n    mv.visitInsn(Constants.AALOAD);\r\n}\npublic void aastore() {\r\n    mv.visitInsn(Constants.AASTORE);\r\n}\npublic void athrow() {\r\n    mv.visitInsn(Constants.ATHROW);\r\n}\npublic Label make_label() {\r\n    return new Label();\r\n}\npublic Local make_local() {\r\n    return make_local(Constants.TYPE_OBJECT);\r\n}\npublic Local make_local(Type type) {\r\n    return new Local(newLocal(type.getSize()), type);\r\n}\npublic void checkcast_this() {\r\n    checkcast(ce.getClassType());\r\n}\npublic void checkcast(Type type) {\r\n    if (!type.equals(Constants.TYPE_OBJECT)) {\r\n        emit_type(Constants.CHECKCAST, type);\r\n    }\r\n}\npublic void instance_of(Type type) {\r\n    emit_type(Constants.INSTANCEOF, type);\r\n}\npublic void instance_of_this() {\r\n    instance_of(ce.getClassType());\r\n}\npublic void process_switch(int[] keys, ProcessSwitchCallback callback) {\r\n    float density;\r\n    if (keys.length == 0) {\r\n        density = 0;\r\n    } else {\r\n        density = (float) keys.length / (keys[keys.length - 1] - keys[0] + 1);\r\n    }\r\n    process_switch(keys, callback, density >= 0.5f);\r\n}\npublic void process_switch(int[] keys, ProcessSwitchCallback callback, boolean useTable) {\r\n    if (!isSorted(keys)) {\r\n        throw new IllegalArgumentException(\"keys to switch must be sorted ascending\");\r\n    }\r\n    Label def = make_label();\r\n    Label end = make_label();\r\n    try {\r\n        if (keys.length > 0) {\r\n            int len = keys.length;\r\n            int min = keys[0];\r\n            int max = keys[len - 1];\r\n            int range = max - min + 1;\r\n            if (useTable) {\r\n                Label[] labels = new Label[range];\r\n                Arrays.fill(labels, def);\r\n                for (int i = 0; i < len; i++) {\r\n                    labels[keys[i] - min] = make_label();\r\n                }\r\n                mv.visitTableSwitchInsn(min, max, def, labels);\r\n                for (int i = 0; i < range; i++) {\r\n                    Label label = labels[i];\r\n                    if (label != def) {\r\n                        mark(label);\r\n                        callback.processCase(i + min, end);\r\n                    }\r\n                }\r\n            } else {\r\n                Label[] labels = new Label[len];\r\n                for (int i = 0; i < len; i++) {\r\n                    labels[i] = make_label();\r\n                }\r\n                mv.visitLookupSwitchInsn(def, keys, labels);\r\n                for (int i = 0; i < len; i++) {\r\n                    mark(labels[i]);\r\n                    callback.processCase(keys[i], end);\r\n                }\r\n            }\r\n        }\r\n        mark(def);\r\n        callback.processDefault();\r\n        mark(end);\r\n    } catch (RuntimeException | Error e) {\r\n        throw e;\r\n    } catch (Exception e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}\nprivate static boolean isSorted(int[] keys) {\r\n    for (int i = 1; i < keys.length; i++) {\r\n        if (keys[i] < keys[i - 1]) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}\npublic void mark(Label label) {\r\n    mv.visitLabel(label);\r\n}\nLabel mark() {\r\n    Label label = make_label();\r\n    mv.visitLabel(label);\r\n    return label;\r\n}\npublic void push(boolean value) {\r\n    push(value ? 1 : 0);\r\n}\n/**\r\n * Toggles the integer on the top of the stack from 1 to 0 or vice versa\r\n */\r\npublic void not() {\r\n    push(1);\r\n    math(XOR, Type.INT_TYPE);\r\n}\npublic void throw_exception(Type type, String msg) {\r\n    new_instance(type);\r\n    dup();\r\n    push(msg);\r\n    invoke_constructor(type, CSTRUCT_STRING);\r\n    athrow();\r\n}\n/**\r\n * If the argument is a primitive class, replaces the primitive value\r\n * on the top of the stack with the wrapped (Object) equivalent. For\r\n * example, char -> Character.\r\n * If the class is Void, a null is pushed onto the stack instead.\r\n * @param type the class indicating the current type of the top stack value\r\n */\r\npublic void box(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        if (type == Type.VOID_TYPE) {\r\n            aconst_null();\r\n        } else {\r\n            Type boxed = TypeUtils.getBoxedType(type);\r\n            new_instance(boxed);\r\n            if (type.getSize() == 2) {\r\n                // Pp -> Ppo -> oPpo -> ooPpo -> ooPp -> o\r\n                dup_x2();\r\n                dup_x2();\r\n                pop();\r\n            } else {\r\n                // p -> po -> opo -> oop -> o\r\n                dup_x1();\r\n                swap();\r\n            }\r\n            invoke_constructor(boxed, new Signature(Constants.CONSTRUCTOR_NAME, Type.VOID_TYPE, new Type[] { type }));\r\n        }\r\n    }\r\n}\n/**\r\n * If the argument is a primitive class, replaces the object\r\n * on the top of the stack with the unwrapped (primitive)\r\n * equivalent. For example, Character -> char.\r\n * @param type the class indicating the desired type of the top stack value\r\n */\r\npublic void unbox(Type type) {\r\n    Type t = Constants.TYPE_NUMBER;\r\n    Signature sig = null;\r\n    switch(type.getSort()) {\r\n        case Type.VOID:\r\n            return;\r\n        case Type.CHAR:\r\n            t = Constants.TYPE_CHARACTER;\r\n            sig = CHAR_VALUE;\r\n            break;\r\n        case Type.BOOLEAN:\r\n            t = Constants.TYPE_BOOLEAN;\r\n            sig = BOOLEAN_VALUE;\r\n            break;\r\n        case Type.DOUBLE:\r\n            sig = DOUBLE_VALUE;\r\n            break;\r\n        case Type.FLOAT:\r\n            sig = FLOAT_VALUE;\r\n            break;\r\n        case Type.LONG:\r\n            sig = LONG_VALUE;\r\n            break;\r\n        case Type.INT:\r\n        case Type.SHORT:\r\n        case Type.BYTE:\r\n            sig = INT_VALUE;\r\n    }\r\n    if (sig == null) {\r\n        checkcast(type);\r\n    } else {\r\n        checkcast(t);\r\n        invoke_virtual(t, sig);\r\n    }\r\n}\n/**\r\n * Allocates and fills an Object[] array with the arguments to the\r\n * current method. Primitive values are inserted as their boxed\r\n * (Object) equivalents.\r\n */\r\npublic void create_arg_array() {\r\n    /* generates:\r\n           Object[] args = new Object[]{ arg1, new Integer(arg2) };\r\n         */\r\n    push(state.argumentTypes.length);\r\n    newarray();\r\n    for (int i = 0; i < state.argumentTypes.length; i++) {\r\n        dup();\r\n        push(i);\r\n        load_arg(i);\r\n        box(state.argumentTypes[i]);\r\n        aastore();\r\n    }\r\n}\n/**\r\n * Pushes a zero onto the stack if the argument is a primitive class, or a null otherwise.\r\n */\r\npublic void zero_or_null(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        switch(type.getSort()) {\r\n            case Type.DOUBLE:\r\n                push(0d);\r\n                break;\r\n            case Type.LONG:\r\n                push(0L);\r\n                break;\r\n            case Type.FLOAT:\r\n                push(0f);\r\n                break;\r\n            case Type.VOID:\r\n                aconst_null();\r\n            default:\r\n                push(0);\r\n        }\r\n    } else {\r\n        aconst_null();\r\n    }\r\n}\n/**\r\n * Unboxes the object on the top of the stack. If the object is null, the\r\n * unboxed primitive value becomes zero.\r\n */\r\npublic void unbox_or_zero(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        if (type != Type.VOID_TYPE) {\r\n            Label nonNull = make_label();\r\n            Label end = make_label();\r\n            dup();\r\n            ifnonnull(nonNull);\r\n            pop();\r\n            zero_or_null(type);\r\n            goTo(end);\r\n            mark(nonNull);\r\n            unbox(type);\r\n            mark(end);\r\n        }\r\n    } else {\r\n        checkcast(type);\r\n    }\r\n}\n@Override\r\npublic void visitMaxs(int maxStack, int maxLocals) {\r\n    if (!TypeUtils.isAbstract(state.access)) {\r\n        mv.visitMaxs(0, 0);\r\n    }\r\n}\npublic void invoke(MethodInfo method, Type virtualType) {\r\n    ClassInfo classInfo = method.getClassInfo();\r\n    Type type = classInfo.getType();\r\n    Signature sig = method.getSignature();\r\n    if (sig.getName().equals(Constants.CONSTRUCTOR_NAME)) {\r\n        invoke_constructor(type, sig);\r\n    } else if (TypeUtils.isStatic(method.getModifiers())) {\r\n        invoke_static(type, sig, TypeUtils.isInterface(classInfo.getModifiers()));\r\n    } else if (TypeUtils.isInterface(classInfo.getModifiers())) {\r\n        invoke_interface(type, sig);\r\n    } else {\r\n        invoke_virtual(virtualType, sig);\r\n    }\r\n}\npublic void invoke(MethodInfo method) {\r\n    invoke(method, method.getClassInfo().getType());\r\n}",
+    "comment": "\n * @author Juozas Baliuka, Chris Nokleberg\n "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#isStaticHook()",
+    "entityType": "method",
+    "code": "public boolean isStaticHook() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getSignature()",
+    "entityType": "method",
+    "code": "public Signature getSignature() {\r\n    return state.sig;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getReturnType()",
+    "entityType": "method",
+    "code": "public Type getReturnType() {\r\n    return state.sig.getReturnType();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getMethodInfo()",
+    "entityType": "method",
+    "code": "public MethodInfo getMethodInfo() {\r\n    return state;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getClassEmitter()",
+    "entityType": "method",
+    "code": "public ClassEmitter getClassEmitter() {\r\n    return ce;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#end_method()",
+    "entityType": "method",
+    "code": "public void end_method() {\r\n    visitMaxs(0, 0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#begin_block()",
+    "entityType": "method",
+    "code": "public Block begin_block() {\r\n    return new Block(this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#catch_exception(Block,Type)",
+    "entityType": "method",
+    "code": "public void catch_exception(Block block, Type exception) {\r\n    if (block.getEnd() == null) {\r\n        throw new IllegalStateException(\"end of block is unset\");\r\n    }\r\n    mv.visitTryCatchBlock(block.getStart(), block.getEnd(), mark(), exception.getInternalName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#goTo(Label)",
+    "entityType": "method",
+    "code": "public void goTo(Label label) {\r\n    mv.visitJumpInsn(Constants.GOTO, label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#ifnull(Label)",
+    "entityType": "method",
+    "code": "public void ifnull(Label label) {\r\n    mv.visitJumpInsn(Constants.IFNULL, label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#ifnonnull(Label)",
+    "entityType": "method",
+    "code": "public void ifnonnull(Label label) {\r\n    mv.visitJumpInsn(Constants.IFNONNULL, label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#if_jump(int,Label)",
+    "entityType": "method",
+    "code": "public void if_jump(int mode, Label label) {\r\n    mv.visitJumpInsn(mode, label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#if_icmp(int,Label)",
+    "entityType": "method",
+    "code": "public void if_icmp(int mode, Label label) {\r\n    if_cmp(Type.INT_TYPE, mode, label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#if_cmp(Type,int,Label)",
+    "entityType": "method",
+    "code": "public void if_cmp(Type type, int mode, Label label) {\r\n    int intOp = -1;\r\n    int jumpmode = mode;\r\n    switch(mode) {\r\n        case GE:\r\n            jumpmode = LT;\r\n            break;\r\n        case LE:\r\n            jumpmode = GT;\r\n            break;\r\n    }\r\n    switch(type.getSort()) {\r\n        case Type.LONG:\r\n            mv.visitInsn(Constants.LCMP);\r\n            break;\r\n        case Type.DOUBLE:\r\n            mv.visitInsn(Constants.DCMPG);\r\n            break;\r\n        case Type.FLOAT:\r\n            mv.visitInsn(Constants.FCMPG);\r\n            break;\r\n        case Type.ARRAY:\r\n        case Type.OBJECT:\r\n            switch(mode) {\r\n                case EQ:\r\n                    mv.visitJumpInsn(Constants.IF_ACMPEQ, label);\r\n                    return;\r\n                case NE:\r\n                    mv.visitJumpInsn(Constants.IF_ACMPNE, label);\r\n                    return;\r\n            }\r\n            throw new IllegalArgumentException(\"Bad comparison for type \" + type);\r\n        default:\r\n            switch(mode) {\r\n                case EQ:\r\n                    intOp = Constants.IF_ICMPEQ;\r\n                    break;\r\n                case NE:\r\n                    intOp = Constants.IF_ICMPNE;\r\n                    break;\r\n                case GE:\r\n                    swap();\r\n                /* fall through */\r\n                case LT:\r\n                    intOp = Constants.IF_ICMPLT;\r\n                    break;\r\n                case LE:\r\n                    swap();\r\n                /* fall through */\r\n                case GT:\r\n                    intOp = Constants.IF_ICMPGT;\r\n                    break;\r\n            }\r\n            mv.visitJumpInsn(intOp, label);\r\n            return;\r\n    }\r\n    if_jump(jumpmode, label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#pop()",
+    "entityType": "method",
+    "code": "public void pop() {\r\n    mv.visitInsn(Constants.POP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#pop2()",
+    "entityType": "method",
+    "code": "public void pop2() {\r\n    mv.visitInsn(Constants.POP2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#dup()",
+    "entityType": "method",
+    "code": "public void dup() {\r\n    mv.visitInsn(Constants.DUP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#dup2()",
+    "entityType": "method",
+    "code": "public void dup2() {\r\n    mv.visitInsn(Constants.DUP2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#dup_x1()",
+    "entityType": "method",
+    "code": "public void dup_x1() {\r\n    mv.visitInsn(Constants.DUP_X1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#dup_x2()",
+    "entityType": "method",
+    "code": "public void dup_x2() {\r\n    mv.visitInsn(Constants.DUP_X2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#dup2_x1()",
+    "entityType": "method",
+    "code": "public void dup2_x1() {\r\n    mv.visitInsn(Constants.DUP2_X1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#dup2_x2()",
+    "entityType": "method",
+    "code": "public void dup2_x2() {\r\n    mv.visitInsn(Constants.DUP2_X2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#swap()",
+    "entityType": "method",
+    "code": "public void swap() {\r\n    mv.visitInsn(Constants.SWAP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#aconst_null()",
+    "entityType": "method",
+    "code": "public void aconst_null() {\r\n    mv.visitInsn(Constants.ACONST_NULL);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#swap(Type,Type)",
+    "entityType": "method",
+    "code": "public void swap(Type prev, Type type) {\r\n    if (type.getSize() == 1) {\r\n        if (prev.getSize() == 1) {\r\n            // same as dup_x1(), pop();\r\n            swap();\r\n        } else {\r\n            dup_x2();\r\n            pop();\r\n        }\r\n    } else {\r\n        if (prev.getSize() == 1) {\r\n            dup2_x1();\r\n            pop2();\r\n        } else {\r\n            dup2_x2();\r\n            pop2();\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#monitorenter()",
+    "entityType": "method",
+    "code": "public void monitorenter() {\r\n    mv.visitInsn(Constants.MONITORENTER);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#monitorexit()",
+    "entityType": "method",
+    "code": "public void monitorexit() {\r\n    mv.visitInsn(Constants.MONITOREXIT);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#math(int,Type)",
+    "entityType": "method",
+    "code": "public void math(int op, Type type) {\r\n    mv.visitInsn(type.getOpcode(op));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#array_load(Type)",
+    "entityType": "method",
+    "code": "public void array_load(Type type) {\r\n    mv.visitInsn(type.getOpcode(Constants.IALOAD));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#array_store(Type)",
+    "entityType": "method",
+    "code": "public void array_store(Type type) {\r\n    mv.visitInsn(type.getOpcode(Constants.IASTORE));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#cast_numeric(Type,Type)",
+    "entityType": "method",
+    "code": "/**\r\n * Casts from one primitive numeric type to another\r\n */\r\npublic void cast_numeric(Type from, Type to) {\r\n    if (from != to) {\r\n        if (from == Type.DOUBLE_TYPE) {\r\n            if (to == Type.FLOAT_TYPE) {\r\n                mv.visitInsn(Constants.D2F);\r\n            } else if (to == Type.LONG_TYPE) {\r\n                mv.visitInsn(Constants.D2L);\r\n            } else {\r\n                mv.visitInsn(Constants.D2I);\r\n                cast_numeric(Type.INT_TYPE, to);\r\n            }\r\n        } else if (from == Type.FLOAT_TYPE) {\r\n            if (to == Type.DOUBLE_TYPE) {\r\n                mv.visitInsn(Constants.F2D);\r\n            } else if (to == Type.LONG_TYPE) {\r\n                mv.visitInsn(Constants.F2L);\r\n            } else {\r\n                mv.visitInsn(Constants.F2I);\r\n                cast_numeric(Type.INT_TYPE, to);\r\n            }\r\n        } else if (from == Type.LONG_TYPE) {\r\n            if (to == Type.DOUBLE_TYPE) {\r\n                mv.visitInsn(Constants.L2D);\r\n            } else if (to == Type.FLOAT_TYPE) {\r\n                mv.visitInsn(Constants.L2F);\r\n            } else {\r\n                mv.visitInsn(Constants.L2I);\r\n                cast_numeric(Type.INT_TYPE, to);\r\n            }\r\n        } else {\r\n            if (to == Type.BYTE_TYPE) {\r\n                mv.visitInsn(Constants.I2B);\r\n            } else if (to == Type.CHAR_TYPE) {\r\n                mv.visitInsn(Constants.I2C);\r\n            } else if (to == Type.DOUBLE_TYPE) {\r\n                mv.visitInsn(Constants.I2D);\r\n            } else if (to == Type.FLOAT_TYPE) {\r\n                mv.visitInsn(Constants.I2F);\r\n            } else if (to == Type.LONG_TYPE) {\r\n                mv.visitInsn(Constants.I2L);\r\n            } else if (to == Type.SHORT_TYPE) {\r\n                mv.visitInsn(Constants.I2S);\r\n            }\r\n        }\r\n    }\r\n}",
+    "comment": "\n     * Casts from one primitive numeric type to another\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#push(int)",
+    "entityType": "method",
+    "code": "public void push(int i) {\r\n    if (i < -1) {\r\n        mv.visitLdcInsn(i);\r\n    } else if (i <= 5) {\r\n        mv.visitInsn(TypeUtils.ICONST(i));\r\n    } else if (i <= Byte.MAX_VALUE) {\r\n        mv.visitIntInsn(Constants.BIPUSH, i);\r\n    } else if (i <= Short.MAX_VALUE) {\r\n        mv.visitIntInsn(Constants.SIPUSH, i);\r\n    } else {\r\n        mv.visitLdcInsn(i);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#push(long)",
+    "entityType": "method",
+    "code": "public void push(long value) {\r\n    if (value == 0L || value == 1L) {\r\n        mv.visitInsn(TypeUtils.LCONST(value));\r\n    } else {\r\n        mv.visitLdcInsn(value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#push(float)",
+    "entityType": "method",
+    "code": "public void push(float value) {\r\n    if (value == 0f || value == 1f || value == 2f) {\r\n        mv.visitInsn(TypeUtils.FCONST(value));\r\n    } else {\r\n        mv.visitLdcInsn(value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#push(double)",
+    "entityType": "method",
+    "code": "public void push(double value) {\r\n    if (value == 0d || value == 1d) {\r\n        mv.visitInsn(TypeUtils.DCONST(value));\r\n    } else {\r\n        mv.visitLdcInsn(value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#push(String)",
+    "entityType": "method",
+    "code": "public void push(String value) {\r\n    mv.visitLdcInsn(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#newarray()",
+    "entityType": "method",
+    "code": "public void newarray() {\r\n    newarray(Constants.TYPE_OBJECT);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#newarray(Type)",
+    "entityType": "method",
+    "code": "public void newarray(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        mv.visitIntInsn(Constants.NEWARRAY, TypeUtils.NEWARRAY(type));\r\n    } else {\r\n        emit_type(Constants.ANEWARRAY, type);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#arraylength()",
+    "entityType": "method",
+    "code": "public void arraylength() {\r\n    mv.visitInsn(Constants.ARRAYLENGTH);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#load_this()",
+    "entityType": "method",
+    "code": "public void load_this() {\r\n    if (TypeUtils.isStatic(state.access)) {\r\n        throw new IllegalStateException(\"no 'this' pointer within static method\");\r\n    }\r\n    mv.visitVarInsn(Constants.ALOAD, 0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#load_args()",
+    "entityType": "method",
+    "code": "/**\r\n * Pushes all of the arguments of the current method onto the stack.\r\n */\r\npublic void load_args() {\r\n    load_args(0, state.argumentTypes.length);\r\n}",
+    "comment": "\n     * Pushes all of the arguments of the current method onto the stack.\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#load_arg(int)",
+    "entityType": "method",
+    "code": "/**\r\n * Pushes the specified argument of the current method onto the stack.\r\n * @param index the zero-based index into the argument list\r\n */\r\npublic void load_arg(int index) {\r\n    load_local(state.argumentTypes[index], state.localOffset + skipArgs(index));\r\n}",
+    "comment": "\n     * Pushes the specified argument of the current method onto the stack.\n     * @param index the zero-based index into the argument list\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#load_args(int,int)",
+    "entityType": "method",
+    "code": "// zero-based (see load_this)\r\npublic void load_args(int fromArg, int count) {\r\n    int pos = state.localOffset + skipArgs(fromArg);\r\n    for (int i = 0; i < count; i++) {\r\n        Type t = state.argumentTypes[fromArg + i];\r\n        load_local(t, pos);\r\n        pos += t.getSize();\r\n    }\r\n}",
+    "comment": " zero-based (see load_this)"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#skipArgs(int)",
+    "entityType": "method",
+    "code": "private int skipArgs(int numArgs) {\r\n    int amount = 0;\r\n    for (int i = 0; i < numArgs; i++) {\r\n        amount += state.argumentTypes[i].getSize();\r\n    }\r\n    return amount;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#load_local(Type,int)",
+    "entityType": "method",
+    "code": "private void load_local(Type t, int pos) {\r\n    // TODO: make t == null ok?\r\n    mv.visitVarInsn(t.getOpcode(Constants.ILOAD), pos);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#store_local(Type,int)",
+    "entityType": "method",
+    "code": "private void store_local(Type t, int pos) {\r\n    // TODO: make t == null ok?\r\n    mv.visitVarInsn(t.getOpcode(Constants.ISTORE), pos);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#iinc(Local,int)",
+    "entityType": "method",
+    "code": "public void iinc(Local local, int amount) {\r\n    mv.visitIincInsn(local.getIndex(), amount);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#store_local(Local)",
+    "entityType": "method",
+    "code": "public void store_local(Local local) {\r\n    store_local(local.getType(), local.getIndex());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#load_local(Local)",
+    "entityType": "method",
+    "code": "public void load_local(Local local) {\r\n    load_local(local.getType(), local.getIndex());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#return_value()",
+    "entityType": "method",
+    "code": "public void return_value() {\r\n    mv.visitInsn(state.sig.getReturnType().getOpcode(Constants.IRETURN));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getfield(String)",
+    "entityType": "method",
+    "code": "public void getfield(String name) {\r\n    ClassEmitter.FieldInfo info = ce.getFieldInfo(name);\r\n    int opcode = TypeUtils.isStatic(info.access) ? Constants.GETSTATIC : Constants.GETFIELD;\r\n    emit_field(opcode, ce.getClassType(), name, info.type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#putfield(String)",
+    "entityType": "method",
+    "code": "public void putfield(String name) {\r\n    ClassEmitter.FieldInfo info = ce.getFieldInfo(name);\r\n    int opcode = TypeUtils.isStatic(info.access) ? Constants.PUTSTATIC : Constants.PUTFIELD;\r\n    emit_field(opcode, ce.getClassType(), name, info.type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_getfield(String,Type)",
+    "entityType": "method",
+    "code": "public void super_getfield(String name, Type type) {\r\n    emit_field(Constants.GETFIELD, ce.getSuperType(), name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_putfield(String,Type)",
+    "entityType": "method",
+    "code": "public void super_putfield(String name, Type type) {\r\n    emit_field(Constants.PUTFIELD, ce.getSuperType(), name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_getstatic(String,Type)",
+    "entityType": "method",
+    "code": "public void super_getstatic(String name, Type type) {\r\n    emit_field(Constants.GETSTATIC, ce.getSuperType(), name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_putstatic(String,Type)",
+    "entityType": "method",
+    "code": "public void super_putstatic(String name, Type type) {\r\n    emit_field(Constants.PUTSTATIC, ce.getSuperType(), name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getfield(Type,String,Type)",
+    "entityType": "method",
+    "code": "public void getfield(Type owner, String name, Type type) {\r\n    emit_field(Constants.GETFIELD, owner, name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#putfield(Type,String,Type)",
+    "entityType": "method",
+    "code": "public void putfield(Type owner, String name, Type type) {\r\n    emit_field(Constants.PUTFIELD, owner, name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#getstatic(Type,String,Type)",
+    "entityType": "method",
+    "code": "public void getstatic(Type owner, String name, Type type) {\r\n    emit_field(Constants.GETSTATIC, owner, name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#putstatic(Type,String,Type)",
+    "entityType": "method",
+    "code": "public void putstatic(Type owner, String name, Type type) {\r\n    emit_field(Constants.PUTSTATIC, owner, name, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#emit_field(int,Type,String,Type)",
+    "entityType": "method",
+    "code": "// package-protected for EmitUtils, try to fix\r\nvoid emit_field(int opcode, Type ctype, String name, Type ftype) {\r\n    mv.visitFieldInsn(opcode, ctype.getInternalName(), name, ftype.getDescriptor());\r\n}",
+    "comment": " package-protected for EmitUtils, try to fix"
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_invoke()",
+    "entityType": "method",
+    "code": "public void super_invoke() {\r\n    super_invoke(state.sig);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_invoke(Signature)",
+    "entityType": "method",
+    "code": "public void super_invoke(Signature sig) {\r\n    emit_invoke(Constants.INVOKESPECIAL, ce.getSuperType(), sig, false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_constructor(Type)",
+    "entityType": "method",
+    "code": "public void invoke_constructor(Type type) {\r\n    invoke_constructor(type, CSTRUCT_NULL);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_invoke_constructor()",
+    "entityType": "method",
+    "code": "public void super_invoke_constructor() {\r\n    invoke_constructor(ce.getSuperType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_constructor_this()",
+    "entityType": "method",
+    "code": "public void invoke_constructor_this() {\r\n    invoke_constructor(ce.getClassType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#emit_invoke(int,Type,Signature,boolean)",
+    "entityType": "method",
+    "code": "private void emit_invoke(int opcode, Type type, Signature sig, boolean isInterface) {\r\n    if (sig.getName().equals(Constants.CONSTRUCTOR_NAME) && ((opcode == Constants.INVOKEVIRTUAL) || (opcode == Constants.INVOKESTATIC))) {\r\n        // TODO: error\r\n    }\r\n    mv.visitMethodInsn(opcode, type.getInternalName(), sig.getName(), sig.getDescriptor(), isInterface);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_interface(Type,Signature)",
+    "entityType": "method",
+    "code": "public void invoke_interface(Type owner, Signature sig) {\r\n    emit_invoke(Constants.INVOKEINTERFACE, owner, sig, true);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_virtual(Type,Signature)",
+    "entityType": "method",
+    "code": "public void invoke_virtual(Type owner, Signature sig) {\r\n    emit_invoke(Constants.INVOKEVIRTUAL, owner, sig, false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_static(Type,Signature)",
+    "entityType": "method",
+    "code": "@Deprecated\r\npublic void invoke_static(Type owner, Signature sig) {\r\n    invoke_static(owner, sig, false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_static(Type,Signature,boolean)",
+    "entityType": "method",
+    "code": "public void invoke_static(Type owner, Signature sig, boolean isInterface) {\r\n    emit_invoke(Constants.INVOKESTATIC, owner, sig, isInterface);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_virtual_this(Signature)",
+    "entityType": "method",
+    "code": "public void invoke_virtual_this(Signature sig) {\r\n    invoke_virtual(ce.getClassType(), sig);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_static_this(Signature)",
+    "entityType": "method",
+    "code": "public void invoke_static_this(Signature sig) {\r\n    invoke_static(ce.getClassType(), sig);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_constructor(Type,Signature)",
+    "entityType": "method",
+    "code": "public void invoke_constructor(Type type, Signature sig) {\r\n    emit_invoke(Constants.INVOKESPECIAL, type, sig, false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#invoke_constructor_this(Signature)",
+    "entityType": "method",
+    "code": "public void invoke_constructor_this(Signature sig) {\r\n    invoke_constructor(ce.getClassType(), sig);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#super_invoke_constructor(Signature)",
+    "entityType": "method",
+    "code": "public void super_invoke_constructor(Signature sig) {\r\n    invoke_constructor(ce.getSuperType(), sig);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#new_instance_this()",
+    "entityType": "method",
+    "code": "public void new_instance_this() {\r\n    new_instance(ce.getClassType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#new_instance(Type)",
+    "entityType": "method",
+    "code": "public void new_instance(Type type) {\r\n    emit_type(Constants.NEW, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#emit_type(int,Type)",
+    "entityType": "method",
+    "code": "private void emit_type(int opcode, Type type) {\r\n    String desc;\r\n    if (TypeUtils.isArray(type)) {\r\n        desc = type.getDescriptor();\r\n    } else {\r\n        desc = type.getInternalName();\r\n    }\r\n    mv.visitTypeInsn(opcode, desc);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#aaload(int)",
+    "entityType": "method",
+    "code": "public void aaload(int index) {\r\n    push(index);\r\n    aaload();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#aaload()",
+    "entityType": "method",
+    "code": "public void aaload() {\r\n    mv.visitInsn(Constants.AALOAD);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#aastore()",
+    "entityType": "method",
+    "code": "public void aastore() {\r\n    mv.visitInsn(Constants.AASTORE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#athrow()",
+    "entityType": "method",
+    "code": "public void athrow() {\r\n    mv.visitInsn(Constants.ATHROW);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#make_label()",
+    "entityType": "method",
+    "code": "public Label make_label() {\r\n    return new Label();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#make_local()",
+    "entityType": "method",
+    "code": "public Local make_local() {\r\n    return make_local(Constants.TYPE_OBJECT);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#make_local(Type)",
+    "entityType": "method",
+    "code": "public Local make_local(Type type) {\r\n    return new Local(newLocal(type.getSize()), type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#checkcast_this()",
+    "entityType": "method",
+    "code": "public void checkcast_this() {\r\n    checkcast(ce.getClassType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#checkcast(Type)",
+    "entityType": "method",
+    "code": "public void checkcast(Type type) {\r\n    if (!type.equals(Constants.TYPE_OBJECT)) {\r\n        emit_type(Constants.CHECKCAST, type);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#instance_of(Type)",
+    "entityType": "method",
+    "code": "public void instance_of(Type type) {\r\n    emit_type(Constants.INSTANCEOF, type);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#instance_of_this()",
+    "entityType": "method",
+    "code": "public void instance_of_this() {\r\n    instance_of(ce.getClassType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#process_switch(int[],ProcessSwitchCallback)",
+    "entityType": "method",
+    "code": "public void process_switch(int[] keys, ProcessSwitchCallback callback) {\r\n    float density;\r\n    if (keys.length == 0) {\r\n        density = 0;\r\n    } else {\r\n        density = (float) keys.length / (keys[keys.length - 1] - keys[0] + 1);\r\n    }\r\n    process_switch(keys, callback, density >= 0.5f);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#process_switch(int[],ProcessSwitchCallback,boolean)",
+    "entityType": "method",
+    "code": "public void process_switch(int[] keys, ProcessSwitchCallback callback, boolean useTable) {\r\n    if (!isSorted(keys)) {\r\n        throw new IllegalArgumentException(\"keys to switch must be sorted ascending\");\r\n    }\r\n    Label def = make_label();\r\n    Label end = make_label();\r\n    try {\r\n        if (keys.length > 0) {\r\n            int len = keys.length;\r\n            int min = keys[0];\r\n            int max = keys[len - 1];\r\n            int range = max - min + 1;\r\n            if (useTable) {\r\n                Label[] labels = new Label[range];\r\n                Arrays.fill(labels, def);\r\n                for (int i = 0; i < len; i++) {\r\n                    labels[keys[i] - min] = make_label();\r\n                }\r\n                mv.visitTableSwitchInsn(min, max, def, labels);\r\n                for (int i = 0; i < range; i++) {\r\n                    Label label = labels[i];\r\n                    if (label != def) {\r\n                        mark(label);\r\n                        callback.processCase(i + min, end);\r\n                    }\r\n                }\r\n            } else {\r\n                Label[] labels = new Label[len];\r\n                for (int i = 0; i < len; i++) {\r\n                    labels[i] = make_label();\r\n                }\r\n                mv.visitLookupSwitchInsn(def, keys, labels);\r\n                for (int i = 0; i < len; i++) {\r\n                    mark(labels[i]);\r\n                    callback.processCase(keys[i], end);\r\n                }\r\n            }\r\n        }\r\n        mark(def);\r\n        callback.processDefault();\r\n        mark(end);\r\n    } catch (RuntimeException | Error e) {\r\n        throw e;\r\n    } catch (Exception e) {\r\n        throw new CodeGenerationException(e);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#isSorted(int[])",
+    "entityType": "method",
+    "code": "private static boolean isSorted(int[] keys) {\r\n    for (int i = 1; i < keys.length; i++) {\r\n        if (keys[i] < keys[i - 1]) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#mark(Label)",
+    "entityType": "method",
+    "code": "public void mark(Label label) {\r\n    mv.visitLabel(label);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#mark()",
+    "entityType": "method",
+    "code": "Label mark() {\r\n    Label label = make_label();\r\n    mv.visitLabel(label);\r\n    return label;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#push(boolean)",
+    "entityType": "method",
+    "code": "public void push(boolean value) {\r\n    push(value ? 1 : 0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#not()",
+    "entityType": "method",
+    "code": "/**\r\n * Toggles the integer on the top of the stack from 1 to 0 or vice versa\r\n */\r\npublic void not() {\r\n    push(1);\r\n    math(XOR, Type.INT_TYPE);\r\n}",
+    "comment": "\n     * Toggles the integer on the top of the stack from 1 to 0 or vice versa\n     "
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#throw_exception(Type,String)",
+    "entityType": "method",
+    "code": "public void throw_exception(Type type, String msg) {\r\n    new_instance(type);\r\n    dup();\r\n    push(msg);\r\n    invoke_constructor(type, CSTRUCT_STRING);\r\n    athrow();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.cglib.core.CodeEmitter#box(Type)",
+    "entityType": "method",
+    "code": "/**\r\n * If the argument is a primitive class, replaces the primitive value\r\n * on the top of the stack with the wrapped (Object) equivalent. For\r\n * example, char -> Character.\r\n * If the class is Void, a null is pushed onto the stack instead.\r\n * @param type the class indicating the current type of the top stack value\r\n */\r\npublic void box(Type type) {\r\n    if (TypeUtils.isPrimitive(type)) {\r\n        if (type == Type.VOID_TYPE) {\r\n            aconst_null();\r\n        } else {\r\n            Type boxed = TypeUtils.getBoxedType(type);\r\n            new_instance(boxed);\r\n            if (type.getSize() == 2) {\r\n                // Pp -> Ppo -> oPpo -> ooPpo -> ooPp -> o\r\n                dup_x2();\r\n                dup_x2();\r\n                pop();\r\n            } else {\r\n                // p -> po -> opo -> oop -> o\r\n                dup_x1();\r\n                swap();\r\n            }\r\n            invoke_constructor(boxed, new Signature(Constants.CONSTRUCTOR_NAME, Type.VOID_TYPE, new Type[] { type }));\r\n        }\r\n    }\r\n}",
+    "comment": "\n     * If the argument is a primitive class, replaces the primitive value\n     * on the top of the stack with the wrapped (Object) equivalent. For\n     * example, char -> Character.\n     * If the class is Void, a null is pushed onto the stack instead.\n     * @param type the class indicating the current type of the top stack value\n     "
+  }
+]

@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder",
+    "entityType": "class",
+    "code": "/**\r\n * The default charset to use, i.e. \"UTF-8\".\r\n */\r\npublic static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;\n/**\r\n * The default delimiter strings to use, i.e. {@code \\r\\n} and {@code \\n}.\r\n */\r\npublic static final List<String> DEFAULT_DELIMITERS = List.of(\"\\r\\n\", \"\\n\");\nprivate final List<String> delimiters;\nprivate final boolean stripDelimiter;\nprivate Charset defaultCharset = DEFAULT_CHARSET;\nprivate final ConcurrentMap<Charset, byte[][]> delimitersCache = new ConcurrentHashMap<>();\n/**\r\n * Create a new {@code AbstractCharSequenceDecoder} with the given parameters.\r\n */\r\nprotected AbstractCharSequenceDecoder(List<String> delimiters, boolean stripDelimiter, MimeType... mimeTypes) {\r\n    super(mimeTypes);\r\n    Assert.notEmpty(delimiters, \"'delimiters' must not be empty\");\r\n    this.delimiters = new ArrayList<>(delimiters);\r\n    this.stripDelimiter = stripDelimiter;\r\n}\n/**\r\n * Set the default character set to fall back on if the MimeType does not specify any.\r\n * <p>By default this is {@code UTF-8}.\r\n * @param defaultCharset the charset to fall back on\r\n */\r\npublic void setDefaultCharset(Charset defaultCharset) {\r\n    this.defaultCharset = defaultCharset;\r\n}\n/**\r\n * Return the configured {@link #setDefaultCharset(Charset) defaultCharset}.\r\n */\r\npublic Charset getDefaultCharset() {\r\n    return this.defaultCharset;\r\n}\n@Override\r\npublic final Flux<T> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    byte[][] delimiterBytes = getDelimiterBytes(mimeType);\r\n    LimitedDataBufferList chunks = new LimitedDataBufferList(getMaxInMemorySize());\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delimiterBytes);\r\n    return Flux.from(input).concatMapIterable(buffer -> processDataBuffer(buffer, matcher, chunks)).concatWith(Mono.defer(() -> {\r\n        if (chunks.isEmpty()) {\r\n            return Mono.empty();\r\n        }\r\n        DataBuffer lastBuffer = chunks.get(0).factory().join(chunks);\r\n        chunks.clear();\r\n        return Mono.just(lastBuffer);\r\n    })).doFinally(signalType -> chunks.releaseAndClear()).doOnDiscard(DataBuffer.class, DataBufferUtils::release).map(buffer -> decode(buffer, elementType, mimeType, hints));\r\n}\nprivate byte[][] getDelimiterBytes(@Nullable MimeType mimeType) {\r\n    return this.delimitersCache.computeIfAbsent(getCharset(mimeType), charset -> {\r\n        byte[][] result = new byte[this.delimiters.size()][];\r\n        for (int i = 0; i < this.delimiters.size(); i++) {\r\n            result[i] = this.delimiters.get(i).getBytes(charset);\r\n        }\r\n        return result;\r\n    });\r\n}\nprivate Collection<DataBuffer> processDataBuffer(DataBuffer buffer, DataBufferUtils.Matcher matcher, LimitedDataBufferList chunks) {\r\n    boolean release = true;\r\n    try {\r\n        List<DataBuffer> result = null;\r\n        do {\r\n            int endIndex = matcher.match(buffer);\r\n            if (endIndex == -1) {\r\n                chunks.add(buffer);\r\n                release = false;\r\n                break;\r\n            }\r\n            DataBuffer split = buffer.split(endIndex + 1);\r\n            if (result == null) {\r\n                result = new ArrayList<>();\r\n            }\r\n            int delimiterLength = matcher.delimiter().length;\r\n            if (chunks.isEmpty()) {\r\n                if (this.stripDelimiter) {\r\n                    split.writePosition(split.writePosition() - delimiterLength);\r\n                }\r\n                result.add(split);\r\n            } else {\r\n                chunks.add(split);\r\n                DataBuffer joined = buffer.factory().join(chunks);\r\n                if (this.stripDelimiter) {\r\n                    joined.writePosition(joined.writePosition() - delimiterLength);\r\n                }\r\n                result.add(joined);\r\n                chunks.clear();\r\n            }\r\n        } while (buffer.readableByteCount() > 0);\r\n        return (result != null ? result : Collections.emptyList());\r\n    } finally {\r\n        if (release) {\r\n            DataBufferUtils.release(buffer);\r\n        }\r\n    }\r\n}\n@Override\r\npublic final T decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Charset charset = getCharset(mimeType);\r\n    T value = decodeInternal(dataBuffer, charset);\r\n    DataBufferUtils.release(dataBuffer);\r\n    LogFormatUtils.traceDebug(logger, traceOn -> {\r\n        String formatted = LogFormatUtils.formatValue(value, !traceOn);\r\n        return Hints.getLogPrefix(hints) + \"Decoded \" + formatted;\r\n    });\r\n    return value;\r\n}\nprivate Charset getCharset(@Nullable MimeType mimeType) {\r\n    if (mimeType != null) {\r\n        Charset charset = mimeType.getCharset();\r\n        if (charset != null) {\r\n            return charset;\r\n        }\r\n    }\r\n    return getDefaultCharset();\r\n}\n/**\r\n * Template method that decodes the given data buffer into {@code T}, given\r\n * the charset.\r\n */\r\nprotected abstract T decodeInternal(DataBuffer dataBuffer, Charset charset);",
+    "comment": "\n * Abstract base class that decodes from a data buffer stream to a\n * {@code CharSequence} stream.\n *\n * @author Arjen Poutsma\n * @since 6.1\n * @param <T> the character sequence type\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#setDefaultCharset(Charset)",
+    "entityType": "method",
+    "code": "/**\r\n * Set the default character set to fall back on if the MimeType does not specify any.\r\n * <p>By default this is {@code UTF-8}.\r\n * @param defaultCharset the charset to fall back on\r\n */\r\npublic void setDefaultCharset(Charset defaultCharset) {\r\n    this.defaultCharset = defaultCharset;\r\n}",
+    "comment": "\n\t * Set the default character set to fall back on if the MimeType does not specify any.\n\t * <p>By default this is {@code UTF-8}.\n\t * @param defaultCharset the charset to fall back on\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#getDefaultCharset()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the configured {@link #setDefaultCharset(Charset) defaultCharset}.\r\n */\r\npublic Charset getDefaultCharset() {\r\n    return this.defaultCharset;\r\n}",
+    "comment": "\n\t * Return the configured {@link #setDefaultCharset(Charset) defaultCharset}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic final Flux<T> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    byte[][] delimiterBytes = getDelimiterBytes(mimeType);\r\n    LimitedDataBufferList chunks = new LimitedDataBufferList(getMaxInMemorySize());\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delimiterBytes);\r\n    return Flux.from(input).concatMapIterable(buffer -> processDataBuffer(buffer, matcher, chunks)).concatWith(Mono.defer(() -> {\r\n        if (chunks.isEmpty()) {\r\n            return Mono.empty();\r\n        }\r\n        DataBuffer lastBuffer = chunks.get(0).factory().join(chunks);\r\n        chunks.clear();\r\n        return Mono.just(lastBuffer);\r\n    })).doFinally(signalType -> chunks.releaseAndClear()).doOnDiscard(DataBuffer.class, DataBufferUtils::release).map(buffer -> decode(buffer, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#getDelimiterBytes(MimeType)",
+    "entityType": "method",
+    "code": "private byte[][] getDelimiterBytes(@Nullable MimeType mimeType) {\r\n    return this.delimitersCache.computeIfAbsent(getCharset(mimeType), charset -> {\r\n        byte[][] result = new byte[this.delimiters.size()][];\r\n        for (int i = 0; i < this.delimiters.size(); i++) {\r\n            result[i] = this.delimiters.get(i).getBytes(charset);\r\n        }\r\n        return result;\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#processDataBuffer(DataBuffer,DataBufferUtils.Matcher,LimitedDataBufferList)",
+    "entityType": "method",
+    "code": "private Collection<DataBuffer> processDataBuffer(DataBuffer buffer, DataBufferUtils.Matcher matcher, LimitedDataBufferList chunks) {\r\n    boolean release = true;\r\n    try {\r\n        List<DataBuffer> result = null;\r\n        do {\r\n            int endIndex = matcher.match(buffer);\r\n            if (endIndex == -1) {\r\n                chunks.add(buffer);\r\n                release = false;\r\n                break;\r\n            }\r\n            DataBuffer split = buffer.split(endIndex + 1);\r\n            if (result == null) {\r\n                result = new ArrayList<>();\r\n            }\r\n            int delimiterLength = matcher.delimiter().length;\r\n            if (chunks.isEmpty()) {\r\n                if (this.stripDelimiter) {\r\n                    split.writePosition(split.writePosition() - delimiterLength);\r\n                }\r\n                result.add(split);\r\n            } else {\r\n                chunks.add(split);\r\n                DataBuffer joined = buffer.factory().join(chunks);\r\n                if (this.stripDelimiter) {\r\n                    joined.writePosition(joined.writePosition() - delimiterLength);\r\n                }\r\n                result.add(joined);\r\n                chunks.clear();\r\n            }\r\n        } while (buffer.readableByteCount() > 0);\r\n        return (result != null ? result : Collections.emptyList());\r\n    } finally {\r\n        if (release) {\r\n            DataBufferUtils.release(buffer);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic final T decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Charset charset = getCharset(mimeType);\r\n    T value = decodeInternal(dataBuffer, charset);\r\n    DataBufferUtils.release(dataBuffer);\r\n    LogFormatUtils.traceDebug(logger, traceOn -> {\r\n        String formatted = LogFormatUtils.formatValue(value, !traceOn);\r\n        return Hints.getLogPrefix(hints) + \"Decoded \" + formatted;\r\n    });\r\n    return value;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#getCharset(MimeType)",
+    "entityType": "method",
+    "code": "private Charset getCharset(@Nullable MimeType mimeType) {\r\n    if (mimeType != null) {\r\n        Charset charset = mimeType.getCharset();\r\n        if (charset != null) {\r\n            return charset;\r\n        }\r\n    }\r\n    return getDefaultCharset();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractCharSequenceDecoder#decodeInternal(DataBuffer,Charset)",
+    "entityType": "method",
+    "code": "/**\r\n * Template method that decodes the given data buffer into {@code T}, given\r\n * the charset.\r\n */\r\nprotected abstract T decodeInternal(DataBuffer dataBuffer, Charset charset);",
+    "comment": "\n\t * Template method that decodes the given data buffer into {@code T}, given\n\t * the charset.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDataBufferDecoder",
+    "entityType": "class",
+    "code": "private int maxInMemorySize = 256 * 1024;\nprotected AbstractDataBufferDecoder(MimeType... supportedMimeTypes) {\r\n    super(supportedMimeTypes);\r\n}\n/**\r\n * Configure a limit on the number of bytes that can be buffered whenever\r\n * the input stream needs to be aggregated. This can be a result of\r\n * decoding to a single {@code DataBuffer},\r\n * {@link java.nio.ByteBuffer ByteBuffer}, {@code byte[]},\r\n * {@link org.springframework.core.io.Resource Resource}, {@code String}, etc.\r\n * It can also occur when splitting the input stream, for example, delimited text,\r\n * in which case the limit applies to data buffered between delimiters.\r\n * <p>By default this is set to 256K.\r\n * @param byteCount the max number of bytes to buffer, or -1 for unlimited\r\n * @since 5.1.11\r\n */\r\npublic void setMaxInMemorySize(int byteCount) {\r\n    this.maxInMemorySize = byteCount;\r\n}\n/**\r\n * Return the {@link #setMaxInMemorySize configured} byte count limit.\r\n * @since 5.1.11\r\n */\r\npublic int getMaxInMemorySize() {\r\n    return this.maxInMemorySize;\r\n}\n@Override\r\npublic Flux<T> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(input).map(buffer -> decodeDataBuffer(buffer, elementType, mimeType, hints));\r\n}\n@Override\r\npublic Mono<T> decodeToMono(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return DataBufferUtils.join(input, this.maxInMemorySize).map(buffer -> decodeDataBuffer(buffer, elementType, mimeType, hints));\r\n}\n/**\r\n * How to decode a {@code DataBuffer} to the target element type.\r\n * @deprecated as of 5.2, please implement\r\n * {@link #decode(DataBuffer, ResolvableType, MimeType, Map)} instead\r\n */\r\n@Deprecated\r\n@Nullable\r\nprotected T decodeDataBuffer(DataBuffer buffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return decode(buffer, elementType, mimeType, hints);\r\n}",
+    "comment": "\n * Abstract base class for {@code Decoder} implementations that can decode\n * a {@code DataBuffer} directly to the target element type.\n *\n * <p>Sub-classes must implement {@link #decodeDataBuffer} to provide a way to\n * transform a {@code DataBuffer} to the target data type. The default\n * {@link #decode} implementation transforms each individual data buffer while\n * {@link #decodeToMono} applies \"reduce\" and transforms the aggregated buffer.\n *\n * <p>Sub-classes can override {@link #decode} in order to split the input stream\n * along different boundaries (for example, on new line characters for {@code String})\n * or always reduce to a single data buffer (for example, {@code Resource}).\n *\n * @author Rossen Stoyanchev\n * @since 5.0\n * @param <T> the element type\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDataBufferDecoder#setMaxInMemorySize(int)",
+    "entityType": "method",
+    "code": "/**\r\n * Configure a limit on the number of bytes that can be buffered whenever\r\n * the input stream needs to be aggregated. This can be a result of\r\n * decoding to a single {@code DataBuffer},\r\n * {@link java.nio.ByteBuffer ByteBuffer}, {@code byte[]},\r\n * {@link org.springframework.core.io.Resource Resource}, {@code String}, etc.\r\n * It can also occur when splitting the input stream, for example, delimited text,\r\n * in which case the limit applies to data buffered between delimiters.\r\n * <p>By default this is set to 256K.\r\n * @param byteCount the max number of bytes to buffer, or -1 for unlimited\r\n * @since 5.1.11\r\n */\r\npublic void setMaxInMemorySize(int byteCount) {\r\n    this.maxInMemorySize = byteCount;\r\n}",
+    "comment": "\n\t * Configure a limit on the number of bytes that can be buffered whenever\n\t * the input stream needs to be aggregated. This can be a result of\n\t * decoding to a single {@code DataBuffer},\n\t * {@link java.nio.ByteBuffer ByteBuffer}, {@code byte[]},\n\t * {@link org.springframework.core.io.Resource Resource}, {@code String}, etc.\n\t * It can also occur when splitting the input stream, for example, delimited text,\n\t * in which case the limit applies to data buffered between delimiters.\n\t * <p>By default this is set to 256K.\n\t * @param byteCount the max number of bytes to buffer, or -1 for unlimited\n\t * @since 5.1.11\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDataBufferDecoder#getMaxInMemorySize()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@link #setMaxInMemorySize configured} byte count limit.\r\n * @since 5.1.11\r\n */\r\npublic int getMaxInMemorySize() {\r\n    return this.maxInMemorySize;\r\n}",
+    "comment": "\n\t * Return the {@link #setMaxInMemorySize configured} byte count limit.\n\t * @since 5.1.11\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDataBufferDecoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<T> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(input).map(buffer -> decodeDataBuffer(buffer, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDataBufferDecoder#decodeToMono(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Mono<T> decodeToMono(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return DataBufferUtils.join(input, this.maxInMemorySize).map(buffer -> decodeDataBuffer(buffer, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDataBufferDecoder#decodeDataBuffer(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * How to decode a {@code DataBuffer} to the target element type.\r\n * @deprecated as of 5.2, please implement\r\n * {@link #decode(DataBuffer, ResolvableType, MimeType, Map)} instead\r\n */\r\n@Deprecated\r\n@Nullable\r\nprotected T decodeDataBuffer(DataBuffer buffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return decode(buffer, elementType, mimeType, hints);\r\n}",
+    "comment": "\n\t * How to decode a {@code DataBuffer} to the target element type.\n\t * @deprecated as of 5.2, please implement\n\t * {@link #decode(DataBuffer, ResolvableType, MimeType, Map)} instead\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDecoder",
+    "entityType": "class",
+    "code": "private final List<MimeType> decodableMimeTypes;\nprotected Log logger = LogFactory.getLog(getClass());\nprotected AbstractDecoder(MimeType... supportedMimeTypes) {\r\n    this.decodableMimeTypes = Arrays.asList(supportedMimeTypes);\r\n}\n/**\r\n * Set an alternative logger to use than the one based on the class name.\r\n * @param logger the logger to use\r\n * @since 5.1\r\n */\r\npublic void setLogger(Log logger) {\r\n    this.logger = logger;\r\n}\n/**\r\n * Return the currently configured Logger.\r\n * @since 5.1\r\n */\r\npublic Log getLogger() {\r\n    return logger;\r\n}\n@Override\r\npublic List<MimeType> getDecodableMimeTypes() {\r\n    return this.decodableMimeTypes;\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    if (mimeType == null) {\r\n        return true;\r\n    }\r\n    for (MimeType candidate : this.decodableMimeTypes) {\r\n        if (candidate.isCompatibleWith(mimeType)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}\n@Override\r\npublic Mono<T> decodeToMono(Publisher<DataBuffer> inputStream, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": "\n * Abstract base class for {@link Decoder} implementations.\n *\n * @author Sebastien Deleuze\n * @author Arjen Poutsma\n * @since 5.0\n * @param <T> the element type\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDecoder#setLogger(Log)",
+    "entityType": "method",
+    "code": "/**\r\n * Set an alternative logger to use than the one based on the class name.\r\n * @param logger the logger to use\r\n * @since 5.1\r\n */\r\npublic void setLogger(Log logger) {\r\n    this.logger = logger;\r\n}",
+    "comment": "\n\t * Set an alternative logger to use than the one based on the class name.\n\t * @param logger the logger to use\n\t * @since 5.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDecoder#getLogger()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the currently configured Logger.\r\n * @since 5.1\r\n */\r\npublic Log getLogger() {\r\n    return logger;\r\n}",
+    "comment": "\n\t * Return the currently configured Logger.\n\t * @since 5.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDecoder#getDecodableMimeTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic List<MimeType> getDecodableMimeTypes() {\r\n    return this.decodableMimeTypes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDecoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    if (mimeType == null) {\r\n        return true;\r\n    }\r\n    for (MimeType candidate : this.decodableMimeTypes) {\r\n        if (candidate.isCompatibleWith(mimeType)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractDecoder#decodeToMono(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Mono<T> decodeToMono(Publisher<DataBuffer> inputStream, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractEncoder",
+    "entityType": "class",
+    "code": "private final List<MimeType> encodableMimeTypes;\nprotected Log logger = LogFactory.getLog(getClass());\nprotected AbstractEncoder(MimeType... supportedMimeTypes) {\r\n    this.encodableMimeTypes = Arrays.asList(supportedMimeTypes);\r\n}\n/**\r\n * Set an alternative logger to use than the one based on the class name.\r\n * @param logger the logger to use\r\n * @since 5.1\r\n */\r\npublic void setLogger(Log logger) {\r\n    this.logger = logger;\r\n}\n/**\r\n * Return the currently configured Logger.\r\n * @since 5.1\r\n */\r\npublic Log getLogger() {\r\n    return logger;\r\n}\n@Override\r\npublic List<MimeType> getEncodableMimeTypes() {\r\n    return this.encodableMimeTypes;\r\n}\n@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    if (mimeType == null) {\r\n        return true;\r\n    }\r\n    for (MimeType candidate : this.encodableMimeTypes) {\r\n        if (candidate.isCompatibleWith(mimeType)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "comment": "\n * Abstract base class for {@link Encoder} implementations.\n *\n * @author Sebastien Deleuze\n * @author Arjen Poutsma\n * @since 5.0\n * @param <T> the element type\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractEncoder#setLogger(Log)",
+    "entityType": "method",
+    "code": "/**\r\n * Set an alternative logger to use than the one based on the class name.\r\n * @param logger the logger to use\r\n * @since 5.1\r\n */\r\npublic void setLogger(Log logger) {\r\n    this.logger = logger;\r\n}",
+    "comment": "\n\t * Set an alternative logger to use than the one based on the class name.\n\t * @param logger the logger to use\n\t * @since 5.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractEncoder#getLogger()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the currently configured Logger.\r\n * @since 5.1\r\n */\r\npublic Log getLogger() {\r\n    return logger;\r\n}",
+    "comment": "\n\t * Return the currently configured Logger.\n\t * @since 5.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractEncoder#getEncodableMimeTypes()",
+    "entityType": "method",
+    "code": "@Override\r\npublic List<MimeType> getEncodableMimeTypes() {\r\n    return this.encodableMimeTypes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractEncoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    if (mimeType == null) {\r\n        return true;\r\n    }\r\n    for (MimeType candidate : this.encodableMimeTypes) {\r\n        if (candidate.isCompatibleWith(mimeType)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractSingleValueEncoder",
+    "entityType": "class",
+    "code": "public AbstractSingleValueEncoder(MimeType... supportedMimeTypes) {\r\n    super(supportedMimeTypes);\r\n}\n@Override\r\npublic final Flux<DataBuffer> encode(Publisher<? extends T> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).take(1).concatMap(value -> encode(value, bufferFactory, elementType, mimeType, hints)).doOnDiscard(DataBuffer.class, DataBufferUtils::release);\r\n}\n/**\r\n * Encode {@code T} to an output {@link DataBuffer} stream.\r\n * @param t the value to process\r\n * @param dataBufferFactory a buffer factory used to create the output\r\n * @param type the stream element type to process\r\n * @param mimeType the mime type to process\r\n * @param hints additional information about how to do decode, optional\r\n * @return the output stream\r\n */\r\nprotected abstract Flux<DataBuffer> encode(T t, DataBufferFactory dataBufferFactory, ResolvableType type, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);",
+    "comment": "\n * Abstract base class for {@link org.springframework.core.codec.Encoder}\n * classes that can only deal with a single value.\n *\n * @author Arjen Poutsma\n * @since 5.0\n * @param <T> the element type\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractSingleValueEncoder#encode(Publisher<? extends T>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic final Flux<DataBuffer> encode(Publisher<? extends T> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).take(1).concatMap(value -> encode(value, bufferFactory, elementType, mimeType, hints)).doOnDiscard(DataBuffer.class, DataBufferUtils::release);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.AbstractSingleValueEncoder#encode(T,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Encode {@code T} to an output {@link DataBuffer} stream.\r\n * @param t the value to process\r\n * @param dataBufferFactory a buffer factory used to create the output\r\n * @param type the stream element type to process\r\n * @param mimeType the mime type to process\r\n * @param hints additional information about how to do decode, optional\r\n * @return the output stream\r\n */\r\nprotected abstract Flux<DataBuffer> encode(T t, DataBufferFactory dataBufferFactory, ResolvableType type, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);",
+    "comment": "\n\t * Encode {@code T} to an output {@link DataBuffer} stream.\n\t * @param t the value to process\n\t * @param dataBufferFactory a buffer factory used to create the output\n\t * @param type the stream element type to process\n\t * @param mimeType the mime type to process\n\t * @param hints additional information about how to do decode, optional\n\t * @return the output stream\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayDecoder",
+    "entityType": "class",
+    "code": "public ByteArrayDecoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (elementType.resolve() == byte[].class && super.canDecode(elementType, mimeType));\r\n}\n@Override\r\npublic byte[] decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    byte[] result = new byte[dataBuffer.readableByteCount()];\r\n    dataBuffer.read(result);\r\n    DataBufferUtils.release(dataBuffer);\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + result.length + \" bytes\");\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n * Decoder for {@code byte} arrays.\n *\n * @author Arjen Poutsma\n * @author Rossen Stoyanchev\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayDecoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (elementType.resolve() == byte[].class && super.canDecode(elementType, mimeType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte[] decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    byte[] result = new byte[dataBuffer.readableByteCount()];\r\n    dataBuffer.read(result);\r\n    DataBufferUtils.release(dataBuffer);\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + result.length + \" bytes\");\r\n    }\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayEncoder",
+    "entityType": "class",
+    "code": "public ByteArrayEncoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && byte[].class.isAssignableFrom(clazz);\r\n}\n@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends byte[]> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    // Use (byte[] bytes) for Eclipse\r\n    return Flux.from(inputStream).map((byte[] bytes) -> encodeValue(bytes, bufferFactory, elementType, mimeType, hints));\r\n}\n@Override\r\npublic DataBuffer encodeValue(byte[] bytes, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    DataBuffer dataBuffer = bufferFactory.wrap(bytes);\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    return dataBuffer;\r\n}",
+    "comment": "\n * Encoder for {@code byte} arrays.\n *\n * @author Arjen Poutsma\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayEncoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && byte[].class.isAssignableFrom(clazz);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayEncoder#encode(Publisher<? extends byte[]>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends byte[]> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    // Use (byte[] bytes) for Eclipse\r\n    return Flux.from(inputStream).map((byte[] bytes) -> encodeValue(bytes, bufferFactory, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteArrayEncoder#encodeValue(byte[],DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer encodeValue(byte[] bytes, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    DataBuffer dataBuffer = bufferFactory.wrap(bytes);\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    return dataBuffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferDecoder",
+    "entityType": "class",
+    "code": "public ByteBufferDecoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (ByteBuffer.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}\n@Override\r\npublic ByteBuffer decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    int len = dataBuffer.readableByteCount();\r\n    ByteBuffer result = ByteBuffer.allocate(len);\r\n    dataBuffer.toByteBuffer(result);\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + len + \" bytes\");\r\n    }\r\n    DataBufferUtils.release(dataBuffer);\r\n    return result;\r\n}",
+    "comment": "\n * Decoder for {@link ByteBuffer ByteBuffers}.\n *\n * @author Sebastien Deleuze\n * @author Arjen Poutsma\n * @author Rossen Stoyanchev\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferDecoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (ByteBuffer.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBuffer decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    int len = dataBuffer.readableByteCount();\r\n    ByteBuffer result = ByteBuffer.allocate(len);\r\n    dataBuffer.toByteBuffer(result);\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + len + \" bytes\");\r\n    }\r\n    DataBufferUtils.release(dataBuffer);\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferEncoder",
+    "entityType": "class",
+    "code": "public ByteBufferEncoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && ByteBuffer.class.isAssignableFrom(clazz);\r\n}\n@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends ByteBuffer> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).map(byteBuffer -> encodeValue(byteBuffer, bufferFactory, elementType, mimeType, hints));\r\n}\n@Override\r\npublic DataBuffer encodeValue(ByteBuffer byteBuffer, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    DataBuffer dataBuffer = bufferFactory.wrap(byteBuffer);\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    return dataBuffer;\r\n}",
+    "comment": "\n * Encoder for {@link ByteBuffer ByteBuffers}.\n *\n * @author Sebastien Deleuze\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferEncoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && ByteBuffer.class.isAssignableFrom(clazz);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferEncoder#encode(Publisher<? extends ByteBuffer>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends ByteBuffer> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).map(byteBuffer -> encodeValue(byteBuffer, bufferFactory, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ByteBufferEncoder#encodeValue(ByteBuffer,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer encodeValue(ByteBuffer byteBuffer, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    DataBuffer dataBuffer = bufferFactory.wrap(byteBuffer);\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    return dataBuffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder",
+    "entityType": "class",
+    "code": "public CharBufferDecoder(List<String> delimiters, boolean stripDelimiter, MimeType... mimeTypes) {\r\n    super(delimiters, stripDelimiter, mimeTypes);\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (elementType.resolve() == CharBuffer.class) && super.canDecode(elementType, mimeType);\r\n}\n@Override\r\nprotected CharBuffer decodeInternal(DataBuffer dataBuffer, Charset charset) {\r\n    ByteBuffer byteBuffer = ByteBuffer.allocate(dataBuffer.readableByteCount());\r\n    dataBuffer.toByteBuffer(byteBuffer);\r\n    return charset.decode(byteBuffer);\r\n}\n/**\r\n * Create a {@code CharBufferDecoder} for {@code \"text/plain\"}.\r\n */\r\npublic static CharBufferDecoder textPlainOnly() {\r\n    return textPlainOnly(DEFAULT_DELIMITERS, true);\r\n}\n/**\r\n * Create a {@code CharBufferDecoder} for {@code \"text/plain\"}.\r\n * @param delimiters delimiter strings to use to split the input stream\r\n * @param stripDelimiter whether to remove delimiters from the resulting input strings\r\n */\r\npublic static CharBufferDecoder textPlainOnly(List<String> delimiters, boolean stripDelimiter) {\r\n    var textPlain = new MimeType(\"text\", \"plain\", DEFAULT_CHARSET);\r\n    return new CharBufferDecoder(delimiters, stripDelimiter, textPlain);\r\n}\n/**\r\n * Create a {@code CharBufferDecoder} that supports all MIME types.\r\n */\r\npublic static CharBufferDecoder allMimeTypes() {\r\n    return allMimeTypes(DEFAULT_DELIMITERS, true);\r\n}\n/**\r\n * Create a {@code CharBufferDecoder} that supports all MIME types.\r\n * @param delimiters delimiter strings to use to split the input stream\r\n * @param stripDelimiter whether to remove delimiters from the resulting input strings\r\n */\r\npublic static CharBufferDecoder allMimeTypes(List<String> delimiters, boolean stripDelimiter) {\r\n    var textPlain = new MimeType(\"text\", \"plain\", DEFAULT_CHARSET);\r\n    return new CharBufferDecoder(delimiters, stripDelimiter, textPlain, MimeTypeUtils.ALL);\r\n}",
+    "comment": "\n * Decode from a data buffer stream to a {@code CharBuffer} stream, either splitting\n * or aggregating incoming data chunks to realign along newlines delimiters\n * and produce a stream of char buffers. This is useful for streaming but is also\n * necessary to ensure that multi-byte characters can be decoded correctly,\n * avoiding split-character issues. The default delimiters used by default are\n * {@code \\n} and {@code \\r\\n} but that can be customized.\n *\n * @author Markus Heiden\n * @author Arjen Poutsma\n * @since 6.1\n * @see CharSequenceEncoder\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (elementType.resolve() == CharBuffer.class) && super.canDecode(elementType, mimeType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder#decodeInternal(DataBuffer,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected CharBuffer decodeInternal(DataBuffer dataBuffer, Charset charset) {\r\n    ByteBuffer byteBuffer = ByteBuffer.allocate(dataBuffer.readableByteCount());\r\n    dataBuffer.toByteBuffer(byteBuffer);\r\n    return charset.decode(byteBuffer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder#textPlainOnly()",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@code CharBufferDecoder} for {@code \"text/plain\"}.\r\n */\r\npublic static CharBufferDecoder textPlainOnly() {\r\n    return textPlainOnly(DEFAULT_DELIMITERS, true);\r\n}",
+    "comment": "\n\t * Create a {@code CharBufferDecoder} for {@code \"text/plain\"}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder#textPlainOnly(List<String>,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@code CharBufferDecoder} for {@code \"text/plain\"}.\r\n * @param delimiters delimiter strings to use to split the input stream\r\n * @param stripDelimiter whether to remove delimiters from the resulting input strings\r\n */\r\npublic static CharBufferDecoder textPlainOnly(List<String> delimiters, boolean stripDelimiter) {\r\n    var textPlain = new MimeType(\"text\", \"plain\", DEFAULT_CHARSET);\r\n    return new CharBufferDecoder(delimiters, stripDelimiter, textPlain);\r\n}",
+    "comment": "\n\t * Create a {@code CharBufferDecoder} for {@code \"text/plain\"}.\n\t * @param delimiters delimiter strings to use to split the input stream\n\t * @param stripDelimiter whether to remove delimiters from the resulting input strings\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder#allMimeTypes()",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@code CharBufferDecoder} that supports all MIME types.\r\n */\r\npublic static CharBufferDecoder allMimeTypes() {\r\n    return allMimeTypes(DEFAULT_DELIMITERS, true);\r\n}",
+    "comment": "\n\t * Create a {@code CharBufferDecoder} that supports all MIME types.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharBufferDecoder#allMimeTypes(List<String>,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@code CharBufferDecoder} that supports all MIME types.\r\n * @param delimiters delimiter strings to use to split the input stream\r\n * @param stripDelimiter whether to remove delimiters from the resulting input strings\r\n */\r\npublic static CharBufferDecoder allMimeTypes(List<String> delimiters, boolean stripDelimiter) {\r\n    var textPlain = new MimeType(\"text\", \"plain\", DEFAULT_CHARSET);\r\n    return new CharBufferDecoder(delimiters, stripDelimiter, textPlain, MimeTypeUtils.ALL);\r\n}",
+    "comment": "\n\t * Create a {@code CharBufferDecoder} that supports all MIME types.\n\t * @param delimiters delimiter strings to use to split the input stream\n\t * @param stripDelimiter whether to remove delimiters from the resulting input strings\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder",
+    "entityType": "class",
+    "code": "/**\r\n * The default charset used by the encoder.\r\n */\r\npublic static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;\nprivate final ConcurrentMap<Charset, Float> charsetToMaxBytesPerChar = new ConcurrentHashMap<>(3);\nprivate CharSequenceEncoder(MimeType... mimeTypes) {\r\n    super(mimeTypes);\r\n}\n@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && CharSequence.class.isAssignableFrom(clazz);\r\n}\n@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends CharSequence> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).map(charSequence -> encodeValue(charSequence, bufferFactory, elementType, mimeType, hints));\r\n}\n@Override\r\npublic DataBuffer encodeValue(CharSequence charSequence, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (!Hints.isLoggingSuppressed(hints)) {\r\n        LogFormatUtils.traceDebug(logger, traceOn -> {\r\n            String formatted = LogFormatUtils.formatValue(charSequence, !traceOn);\r\n            return Hints.getLogPrefix(hints) + \"Writing \" + formatted;\r\n        });\r\n    }\r\n    boolean release = true;\r\n    Charset charset = getCharset(mimeType);\r\n    int capacity = calculateCapacity(charSequence, charset);\r\n    DataBuffer dataBuffer = bufferFactory.allocateBuffer(capacity);\r\n    try {\r\n        dataBuffer.write(charSequence, charset);\r\n        release = false;\r\n    } catch (CoderMalfunctionError ex) {\r\n        throw new EncodingException(\"String encoding error: \" + ex.getMessage(), ex);\r\n    } finally {\r\n        if (release) {\r\n            DataBufferUtils.release(dataBuffer);\r\n        }\r\n    }\r\n    return dataBuffer;\r\n}\nint calculateCapacity(CharSequence sequence, Charset charset) {\r\n    float maxBytesPerChar = this.charsetToMaxBytesPerChar.computeIfAbsent(charset, cs -> cs.newEncoder().maxBytesPerChar());\r\n    float maxBytesForSequence = sequence.length() * maxBytesPerChar;\r\n    return (int) Math.ceil(maxBytesForSequence);\r\n}\nprivate Charset getCharset(@Nullable MimeType mimeType) {\r\n    if (mimeType != null && mimeType.getCharset() != null) {\r\n        return mimeType.getCharset();\r\n    } else {\r\n        return DEFAULT_CHARSET;\r\n    }\r\n}\n/**\r\n * Create a {@code CharSequenceEncoder} that supports only \"text/plain\".\r\n */\r\npublic static CharSequenceEncoder textPlainOnly() {\r\n    return new CharSequenceEncoder(new MimeType(\"text\", \"plain\", DEFAULT_CHARSET));\r\n}\n/**\r\n * Create a {@code CharSequenceEncoder} that supports all MIME types.\r\n */\r\npublic static CharSequenceEncoder allMimeTypes() {\r\n    return new CharSequenceEncoder(new MimeType(\"text\", \"plain\", DEFAULT_CHARSET), MimeTypeUtils.ALL);\r\n}",
+    "comment": "\n * Encode from a {@code CharSequence} stream to a bytes stream.\n *\n * @author Sebastien Deleuze\n * @author Arjen Poutsma\n * @author Rossen Stoyanchev\n * @since 5.0\n * @see StringDecoder\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && CharSequence.class.isAssignableFrom(clazz);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#encode(Publisher<? extends CharSequence>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends CharSequence> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).map(charSequence -> encodeValue(charSequence, bufferFactory, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#encodeValue(CharSequence,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer encodeValue(CharSequence charSequence, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (!Hints.isLoggingSuppressed(hints)) {\r\n        LogFormatUtils.traceDebug(logger, traceOn -> {\r\n            String formatted = LogFormatUtils.formatValue(charSequence, !traceOn);\r\n            return Hints.getLogPrefix(hints) + \"Writing \" + formatted;\r\n        });\r\n    }\r\n    boolean release = true;\r\n    Charset charset = getCharset(mimeType);\r\n    int capacity = calculateCapacity(charSequence, charset);\r\n    DataBuffer dataBuffer = bufferFactory.allocateBuffer(capacity);\r\n    try {\r\n        dataBuffer.write(charSequence, charset);\r\n        release = false;\r\n    } catch (CoderMalfunctionError ex) {\r\n        throw new EncodingException(\"String encoding error: \" + ex.getMessage(), ex);\r\n    } finally {\r\n        if (release) {\r\n            DataBufferUtils.release(dataBuffer);\r\n        }\r\n    }\r\n    return dataBuffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#calculateCapacity(CharSequence,Charset)",
+    "entityType": "method",
+    "code": "int calculateCapacity(CharSequence sequence, Charset charset) {\r\n    float maxBytesPerChar = this.charsetToMaxBytesPerChar.computeIfAbsent(charset, cs -> cs.newEncoder().maxBytesPerChar());\r\n    float maxBytesForSequence = sequence.length() * maxBytesPerChar;\r\n    return (int) Math.ceil(maxBytesForSequence);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#getCharset(MimeType)",
+    "entityType": "method",
+    "code": "private Charset getCharset(@Nullable MimeType mimeType) {\r\n    if (mimeType != null && mimeType.getCharset() != null) {\r\n        return mimeType.getCharset();\r\n    } else {\r\n        return DEFAULT_CHARSET;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#textPlainOnly()",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@code CharSequenceEncoder} that supports only \"text/plain\".\r\n */\r\npublic static CharSequenceEncoder textPlainOnly() {\r\n    return new CharSequenceEncoder(new MimeType(\"text\", \"plain\", DEFAULT_CHARSET));\r\n}",
+    "comment": "\n\t * Create a {@code CharSequenceEncoder} that supports only \"text/plain\".\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CharSequenceEncoder#allMimeTypes()",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@code CharSequenceEncoder} that supports all MIME types.\r\n */\r\npublic static CharSequenceEncoder allMimeTypes() {\r\n    return new CharSequenceEncoder(new MimeType(\"text\", \"plain\", DEFAULT_CHARSET), MimeTypeUtils.ALL);\r\n}",
+    "comment": "\n\t * Create a {@code CharSequenceEncoder} that supports all MIME types.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.CodecException",
+    "entityType": "class",
+    "code": "/**\r\n * Create a new CodecException.\r\n * @param msg the detail message\r\n */\r\npublic CodecException(@Nullable String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Create a new CodecException.\r\n * @param msg the detail message\r\n * @param cause root cause for the exception, if any\r\n */\r\npublic CodecException(@Nullable String msg, @Nullable Throwable cause) {\r\n    super(msg, cause);\r\n}",
+    "comment": "\n * General error that indicates a problem while encoding and decoding to and\n * from an Object stream.\n *\n * @author Sebastien Deleuze\n * @author Rossen Stoyanchev\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferDecoder",
+    "entityType": "class",
+    "code": "public DataBufferDecoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (DataBuffer.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}\n@Override\r\npublic Flux<DataBuffer> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(input);\r\n}\n@Override\r\npublic DataBuffer decode(DataBuffer buffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + buffer.readableByteCount() + \" bytes\");\r\n    }\r\n    return buffer;\r\n}",
+    "comment": "\n * Simple pass-through decoder for {@link DataBuffer DataBuffers}.\n *\n * <p><strong>Note:</strong> The data buffers should be released via\n * {@link org.springframework.core.io.buffer.DataBufferUtils#release(DataBuffer)}\n * after they have been consumed. In addition, if using {@code Flux} or\n * {@code Mono} operators such as flatMap, reduce, and others that prefetch,\n * cache, and skip or filter out data items internally, please add\n * {@code doOnDiscard(DataBuffer.class, DataBufferUtils::release)} to the\n * composition chain to ensure cached data buffers are released prior to an\n * error or cancellation signal.\n *\n * @author Arjen Poutsma\n * @author Rossen Stoyanchev\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferDecoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (DataBuffer.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferDecoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<DataBuffer> decode(Publisher<DataBuffer> input, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(input);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer decode(DataBuffer buffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + buffer.readableByteCount() + \" bytes\");\r\n    }\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferEncoder",
+    "entityType": "class",
+    "code": "public DataBufferEncoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && DataBuffer.class.isAssignableFrom(clazz);\r\n}\n@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends DataBuffer> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Flux<DataBuffer> flux = Flux.from(inputStream);\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        flux = flux.doOnNext(buffer -> logValue(buffer, hints));\r\n    }\r\n    return flux;\r\n}\n@Override\r\npublic DataBuffer encodeValue(DataBuffer buffer, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        logValue(buffer, hints);\r\n    }\r\n    return buffer;\r\n}\nprivate void logValue(DataBuffer buffer, @Nullable Map<String, Object> hints) {\r\n    String logPrefix = Hints.getLogPrefix(hints);\r\n    logger.debug(logPrefix + \"Writing \" + buffer.readableByteCount() + \" bytes\");\r\n}",
+    "comment": "\n * Simple pass-through encoder for {@link DataBuffer DataBuffers}.\n *\n * @author Arjen Poutsma\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferEncoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = elementType.toClass();\r\n    return super.canEncode(elementType, mimeType) && DataBuffer.class.isAssignableFrom(clazz);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferEncoder#encode(Publisher<? extends DataBuffer>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends DataBuffer> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Flux<DataBuffer> flux = Flux.from(inputStream);\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        flux = flux.doOnNext(buffer -> logValue(buffer, hints));\r\n    }\r\n    return flux;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferEncoder#encodeValue(DataBuffer,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer encodeValue(DataBuffer buffer, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        logValue(buffer, hints);\r\n    }\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.DataBufferEncoder#logValue(DataBuffer,Map<String,Object>)",
+    "entityType": "method",
+    "code": "private void logValue(DataBuffer buffer, @Nullable Map<String, Object> hints) {\r\n    String logPrefix = Hints.getLogPrefix(hints);\r\n    logger.debug(logPrefix + \"Writing \" + buffer.readableByteCount() + \" bytes\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder",
+    "entityType": "class",
+    "code": "/**\r\n * Whether the decoder supports the given target element type and the MIME\r\n * type of the source stream.\r\n * @param elementType the target element type for the output stream\r\n * @param mimeType the mime type associated with the stream to decode\r\n * (can be {@code null} if not specified)\r\n * @return {@code true} if supported, {@code false} otherwise\r\n */\r\nboolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType);\n/**\r\n * Decode a {@link DataBuffer} input stream into a Flux of {@code T}.\r\n * @param inputStream the {@code DataBuffer} input stream to decode\r\n * @param elementType the expected type of elements in the output stream;\r\n * this type must have been previously passed to the {@link #canDecode}\r\n * method and it must have returned {@code true}.\r\n * @param mimeType the MIME type associated with the input stream (optional)\r\n * @param hints additional information about how to do decode\r\n * @return the output stream with decoded elements\r\n */\r\nFlux<T> decode(Publisher<DataBuffer> inputStream, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);\n/**\r\n * Decode a {@link DataBuffer} input stream into a Mono of {@code T}.\r\n * @param inputStream the {@code DataBuffer} input stream to decode\r\n * @param elementType the expected type of elements in the output stream;\r\n * this type must have been previously passed to the {@link #canDecode}\r\n * method and it must have returned {@code true}.\r\n * @param mimeType the MIME type associated with the input stream (optional)\r\n * @param hints additional information about how to do decode\r\n * @return the output stream with the decoded element\r\n */\r\nMono<T> decodeToMono(Publisher<DataBuffer> inputStream, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);\n/**\r\n * Decode a data buffer to an Object of type T. This is useful for scenarios,\r\n * that distinct messages (or events) are decoded and handled individually,\r\n * in fully aggregated form.\r\n * @param buffer the {@code DataBuffer} to decode\r\n * @param targetType the expected output type\r\n * @param mimeType the MIME type associated with the data\r\n * @param hints additional information about how to do decode\r\n * @return the decoded value, possibly {@code null}\r\n * @since 5.2\r\n */\r\n@Nullable\r\ndefault T decode(DataBuffer buffer, ResolvableType targetType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) throws DecodingException {\r\n    CompletableFuture<T> future = decodeToMono(Mono.just(buffer), targetType, mimeType, hints).toFuture();\r\n    Assert.state(future.isDone(), \"DataBuffer decoding should have completed\");\r\n    try {\r\n        return future.get();\r\n    } catch (ExecutionException ex) {\r\n        Throwable cause = ex.getCause();\r\n        throw (cause instanceof CodecException codecException ? codecException : new DecodingException(\"Failed to decode: \" + (cause != null ? cause.getMessage() : ex), cause));\r\n    } catch (InterruptedException ex) {\r\n        throw new DecodingException(\"Interrupted during decode\", ex);\r\n    }\r\n}\n/**\r\n * Return the list of MIME types supported by this Decoder. The list may not\r\n * apply to every possible target element type and calls to this method\r\n * should typically be guarded via {@link #canDecode(ResolvableType, MimeType)\r\n * canDecode(elementType, null)}. The list may also exclude MIME types\r\n * supported only for a specific element type. Alternatively, use\r\n * {@link #getDecodableMimeTypes(ResolvableType)} for a more precise list.\r\n * @return the list of supported MIME types\r\n */\r\nList<MimeType> getDecodableMimeTypes();\n/**\r\n * Return the list of MIME types supported by this Decoder for the given type\r\n * of element. This list may differ from {@link #getDecodableMimeTypes()}\r\n * if the Decoder doesn't support the given element type or if it supports\r\n * it only for a subset of MIME types.\r\n * @param targetType the type of element to check for decoding\r\n * @return the list of MIME types supported for the given target type\r\n * @since 5.3.4\r\n */\r\ndefault List<MimeType> getDecodableMimeTypes(ResolvableType targetType) {\r\n    return (canDecode(targetType, null) ? getDecodableMimeTypes() : Collections.emptyList());\r\n}",
+    "comment": "\n * Strategy for decoding a {@link DataBuffer} input stream into an output stream\n * of elements of type {@code <T>}.\n *\n * @author Sebastien Deleuze\n * @author Rossen Stoyanchev\n * @since 5.0\n * @param <T> the type of elements in the output stream\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "/**\r\n * Whether the decoder supports the given target element type and the MIME\r\n * type of the source stream.\r\n * @param elementType the target element type for the output stream\r\n * @param mimeType the mime type associated with the stream to decode\r\n * (can be {@code null} if not specified)\r\n * @return {@code true} if supported, {@code false} otherwise\r\n */\r\nboolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType);",
+    "comment": "\n\t * Whether the decoder supports the given target element type and the MIME\n\t * type of the source stream.\n\t * @param elementType the target element type for the output stream\n\t * @param mimeType the mime type associated with the stream to decode\n\t * (can be {@code null} if not specified)\n\t * @return {@code true} if supported, {@code false} otherwise\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder#decode(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Decode a {@link DataBuffer} input stream into a Flux of {@code T}.\r\n * @param inputStream the {@code DataBuffer} input stream to decode\r\n * @param elementType the expected type of elements in the output stream;\r\n * this type must have been previously passed to the {@link #canDecode}\r\n * method and it must have returned {@code true}.\r\n * @param mimeType the MIME type associated with the input stream (optional)\r\n * @param hints additional information about how to do decode\r\n * @return the output stream with decoded elements\r\n */\r\nFlux<T> decode(Publisher<DataBuffer> inputStream, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);",
+    "comment": "\n\t * Decode a {@link DataBuffer} input stream into a Flux of {@code T}.\n\t * @param inputStream the {@code DataBuffer} input stream to decode\n\t * @param elementType the expected type of elements in the output stream;\n\t * this type must have been previously passed to the {@link #canDecode}\n\t * method and it must have returned {@code true}.\n\t * @param mimeType the MIME type associated with the input stream (optional)\n\t * @param hints additional information about how to do decode\n\t * @return the output stream with decoded elements\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder#decodeToMono(Publisher<DataBuffer>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Decode a {@link DataBuffer} input stream into a Mono of {@code T}.\r\n * @param inputStream the {@code DataBuffer} input stream to decode\r\n * @param elementType the expected type of elements in the output stream;\r\n * this type must have been previously passed to the {@link #canDecode}\r\n * method and it must have returned {@code true}.\r\n * @param mimeType the MIME type associated with the input stream (optional)\r\n * @param hints additional information about how to do decode\r\n * @return the output stream with the decoded element\r\n */\r\nMono<T> decodeToMono(Publisher<DataBuffer> inputStream, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);",
+    "comment": "\n\t * Decode a {@link DataBuffer} input stream into a Mono of {@code T}.\n\t * @param inputStream the {@code DataBuffer} input stream to decode\n\t * @param elementType the expected type of elements in the output stream;\n\t * this type must have been previously passed to the {@link #canDecode}\n\t * method and it must have returned {@code true}.\n\t * @param mimeType the MIME type associated with the input stream (optional)\n\t * @param hints additional information about how to do decode\n\t * @return the output stream with the decoded element\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Decode a data buffer to an Object of type T. This is useful for scenarios,\r\n * that distinct messages (or events) are decoded and handled individually,\r\n * in fully aggregated form.\r\n * @param buffer the {@code DataBuffer} to decode\r\n * @param targetType the expected output type\r\n * @param mimeType the MIME type associated with the data\r\n * @param hints additional information about how to do decode\r\n * @return the decoded value, possibly {@code null}\r\n * @since 5.2\r\n */\r\n@Nullable\r\ndefault T decode(DataBuffer buffer, ResolvableType targetType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) throws DecodingException {\r\n    CompletableFuture<T> future = decodeToMono(Mono.just(buffer), targetType, mimeType, hints).toFuture();\r\n    Assert.state(future.isDone(), \"DataBuffer decoding should have completed\");\r\n    try {\r\n        return future.get();\r\n    } catch (ExecutionException ex) {\r\n        Throwable cause = ex.getCause();\r\n        throw (cause instanceof CodecException codecException ? codecException : new DecodingException(\"Failed to decode: \" + (cause != null ? cause.getMessage() : ex), cause));\r\n    } catch (InterruptedException ex) {\r\n        throw new DecodingException(\"Interrupted during decode\", ex);\r\n    }\r\n}",
+    "comment": "\n\t * Decode a data buffer to an Object of type T. This is useful for scenarios,\n\t * that distinct messages (or events) are decoded and handled individually,\n\t * in fully aggregated form.\n\t * @param buffer the {@code DataBuffer} to decode\n\t * @param targetType the expected output type\n\t * @param mimeType the MIME type associated with the data\n\t * @param hints additional information about how to do decode\n\t * @return the decoded value, possibly {@code null}\n\t * @since 5.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder#getDecodableMimeTypes()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the list of MIME types supported by this Decoder. The list may not\r\n * apply to every possible target element type and calls to this method\r\n * should typically be guarded via {@link #canDecode(ResolvableType, MimeType)\r\n * canDecode(elementType, null)}. The list may also exclude MIME types\r\n * supported only for a specific element type. Alternatively, use\r\n * {@link #getDecodableMimeTypes(ResolvableType)} for a more precise list.\r\n * @return the list of supported MIME types\r\n */\r\nList<MimeType> getDecodableMimeTypes();",
+    "comment": "\n\t * Return the list of MIME types supported by this Decoder. The list may not\n\t * apply to every possible target element type and calls to this method\n\t * should typically be guarded via {@link #canDecode(ResolvableType, MimeType)\n\t * canDecode(elementType, null)}. The list may also exclude MIME types\n\t * supported only for a specific element type. Alternatively, use\n\t * {@link #getDecodableMimeTypes(ResolvableType)} for a more precise list.\n\t * @return the list of supported MIME types\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Decoder#getDecodableMimeTypes(ResolvableType)",
+    "entityType": "method",
+    "code": "/**\r\n * Return the list of MIME types supported by this Decoder for the given type\r\n * of element. This list may differ from {@link #getDecodableMimeTypes()}\r\n * if the Decoder doesn't support the given element type or if it supports\r\n * it only for a subset of MIME types.\r\n * @param targetType the type of element to check for decoding\r\n * @return the list of MIME types supported for the given target type\r\n * @since 5.3.4\r\n */\r\ndefault List<MimeType> getDecodableMimeTypes(ResolvableType targetType) {\r\n    return (canDecode(targetType, null) ? getDecodableMimeTypes() : Collections.emptyList());\r\n}",
+    "comment": "\n\t * Return the list of MIME types supported by this Decoder for the given type\n\t * of element. This list may differ from {@link #getDecodableMimeTypes()}\n\t * if the Decoder doesn't support the given element type or if it supports\n\t * it only for a subset of MIME types.\n\t * @param targetType the type of element to check for decoding\n\t * @return the list of MIME types supported for the given target type\n\t * @since 5.3.4\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.DecodingException",
+    "entityType": "class",
+    "code": "/**\r\n * Create a new DecodingException.\r\n * @param msg the detail message\r\n */\r\npublic DecodingException(@Nullable String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Create a new DecodingException.\r\n * @param msg the detail message\r\n * @param cause root cause for the exception, if any\r\n */\r\npublic DecodingException(@Nullable String msg, @Nullable Throwable cause) {\r\n    super(msg, cause);\r\n}",
+    "comment": "\n * Indicates an issue with decoding the input stream with a focus on content\n * related issues such as a parse failure. As opposed to more general I/O\n * errors, illegal state, or a {@link CodecException} such as a configuration\n * issue that a {@link Decoder} may choose to raise.\n *\n * <p>For example in server web application, a {@code DecodingException} would\n * translate to a response with a 400 (bad input) status while\n * {@code CodecException} would translate to 500 (server error) status.\n *\n * @author Rossen Stoyanchev\n * @since 5.0\n * @see Decoder\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Encoder",
+    "entityType": "class",
+    "code": "/**\r\n * Whether the encoder supports the given source element type and the MIME\r\n * type for the output stream.\r\n * @param elementType the type of elements in the source stream\r\n * @param mimeType the MIME type for the output stream\r\n * (can be {@code null} if not specified)\r\n * @return {@code true} if supported, {@code false} otherwise\r\n */\r\nboolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType);\n/**\r\n * Encode a stream of Objects of type {@code T} into a {@link DataBuffer}\r\n * output stream.\r\n * @param inputStream the input stream of Objects to encode. If the input should be\r\n * encoded as a single value rather than as a stream of elements, an instance of\r\n * {@link Mono} should be used.\r\n * @param bufferFactory for creating output stream {@code DataBuffer}'s\r\n * @param elementType the expected type of elements in the input stream;\r\n * this type must have been previously passed to the {@link #canEncode}\r\n * method and it must have returned {@code true}.\r\n * @param mimeType the MIME type for the output content (optional)\r\n * @param hints additional information about how to encode\r\n * @return the output stream\r\n */\r\nFlux<DataBuffer> encode(Publisher<? extends T> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);\n/**\r\n * Encode an Object of type T to a data buffer. This is useful for scenarios,\r\n * that distinct messages (or events) are encoded and handled individually,\r\n * in fully aggregated form.\r\n * <p>By default this method raises {@link UnsupportedOperationException}\r\n * and it is expected that some encoders cannot produce a single buffer or\r\n * cannot do so synchronously (for example, encoding a {@code Resource}).\r\n * @param value the value to be encoded\r\n * @param bufferFactory for creating the output {@code DataBuffer}\r\n * @param valueType the type for the value being encoded\r\n * @param mimeType the MIME type for the output content (optional)\r\n * @param hints additional information about how to encode\r\n * @return the encoded content\r\n * @since 5.2\r\n */\r\ndefault DataBuffer encodeValue(T value, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    // It may not be possible to produce a single DataBuffer synchronously\r\n    throw new UnsupportedOperationException();\r\n}\n/**\r\n * Return the list of MIME types supported by this Encoder. The list may not\r\n * apply to every possible target element type and calls to this method should\r\n * typically be guarded via {@link #canEncode(ResolvableType, MimeType)\r\n * canEncode(elementType, null)}. The list may also exclude MIME types\r\n * supported only for a specific element type. Alternatively, use\r\n * {@link #getEncodableMimeTypes(ResolvableType)} for a more precise list.\r\n * @return the list of supported MIME types\r\n */\r\nList<MimeType> getEncodableMimeTypes();\n/**\r\n * Return the list of MIME types supported by this Encoder for the given type\r\n * of element. This list may differ from the {@link #getEncodableMimeTypes()}\r\n * if the Encoder doesn't support the element type or if it supports it only\r\n * for a subset of MIME types.\r\n * @param elementType the type of element to check for encoding\r\n * @return the list of MIME types supported for the given element type\r\n * @since 5.3.4\r\n */\r\ndefault List<MimeType> getEncodableMimeTypes(ResolvableType elementType) {\r\n    return (canEncode(elementType, null) ? getEncodableMimeTypes() : Collections.emptyList());\r\n}",
+    "comment": "\n * Strategy to encode a stream of Objects of type {@code <T>} into an output\n * stream of bytes.\n *\n * @author Sebastien Deleuze\n * @author Rossen Stoyanchev\n * @since 5.0\n * @param <T> the type of elements in the input stream\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Encoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "/**\r\n * Whether the encoder supports the given source element type and the MIME\r\n * type for the output stream.\r\n * @param elementType the type of elements in the source stream\r\n * @param mimeType the MIME type for the output stream\r\n * (can be {@code null} if not specified)\r\n * @return {@code true} if supported, {@code false} otherwise\r\n */\r\nboolean canEncode(ResolvableType elementType, @Nullable MimeType mimeType);",
+    "comment": "\n\t * Whether the encoder supports the given source element type and the MIME\n\t * type for the output stream.\n\t * @param elementType the type of elements in the source stream\n\t * @param mimeType the MIME type for the output stream\n\t * (can be {@code null} if not specified)\n\t * @return {@code true} if supported, {@code false} otherwise\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Encoder#encode(Publisher<? extends T>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Encode a stream of Objects of type {@code T} into a {@link DataBuffer}\r\n * output stream.\r\n * @param inputStream the input stream of Objects to encode. If the input should be\r\n * encoded as a single value rather than as a stream of elements, an instance of\r\n * {@link Mono} should be used.\r\n * @param bufferFactory for creating output stream {@code DataBuffer}'s\r\n * @param elementType the expected type of elements in the input stream;\r\n * this type must have been previously passed to the {@link #canEncode}\r\n * method and it must have returned {@code true}.\r\n * @param mimeType the MIME type for the output content (optional)\r\n * @param hints additional information about how to encode\r\n * @return the output stream\r\n */\r\nFlux<DataBuffer> encode(Publisher<? extends T> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints);",
+    "comment": "\n\t * Encode a stream of Objects of type {@code T} into a {@link DataBuffer}\n\t * output stream.\n\t * @param inputStream the input stream of Objects to encode. If the input should be\n\t * encoded as a single value rather than as a stream of elements, an instance of\n\t * {@link Mono} should be used.\n\t * @param bufferFactory for creating output stream {@code DataBuffer}'s\n\t * @param elementType the expected type of elements in the input stream;\n\t * this type must have been previously passed to the {@link #canEncode}\n\t * method and it must have returned {@code true}.\n\t * @param mimeType the MIME type for the output content (optional)\n\t * @param hints additional information about how to encode\n\t * @return the output stream\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Encoder#encodeValue(T,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Encode an Object of type T to a data buffer. This is useful for scenarios,\r\n * that distinct messages (or events) are encoded and handled individually,\r\n * in fully aggregated form.\r\n * <p>By default this method raises {@link UnsupportedOperationException}\r\n * and it is expected that some encoders cannot produce a single buffer or\r\n * cannot do so synchronously (for example, encoding a {@code Resource}).\r\n * @param value the value to be encoded\r\n * @param bufferFactory for creating the output {@code DataBuffer}\r\n * @param valueType the type for the value being encoded\r\n * @param mimeType the MIME type for the output content (optional)\r\n * @param hints additional information about how to encode\r\n * @return the encoded content\r\n * @since 5.2\r\n */\r\ndefault DataBuffer encodeValue(T value, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    // It may not be possible to produce a single DataBuffer synchronously\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": "\n\t * Encode an Object of type T to a data buffer. This is useful for scenarios,\n\t * that distinct messages (or events) are encoded and handled individually,\n\t * in fully aggregated form.\n\t * <p>By default this method raises {@link UnsupportedOperationException}\n\t * and it is expected that some encoders cannot produce a single buffer or\n\t * cannot do so synchronously (for example, encoding a {@code Resource}).\n\t * @param value the value to be encoded\n\t * @param bufferFactory for creating the output {@code DataBuffer}\n\t * @param valueType the type for the value being encoded\n\t * @param mimeType the MIME type for the output content (optional)\n\t * @param hints additional information about how to encode\n\t * @return the encoded content\n\t * @since 5.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Encoder#getEncodableMimeTypes()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the list of MIME types supported by this Encoder. The list may not\r\n * apply to every possible target element type and calls to this method should\r\n * typically be guarded via {@link #canEncode(ResolvableType, MimeType)\r\n * canEncode(elementType, null)}. The list may also exclude MIME types\r\n * supported only for a specific element type. Alternatively, use\r\n * {@link #getEncodableMimeTypes(ResolvableType)} for a more precise list.\r\n * @return the list of supported MIME types\r\n */\r\nList<MimeType> getEncodableMimeTypes();",
+    "comment": "\n\t * Return the list of MIME types supported by this Encoder. The list may not\n\t * apply to every possible target element type and calls to this method should\n\t * typically be guarded via {@link #canEncode(ResolvableType, MimeType)\n\t * canEncode(elementType, null)}. The list may also exclude MIME types\n\t * supported only for a specific element type. Alternatively, use\n\t * {@link #getEncodableMimeTypes(ResolvableType)} for a more precise list.\n\t * @return the list of supported MIME types\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Encoder#getEncodableMimeTypes(ResolvableType)",
+    "entityType": "method",
+    "code": "/**\r\n * Return the list of MIME types supported by this Encoder for the given type\r\n * of element. This list may differ from the {@link #getEncodableMimeTypes()}\r\n * if the Encoder doesn't support the element type or if it supports it only\r\n * for a subset of MIME types.\r\n * @param elementType the type of element to check for encoding\r\n * @return the list of MIME types supported for the given element type\r\n * @since 5.3.4\r\n */\r\ndefault List<MimeType> getEncodableMimeTypes(ResolvableType elementType) {\r\n    return (canEncode(elementType, null) ? getEncodableMimeTypes() : Collections.emptyList());\r\n}",
+    "comment": "\n\t * Return the list of MIME types supported by this Encoder for the given type\n\t * of element. This list may differ from the {@link #getEncodableMimeTypes()}\n\t * if the Encoder doesn't support the element type or if it supports it only\n\t * for a subset of MIME types.\n\t * @param elementType the type of element to check for encoding\n\t * @return the list of MIME types supported for the given element type\n\t * @since 5.3.4\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.EncodingException",
+    "entityType": "class",
+    "code": "/**\r\n * Create a new EncodingException.\r\n * @param msg the detail message\r\n */\r\npublic EncodingException(String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Create a new EncodingException.\r\n * @param msg the detail message\r\n * @param cause root cause for the exception, if any\r\n */\r\npublic EncodingException(String msg, @Nullable Throwable cause) {\r\n    super(msg, cause);\r\n}",
+    "comment": "\n * Indicates an issue with encoding the input Object stream with a focus on\n * not being able to encode Objects. As opposed to a more general I/O errors\n * or a {@link CodecException} such as a configuration issue that an\n * {@link Encoder} may also choose to raise.\n *\n * @author Rossen Stoyanchev\n * @since 5.0\n * @see Encoder\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints",
+    "entityType": "class",
+    "code": "/**\r\n * Name of hint exposing a prefix to use for correlating log messages.\r\n */\r\npublic static final String LOG_PREFIX_HINT = Log.class.getName() + \".PREFIX\";\n/**\r\n * Name of boolean hint whether to avoid logging data either because it's\r\n * potentially sensitive, or because it has been logged by a composite\r\n * encoder, for example, for multipart requests.\r\n */\r\npublic static final String SUPPRESS_LOGGING_HINT = Log.class.getName() + \".SUPPRESS_LOGGING\";\n/**\r\n * Create a map wit a single hint via {@link Collections#singletonMap}.\r\n * @param hintName the hint name\r\n * @param value the hint value\r\n * @return the created map\r\n */\r\npublic static Map<String, Object> from(String hintName, Object value) {\r\n    return Collections.singletonMap(hintName, value);\r\n}\n/**\r\n * Return an empty map of hints via {@link Collections#emptyMap()}.\r\n * @return the empty map\r\n */\r\npublic static Map<String, Object> none() {\r\n    return Collections.emptyMap();\r\n}\n/**\r\n * Obtain the value for a required hint.\r\n * @param hints the hints map\r\n * @param hintName the required hint name\r\n * @param <T> the hint type to cast to\r\n * @return the hint value\r\n * @throws IllegalArgumentException if the hint is not found\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\npublic static <T> T getRequiredHint(@Nullable Map<String, Object> hints, String hintName) {\r\n    if (hints == null) {\r\n        throw new IllegalArgumentException(\"No hints map for required hint '\" + hintName + \"'\");\r\n    }\r\n    T hint = (T) hints.get(hintName);\r\n    if (hint == null) {\r\n        throw new IllegalArgumentException(\"Hints map must contain the hint '\" + hintName + \"'\");\r\n    }\r\n    return hint;\r\n}\n/**\r\n * Obtain the hint {@link #LOG_PREFIX_HINT}, if present, or an empty String.\r\n * @param hints the hints passed to the encode method\r\n * @return the log prefix\r\n */\r\npublic static String getLogPrefix(@Nullable Map<String, Object> hints) {\r\n    return (hints != null ? (String) hints.getOrDefault(LOG_PREFIX_HINT, \"\") : \"\");\r\n}\n/**\r\n * Whether to suppress logging based on the hint {@link #SUPPRESS_LOGGING_HINT}.\r\n * @param hints the hints map\r\n * @return whether logging of data is allowed\r\n */\r\npublic static boolean isLoggingSuppressed(@Nullable Map<String, Object> hints) {\r\n    return (hints != null && (boolean) hints.getOrDefault(SUPPRESS_LOGGING_HINT, false));\r\n}\n/**\r\n * Merge two maps of hints, creating and copying into a new map if both have\r\n * values, or returning the non-empty map, or an empty map if both are empty.\r\n * @param hints1 1st map of hints\r\n * @param hints2 2nd map of hints\r\n * @return a single map with hints from both\r\n */\r\npublic static Map<String, Object> merge(@Nullable Map<String, Object> hints1, @Nullable Map<String, Object> hints2) {\r\n    if (ObjectUtils.isEmpty(hints1) && ObjectUtils.isEmpty(hints2)) {\r\n        return Collections.emptyMap();\r\n    } else if (ObjectUtils.isEmpty(hints2)) {\r\n        return (hints1 != null ? hints1 : Collections.emptyMap());\r\n    } else if (ObjectUtils.isEmpty(hints1)) {\r\n        return hints2;\r\n    }\r\n    Map<String, Object> result = CollectionUtils.newHashMap(hints1.size() + hints2.size());\r\n    result.putAll(hints1);\r\n    result.putAll(hints2);\r\n    return result;\r\n}\n/**\r\n * Merge a single hint into a map of hints, possibly creating and copying\r\n * all hints into a new map, or otherwise if the map of hints is empty,\r\n * creating a new single entry map.\r\n * @param hints a map of hints to be merged\r\n * @param hintName the hint name to merge\r\n * @param hintValue the hint value to merge\r\n * @return a single map with all hints\r\n */\r\npublic static Map<String, Object> merge(@Nullable Map<String, Object> hints, String hintName, Object hintValue) {\r\n    if (ObjectUtils.isEmpty(hints)) {\r\n        return Collections.singletonMap(hintName, hintValue);\r\n    }\r\n    Map<String, Object> result = CollectionUtils.newHashMap(hints.size() + 1);\r\n    result.putAll(hints);\r\n    result.put(hintName, hintValue);\r\n    return result;\r\n}\n/**\r\n * If the hints contain a {@link #LOG_PREFIX_HINT} and the given logger has\r\n * DEBUG level enabled, apply the log prefix as a hint to the given buffer\r\n * via {@link DataBufferUtils#touch(DataBuffer, Object)}.\r\n * @param buffer the buffer to touch\r\n * @param hints the hints map to check for a log prefix\r\n * @param logger the logger whose level to check\r\n * @since 5.3.2\r\n */\r\npublic static void touchDataBuffer(DataBuffer buffer, @Nullable Map<String, Object> hints, Log logger) {\r\n    if (logger.isDebugEnabled() && hints != null) {\r\n        Object logPrefix = hints.get(LOG_PREFIX_HINT);\r\n        if (logPrefix != null) {\r\n            DataBufferUtils.touch(buffer, logPrefix);\r\n        }\r\n    }\r\n}",
+    "comment": "\n * Constants and convenience methods for working with hints.\n *\n * @author Rossen Stoyanchev\n * @since 5.1\n * @see ResourceRegionEncoder#BOUNDARY_STRING_HINT\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#from(String,Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a map wit a single hint via {@link Collections#singletonMap}.\r\n * @param hintName the hint name\r\n * @param value the hint value\r\n * @return the created map\r\n */\r\npublic static Map<String, Object> from(String hintName, Object value) {\r\n    return Collections.singletonMap(hintName, value);\r\n}",
+    "comment": "\n\t * Create a map wit a single hint via {@link Collections#singletonMap}.\n\t * @param hintName the hint name\n\t * @param value the hint value\n\t * @return the created map\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#none()",
+    "entityType": "method",
+    "code": "/**\r\n * Return an empty map of hints via {@link Collections#emptyMap()}.\r\n * @return the empty map\r\n */\r\npublic static Map<String, Object> none() {\r\n    return Collections.emptyMap();\r\n}",
+    "comment": "\n\t * Return an empty map of hints via {@link Collections#emptyMap()}.\n\t * @return the empty map\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#getRequiredHint(Map<String,Object>,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Obtain the value for a required hint.\r\n * @param hints the hints map\r\n * @param hintName the required hint name\r\n * @param <T> the hint type to cast to\r\n * @return the hint value\r\n * @throws IllegalArgumentException if the hint is not found\r\n */\r\n@SuppressWarnings(\"unchecked\")\r\npublic static <T> T getRequiredHint(@Nullable Map<String, Object> hints, String hintName) {\r\n    if (hints == null) {\r\n        throw new IllegalArgumentException(\"No hints map for required hint '\" + hintName + \"'\");\r\n    }\r\n    T hint = (T) hints.get(hintName);\r\n    if (hint == null) {\r\n        throw new IllegalArgumentException(\"Hints map must contain the hint '\" + hintName + \"'\");\r\n    }\r\n    return hint;\r\n}",
+    "comment": "\n\t * Obtain the value for a required hint.\n\t * @param hints the hints map\n\t * @param hintName the required hint name\n\t * @param <T> the hint type to cast to\n\t * @return the hint value\n\t * @throws IllegalArgumentException if the hint is not found\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#getLogPrefix(Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Obtain the hint {@link #LOG_PREFIX_HINT}, if present, or an empty String.\r\n * @param hints the hints passed to the encode method\r\n * @return the log prefix\r\n */\r\npublic static String getLogPrefix(@Nullable Map<String, Object> hints) {\r\n    return (hints != null ? (String) hints.getOrDefault(LOG_PREFIX_HINT, \"\") : \"\");\r\n}",
+    "comment": "\n\t * Obtain the hint {@link #LOG_PREFIX_HINT}, if present, or an empty String.\n\t * @param hints the hints passed to the encode method\n\t * @return the log prefix\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#isLoggingSuppressed(Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Whether to suppress logging based on the hint {@link #SUPPRESS_LOGGING_HINT}.\r\n * @param hints the hints map\r\n * @return whether logging of data is allowed\r\n */\r\npublic static boolean isLoggingSuppressed(@Nullable Map<String, Object> hints) {\r\n    return (hints != null && (boolean) hints.getOrDefault(SUPPRESS_LOGGING_HINT, false));\r\n}",
+    "comment": "\n\t * Whether to suppress logging based on the hint {@link #SUPPRESS_LOGGING_HINT}.\n\t * @param hints the hints map\n\t * @return whether logging of data is allowed\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#merge(Map<String,Object>,Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Merge two maps of hints, creating and copying into a new map if both have\r\n * values, or returning the non-empty map, or an empty map if both are empty.\r\n * @param hints1 1st map of hints\r\n * @param hints2 2nd map of hints\r\n * @return a single map with hints from both\r\n */\r\npublic static Map<String, Object> merge(@Nullable Map<String, Object> hints1, @Nullable Map<String, Object> hints2) {\r\n    if (ObjectUtils.isEmpty(hints1) && ObjectUtils.isEmpty(hints2)) {\r\n        return Collections.emptyMap();\r\n    } else if (ObjectUtils.isEmpty(hints2)) {\r\n        return (hints1 != null ? hints1 : Collections.emptyMap());\r\n    } else if (ObjectUtils.isEmpty(hints1)) {\r\n        return hints2;\r\n    }\r\n    Map<String, Object> result = CollectionUtils.newHashMap(hints1.size() + hints2.size());\r\n    result.putAll(hints1);\r\n    result.putAll(hints2);\r\n    return result;\r\n}",
+    "comment": "\n\t * Merge two maps of hints, creating and copying into a new map if both have\n\t * values, or returning the non-empty map, or an empty map if both are empty.\n\t * @param hints1 1st map of hints\n\t * @param hints2 2nd map of hints\n\t * @return a single map with hints from both\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#merge(Map<String,Object>,String,Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Merge a single hint into a map of hints, possibly creating and copying\r\n * all hints into a new map, or otherwise if the map of hints is empty,\r\n * creating a new single entry map.\r\n * @param hints a map of hints to be merged\r\n * @param hintName the hint name to merge\r\n * @param hintValue the hint value to merge\r\n * @return a single map with all hints\r\n */\r\npublic static Map<String, Object> merge(@Nullable Map<String, Object> hints, String hintName, Object hintValue) {\r\n    if (ObjectUtils.isEmpty(hints)) {\r\n        return Collections.singletonMap(hintName, hintValue);\r\n    }\r\n    Map<String, Object> result = CollectionUtils.newHashMap(hints.size() + 1);\r\n    result.putAll(hints);\r\n    result.put(hintName, hintValue);\r\n    return result;\r\n}",
+    "comment": "\n\t * Merge a single hint into a map of hints, possibly creating and copying\n\t * all hints into a new map, or otherwise if the map of hints is empty,\n\t * creating a new single entry map.\n\t * @param hints a map of hints to be merged\n\t * @param hintName the hint name to merge\n\t * @param hintValue the hint value to merge\n\t * @return a single map with all hints\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Hints#touchDataBuffer(DataBuffer,Map<String,Object>,Log)",
+    "entityType": "method",
+    "code": "/**\r\n * If the hints contain a {@link #LOG_PREFIX_HINT} and the given logger has\r\n * DEBUG level enabled, apply the log prefix as a hint to the given buffer\r\n * via {@link DataBufferUtils#touch(DataBuffer, Object)}.\r\n * @param buffer the buffer to touch\r\n * @param hints the hints map to check for a log prefix\r\n * @param logger the logger whose level to check\r\n * @since 5.3.2\r\n */\r\npublic static void touchDataBuffer(DataBuffer buffer, @Nullable Map<String, Object> hints, Log logger) {\r\n    if (logger.isDebugEnabled() && hints != null) {\r\n        Object logPrefix = hints.get(LOG_PREFIX_HINT);\r\n        if (logPrefix != null) {\r\n            DataBufferUtils.touch(buffer, logPrefix);\r\n        }\r\n    }\r\n}",
+    "comment": "\n\t * If the hints contain a {@link #LOG_PREFIX_HINT} and the given logger has\n\t * DEBUG level enabled, apply the log prefix as a hint to the given buffer\n\t * via {@link DataBufferUtils#touch(DataBuffer, Object)}.\n\t * @param buffer the buffer to touch\n\t * @param hints the hints map to check for a log prefix\n\t * @param logger the logger whose level to check\n\t * @since 5.3.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferDecoder",
+    "entityType": "class",
+    "code": "public Netty5BufferDecoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (Buffer.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}\n@Override\r\npublic Buffer decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    if (dataBuffer instanceof Netty5DataBuffer netty5DataBuffer) {\r\n        return netty5DataBuffer.getNativeBuffer();\r\n    }\r\n    byte[] bytes = new byte[dataBuffer.readableByteCount()];\r\n    dataBuffer.read(bytes);\r\n    Buffer buffer = DefaultBufferAllocators.preferredAllocator().copyOf(bytes);\r\n    DataBufferUtils.release(dataBuffer);\r\n    return buffer;\r\n}",
+    "comment": "\n * Decoder for {@link Buffer Buffers}.\n *\n * @author Violeta Georgieva\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferDecoder#canDecode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (Buffer.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferDecoder#decode(DataBuffer,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Buffer decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    if (dataBuffer instanceof Netty5DataBuffer netty5DataBuffer) {\r\n        return netty5DataBuffer.getNativeBuffer();\r\n    }\r\n    byte[] bytes = new byte[dataBuffer.readableByteCount()];\r\n    dataBuffer.read(bytes);\r\n    Buffer buffer = DefaultBufferAllocators.preferredAllocator().copyOf(bytes);\r\n    DataBufferUtils.release(dataBuffer);\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferEncoder",
+    "entityType": "class",
+    "code": "public Netty5BufferEncoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canEncode(ResolvableType type, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = type.toClass();\r\n    return super.canEncode(type, mimeType) && Buffer.class.isAssignableFrom(clazz);\r\n}\n@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends Buffer> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).map(byteBuffer -> encodeValue(byteBuffer, bufferFactory, elementType, mimeType, hints));\r\n}\n@Override\r\npublic DataBuffer encodeValue(Buffer buffer, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing \" + buffer.readableBytes() + \" bytes\");\r\n    }\r\n    if (bufferFactory instanceof Netty5DataBufferFactory netty5DataBufferFactory) {\r\n        return netty5DataBufferFactory.wrap(buffer);\r\n    }\r\n    byte[] bytes = new byte[buffer.readableBytes()];\r\n    buffer.readBytes(bytes, 0, bytes.length);\r\n    buffer.close();\r\n    return bufferFactory.wrap(bytes);\r\n}",
+    "comment": "\n * Encoder for {@link Buffer Buffers}.\n *\n * @author Violeta Georgieva\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferEncoder#canEncode(ResolvableType,MimeType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean canEncode(ResolvableType type, @Nullable MimeType mimeType) {\r\n    Class<?> clazz = type.toClass();\r\n    return super.canEncode(type, mimeType) && Buffer.class.isAssignableFrom(clazz);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferEncoder#encode(Publisher<? extends Buffer>,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Flux<DataBuffer> encode(Publisher<? extends Buffer> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    return Flux.from(inputStream).map(byteBuffer -> encodeValue(byteBuffer, bufferFactory, elementType, mimeType, hints));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferEncoder#encodeValue(Buffer,DataBufferFactory,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer encodeValue(Buffer buffer, DataBufferFactory bufferFactory, ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled() && !Hints.isLoggingSuppressed(hints)) {\r\n        String logPrefix = Hints.getLogPrefix(hints);\r\n        logger.debug(logPrefix + \"Writing \" + buffer.readableBytes() + \" bytes\");\r\n    }\r\n    if (bufferFactory instanceof Netty5DataBufferFactory netty5DataBufferFactory) {\r\n        return netty5DataBufferFactory.wrap(buffer);\r\n    }\r\n    byte[] bytes = new byte[buffer.readableBytes()];\r\n    buffer.readBytes(bytes, 0, bytes.length);\r\n    buffer.close();\r\n    return bufferFactory.wrap(bytes);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufDecoder",
+    "entityType": "class",
+    "code": "public NettyByteBufDecoder() {\r\n    super(MimeTypeUtils.ALL);\r\n}\n@Override\r\npublic boolean canDecode(ResolvableType elementType, @Nullable MimeType mimeType) {\r\n    return (ByteBuf.class.isAssignableFrom(elementType.toClass()) && super.canDecode(elementType, mimeType));\r\n}\n@Override\r\npublic ByteBuf decode(DataBuffer dataBuffer, ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    if (logger.isDebugEnabled()) {\r\n        logger.debug(Hints.getLogPrefix(hints) + \"Read \" + dataBuffer.readableByteCount() + \" bytes\");\r\n    }\r\n    if (dataBuffer instanceof NettyDataBuffer nettyDataBuffer) {\r\n        return nettyDataBuffer.getNativeBuffer();\r\n    }\r\n    ByteBuf byteBuf;\r\n    byte[] bytes = new byte[dataBuffer.readableByteCount()];\r\n    dataBuffer.read(bytes);\r\n    byteBuf = Unpooled.wrappedBuffer(bytes);\r\n    DataBufferUtils.release(dataBuffer);\r\n    return byteBuf;\r\n}",
+    "comment": "\n * Decoder for {@link ByteBuf ByteBufs}.\n *\n * @author Vladislav Kisel\n * @since 5.3\n "
+  }
+]

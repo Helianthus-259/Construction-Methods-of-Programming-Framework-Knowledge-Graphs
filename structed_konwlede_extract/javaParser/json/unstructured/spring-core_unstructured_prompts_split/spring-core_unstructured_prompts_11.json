@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#getAllInterfaces()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAllInterfaces() {\r\n    DerivedTestObject testBean = new DerivedTestObject();\r\n    List<Class<?>> ifcs = Arrays.asList(ClassUtils.getAllInterfaces(testBean));\r\n    assertThat(ifcs).as(\"Correct number of interfaces\").hasSize(4);\r\n    assertThat(ifcs.contains(Serializable.class)).as(\"Contains Serializable\").isTrue();\r\n    assertThat(ifcs.contains(ITestObject.class)).as(\"Contains ITestBean\").isTrue();\r\n    assertThat(ifcs.contains(ITestInterface.class)).as(\"Contains IOther\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#classNamesToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid classNamesToString() {\r\n    List<Class<?>> ifcs = new ArrayList<>();\r\n    ifcs.add(Serializable.class);\r\n    ifcs.add(Runnable.class);\r\n    assertThat(ifcs.toString()).isEqualTo(\"[interface java.io.Serializable, interface java.lang.Runnable]\");\r\n    assertThat(ClassUtils.classNamesToString(ifcs)).isEqualTo(\"[java.io.Serializable, java.lang.Runnable]\");\r\n    List<Class<?>> classes = new ArrayList<>();\r\n    classes.add(ArrayList.class);\r\n    classes.add(Integer.class);\r\n    assertThat(classes.toString()).isEqualTo(\"[class java.util.ArrayList, class java.lang.Integer]\");\r\n    assertThat(ClassUtils.classNamesToString(classes)).isEqualTo(\"[java.util.ArrayList, java.lang.Integer]\");\r\n    assertThat(Collections.singletonList(List.class).toString()).isEqualTo(\"[interface java.util.List]\");\r\n    assertThat(ClassUtils.classNamesToString(List.class)).isEqualTo(\"[java.util.List]\");\r\n    assertThat(Collections.EMPTY_LIST.toString()).isEqualTo(\"[]\");\r\n    assertThat(ClassUtils.classNamesToString(Collections.emptyList())).isEqualTo(\"[]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#determineCommonAncestor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid determineCommonAncestor() {\r\n    assertThat(ClassUtils.determineCommonAncestor(Integer.class, Number.class)).isEqualTo(Number.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Number.class, Integer.class)).isEqualTo(Number.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Number.class, null)).isEqualTo(Number.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(null, Integer.class)).isEqualTo(Integer.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Integer.class, Integer.class)).isEqualTo(Integer.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Integer.class, Float.class)).isEqualTo(Number.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Float.class, Integer.class)).isEqualTo(Number.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Integer.class, String.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(String.class, Integer.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(List.class, Collection.class)).isEqualTo(Collection.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Collection.class, List.class)).isEqualTo(Collection.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(Collection.class, null)).isEqualTo(Collection.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(null, List.class)).isEqualTo(List.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(List.class, List.class)).isEqualTo(List.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(List.class, Set.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(Set.class, List.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(List.class, Runnable.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(Runnable.class, List.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(List.class, ArrayList.class)).isEqualTo(List.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(ArrayList.class, List.class)).isEqualTo(List.class);\r\n    assertThat(ClassUtils.determineCommonAncestor(List.class, String.class)).isNull();\r\n    assertThat(ClassUtils.determineCommonAncestor(String.class, List.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#getMostSpecificMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMostSpecificMethod() throws NoSuchMethodException {\r\n    Method defaultPrintMethod = ClassUtils.getMethod(MethodsInterface.class, \"defaultPrint\");\r\n    assertThat(ClassUtils.getMostSpecificMethod(defaultPrintMethod, MethodsInterfaceImplementation.class)).isEqualTo(defaultPrintMethod);\r\n    assertThat(ClassUtils.getMostSpecificMethod(defaultPrintMethod, SubMethodsInterfaceImplementation.class)).isEqualTo(defaultPrintMethod);\r\n    Method printMethod = ClassUtils.getMethod(MethodsInterface.class, \"print\", String.class);\r\n    assertThat(ClassUtils.getMostSpecificMethod(printMethod, MethodsInterfaceImplementation.class)).isNotEqualTo(printMethod);\r\n    assertThat(ClassUtils.getMostSpecificMethod(printMethod, MethodsInterfaceImplementation.class)).isEqualTo(ClassUtils.getMethod(MethodsInterfaceImplementation.class, \"print\", String.class));\r\n    assertThat(ClassUtils.getMostSpecificMethod(printMethod, SubMethodsInterfaceImplementation.class)).isEqualTo(ClassUtils.getMethod(MethodsInterfaceImplementation.class, \"print\", String.class));\r\n    Method protectedPrintMethod = MethodsInterfaceImplementation.class.getDeclaredMethod(\"protectedPrint\");\r\n    assertThat(ClassUtils.getMostSpecificMethod(protectedPrintMethod, MethodsInterfaceImplementation.class)).isEqualTo(protectedPrintMethod);\r\n    assertThat(ClassUtils.getMostSpecificMethod(protectedPrintMethod, SubMethodsInterfaceImplementation.class)).isEqualTo(SubMethodsInterfaceImplementation.class.getDeclaredMethod(\"protectedPrint\"));\r\n    Method packageAccessiblePrintMethod = MethodsInterfaceImplementation.class.getDeclaredMethod(\"packageAccessiblePrint\");\r\n    assertThat(ClassUtils.getMostSpecificMethod(packageAccessiblePrintMethod, MethodsInterfaceImplementation.class)).isEqualTo(packageAccessiblePrintMethod);\r\n    assertThat(ClassUtils.getMostSpecificMethod(packageAccessiblePrintMethod, SubMethodsInterfaceImplementation.class)).isEqualTo(ClassUtils.getMethod(SubMethodsInterfaceImplementation.class, \"packageAccessiblePrint\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isPrimitiveWrapper(Class<?>)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@WrapperTypes\r\nvoid isPrimitiveWrapper(Class<?> type) {\r\n    assertThat(ClassUtils.isPrimitiveWrapper(type)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isPrimitiveOrWrapperWithPrimitive(Class<?>)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@PrimitiveTypes\r\nvoid isPrimitiveOrWrapperWithPrimitive(Class<?> type) {\r\n    assertThat(ClassUtils.isPrimitiveOrWrapper(type)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isPrimitiveOrWrapperWithWrapper(Class<?>)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@WrapperTypes\r\nvoid isPrimitiveOrWrapperWithWrapper(Class<?> type) {\r\n    assertThat(ClassUtils.isPrimitiveOrWrapper(type)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isLambda()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isLambda() {\r\n    assertIsLambda(ClassUtilsTests.staticLambdaExpression);\r\n    assertIsLambda(ClassUtilsTests::staticStringFactory);\r\n    assertIsLambda(this.instanceLambdaExpression);\r\n    assertIsLambda(this::instanceStringFactory);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isNotLambda()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"Convert2Lambda\")\r\nvoid isNotLambda() {\r\n    assertIsNotLambda(new EnigmaSupplier());\r\n    assertIsNotLambda(new Supplier<>() {\r\n\r\n        @Override\r\n        public String get() {\r\n            return \"anonymous inner class\";\r\n        }\r\n    });\r\n    assertIsNotLambda(new Fake$$LambdaSupplier());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertInterfaceMethod(Method)",
+    "entityType": "method",
+    "code": "private static void assertInterfaceMethod(Method method) {\r\n    assertThat(method.getDeclaringClass()).as(\"%s must be an interface method\", method).isInterface();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertNotInterfaceMethod(Method)",
+    "entityType": "method",
+    "code": "private static void assertNotInterfaceMethod(Method method) {\r\n    assertThat(method.getDeclaringClass()).as(\"%s must not be an interface method\", method).isNotInterface();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertPubliclyAccessible(Method)",
+    "entityType": "method",
+    "code": "private static void assertPubliclyAccessible(Method method) {\r\n    assertPublic(method);\r\n    assertPublic(method.getDeclaringClass());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertNotPubliclyAccessible(Method)",
+    "entityType": "method",
+    "code": "private static void assertNotPubliclyAccessible(Method method) {\r\n    assertThat(!isPublic(method) || !isPublic(method.getDeclaringClass())).as(\"%s must not be publicly accessible\", method).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertPublic(Member)",
+    "entityType": "method",
+    "code": "private static void assertPublic(Member member) {\r\n    assertThat(isPublic(member)).as(\"%s must be public\", member).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertPublic(Class<?>)",
+    "entityType": "method",
+    "code": "private static void assertPublic(Class<?> clazz) {\r\n    assertThat(isPublic(clazz)).as(\"%s must be public\", clazz).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertNotPublic(Member)",
+    "entityType": "method",
+    "code": "private static void assertNotPublic(Member member) {\r\n    assertThat(!isPublic(member)).as(\"%s must be not be public\", member).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertNotPublic(Class<?>)",
+    "entityType": "method",
+    "code": "private static void assertNotPublic(Class<?> clazz) {\r\n    assertThat(!isPublic(clazz)).as(\"%s must be not be public\", clazz).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isPublic(Class<?>)",
+    "entityType": "method",
+    "code": "private static boolean isPublic(Class<?> clazz) {\r\n    return Modifier.isPublic(clazz.getModifiers());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#isPublic(Member)",
+    "entityType": "method",
+    "code": "private static boolean isPublic(Member member) {\r\n    return Modifier.isPublic(member.getModifiers());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertIsLambda(Supplier<String>)",
+    "entityType": "method",
+    "code": "private static void assertIsLambda(Supplier<String> supplier) {\r\n    assertThat(ClassUtils.isLambdaClass(supplier.getClass())).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#assertIsNotLambda(Supplier<String>)",
+    "entityType": "method",
+    "code": "private static void assertIsNotLambda(Supplier<String> supplier) {\r\n    assertThat(ClassUtils.isLambdaClass(supplier.getClass())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#staticStringFactory()",
+    "entityType": "method",
+    "code": "private static String staticStringFactory() {\r\n    return \"static string factory\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ClassUtilsTests#instanceStringFactory()",
+    "entityType": "method",
+    "code": "private String instanceStringFactory() {\r\n    return \"instance string factory\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetStaticMethodTests",
+    "entityType": "class",
+    "code": "@BeforeEach\r\nvoid clearStatics() {\r\n    NestedClass.noArgCalled = false;\r\n    NestedClass.argCalled = false;\r\n    NestedClass.overloadedCalled = false;\r\n}\n@Test\r\nvoid noArgsStaticMethod() throws IllegalAccessException, InvocationTargetException {\r\n    Method method = ClassUtils.getStaticMethod(NestedClass.class, \"staticMethod\");\r\n    method.invoke(null, (Object[]) null);\r\n    assertThat(NestedClass.noArgCalled).as(\"no argument method was not invoked.\").isTrue();\r\n}\n@Test\r\nvoid argsStaticMethod() throws IllegalAccessException, InvocationTargetException {\r\n    Method method = ClassUtils.getStaticMethod(NestedClass.class, \"argStaticMethod\", String.class);\r\n    method.invoke(null, \"test\");\r\n    assertThat(NestedClass.argCalled).as(\"argument method was not invoked.\").isTrue();\r\n}\n@Test\r\nvoid overloadedStaticMethod() throws IllegalAccessException, InvocationTargetException {\r\n    Method method = ClassUtils.getStaticMethod(NestedClass.class, \"staticMethod\", String.class);\r\n    method.invoke(null, \"test\");\r\n    assertThat(NestedClass.overloadedCalled).as(\"argument method was not invoked.\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetStaticMethodTests#clearStatics()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid clearStatics() {\r\n    NestedClass.noArgCalled = false;\r\n    NestedClass.argCalled = false;\r\n    NestedClass.overloadedCalled = false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetStaticMethodTests#noArgsStaticMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid noArgsStaticMethod() throws IllegalAccessException, InvocationTargetException {\r\n    Method method = ClassUtils.getStaticMethod(NestedClass.class, \"staticMethod\");\r\n    method.invoke(null, (Object[]) null);\r\n    assertThat(NestedClass.noArgCalled).as(\"no argument method was not invoked.\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetStaticMethodTests#argsStaticMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid argsStaticMethod() throws IllegalAccessException, InvocationTargetException {\r\n    Method method = ClassUtils.getStaticMethod(NestedClass.class, \"argStaticMethod\", String.class);\r\n    method.invoke(null, \"test\");\r\n    assertThat(NestedClass.argCalled).as(\"argument method was not invoked.\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetStaticMethodTests#overloadedStaticMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid overloadedStaticMethod() throws IllegalAccessException, InvocationTargetException {\r\n    Method method = ClassUtils.getStaticMethod(NestedClass.class, \"staticMethod\", String.class);\r\n    method.invoke(null, \"test\");\r\n    assertThat(NestedClass.overloadedCalled).as(\"argument method was not invoked.\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid publicMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = String.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"getBytes\");\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(originalType);\r\n    assertThat(interfaceMethod).isSameAs(originalMethod);\r\n    assertNotInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid publicMethodInNonPublicInterface() throws Exception {\r\n    Class<?> originalType = PrivateInterface.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisites for this use case:\r\n    assertPublic(originalMethod);\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod).isSameAs(originalMethod);\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertNotPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid publicInterfaceMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = ArrayList.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"size\");\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(List.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"size\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid publicInterfaceMethodDeclaredInNonPublicClassWithLateBindingOfClassMethodToSubclassDeclaredInterface() throws Exception {\r\n    HashMap<String, String> hashMap = new HashMap<>();\r\n    // Returns a package-private java.util.HashMap.KeyIterator which extends java.util.HashMap.HashIterator\r\n    // which declares hasNext(), even though HashIterator does not implement Iterator. Rather, KeyIterator\r\n    // implements HashIterator.\r\n    Iterator<String> iterator = hashMap.keySet().iterator();\r\n    Class<?> targetClass = iterator.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"hasNext\");\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, targetClass);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(Iterator.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"hasNext\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesPropertyInPublicInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getText\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(PublicInterface.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"getText\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesPropertyInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(PrivateInterface.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"getMessage\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertNotPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid packagePrivateSubclassOverridesMethodInPublicInterface() throws Exception {\r\n    List<String> unmodifiableList = Collections.unmodifiableList(Arrays.asList(\"foo\", \"bar\"));\r\n    Class<?> targetClass = unmodifiableList.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"contains\", Object.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(Collection.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"contains\");\r\n    assertThat(interfaceMethod.getParameterTypes()).containsExactly(Object.class);\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesMethodInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getMethod(\"greet\", String.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(PrivateInterface.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"greet\");\r\n    assertThat(interfaceMethod.getParameterTypes()).containsExactly(String.class);\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertNotPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#publicMethodInPublicClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = String.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"getBytes\");\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(originalType);\r\n    assertThat(interfaceMethod).isSameAs(originalMethod);\r\n    assertNotInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#publicMethodInNonPublicInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicMethodInNonPublicInterface() throws Exception {\r\n    Class<?> originalType = PrivateInterface.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisites for this use case:\r\n    assertPublic(originalMethod);\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod).isSameAs(originalMethod);\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertNotPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#publicInterfaceMethodInPublicClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicInterfaceMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = ArrayList.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"size\");\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(List.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"size\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#publicInterfaceMethodDeclaredInNonPublicClassWithLateBindingOfClassMethodToSubclassDeclaredInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicInterfaceMethodDeclaredInNonPublicClassWithLateBindingOfClassMethodToSubclassDeclaredInterface() throws Exception {\r\n    HashMap<String, String> hashMap = new HashMap<>();\r\n    // Returns a package-private java.util.HashMap.KeyIterator which extends java.util.HashMap.HashIterator\r\n    // which declares hasNext(), even though HashIterator does not implement Iterator. Rather, KeyIterator\r\n    // implements HashIterator.\r\n    Iterator<String> iterator = hashMap.keySet().iterator();\r\n    Class<?> targetClass = iterator.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"hasNext\");\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, targetClass);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(Iterator.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"hasNext\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#privateSubclassOverridesPropertyInPublicInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesPropertyInPublicInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getText\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(PublicInterface.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"getText\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#privateSubclassOverridesPropertyInPrivateInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesPropertyInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(PrivateInterface.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"getMessage\");\r\n    assertThat(interfaceMethod.getParameterTypes()).isEmpty();\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertNotPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#packagePrivateSubclassOverridesMethodInPublicInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid packagePrivateSubclassOverridesMethodInPublicInterface() throws Exception {\r\n    List<String> unmodifiableList = Collections.unmodifiableList(Arrays.asList(\"foo\", \"bar\"));\r\n    Class<?> targetClass = unmodifiableList.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"contains\", Object.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(Collection.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"contains\");\r\n    assertThat(interfaceMethod.getParameterTypes()).containsExactly(Object.class);\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetInterfaceMethodTests#privateSubclassOverridesMethodInPrivateInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesMethodInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getMethod(\"greet\", String.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(originalMethod, null);\r\n    assertThat(interfaceMethod.getDeclaringClass()).isEqualTo(PrivateInterface.class);\r\n    assertThat(interfaceMethod.getName()).isEqualTo(\"greet\");\r\n    assertThat(interfaceMethod.getParameterTypes()).containsExactly(String.class);\r\n    assertInterfaceMethod(interfaceMethod);\r\n    assertNotPubliclyAccessible(interfaceMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid nonPublicMethod(TestInfo testInfo) {\r\n    Method originalMethod = testInfo.getTestMethod().get();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(originalMethod);\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertNotPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\npublic // This method is intentionally public.\r\nvoid publicMethodInNonPublicClass(TestInfo testInfo) {\r\n    Method originalMethod = testInfo.getTestMethod().get();\r\n    // Prerequisites for this use case:\r\n    assertPublic(originalMethod);\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertNotPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid publicMethodInNonPublicInterface() throws Exception {\r\n    Class<?> originalType = PrivateInterface.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisites for this use case:\r\n    assertPublic(originalMethod);\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertNotPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid publicMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = String.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"toString\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(originalType);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid publicInterfaceMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = ArrayList.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"size\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    // Should not find the interface method in List.\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(originalType);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid publicMethodInJavaLangObjectDeclaredInNonPublicClass() throws Exception {\r\n    List<String> unmodifiableList = Collections.unmodifiableList(Arrays.asList(\"foo\", \"bar\"));\r\n    Class<?> targetClass = unmodifiableList.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"toString\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(Object.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"toString\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid publicMethodInJavaTimeZoneIdDeclaredInNonPublicSubclass() throws Exception {\r\n    // Returns a package-private java.time.ZoneRegion.\r\n    ZoneId zoneId = ZoneId.of(\"CET\");\r\n    Class<?> targetClass = zoneId.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getDeclaredMethod(\"getId\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(ZoneId.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getId\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid publicInterfaceMethodDeclaredInNonPublicClassWithLateBindingOfClassMethodToSubclassDeclaredInterface() throws Exception {\r\n    HashMap<String, String> hashMap = new HashMap<>();\r\n    // Returns a package-private java.util.HashMap.KeyIterator which extends java.util.HashMap.HashIterator\r\n    // which declares hasNext(), even though HashIterator does not implement Iterator. Rather, KeyIterator\r\n    // implements HashIterator.\r\n    Iterator<String> iterator = hashMap.keySet().iterator();\r\n    Class<?> targetClass = iterator.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"hasNext\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, targetClass);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(Iterator.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"hasNext\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesPropertyInPublicInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getText\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicInterface.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getText\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesPropertyInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    // Should not find the interface method in PrivateInterface.\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getMessage\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesPropertyInPublicSuperclass() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getNumber\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getNumber\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid packagePrivateSubclassOverridesMethodInPublicInterface() throws Exception {\r\n    List<String> unmodifiableList = Collections.unmodifiableList(Arrays.asList(\"foo\", \"bar\"));\r\n    Class<?> targetClass = unmodifiableList.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"contains\", Object.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(Collection.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"contains\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).containsExactly(Object.class);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesMethodInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getMethod(\"greet\", String.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"greet\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).containsExactly(String.class);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}\n@Test\r\nvoid privateSubclassOverridesMethodInPublicSuperclass() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getMethod(\"process\", int.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"process\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).containsExactly(int.class);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#nonPublicMethod(TestInfo)",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nonPublicMethod(TestInfo testInfo) {\r\n    Method originalMethod = testInfo.getTestMethod().get();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(originalMethod);\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertNotPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicMethodInNonPublicClass(TestInfo)",
+    "entityType": "method",
+    "code": "@Test\r\npublic // This method is intentionally public.\r\nvoid publicMethodInNonPublicClass(TestInfo testInfo) {\r\n    Method originalMethod = testInfo.getTestMethod().get();\r\n    // Prerequisites for this use case:\r\n    assertPublic(originalMethod);\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertNotPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicMethodInNonPublicInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicMethodInNonPublicInterface() throws Exception {\r\n    Class<?> originalType = PrivateInterface.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisites for this use case:\r\n    assertPublic(originalMethod);\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertNotPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicMethodInPublicClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = String.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"toString\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(originalType);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicInterfaceMethodInPublicClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicInterfaceMethodInPublicClass() throws Exception {\r\n    Class<?> originalType = ArrayList.class;\r\n    Method originalMethod = originalType.getDeclaredMethod(\"size\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    // Should not find the interface method in List.\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(originalType);\r\n    assertThat(publiclyAccessibleMethod).isSameAs(originalMethod);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicMethodInJavaLangObjectDeclaredInNonPublicClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicMethodInJavaLangObjectDeclaredInNonPublicClass() throws Exception {\r\n    List<String> unmodifiableList = Collections.unmodifiableList(Arrays.asList(\"foo\", \"bar\"));\r\n    Class<?> targetClass = unmodifiableList.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"toString\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(Object.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"toString\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicMethodInJavaTimeZoneIdDeclaredInNonPublicSubclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicMethodInJavaTimeZoneIdDeclaredInNonPublicSubclass() throws Exception {\r\n    // Returns a package-private java.time.ZoneRegion.\r\n    ZoneId zoneId = ZoneId.of(\"CET\");\r\n    Class<?> targetClass = zoneId.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getDeclaredMethod(\"getId\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(ZoneId.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getId\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#publicInterfaceMethodDeclaredInNonPublicClassWithLateBindingOfClassMethodToSubclassDeclaredInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicInterfaceMethodDeclaredInNonPublicClassWithLateBindingOfClassMethodToSubclassDeclaredInterface() throws Exception {\r\n    HashMap<String, String> hashMap = new HashMap<>();\r\n    // Returns a package-private java.util.HashMap.KeyIterator which extends java.util.HashMap.HashIterator\r\n    // which declares hasNext(), even though HashIterator does not implement Iterator. Rather, KeyIterator\r\n    // implements HashIterator.\r\n    Iterator<String> iterator = hashMap.keySet().iterator();\r\n    Class<?> targetClass = iterator.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"hasNext\");\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, targetClass);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(Iterator.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"hasNext\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#privateSubclassOverridesPropertyInPublicInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesPropertyInPublicInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getText\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicInterface.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getText\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#privateSubclassOverridesPropertyInPrivateInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesPropertyInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getMessage\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    // Should not find the interface method in PrivateInterface.\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getMessage\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#privateSubclassOverridesPropertyInPublicSuperclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesPropertyInPublicSuperclass() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getDeclaredMethod(\"getNumber\");\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"getNumber\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).isEmpty();\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#packagePrivateSubclassOverridesMethodInPublicInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid packagePrivateSubclassOverridesMethodInPublicInterface() throws Exception {\r\n    List<String> unmodifiableList = Collections.unmodifiableList(Arrays.asList(\"foo\", \"bar\"));\r\n    Class<?> targetClass = unmodifiableList.getClass();\r\n    // Prerequisites for this use case:\r\n    assertNotPublic(targetClass);\r\n    Method originalMethod = targetClass.getMethod(\"contains\", Object.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(Collection.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"contains\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).containsExactly(Object.class);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#privateSubclassOverridesMethodInPrivateInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesMethodInPrivateInterface() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getMethod(\"greet\", String.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"greet\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).containsExactly(String.class);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.GetPubliclyAccessibleMethodTests#privateSubclassOverridesMethodInPublicSuperclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateSubclassOverridesMethodInPublicSuperclass() throws Exception {\r\n    Method originalMethod = PrivateSubclass.class.getMethod(\"process\", int.class);\r\n    // Prerequisite: type must not be public for this use case.\r\n    assertNotPublic(originalMethod.getDeclaringClass());\r\n    Method publiclyAccessibleMethod = ClassUtils.getPubliclyAccessibleMethodIfPossible(originalMethod, null);\r\n    assertThat(publiclyAccessibleMethod.getDeclaringClass()).isEqualTo(PublicSuperclass.class);\r\n    assertThat(publiclyAccessibleMethod.getName()).isEqualTo(\"process\");\r\n    assertThat(publiclyAccessibleMethod.getParameterTypes()).containsExactly(int.class);\r\n    assertPubliclyAccessible(publiclyAccessibleMethod);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NestedClass",
+    "entityType": "class",
+    "code": "static boolean noArgCalled;\nstatic boolean argCalled;\nstatic boolean overloadedCalled;\npublic static void staticMethod() {\r\n    noArgCalled = true;\r\n}\npublic static void staticMethod(String anArg) {\r\n    overloadedCalled = true;\r\n}\npublic static void argStaticMethod(String anArg) {\r\n    argCalled = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NestedClass#staticMethod()",
+    "entityType": "method",
+    "code": "public static void staticMethod() {\r\n    noArgCalled = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NestedClass#staticMethod(String)",
+    "entityType": "method",
+    "code": "public static void staticMethod(String anArg) {\r\n    overloadedCalled = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NestedClass#argStaticMethod(String)",
+    "entityType": "method",
+    "code": "public static void argStaticMethod(String anArg) {\r\n    argCalled = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.OverloadedMethodsClass",
+    "entityType": "class",
+    "code": "public void print(String messages) {\r\n    /* no-op */\r\n}\npublic void print(String[] messages) {\r\n    /* no-op */\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.OverloadedMethodsClass#print(String)",
+    "entityType": "method",
+    "code": "public void print(String messages) {\r\n    /* no-op */\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.OverloadedMethodsClass#print(String[])",
+    "entityType": "method",
+    "code": "public void print(String[] messages) {\r\n    /* no-op */\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SubOverloadedMethodsClass",
+    "entityType": "class",
+    "code": "public void print(String header, String[] messages) {\r\n    /* no-op */\r\n}\nvoid print(String header, String[] messages, String footer) {\r\n    /* no-op */\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SubOverloadedMethodsClass#print(String,String[])",
+    "entityType": "method",
+    "code": "public void print(String header, String[] messages) {\r\n    /* no-op */\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SubOverloadedMethodsClass#print(String,String[],String)",
+    "entityType": "method",
+    "code": "void print(String header, String[] messages, String footer) {\r\n    /* no-op */\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.EnigmaSupplier",
+    "entityType": "class",
+    "code": "@Override\r\npublic String get() {\r\n    return \"enigma\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.EnigmaSupplier#get()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String get() {\r\n    return \"enigma\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Fake$$LambdaSupplier",
+    "entityType": "class",
+    "code": "@Override\r\npublic String get() {\r\n    return \"fake lambda\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Fake$$LambdaSupplier#get()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String get() {\r\n    return \"fake lambda\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterface",
+    "entityType": "class",
+    "code": "default void defaultPrint() ;\nvoid print(String messages);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterface#defaultPrint()",
+    "entityType": "method",
+    "code": "default void defaultPrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterface#print(String)",
+    "entityType": "method",
+    "code": "void print(String messages);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterfaceImplementation",
+    "entityType": "class",
+    "code": "@Override\r\npublic void print(String message) ;\nprotected void protectedPrint() ;\nvoid packageAccessiblePrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterfaceImplementation#print(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void print(String message) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterfaceImplementation#protectedPrint()",
+    "entityType": "method",
+    "code": "protected void protectedPrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodsInterfaceImplementation#packageAccessiblePrint()",
+    "entityType": "method",
+    "code": "void packageAccessiblePrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SubMethodsInterfaceImplementation",
+    "entityType": "class",
+    "code": "@Override\r\nprotected void protectedPrint() ;\n@Override\r\npublic void packageAccessiblePrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SubMethodsInterfaceImplementation#protectedPrint()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void protectedPrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SubMethodsInterfaceImplementation#packageAccessiblePrint()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void packageAccessiblePrint() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateInterface",
+    "entityType": "class",
+    "code": "String getMessage();\nString greet(String name);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateInterface#getMessage()",
+    "entityType": "method",
+    "code": "String getMessage();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateInterface#greet(String)",
+    "entityType": "method",
+    "code": "String greet(String name);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateSubclass",
+    "entityType": "class",
+    "code": "@Override\r\npublic int getNumber() {\r\n    return 2;\r\n}\n@Override\r\npublic String getMessage() {\r\n    return \"hello\";\r\n}\n@Override\r\npublic String greet(String name) {\r\n    return \"Hello, \" + name;\r\n}\n@Override\r\npublic int process(int num) {\r\n    return num * 2;\r\n}\n@Override\r\npublic String getText() {\r\n    return \"enigma\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateSubclass#getNumber()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int getNumber() {\r\n    return 2;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateSubclass#getMessage()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getMessage() {\r\n    return \"hello\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateSubclass#greet(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String greet(String name) {\r\n    return \"Hello, \" + name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateSubclass#process(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int process(int num) {\r\n    return num * 2;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PrivateSubclass#getText()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getText() {\r\n    return \"enigma\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ProxyHintsPredicates",
+    "entityType": "class",
+    "code": "ProxyHintsPredicates() {\r\n}\n/**\r\n * Return a predicate that checks whether a {@link org.springframework.aot.hint.JdkProxyHint}\r\n * is registered for the given interfaces.\r\n * <p>Note that the order in which interfaces are given matters.\r\n * @param interfaces the proxied interfaces\r\n * @return the {@link RuntimeHints} predicate\r\n * @see java.lang.reflect.Proxy\r\n */\r\npublic Predicate<RuntimeHints> forInterfaces(Class<?>... interfaces) {\r\n    Assert.notEmpty(interfaces, \"'interfaces' should not be empty\");\r\n    return forInterfaces(Arrays.stream(interfaces).map(TypeReference::of).toArray(TypeReference[]::new));\r\n}\n/**\r\n * Return a predicate that checks whether a {@link org.springframework.aot.hint.JdkProxyHint}\r\n * is registered for the given interfaces.\r\n * <p>Note that the order in which interfaces are given matters.\r\n * @param interfaces the proxied interfaces as type references\r\n * @return the {@link RuntimeHints} predicate\r\n * @see java.lang.reflect.Proxy\r\n */\r\npublic Predicate<RuntimeHints> forInterfaces(TypeReference... interfaces) {\r\n    Assert.notEmpty(interfaces, \"'interfaces' should not be empty\");\r\n    List<TypeReference> interfaceList = Arrays.asList(interfaces);\r\n    return hints -> hints.proxies().jdkProxyHints().anyMatch(proxyHint -> proxyHint.getProxiedInterfaces().equals(interfaceList));\r\n}",
+    "comment": "\n * Generator of {@link ProxyHints} predicates, testing whether the given hints\n * match the expected behavior for proxies.\n *\n * @author Brian Clozel\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ProxyHintsPredicates#forInterfaces(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Return a predicate that checks whether a {@link org.springframework.aot.hint.JdkProxyHint}\r\n * is registered for the given interfaces.\r\n * <p>Note that the order in which interfaces are given matters.\r\n * @param interfaces the proxied interfaces\r\n * @return the {@link RuntimeHints} predicate\r\n * @see java.lang.reflect.Proxy\r\n */\r\npublic Predicate<RuntimeHints> forInterfaces(Class<?>... interfaces) {\r\n    Assert.notEmpty(interfaces, \"'interfaces' should not be empty\");\r\n    return forInterfaces(Arrays.stream(interfaces).map(TypeReference::of).toArray(TypeReference[]::new));\r\n}",
+    "comment": "\n\t * Return a predicate that checks whether a {@link org.springframework.aot.hint.JdkProxyHint}\n\t * is registered for the given interfaces.\n\t * <p>Note that the order in which interfaces are given matters.\n\t * @param interfaces the proxied interfaces\n\t * @return the {@link RuntimeHints} predicate\n\t * @see java.lang.reflect.Proxy\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ProxyHintsPredicates#forInterfaces(TypeReference)",
+    "entityType": "method",
+    "code": "/**\r\n * Return a predicate that checks whether a {@link org.springframework.aot.hint.JdkProxyHint}\r\n * is registered for the given interfaces.\r\n * <p>Note that the order in which interfaces are given matters.\r\n * @param interfaces the proxied interfaces as type references\r\n * @return the {@link RuntimeHints} predicate\r\n * @see java.lang.reflect.Proxy\r\n */\r\npublic Predicate<RuntimeHints> forInterfaces(TypeReference... interfaces) {\r\n    Assert.notEmpty(interfaces, \"'interfaces' should not be empty\");\r\n    List<TypeReference> interfaceList = Arrays.asList(interfaces);\r\n    return hints -> hints.proxies().jdkProxyHints().anyMatch(proxyHint -> proxyHint.getProxiedInterfaces().equals(interfaceList));\r\n}",
+    "comment": "\n\t * Return a predicate that checks whether a {@link org.springframework.aot.hint.JdkProxyHint}\n\t * is registered for the given interfaces.\n\t * <p>Note that the order in which interfaces are given matters.\n\t * @param interfaces the proxied interfaces as type references\n\t * @return the {@link RuntimeHints} predicate\n\t * @see java.lang.reflect.Proxy\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid isEmpty() {\r\n    assertThat(CollectionUtils.isEmpty((Set<Object>) null)).isTrue();\r\n    assertThat(CollectionUtils.isEmpty((Map<String, String>) null)).isTrue();\r\n    assertThat(CollectionUtils.isEmpty(new HashMap<>())).isTrue();\r\n    assertThat(CollectionUtils.isEmpty(new HashSet<>())).isTrue();\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new Object());\r\n    assertThat(CollectionUtils.isEmpty(list)).isFalse();\r\n    Map<String, String> map = new HashMap<>();\r\n    map.put(\"foo\", \"bar\");\r\n    assertThat(CollectionUtils.isEmpty(map)).isFalse();\r\n}\n@Test\r\nvoid mergeArrayIntoCollection() {\r\n    Object[] arr = new Object[] { \"value1\", \"value2\" };\r\n    List<Comparable<?>> list = new ArrayList<>();\r\n    list.add(\"value3\");\r\n    CollectionUtils.mergeArrayIntoCollection(arr, list);\r\n    assertThat(list).containsExactly(\"value3\", \"value1\", \"value2\");\r\n}\n@Test\r\nvoid mergePrimitiveArrayIntoCollection() {\r\n    int[] arr = new int[] { 1, 2 };\r\n    List<Comparable<?>> list = new ArrayList<>();\r\n    list.add(3);\r\n    CollectionUtils.mergeArrayIntoCollection(arr, list);\r\n    assertThat(list).containsExactly(3, 1, 2);\r\n}\n@Test\r\nvoid mergePropertiesIntoMap() {\r\n    Properties defaults = new Properties();\r\n    defaults.setProperty(\"prop1\", \"value1\");\r\n    Properties props = new Properties(defaults);\r\n    props.setProperty(\"prop2\", \"value2\");\r\n    props.put(\"prop3\", 3);\r\n    Map<String, Object> map = new HashMap<>();\r\n    map.put(\"prop4\", \"value4\");\r\n    CollectionUtils.mergePropertiesIntoMap(props, map);\r\n    assertThat(map.get(\"prop1\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"prop2\")).isEqualTo(\"value2\");\r\n    assertThat(map.get(\"prop3\")).isEqualTo(3);\r\n    assertThat(map.get(\"prop4\")).isEqualTo(\"value4\");\r\n}\n@Test\r\nvoid contains() {\r\n    assertThat(CollectionUtils.contains((Iterator<String>) null, \"myElement\")).isFalse();\r\n    assertThat(CollectionUtils.contains((Enumeration<String>) null, \"myElement\")).isFalse();\r\n    assertThat(CollectionUtils.contains(new ArrayList<String>().iterator(), \"myElement\")).isFalse();\r\n    assertThat(CollectionUtils.contains(new Hashtable<String, Object>().keys(), \"myElement\")).isFalse();\r\n    List<String> list = new ArrayList<>();\r\n    list.add(\"myElement\");\r\n    assertThat(CollectionUtils.contains(list.iterator(), \"myElement\")).isTrue();\r\n    Hashtable<String, String> ht = new Hashtable<>();\r\n    ht.put(\"myElement\", \"myValue\");\r\n    assertThat(CollectionUtils.contains(ht.keys(), \"myElement\")).isTrue();\r\n}\n@Test\r\nvoid containsAny() {\r\n    List<String> source = new ArrayList<>();\r\n    source.add(\"abc\");\r\n    source.add(\"def\");\r\n    source.add(\"ghi\");\r\n    List<String> candidates = new ArrayList<>();\r\n    candidates.add(\"xyz\");\r\n    candidates.add(\"def\");\r\n    candidates.add(\"abc\");\r\n    assertThat(CollectionUtils.containsAny(source, candidates)).isTrue();\r\n    candidates.remove(\"def\");\r\n    assertThat(CollectionUtils.containsAny(source, candidates)).isTrue();\r\n    candidates.remove(\"abc\");\r\n    assertThat(CollectionUtils.containsAny(source, candidates)).isFalse();\r\n}\n@Test\r\nvoid containsInstanceWithNullCollection() {\r\n    assertThat(CollectionUtils.containsInstance(null, this)).as(\"Must return false if supplied Collection argument is null\").isFalse();\r\n}\n@Test\r\nvoid containsInstanceWithInstancesThatAreEqualButDistinct() {\r\n    List<Instance> list = new ArrayList<>();\r\n    list.add(new Instance(\"fiona\"));\r\n    assertThat(CollectionUtils.containsInstance(list, new Instance(\"fiona\"))).as(\"Must return false if instance is not in the supplied Collection argument\").isFalse();\r\n}\n@Test\r\nvoid containsInstanceWithSameInstance() {\r\n    List<Instance> list = new ArrayList<>();\r\n    list.add(new Instance(\"apple\"));\r\n    Instance instance = new Instance(\"fiona\");\r\n    list.add(instance);\r\n    assertThat(CollectionUtils.containsInstance(list, instance)).as(\"Must return true if instance is in the supplied Collection argument\").isTrue();\r\n}\n@Test\r\nvoid containsInstanceWithNullInstance() {\r\n    List<Instance> list = new ArrayList<>();\r\n    list.add(new Instance(\"apple\"));\r\n    list.add(new Instance(\"fiona\"));\r\n    assertThat(CollectionUtils.containsInstance(list, null)).as(\"Must return false if null instance is supplied\").isFalse();\r\n}\n@Test\r\nvoid findFirstMatch() {\r\n    List<String> source = new ArrayList<>();\r\n    source.add(\"abc\");\r\n    source.add(\"def\");\r\n    source.add(\"ghi\");\r\n    List<String> candidates = new ArrayList<>();\r\n    candidates.add(\"xyz\");\r\n    candidates.add(\"def\");\r\n    candidates.add(\"abc\");\r\n    assertThat(CollectionUtils.findFirstMatch(source, candidates)).isEqualTo(\"def\");\r\n}\n@Test\r\nvoid findValueOfType() {\r\n    List<Integer> integerList = new ArrayList<>();\r\n    integerList.add(1);\r\n    assertThat(CollectionUtils.findValueOfType(integerList, Integer.class)).isEqualTo(1);\r\n    Set<Integer> integerSet = new HashSet<>();\r\n    integerSet.add(2);\r\n    assertThat(CollectionUtils.findValueOfType(integerSet, Integer.class)).isEqualTo(2);\r\n}\n@Test\r\nvoid findValueOfTypeWithEmptyCollection() {\r\n    List<Integer> emptyList = new ArrayList<>();\r\n    assertThat(CollectionUtils.findValueOfType(emptyList, Integer.class)).isNull();\r\n}\n@Test\r\nvoid findValueOfTypeWithMoreThanOneValue() {\r\n    List<Integer> integerList = new ArrayList<>();\r\n    integerList.add(1);\r\n    integerList.add(2);\r\n    assertThat(CollectionUtils.findValueOfType(integerList, Integer.class)).isNull();\r\n}\n@Test\r\nvoid hasUniqueObject() {\r\n    List<String> list = new ArrayList<>();\r\n    list.add(\"myElement\");\r\n    list.add(\"myOtherElement\");\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isFalse();\r\n    list = new ArrayList<>();\r\n    list.add(\"myElement\");\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isTrue();\r\n    list = new ArrayList<>();\r\n    list.add(\"myElement\");\r\n    list.add(null);\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isFalse();\r\n    list = new ArrayList<>();\r\n    list.add(null);\r\n    list.add(\"myElement\");\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isFalse();\r\n    list = new ArrayList<>();\r\n    list.add(null);\r\n    list.add(null);\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isTrue();\r\n    list = new ArrayList<>();\r\n    list.add(null);\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isTrue();\r\n    list = new ArrayList<>();\r\n    assertThat(CollectionUtils.hasUniqueObject(list)).isFalse();\r\n}\n@Test\r\nvoid findCommonElementType() {\r\n    List<Integer> integerList = new ArrayList<>();\r\n    integerList.add(1);\r\n    integerList.add(2);\r\n    assertThat(CollectionUtils.findCommonElementType(integerList)).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid findCommonElementTypeWithEmptyCollection() {\r\n    List<Integer> emptyList = new ArrayList<>();\r\n    assertThat(CollectionUtils.findCommonElementType(emptyList)).isNull();\r\n}\n@Test\r\nvoid findCommonElementTypeWithDifferentElementType() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(1);\r\n    list.add(\"foo\");\r\n    assertThat(CollectionUtils.findCommonElementType(list)).isNull();\r\n}\n@Test\r\nvoid firstElementWithSet() {\r\n    Set<Integer> set = new HashSet<>();\r\n    set.add(17);\r\n    set.add(3);\r\n    set.add(2);\r\n    set.add(1);\r\n    assertThat(CollectionUtils.firstElement(set)).isEqualTo(17);\r\n}\n@Test\r\nvoid firstElementWithSortedSet() {\r\n    SortedSet<Integer> sortedSet = new TreeSet<>();\r\n    sortedSet.add(17);\r\n    sortedSet.add(3);\r\n    sortedSet.add(2);\r\n    sortedSet.add(1);\r\n    assertThat(CollectionUtils.firstElement(sortedSet)).isEqualTo(1);\r\n}\n@Test\r\nvoid firstElementWithList() {\r\n    List<Integer> list = new ArrayList<>();\r\n    list.add(1);\r\n    list.add(2);\r\n    list.add(3);\r\n    assertThat(CollectionUtils.firstElement(list)).isEqualTo(1);\r\n}\n@Test\r\nvoid lastElementWithSet() {\r\n    Set<Integer> set = new HashSet<>();\r\n    set.add(17);\r\n    set.add(3);\r\n    set.add(2);\r\n    set.add(1);\r\n    assertThat(CollectionUtils.lastElement(set)).isEqualTo(3);\r\n}\n@Test\r\nvoid lastElementWithSortedSet() {\r\n    SortedSet<Integer> sortedSet = new TreeSet<>();\r\n    sortedSet.add(17);\r\n    sortedSet.add(3);\r\n    sortedSet.add(2);\r\n    sortedSet.add(1);\r\n    assertThat(CollectionUtils.lastElement(sortedSet)).isEqualTo(17);\r\n}\n@Test\r\nvoid lastElementWithList() {\r\n    List<Integer> list = new ArrayList<>();\r\n    list.add(1);\r\n    list.add(2);\r\n    list.add(3);\r\n    assertThat(CollectionUtils.lastElement(list)).isEqualTo(3);\r\n}\n@Test\r\nvoid toArray() {\r\n    Vector<String> vector = new Vector<>();\r\n    vector.add(\"foo\");\r\n    vector.add(\"bar\");\r\n    Enumeration<String> enumeration = vector.elements();\r\n    assertThat(CollectionUtils.toArray(enumeration, new String[] ;)).containsExactly(\"foo\", \"bar\");\r\n}\n@Test\r\nvoid conversionOfEmptyMap() {\r\n    MultiValueMap<String, String> asMultiValueMap = CollectionUtils.toMultiValueMap(new HashMap<>());\r\n    assertThat(asMultiValueMap).isEmpty();\r\n    assertThat(asMultiValueMap).isEmpty();\r\n}\n@Test\r\nvoid conversionOfNonEmptyMap() {\r\n    Map<String, List<String>> wrapped = new HashMap<>();\r\n    wrapped.put(\"key\", Arrays.asList(\"first\", \"second\"));\r\n    MultiValueMap<String, String> asMultiValueMap = CollectionUtils.toMultiValueMap(wrapped);\r\n    assertThat(asMultiValueMap).containsAllEntriesOf(wrapped);\r\n}\n@Test\r\nvoid changesValueByReference() {\r\n    Map<String, List<String>> wrapped = new HashMap<>();\r\n    MultiValueMap<String, String> asMultiValueMap = CollectionUtils.toMultiValueMap(wrapped);\r\n    assertThat(asMultiValueMap).doesNotContainKeys(\"key\");\r\n    wrapped.put(\"key\", new ArrayList<>());\r\n    assertThat(asMultiValueMap).containsKey(\"key\");\r\n}\n@Test\r\nvoid compositeMap() {\r\n    Map<String, String> first = new HashMap<>();\r\n    first.put(\"key1\", \"value1\");\r\n    first.put(\"key2\", \"value2\");\r\n    Map<String, String> second = new HashMap<>();\r\n    second.put(\"key3\", \"value3\");\r\n    second.put(\"key4\", \"value4\");\r\n    Map<String, String> compositeMap = CollectionUtils.compositeMap(first, second);\r\n    assertThat(compositeMap).containsKeys(\"key1\", \"key2\", \"key3\", \"key4\");\r\n    assertThat(compositeMap).containsValues(\"value1\", \"value2\", \"value3\", \"value4\");\r\n}\nprivate static final class Instance {\r\n\r\n    private final String name;\r\n\r\n    public Instance(String name) {\r\n        this.name = name;\r\n    }\r\n\r\n    @Override\r\n    public boolean equals(@Nullable Object rhs) {\r\n        if (this == rhs) {\r\n            return true;\r\n        }\r\n        if (rhs == null || this.getClass() != rhs.getClass()) {\r\n            return false;\r\n        }\r\n        Instance instance = (Instance) rhs;\r\n        return this.name.equals(instance.name);\r\n    }\r\n\r\n    @Override\r\n    public int hashCode() {\r\n        return this.name.hashCode();\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link CollectionUtils}.\n *\n * @author Rob Harrop\n * @author Juergen Hoeller\n * @author Rick Evans\n "
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#isEmpty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isEmpty() {\r\n    assertThat(CollectionUtils.isEmpty((Set<Object>) null)).isTrue();\r\n    assertThat(CollectionUtils.isEmpty((Map<String, String>) null)).isTrue();\r\n    assertThat(CollectionUtils.isEmpty(new HashMap<>())).isTrue();\r\n    assertThat(CollectionUtils.isEmpty(new HashSet<>())).isTrue();\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new Object());\r\n    assertThat(CollectionUtils.isEmpty(list)).isFalse();\r\n    Map<String, String> map = new HashMap<>();\r\n    map.put(\"foo\", \"bar\");\r\n    assertThat(CollectionUtils.isEmpty(map)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#mergeArrayIntoCollection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mergeArrayIntoCollection() {\r\n    Object[] arr = new Object[] { \"value1\", \"value2\" };\r\n    List<Comparable<?>> list = new ArrayList<>();\r\n    list.add(\"value3\");\r\n    CollectionUtils.mergeArrayIntoCollection(arr, list);\r\n    assertThat(list).containsExactly(\"value3\", \"value1\", \"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#mergePrimitiveArrayIntoCollection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mergePrimitiveArrayIntoCollection() {\r\n    int[] arr = new int[] { 1, 2 };\r\n    List<Comparable<?>> list = new ArrayList<>();\r\n    list.add(3);\r\n    CollectionUtils.mergeArrayIntoCollection(arr, list);\r\n    assertThat(list).containsExactly(3, 1, 2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#mergePropertiesIntoMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mergePropertiesIntoMap() {\r\n    Properties defaults = new Properties();\r\n    defaults.setProperty(\"prop1\", \"value1\");\r\n    Properties props = new Properties(defaults);\r\n    props.setProperty(\"prop2\", \"value2\");\r\n    props.put(\"prop3\", 3);\r\n    Map<String, Object> map = new HashMap<>();\r\n    map.put(\"prop4\", \"value4\");\r\n    CollectionUtils.mergePropertiesIntoMap(props, map);\r\n    assertThat(map.get(\"prop1\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"prop2\")).isEqualTo(\"value2\");\r\n    assertThat(map.get(\"prop3\")).isEqualTo(3);\r\n    assertThat(map.get(\"prop4\")).isEqualTo(\"value4\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#contains()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid contains() {\r\n    assertThat(CollectionUtils.contains((Iterator<String>) null, \"myElement\")).isFalse();\r\n    assertThat(CollectionUtils.contains((Enumeration<String>) null, \"myElement\")).isFalse();\r\n    assertThat(CollectionUtils.contains(new ArrayList<String>().iterator(), \"myElement\")).isFalse();\r\n    assertThat(CollectionUtils.contains(new Hashtable<String, Object>().keys(), \"myElement\")).isFalse();\r\n    List<String> list = new ArrayList<>();\r\n    list.add(\"myElement\");\r\n    assertThat(CollectionUtils.contains(list.iterator(), \"myElement\")).isTrue();\r\n    Hashtable<String, String> ht = new Hashtable<>();\r\n    ht.put(\"myElement\", \"myValue\");\r\n    assertThat(CollectionUtils.contains(ht.keys(), \"myElement\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#containsAny()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsAny() {\r\n    List<String> source = new ArrayList<>();\r\n    source.add(\"abc\");\r\n    source.add(\"def\");\r\n    source.add(\"ghi\");\r\n    List<String> candidates = new ArrayList<>();\r\n    candidates.add(\"xyz\");\r\n    candidates.add(\"def\");\r\n    candidates.add(\"abc\");\r\n    assertThat(CollectionUtils.containsAny(source, candidates)).isTrue();\r\n    candidates.remove(\"def\");\r\n    assertThat(CollectionUtils.containsAny(source, candidates)).isTrue();\r\n    candidates.remove(\"abc\");\r\n    assertThat(CollectionUtils.containsAny(source, candidates)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#containsInstanceWithNullCollection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsInstanceWithNullCollection() {\r\n    assertThat(CollectionUtils.containsInstance(null, this)).as(\"Must return false if supplied Collection argument is null\").isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#containsInstanceWithInstancesThatAreEqualButDistinct()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsInstanceWithInstancesThatAreEqualButDistinct() {\r\n    List<Instance> list = new ArrayList<>();\r\n    list.add(new Instance(\"fiona\"));\r\n    assertThat(CollectionUtils.containsInstance(list, new Instance(\"fiona\"))).as(\"Must return false if instance is not in the supplied Collection argument\").isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#containsInstanceWithSameInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsInstanceWithSameInstance() {\r\n    List<Instance> list = new ArrayList<>();\r\n    list.add(new Instance(\"apple\"));\r\n    Instance instance = new Instance(\"fiona\");\r\n    list.add(instance);\r\n    assertThat(CollectionUtils.containsInstance(list, instance)).as(\"Must return true if instance is in the supplied Collection argument\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#containsInstanceWithNullInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsInstanceWithNullInstance() {\r\n    List<Instance> list = new ArrayList<>();\r\n    list.add(new Instance(\"apple\"));\r\n    list.add(new Instance(\"fiona\"));\r\n    assertThat(CollectionUtils.containsInstance(list, null)).as(\"Must return false if null instance is supplied\").isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CollectionUtilsTests#findFirstMatch()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findFirstMatch() {\r\n    List<String> source = new ArrayList<>();\r\n    source.add(\"abc\");\r\n    source.add(\"def\");\r\n    source.add(\"ghi\");\r\n    List<String> candidates = new ArrayList<>();\r\n    candidates.add(\"xyz\");\r\n    candidates.add(\"def\");\r\n    candidates.add(\"abc\");\r\n    assertThat(CollectionUtils.findFirstMatch(source, candidates)).isEqualTo(\"def\");\r\n}",
+    "comment": ""
+  }
+]

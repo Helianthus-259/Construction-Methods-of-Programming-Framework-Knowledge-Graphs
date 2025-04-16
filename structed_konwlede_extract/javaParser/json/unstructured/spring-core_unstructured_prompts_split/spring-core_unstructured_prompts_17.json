@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#ofModifiesThrowException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofModifiesThrowException() {\r\n    ThrowingSupplier<Object> supplier = ThrowingSupplier.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(supplier::get).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#throwIOException()",
+    "entityType": "method",
+    "code": "private Object throwIOException() throws IOException {\r\n    throw new IOException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#throwIllegalArgumentException()",
+    "entityType": "method",
+    "code": "private Object throwIllegalArgumentException() {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid emptyFilterApplyMatchIfEmpty() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(null, null, true);\r\n    match(filter, \"foo\");\r\n    match(filter, \"bar\");\r\n}\n@Test\r\nvoid includesFilter() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(asList(\"First\", \"Second\"), null, true);\r\n    match(filter, \"Second\");\r\n    doNotMatch(filter, \"foo\");\r\n}\n@Test\r\nvoid excludesFilter() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(null, asList(\"First\", \"Second\"), true);\r\n    doNotMatch(filter, \"Second\");\r\n    match(filter, \"foo\");\r\n}\n@Test\r\nvoid includesAndExcludesFilters() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(asList(\"foo\", \"Bar\"), asList(\"First\", \"Second\"), true);\r\n    doNotMatch(filter, \"Second\");\r\n    match(filter, \"foo\");\r\n}\n@Test\r\nvoid includesAndExcludesFiltersConflict() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(List.of(\"First\"), List.of(\"First\"), true);\r\n    doNotMatch(filter, \"First\");\r\n}\nprivate <T> void match(InstanceFilter<T> filter, T candidate) {\r\n    assertThat(filter.match(candidate)).as(\"filter '\" + filter + \"' should match \" + candidate).isTrue();\r\n}\nprivate <T> void doNotMatch(InstanceFilter<T> filter, T candidate) {\r\n    assertThat(filter.match(candidate)).as(\"filter '\" + filter + \"' should not match \" + candidate).isFalse();\r\n}",
+    "comment": "\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#emptyFilterApplyMatchIfEmpty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid emptyFilterApplyMatchIfEmpty() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(null, null, true);\r\n    match(filter, \"foo\");\r\n    match(filter, \"bar\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#includesFilter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid includesFilter() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(asList(\"First\", \"Second\"), null, true);\r\n    match(filter, \"Second\");\r\n    doNotMatch(filter, \"foo\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#excludesFilter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid excludesFilter() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(null, asList(\"First\", \"Second\"), true);\r\n    doNotMatch(filter, \"Second\");\r\n    match(filter, \"foo\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#includesAndExcludesFilters()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid includesAndExcludesFilters() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(asList(\"foo\", \"Bar\"), asList(\"First\", \"Second\"), true);\r\n    doNotMatch(filter, \"Second\");\r\n    match(filter, \"foo\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.ThrowawayClassLoader",
+    "entityType": "class",
+    "code": "static {\r\n    registerAsParallelCapable();\r\n}\nprivate final ClassLoader resourceLoader;\nThrowawayClassLoader(ClassLoader parent) {\r\n    super(parent.getParent());\r\n    this.resourceLoader = parent;\r\n}\n@Override\r\nprotected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {\r\n    synchronized (getClassLoadingLock(name)) {\r\n        Class<?> loaded = findLoadedClass(name);\r\n        if (loaded != null) {\r\n            return loaded;\r\n        }\r\n        try {\r\n            return super.loadClass(name, true);\r\n        } catch (ClassNotFoundException ex) {\r\n            return loadClassFromResource(name);\r\n        }\r\n    }\r\n}\nprivate Class<?> loadClassFromResource(String name) throws ClassNotFoundException, ClassFormatError {\r\n    String resourceName = name.replace('.', '/') + \".class\";\r\n    InputStream inputStream = this.resourceLoader.getResourceAsStream(resourceName);\r\n    if (inputStream == null) {\r\n        return null;\r\n    }\r\n    try {\r\n        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();\r\n        inputStream.transferTo(outputStream);\r\n        byte[] bytes = outputStream.toByteArray();\r\n        return defineClass(name, bytes, 0, bytes.length);\r\n    } catch (IOException ex) {\r\n        throw new ClassNotFoundException(\"Cannot load resource for class [\" + name + \"]\", ex);\r\n    }\r\n}\n@Override\r\nprotected URL findResource(String name) {\r\n    return this.resourceLoader.getResource(name);\r\n}",
+    "comment": "\n * {@link ClassLoader} used to load classes without causing build-time\n * initialization.\n *\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#includesAndExcludesFiltersConflict()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid includesAndExcludesFiltersConflict() {\r\n    InstanceFilter<String> filter = new InstanceFilter<>(List.of(\"First\"), List.of(\"First\"), true);\r\n    doNotMatch(filter, \"First\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#match(InstanceFilter<T>,T)",
+    "entityType": "method",
+    "code": "private <T> void match(InstanceFilter<T> filter, T candidate) {\r\n    assertThat(filter.match(candidate)).as(\"filter '\" + filter + \"' should match \" + candidate).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.InstanceFilterTests#doNotMatch(InstanceFilter<T>,T)",
+    "entityType": "method",
+    "code": "private <T> void doNotMatch(InstanceFilter<T> filter, T candidate) {\r\n    assertThat(filter.match(candidate)).as(\"filter '\" + filter + \"' should not match \" + candidate).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.ThrowawayClassLoader#loadClass(String,boolean)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {\r\n    synchronized (getClassLoadingLock(name)) {\r\n        Class<?> loaded = findLoadedClass(name);\r\n        if (loaded != null) {\r\n            return loaded;\r\n        }\r\n        try {\r\n            return super.loadClass(name, true);\r\n        } catch (ClassNotFoundException ex) {\r\n            return loadClassFromResource(name);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.ThrowawayClassLoader#loadClassFromResource(String)",
+    "entityType": "method",
+    "code": "private Class<?> loadClassFromResource(String name) throws ClassNotFoundException, ClassFormatError {\r\n    String resourceName = name.replace('.', '/') + \".class\";\r\n    InputStream inputStream = this.resourceLoader.getResourceAsStream(resourceName);\r\n    if (inputStream == null) {\r\n        return null;\r\n    }\r\n    try {\r\n        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();\r\n        inputStream.transferTo(outputStream);\r\n        byte[] bytes = outputStream.toByteArray();\r\n        return defineClass(name, bytes, 0, bytes.length);\r\n    } catch (IOException ex) {\r\n        throw new ClassNotFoundException(\"Cannot load resource for class [\" + name + \"]\", ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.ThrowawayClassLoader#findResource(String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected URL findResource(String name) {\r\n    return this.resourceLoader.getResource(name);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.FileNativeConfigurationWriter",
+    "entityType": "class",
+    "code": "private final Path basePath;\n@Nullable\r\nprivate final String groupId;\n@Nullable\r\nprivate final String artifactId;\npublic FileNativeConfigurationWriter(Path basePath) {\r\n    this(basePath, null, null);\r\n}\npublic FileNativeConfigurationWriter(Path basePath, @Nullable String groupId, @Nullable String artifactId) {\r\n    this.basePath = basePath;\r\n    if ((groupId == null && artifactId != null) || (groupId != null && artifactId == null)) {\r\n        throw new IllegalArgumentException(\"groupId and artifactId must be both null or both non-null\");\r\n    }\r\n    this.groupId = groupId;\r\n    this.artifactId = artifactId;\r\n}\n@Override\r\nprotected void writeTo(String fileName, Consumer<BasicJsonWriter> writer) {\r\n    try {\r\n        File file = createIfNecessary(fileName);\r\n        try (FileWriter out = new FileWriter(file)) {\r\n            writer.accept(createJsonWriter(out));\r\n        }\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(\"Failed to write native configuration for \" + fileName, ex);\r\n    }\r\n}\nprivate File createIfNecessary(String filename) throws IOException {\r\n    Path outputDirectory = this.basePath.resolve(\"META-INF\").resolve(\"native-image\");\r\n    if (this.groupId != null && this.artifactId != null) {\r\n        outputDirectory = outputDirectory.resolve(this.groupId).resolve(this.artifactId);\r\n    }\r\n    outputDirectory.toFile().mkdirs();\r\n    File file = outputDirectory.resolve(filename).toFile();\r\n    file.createNewFile();\r\n    return file;\r\n}\nprivate BasicJsonWriter createJsonWriter(Writer out) {\r\n    return new BasicJsonWriter(out);\r\n}",
+    "comment": "\n * A {@link NativeConfigurationWriter} implementation that writes the\n * configuration to disk.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @since 6.0\n * @see <a href=\"https://www.graalvm.org/22.0/reference-manual/native-image/BuildConfiguration/\">Native Image Build Configuration</a>\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.FileNativeConfigurationWriter#writeTo(String,Consumer<BasicJsonWriter>)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void writeTo(String fileName, Consumer<BasicJsonWriter> writer) {\r\n    try {\r\n        File file = createIfNecessary(fileName);\r\n        try (FileWriter out = new FileWriter(file)) {\r\n            writer.accept(createJsonWriter(out));\r\n        }\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(\"Failed to write native configuration for \" + fileName, ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.FileNativeConfigurationWriter#createIfNecessary(String)",
+    "entityType": "method",
+    "code": "private File createIfNecessary(String filename) throws IOException {\r\n    Path outputDirectory = this.basePath.resolve(\"META-INF\").resolve(\"native-image\");\r\n    if (this.groupId != null && this.artifactId != null) {\r\n        outputDirectory = outputDirectory.resolve(this.groupId).resolve(this.artifactId);\r\n    }\r\n    outputDirectory.toFile().mkdirs();\r\n    File file = outputDirectory.resolve(filename).toFile();\r\n    file.createNewFile();\r\n    return file;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.FileNativeConfigurationWriter#createJsonWriter(Writer)",
+    "entityType": "method",
+    "code": "private BasicJsonWriter createJsonWriter(Writer out) {\r\n    return new BasicJsonWriter(out);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "entityType": "class",
+    "code": "private final LinkedCaseInsensitiveMap<String> map = new LinkedCaseInsensitiveMap<>();\n@Test\r\nvoid putAndGet() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"key\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value3\");\r\n    assertThat(map.containsKey(\"key\")).isTrue();\r\n    assertThat(map.containsKey(\"KEY\")).isTrue();\r\n    assertThat(map.containsKey(\"Key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"KEY\")).isTrue();\r\n    assertThat(map.keySet().contains(\"Key\")).isTrue();\r\n}\n@Test\r\nvoid putWithOverlappingKeys() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value3\");\r\n    assertThat(map.containsKey(\"key\")).isTrue();\r\n    assertThat(map.containsKey(\"KEY\")).isTrue();\r\n    assertThat(map.containsKey(\"Key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"KEY\")).isTrue();\r\n    assertThat(map.keySet().contains(\"Key\")).isTrue();\r\n}\n@Test\r\nvoid getOrDefault() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map.getOrDefault(\"key\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"KEY\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"Key\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\r\n    assertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\r\n}\n@Test\r\nvoid getOrDefaultWithNullValue() {\r\n    assertThat(map.put(\"key\", null)).isNull();\r\n    assertThat(map.put(\"KEY\", null)).isNull();\r\n    assertThat(map.put(\"Key\", null)).isNull();\r\n    assertThat(map.getOrDefault(\"key\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"KEY\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"Key\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\r\n    assertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\r\n}\n@Test\r\nvoid computeIfAbsentWithExistingValue() {\r\n    assertThat(map.putIfAbsent(\"key\", \"value1\")).isNull();\r\n    assertThat(map.putIfAbsent(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value3\");\r\n    assertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value3\");\r\n    assertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value3\");\r\n    assertThat(map.put(\"null\", null)).isNull();\r\n    assertThat(map.putIfAbsent(\"NULL\", \"value\")).isNull();\r\n    assertThat(map.put(\"null\", null)).isEqualTo(\"value\");\r\n    assertThat(map.computeIfAbsent(\"NULL\", s -> \"value\")).isEqualTo(\"value\");\r\n    assertThat(map.get(\"null\")).isEqualTo(\"value\");\r\n}\n@Test\r\nvoid computeIfAbsentWithComputedValue() {\r\n    assertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value1\");\r\n}\n@Test\r\nvoid mapClone() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    LinkedCaseInsensitiveMap<String> copy = map.clone();\r\n    assertThat(copy.getLocale()).isEqualTo(map.getLocale());\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"KEY\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"Key\")).isEqualTo(\"value1\");\r\n    copy.put(\"Key\", \"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(copy).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"key\")).isEqualTo(\"value2\");\r\n    assertThat(copy.get(\"KEY\")).isEqualTo(\"value2\");\r\n    assertThat(copy.get(\"Key\")).isEqualTo(\"value2\");\r\n}\n@Test\r\nvoid clearFromKeySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.keySet().clear();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid removeFromKeySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.keySet().remove(\"key\");\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid removeFromKeySetViaIterator() {\r\n    map.put(\"key\", \"value\");\r\n    nextAndRemove(map.keySet().iterator());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid clearFromValues() {\r\n    map.put(\"key\", \"value\");\r\n    map.values().clear();\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid removeFromValues() {\r\n    map.put(\"key\", \"value\");\r\n    map.values().remove(\"value\");\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid removeFromValuesViaIterator() {\r\n    map.put(\"key\", \"value\");\r\n    nextAndRemove(map.values().iterator());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid clearFromEntrySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.entrySet().clear();\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid removeFromEntrySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.entrySet().remove(map.entrySet().iterator().next());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\n@Test\r\nvoid removeFromEntrySetViaIterator() {\r\n    map.put(\"key\", \"value\");\r\n    nextAndRemove(map.entrySet().iterator());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}\nprivate void nextAndRemove(Iterator<?> iterator) {\r\n    iterator.next();\r\n    iterator.remove();\r\n}",
+    "comment": "\n * Tests for {@link LinkedCaseInsensitiveMap}.\n *\n * @author Juergen Hoeller\n * @author Phillip Webb\n "
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#putAndGet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid putAndGet() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"key\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value3\");\r\n    assertThat(map.containsKey(\"key\")).isTrue();\r\n    assertThat(map.containsKey(\"KEY\")).isTrue();\r\n    assertThat(map.containsKey(\"Key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"KEY\")).isTrue();\r\n    assertThat(map.keySet().contains(\"Key\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#putWithOverlappingKeys()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid putWithOverlappingKeys() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value3\");\r\n    assertThat(map.containsKey(\"key\")).isTrue();\r\n    assertThat(map.containsKey(\"KEY\")).isTrue();\r\n    assertThat(map.containsKey(\"Key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"KEY\")).isTrue();\r\n    assertThat(map.keySet().contains(\"Key\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefault()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getOrDefault() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map.getOrDefault(\"key\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"KEY\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"Key\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\r\n    assertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefaultWithNullValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getOrDefaultWithNullValue() {\r\n    assertThat(map.put(\"key\", null)).isNull();\r\n    assertThat(map.put(\"KEY\", null)).isNull();\r\n    assertThat(map.put(\"Key\", null)).isNull();\r\n    assertThat(map.getOrDefault(\"key\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"KEY\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"Key\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\r\n    assertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#computeIfAbsentWithExistingValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid computeIfAbsentWithExistingValue() {\r\n    assertThat(map.putIfAbsent(\"key\", \"value1\")).isNull();\r\n    assertThat(map.putIfAbsent(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value3\");\r\n    assertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value3\");\r\n    assertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value3\");\r\n    assertThat(map.put(\"null\", null)).isNull();\r\n    assertThat(map.putIfAbsent(\"NULL\", \"value\")).isNull();\r\n    assertThat(map.put(\"null\", null)).isEqualTo(\"value\");\r\n    assertThat(map.computeIfAbsent(\"NULL\", s -> \"value\")).isEqualTo(\"value\");\r\n    assertThat(map.get(\"null\")).isEqualTo(\"value\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#computeIfAbsentWithComputedValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid computeIfAbsentWithComputedValue() {\r\n    assertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#mapClone()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapClone() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    LinkedCaseInsensitiveMap<String> copy = map.clone();\r\n    assertThat(copy.getLocale()).isEqualTo(map.getLocale());\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"KEY\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"Key\")).isEqualTo(\"value1\");\r\n    copy.put(\"Key\", \"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(copy).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value1\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value1\");\r\n    assertThat(copy.get(\"key\")).isEqualTo(\"value2\");\r\n    assertThat(copy.get(\"KEY\")).isEqualTo(\"value2\");\r\n    assertThat(copy.get(\"Key\")).isEqualTo(\"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#clearFromKeySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid clearFromKeySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.keySet().clear();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#removeFromKeySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeFromKeySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.keySet().remove(\"key\");\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#removeFromKeySetViaIterator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeFromKeySetViaIterator() {\r\n    map.put(\"key\", \"value\");\r\n    nextAndRemove(map.keySet().iterator());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#clearFromValues()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid clearFromValues() {\r\n    map.put(\"key\", \"value\");\r\n    map.values().clear();\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#removeFromValues()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeFromValues() {\r\n    map.put(\"key\", \"value\");\r\n    map.values().remove(\"value\");\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#removeFromValuesViaIterator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeFromValuesViaIterator() {\r\n    map.put(\"key\", \"value\");\r\n    nextAndRemove(map.values().iterator());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#clearFromEntrySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid clearFromEntrySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.entrySet().clear();\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#removeFromEntrySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeFromEntrySet() {\r\n    map.put(\"key\", \"value\");\r\n    map.entrySet().remove(map.entrySet().iterator().next());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#removeFromEntrySetViaIterator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeFromEntrySetViaIterator() {\r\n    map.put(\"key\", \"value\");\r\n    nextAndRemove(map.entrySet().iterator());\r\n    assertThat(map).isEmpty();\r\n    map.computeIfAbsent(\"key\", k -> \"newvalue\");\r\n    assertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedCaseInsensitiveMapTests#nextAndRemove(Iterator<?>)",
+    "entityType": "method",
+    "code": "private void nextAndRemove(Iterator<?> iterator) {\r\n    iterator.next();\r\n    iterator.remove();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.NativeConfigurationWriter",
+    "entityType": "class",
+    "code": "/**\r\n * Write the GraalVM native configuration from the provided hints.\r\n * @param hints the hints to handle\r\n */\r\npublic void write(RuntimeHints hints) {\r\n    if (hasAnyHint(hints)) {\r\n        writeTo(\"reachability-metadata.json\", writer -> new RuntimeHintsWriter().write(writer, hints));\r\n    }\r\n}\nprivate boolean hasAnyHint(RuntimeHints hints) {\r\n    return (hints.serialization().javaSerializationHints().findAny().isPresent() || hints.proxies().jdkProxyHints().findAny().isPresent() || hints.reflection().typeHints().findAny().isPresent() || hints.resources().resourcePatternHints().findAny().isPresent() || hints.resources().resourceBundleHints().findAny().isPresent() || hints.jni().typeHints().findAny().isPresent());\r\n}\n/**\r\n * Write the specified GraalVM native configuration file, using the\r\n * provided {@link BasicJsonWriter}.\r\n * @param fileName the name of the file\r\n * @param writer a consumer for the writer to use\r\n */\r\nprotected abstract void writeTo(String fileName, Consumer<BasicJsonWriter> writer);",
+    "comment": "\n * Write {@link RuntimeHints} as GraalVM native configuration.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Janne Valkealahti\n * @author Brian Clozel\n * @since 6.0\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/overview/BuildConfiguration/\">Native Image Build Configuration</a>\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.NativeConfigurationWriter#write(RuntimeHints)",
+    "entityType": "method",
+    "code": "/**\r\n * Write the GraalVM native configuration from the provided hints.\r\n * @param hints the hints to handle\r\n */\r\npublic void write(RuntimeHints hints) {\r\n    if (hasAnyHint(hints)) {\r\n        writeTo(\"reachability-metadata.json\", writer -> new RuntimeHintsWriter().write(writer, hints));\r\n    }\r\n}",
+    "comment": "\n\t * Write the GraalVM native configuration from the provided hints.\n\t * @param hints the hints to handle\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.NativeConfigurationWriter#hasAnyHint(RuntimeHints)",
+    "entityType": "method",
+    "code": "private boolean hasAnyHint(RuntimeHints hints) {\r\n    return (hints.serialization().javaSerializationHints().findAny().isPresent() || hints.proxies().jdkProxyHints().findAny().isPresent() || hints.reflection().typeHints().findAny().isPresent() || hints.resources().resourcePatternHints().findAny().isPresent() || hints.resources().resourceBundleHints().findAny().isPresent() || hints.jni().typeHints().findAny().isPresent());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.NativeConfigurationWriter#writeTo(String,Consumer<BasicJsonWriter>)",
+    "entityType": "method",
+    "code": "/**\r\n * Write the specified GraalVM native configuration file, using the\r\n * provided {@link BasicJsonWriter}.\r\n * @param fileName the name of the file\r\n * @param writer a consumer for the writer to use\r\n */\r\nprotected abstract void writeTo(String fileName, Consumer<BasicJsonWriter> writer);",
+    "comment": "\n\t * Write the specified GraalVM native configuration file, using the\n\t * provided {@link BasicJsonWriter}.\n\t * @param fileName the name of the file\n\t * @param writer a consumer for the writer to use\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests",
+    "entityType": "class",
+    "code": "private final LinkedMultiValueMap<String, String> map = new LinkedMultiValueMap<>();\n@Test\r\nvoid add() {\r\n    map.add(\"key\", \"value1\");\r\n    map.add(\"key\", \"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\");\r\n}\n@Test\r\nvoid addIfAbsentWhenAbsent() {\r\n    map.addIfAbsent(\"key\", \"value1\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}\n@Test\r\nvoid addIfAbsentWhenPresent() {\r\n    map.add(\"key\", \"value1\");\r\n    map.addIfAbsent(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}\n@Test\r\nvoid set() {\r\n    map.set(\"key\", \"value1\");\r\n    map.set(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value2\");\r\n}\n@Test\r\nvoid addAll() {\r\n    map.add(\"key\", \"value1\");\r\n    map.addAll(\"key\", Arrays.asList(\"value2\", \"value3\"));\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\", \"value3\");\r\n}\n@Test\r\nvoid addAllWithEmptyList() {\r\n    map.addAll(\"key\", Collections.emptyList());\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEmpty();\r\n    assertThat(map.getFirst(\"key\")).isNull();\r\n}\n@Test\r\nvoid getFirst() {\r\n    List<String> values = new ArrayList<>(2);\r\n    values.add(\"value1\");\r\n    values.add(\"value2\");\r\n    map.put(\"key\", values);\r\n    assertThat(map.getFirst(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.getFirst(\"other\")).isNull();\r\n}\n@Test\r\nvoid getFirstWithEmptyList() {\r\n    map.put(\"key\", Collections.emptyList());\r\n    assertThat(map.getFirst(\"key\")).isNull();\r\n    assertThat(map.getFirst(\"other\")).isNull();\r\n}\n@Test\r\nvoid toSingleValueMap() {\r\n    List<String> values = new ArrayList<>(2);\r\n    values.add(\"value1\");\r\n    values.add(\"value2\");\r\n    map.put(\"key\", values);\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).hasSize(1);\r\n    assertThat(singleValueMap.get(\"key\")).isEqualTo(\"value1\");\r\n}\n@Test\r\nvoid toSingleValueMapWithEmptyList() {\r\n    map.put(\"key\", Collections.emptyList());\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).isEmpty();\r\n    assertThat(singleValueMap.get(\"key\")).isNull();\r\n}\n@Test\r\nvoid equals() {\r\n    map.set(\"key1\", \"value1\");\r\n    assertThat(map).isEqualTo(map);\r\n    MultiValueMap<String, String> o1 = new LinkedMultiValueMap<>();\r\n    o1.set(\"key1\", \"value1\");\r\n    assertThat(o1).isEqualTo(map);\r\n    assertThat(map).isEqualTo(o1);\r\n    Map<String, List<String>> o2 = new HashMap<>();\r\n    o2.put(\"key1\", Collections.singletonList(\"value1\"));\r\n    assertThat(o2).isEqualTo(map);\r\n    assertThat(map).isEqualTo(o2);\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n "
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#add()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid add() {\r\n    map.add(\"key\", \"value1\");\r\n    map.add(\"key\", \"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#addIfAbsentWhenAbsent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addIfAbsentWhenAbsent() {\r\n    map.addIfAbsent(\"key\", \"value1\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#addIfAbsentWhenPresent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addIfAbsentWhenPresent() {\r\n    map.add(\"key\", \"value1\");\r\n    map.addIfAbsent(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#set()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid set() {\r\n    map.set(\"key\", \"value1\");\r\n    map.set(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#addAll()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addAll() {\r\n    map.add(\"key\", \"value1\");\r\n    map.addAll(\"key\", Arrays.asList(\"value2\", \"value3\"));\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\", \"value3\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#addAllWithEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addAllWithEmptyList() {\r\n    map.addAll(\"key\", Collections.emptyList());\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEmpty();\r\n    assertThat(map.getFirst(\"key\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#getFirst()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getFirst() {\r\n    List<String> values = new ArrayList<>(2);\r\n    values.add(\"value1\");\r\n    values.add(\"value2\");\r\n    map.put(\"key\", values);\r\n    assertThat(map.getFirst(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.getFirst(\"other\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#getFirstWithEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getFirstWithEmptyList() {\r\n    map.put(\"key\", Collections.emptyList());\r\n    assertThat(map.getFirst(\"key\")).isNull();\r\n    assertThat(map.getFirst(\"other\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#toSingleValueMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid toSingleValueMap() {\r\n    List<String> values = new ArrayList<>(2);\r\n    values.add(\"value1\");\r\n    values.add(\"value2\");\r\n    map.put(\"key\", values);\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).hasSize(1);\r\n    assertThat(singleValueMap.get(\"key\")).isEqualTo(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#toSingleValueMapWithEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid toSingleValueMapWithEmptyList() {\r\n    map.put(\"key\", Collections.emptyList());\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).isEmpty();\r\n    assertThat(singleValueMap.get(\"key\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.LinkedMultiValueMapTests#equals()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equals() {\r\n    map.set(\"key1\", \"value1\");\r\n    assertThat(map).isEqualTo(map);\r\n    MultiValueMap<String, String> o1 = new LinkedMultiValueMap<>();\r\n    o1.set(\"key1\", \"value1\");\r\n    assertThat(o1).isEqualTo(map);\r\n    assertThat(map).isEqualTo(o1);\r\n    Map<String, List<String>> o2 = new HashMap<>();\r\n    o2.put(\"key1\", Collections.singletonList(\"value1\"));\r\n    assertThat(o2).isEqualTo(map);\r\n    assertThat(map).isEqualTo(o2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid plainMethodInvoker() throws Exception {\r\n    // sanity check: singleton, non-static should work\r\n    TestClass1 tc1 = new TestClass1();\r\n    MethodInvoker mi = new MethodInvoker();\r\n    mi.setTargetObject(tc1);\r\n    mi.setTargetMethod(\"method1\");\r\n    mi.prepare();\r\n    Integer i = (Integer) mi.invoke();\r\n    assertThat(i).isEqualTo(1);\r\n    // defensive check: singleton, non-static should work with null array\r\n    tc1 = new TestClass1();\r\n    mi = new MethodInvoker();\r\n    mi.setTargetObject(tc1);\r\n    mi.setTargetMethod(\"method1\");\r\n    mi.setArguments((Object[]) null);\r\n    mi.prepare();\r\n    i = (Integer) mi.invoke();\r\n    assertThat(i).isEqualTo(1);\r\n    // sanity check: check that argument count matching works\r\n    mi = new MethodInvoker();\r\n    mi.setTargetClass(TestClass1.class);\r\n    mi.setTargetMethod(\"supertypes\");\r\n    mi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\");\r\n    mi.prepare();\r\n    assertThat(mi.invoke()).isEqualTo(\"hello\");\r\n    mi = new MethodInvoker();\r\n    mi.setTargetClass(TestClass1.class);\r\n    mi.setTargetMethod(\"supertypes2\");\r\n    mi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", \"bogus\");\r\n    mi.prepare();\r\n    assertThat(mi.invoke()).isEqualTo(\"hello\");\r\n    // Sanity check: check that argument conversion doesn't work with plain MethodInvoker\r\n    mi = new MethodInvoker();\r\n    mi.setTargetClass(TestClass1.class);\r\n    mi.setTargetMethod(\"supertypes2\");\r\n    mi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", Boolean.TRUE);\r\n    assertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(mi::prepare);\r\n}\n@Test\r\nvoid stringWithMethodInvoker() {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(\"no match\");\r\n    assertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(methodInvoker::prepare);\r\n}\n@Test\r\nvoid purchaserWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Purchaser());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"purchaser: hello\");\r\n}\n@Test\r\nvoid shopperWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Shopper());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"purchaser: may I help you?\");\r\n}\n@Test\r\nvoid salesmanWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Salesman());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"greetable: how are sales?\");\r\n}\n@Test\r\nvoid customerWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Customer());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"customer: good day\");\r\n}\n@Test\r\nvoid regularWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Regular(\"Kotter\"));\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"regular: welcome back Kotter\");\r\n}\n@Test\r\nvoid vipWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new VIP(\"Fonzie\"));\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"regular: whassup dude?\");\r\n}\npublic static class TestClass1 {\r\n\r\n    public static int _staticField1;\r\n\r\n    public int _field1 = 0;\r\n\r\n    public int method1() {\r\n        return ++_field1;\r\n    }\r\n\r\n    public static int staticMethod1() {\r\n        return ++TestClass1._staticField1;\r\n    }\r\n\r\n    public static void voidRetvalMethod() {\r\n    }\r\n\r\n    public static void nullArgument(Object arg) {\r\n    }\r\n\r\n    public static void intArgument(int arg) {\r\n    }\r\n\r\n    public static void intArguments(int[] arg) {\r\n    }\r\n\r\n    public static String supertypes(Collection<?> c, Integer i) {\r\n        return i.toString();\r\n    }\r\n\r\n    public static String supertypes(Collection<?> c, List<?> l, String s) {\r\n        return s;\r\n    }\r\n\r\n    public static String supertypes2(Collection<?> c, List<?> l, Integer i) {\r\n        return i.toString();\r\n    }\r\n\r\n    public static String supertypes2(Collection<?> c, List<?> l, String s, Integer i) {\r\n        return s;\r\n    }\r\n\r\n    public static String supertypes2(Collection<?> c, List<?> l, String s, String s2) {\r\n        return s;\r\n    }\r\n}\n@SuppressWarnings(\"unused\")\r\npublic static class Greeter {\r\n\r\n    // should handle Salesman (only interface)\r\n    public String greet(Greetable greetable) {\r\n        return \"greetable: \" + greetable.getGreeting();\r\n    }\r\n\r\n    // should handle Shopper (beats Greetable since it is a class)\r\n    protected String greet(Purchaser purchaser) {\r\n        return \"purchaser: \" + purchaser.getGreeting();\r\n    }\r\n\r\n    // should handle Customer (exact match)\r\n    String greet(Customer customer) {\r\n        return \"customer: \" + customer.getGreeting();\r\n    }\r\n\r\n    // should handle Regular (exact) and VIP (closest match)\r\n    private String greet(Regular regular) {\r\n        return \"regular: \" + regular.getGreeting();\r\n    }\r\n}\nprivate interface Greetable {\r\n\r\n    String getGreeting();\r\n}\nprivate interface Person extends Greetable {\r\n}\nprivate static class Purchaser implements Greetable {\r\n\r\n    @Override\r\n    public String getGreeting() {\r\n        return \"hello\";\r\n    }\r\n}\nprivate static class Shopper extends Purchaser implements Person {\r\n\r\n    @Override\r\n    public String getGreeting() {\r\n        return \"may I help you?\";\r\n    }\r\n}\nprivate static class Salesman implements Person {\r\n\r\n    @Override\r\n    public String getGreeting() {\r\n        return \"how are sales?\";\r\n    }\r\n}\nprivate static class Customer extends Shopper {\r\n\r\n    @Override\r\n    public String getGreeting() {\r\n        return \"good day\";\r\n    }\r\n}\nprivate static class Regular extends Customer {\r\n\r\n    private String name;\r\n\r\n    public Regular(String name) {\r\n        this.name = name;\r\n    }\r\n\r\n    @Override\r\n    public String getGreeting() {\r\n        return \"welcome back \" + name;\r\n    }\r\n}\nprivate static class VIP extends Regular {\r\n\r\n    public VIP(String name) {\r\n        super(name);\r\n    }\r\n\r\n    @Override\r\n    public String getGreeting() {\r\n        return \"whassup dude?\";\r\n    }\r\n}",
+    "comment": "\n * @author Colin Sampaleanu\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 21.11.2003\n "
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#plainMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid plainMethodInvoker() throws Exception {\r\n    // sanity check: singleton, non-static should work\r\n    TestClass1 tc1 = new TestClass1();\r\n    MethodInvoker mi = new MethodInvoker();\r\n    mi.setTargetObject(tc1);\r\n    mi.setTargetMethod(\"method1\");\r\n    mi.prepare();\r\n    Integer i = (Integer) mi.invoke();\r\n    assertThat(i).isEqualTo(1);\r\n    // defensive check: singleton, non-static should work with null array\r\n    tc1 = new TestClass1();\r\n    mi = new MethodInvoker();\r\n    mi.setTargetObject(tc1);\r\n    mi.setTargetMethod(\"method1\");\r\n    mi.setArguments((Object[]) null);\r\n    mi.prepare();\r\n    i = (Integer) mi.invoke();\r\n    assertThat(i).isEqualTo(1);\r\n    // sanity check: check that argument count matching works\r\n    mi = new MethodInvoker();\r\n    mi.setTargetClass(TestClass1.class);\r\n    mi.setTargetMethod(\"supertypes\");\r\n    mi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\");\r\n    mi.prepare();\r\n    assertThat(mi.invoke()).isEqualTo(\"hello\");\r\n    mi = new MethodInvoker();\r\n    mi.setTargetClass(TestClass1.class);\r\n    mi.setTargetMethod(\"supertypes2\");\r\n    mi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", \"bogus\");\r\n    mi.prepare();\r\n    assertThat(mi.invoke()).isEqualTo(\"hello\");\r\n    // Sanity check: check that argument conversion doesn't work with plain MethodInvoker\r\n    mi = new MethodInvoker();\r\n    mi.setTargetClass(TestClass1.class);\r\n    mi.setTargetMethod(\"supertypes2\");\r\n    mi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", Boolean.TRUE);\r\n    assertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(mi::prepare);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#stringWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringWithMethodInvoker() {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(\"no match\");\r\n    assertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(methodInvoker::prepare);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#purchaserWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid purchaserWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Purchaser());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"purchaser: hello\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#shopperWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shopperWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Shopper());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"purchaser: may I help you?\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#salesmanWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid salesmanWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Salesman());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"greetable: how are sales?\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#customerWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid customerWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Customer());\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"customer: good day\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#regularWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid regularWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new Regular(\"Kotter\"));\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"regular: welcome back Kotter\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MethodInvokerTests#vipWithMethodInvoker()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid vipWithMethodInvoker() throws Exception {\r\n    MethodInvoker methodInvoker = new MethodInvoker();\r\n    methodInvoker.setTargetObject(new Greeter());\r\n    methodInvoker.setTargetMethod(\"greet\");\r\n    methodInvoker.setArguments(new VIP(\"Fonzie\"));\r\n    methodInvoker.prepare();\r\n    String greeting = (String) methodInvoker.invoke();\r\n    assertThat(greeting).isEqualTo(\"regular: whassup dude?\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1",
+    "entityType": "class",
+    "code": "public static int _staticField1;\npublic int _field1 = 0;\npublic int method1() {\r\n    return ++_field1;\r\n}\npublic static int staticMethod1() {\r\n    return ++TestClass1._staticField1;\r\n}\npublic static void voidRetvalMethod() ;\npublic static void nullArgument(Object arg) ;\npublic static void intArgument(int arg) ;\npublic static void intArguments(int[] arg) ;\npublic static String supertypes(Collection<?> c, Integer i) {\r\n    return i.toString();\r\n}\npublic static String supertypes(Collection<?> c, List<?> l, String s) {\r\n    return s;\r\n}\npublic static String supertypes2(Collection<?> c, List<?> l, Integer i) {\r\n    return i.toString();\r\n}\npublic static String supertypes2(Collection<?> c, List<?> l, String s, Integer i) {\r\n    return s;\r\n}\npublic static String supertypes2(Collection<?> c, List<?> l, String s, String s2) {\r\n    return s;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#method1()",
+    "entityType": "method",
+    "code": "public int method1() {\r\n    return ++_field1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#staticMethod1()",
+    "entityType": "method",
+    "code": "public static int staticMethod1() {\r\n    return ++TestClass1._staticField1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#voidRetvalMethod()",
+    "entityType": "method",
+    "code": "public static void voidRetvalMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#nullArgument(Object)",
+    "entityType": "method",
+    "code": "public static void nullArgument(Object arg) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#intArgument(int)",
+    "entityType": "method",
+    "code": "public static void intArgument(int arg) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#intArguments(int[])",
+    "entityType": "method",
+    "code": "public static void intArguments(int[] arg) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#supertypes(Collection<?>,Integer)",
+    "entityType": "method",
+    "code": "public static String supertypes(Collection<?> c, Integer i) {\r\n    return i.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#supertypes(Collection<?>,List<?>,String)",
+    "entityType": "method",
+    "code": "public static String supertypes(Collection<?> c, List<?> l, String s) {\r\n    return s;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#supertypes2(Collection<?>,List<?>,Integer)",
+    "entityType": "method",
+    "code": "public static String supertypes2(Collection<?> c, List<?> l, Integer i) {\r\n    return i.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#supertypes2(Collection<?>,List<?>,String,Integer)",
+    "entityType": "method",
+    "code": "public static String supertypes2(Collection<?> c, List<?> l, String s, Integer i) {\r\n    return s;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestClass1#supertypes2(Collection<?>,List<?>,String,String)",
+    "entityType": "method",
+    "code": "public static String supertypes2(Collection<?> c, List<?> l, String s, String s2) {\r\n    return s;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Greeter",
+    "entityType": "class",
+    "code": "// should handle Salesman (only interface)\r\npublic String greet(Greetable greetable) {\r\n    return \"greetable: \" + greetable.getGreeting();\r\n}\n// should handle Shopper (beats Greetable since it is a class)\r\nprotected String greet(Purchaser purchaser) {\r\n    return \"purchaser: \" + purchaser.getGreeting();\r\n}\n// should handle Customer (exact match)\r\nString greet(Customer customer) {\r\n    return \"customer: \" + customer.getGreeting();\r\n}\n// should handle Regular (exact) and VIP (closest match)\r\nprivate String greet(Regular regular) {\r\n    return \"regular: \" + regular.getGreeting();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Greeter#greet(Greetable)",
+    "entityType": "method",
+    "code": "// should handle Salesman (only interface)\r\npublic String greet(Greetable greetable) {\r\n    return \"greetable: \" + greetable.getGreeting();\r\n}",
+    "comment": " should handle Salesman (only interface)"
+  },
+  {
+    "entityId": "org.springframework.util.Greeter#greet(Purchaser)",
+    "entityType": "method",
+    "code": "// should handle Shopper (beats Greetable since it is a class)\r\nprotected String greet(Purchaser purchaser) {\r\n    return \"purchaser: \" + purchaser.getGreeting();\r\n}",
+    "comment": " should handle Shopper (beats Greetable since it is a class)"
+  },
+  {
+    "entityId": "org.springframework.util.Greeter#greet(Customer)",
+    "entityType": "method",
+    "code": "// should handle Customer (exact match)\r\nString greet(Customer customer) {\r\n    return \"customer: \" + customer.getGreeting();\r\n}",
+    "comment": " should handle Customer (exact match)"
+  },
+  {
+    "entityId": "org.springframework.util.Greeter#greet(Regular)",
+    "entityType": "method",
+    "code": "// should handle Regular (exact) and VIP (closest match)\r\nprivate String greet(Regular regular) {\r\n    return \"regular: \" + regular.getGreeting();\r\n}",
+    "comment": " should handle Regular (exact) and VIP (closest match)"
+  },
+  {
+    "entityId": "org.springframework.util.Greetable",
+    "entityType": "class",
+    "code": "String getGreeting();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Greetable#getGreeting()",
+    "entityType": "method",
+    "code": "String getGreeting();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Person",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Purchaser",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"hello\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Purchaser#getGreeting()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"hello\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Shopper",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"may I help you?\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Shopper#getGreeting()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"may I help you?\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Salesman",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"how are sales?\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Salesman#getGreeting()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"how are sales?\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Customer",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"good day\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Customer#getGreeting()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"good day\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Regular",
+    "entityType": "class",
+    "code": "private String name;\npublic Regular(String name) {\r\n    this.name = name;\r\n}\n@Override\r\npublic String getGreeting() {\r\n    return \"welcome back \" + name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Regular#getGreeting()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"welcome back \" + name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.VIP",
+    "entityType": "class",
+    "code": "public VIP(String name) {\r\n    super(name);\r\n}\n@Override\r\npublic String getGreeting() {\r\n    return \"whassup dude?\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.VIP#getGreeting()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getGreeting() {\r\n    return \"whassup dude?\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "entityType": "class",
+    "code": "private static final Comparator<JdkProxyHint> JDK_PROXY_HINT_COMPARATOR = (left, right) -> {\r\n    String leftSignature = left.getProxiedInterfaces().stream().map(TypeReference::getCanonicalName).collect(Collectors.joining(\",\"));\r\n    String rightSignature = right.getProxiedInterfaces().stream().map(TypeReference::getCanonicalName).collect(Collectors.joining(\",\"));\r\n    return leftSignature.compareTo(rightSignature);\r\n};\npublic List<Map<String, Object>> reflection(RuntimeHints hints) {\r\n    List<Map<String, Object>> reflectionHints = new ArrayList<>();\r\n    reflectionHints.addAll(hints.reflection().typeHints().sorted(Comparator.comparing(TypeHint::getType)).map(this::toAttributes).toList());\r\n    reflectionHints.addAll(hints.proxies().jdkProxyHints().sorted(JDK_PROXY_HINT_COMPARATOR).map(this::toAttributes).toList());\r\n    return reflectionHints;\r\n}\npublic List<Map<String, Object>> jni(RuntimeHints hints) {\r\n    List<Map<String, Object>> jniHints = new ArrayList<>();\r\n    jniHints.addAll(hints.jni().typeHints().sorted(Comparator.comparing(TypeHint::getType)).map(this::toAttributes).toList());\r\n    return jniHints;\r\n}\nprivate Map<String, Object> toAttributes(TypeHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    attributes.put(\"type\", hint.getType());\r\n    handleCondition(attributes, hint);\r\n    handleCategories(attributes, hint.getMemberCategories());\r\n    handleFields(attributes, hint.fields());\r\n    handleExecutables(attributes, Stream.concat(hint.constructors(), hint.methods()).sorted().toList());\r\n    return attributes;\r\n}\nprivate void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        attributes.put(\"condition\", Map.of(\"typeReached\", hint.getReachableType()));\r\n    }\r\n}\nprivate void handleFields(Map<String, Object> attributes, Stream<FieldHint> fields) {\r\n    addIfNotEmpty(attributes, \"fields\", fields.sorted(Comparator.comparing(FieldHint::getName, String::compareToIgnoreCase)).map(fieldHint -> Map.of(\"name\", fieldHint.getName())).toList());\r\n}\nprivate void handleExecutables(Map<String, Object> attributes, List<ExecutableHint> hints) {\r\n    addIfNotEmpty(attributes, \"methods\", hints.stream().filter(h -> h.getMode().equals(ExecutableMode.INVOKE)).map(this::toAttributes).toList());\r\n}\nprivate Map<String, Object> toAttributes(ExecutableHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    attributes.put(\"name\", hint.getName());\r\n    attributes.put(\"parameterTypes\", hint.getParameterTypes());\r\n    return attributes;\r\n}\n@SuppressWarnings(\"removal\")\r\nprivate void handleCategories(Map<String, Object> attributes, Set<MemberCategory> categories) {\r\n    categories.stream().sorted().forEach(category -> {\r\n        switch(category) {\r\n            case ACCESS_PUBLIC_FIELDS, PUBLIC_FIELDS ->\r\n                attributes.put(\"allPublicFields\", true);\r\n            case ACCESS_DECLARED_FIELDS, DECLARED_FIELDS ->\r\n                attributes.put(\"allDeclaredFields\", true);\r\n            case INVOKE_PUBLIC_CONSTRUCTORS ->\r\n                attributes.put(\"allPublicConstructors\", true);\r\n            case INVOKE_DECLARED_CONSTRUCTORS ->\r\n                attributes.put(\"allDeclaredConstructors\", true);\r\n            case INVOKE_PUBLIC_METHODS ->\r\n                attributes.put(\"allPublicMethods\", true);\r\n            case INVOKE_DECLARED_METHODS ->\r\n                attributes.put(\"allDeclaredMethods\", true);\r\n            case PUBLIC_CLASSES ->\r\n                attributes.put(\"allPublicClasses\", true);\r\n            case DECLARED_CLASSES ->\r\n                attributes.put(\"allDeclaredClasses\", true);\r\n            case UNSAFE_ALLOCATED ->\r\n                attributes.put(\"unsafeAllocated\", true);\r\n        }\r\n    });\r\n}\nprivate void addIfNotEmpty(Map<String, Object> attributes, String name, @Nullable Object value) {\r\n    if (value != null && (value instanceof Collection<?> collection && !collection.isEmpty())) {\r\n        attributes.put(name, value);\r\n    }\r\n}\nprivate Map<String, Object> toAttributes(JdkProxyHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, hint);\r\n    attributes.put(\"type\", Map.of(\"proxy\", hint.getProxiedInterfaces()));\r\n    return attributes;\r\n}",
+    "comment": "\n * Collect {@link ReflectionHints} as map attributes ready for JSON serialization for the GraalVM\n * {@code native-image} compiler.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Janne Valkealahti\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/metadata/#reflection\">Reflection Use in Native Images</a>\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/dynamic-features/JNI/\">Java Native Interface (JNI) in Native Image</a>\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/overview/BuildConfiguration/\">Native Image Build Configuration</a>\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#reflection(RuntimeHints)",
+    "entityType": "method",
+    "code": "public List<Map<String, Object>> reflection(RuntimeHints hints) {\r\n    List<Map<String, Object>> reflectionHints = new ArrayList<>();\r\n    reflectionHints.addAll(hints.reflection().typeHints().sorted(Comparator.comparing(TypeHint::getType)).map(this::toAttributes).toList());\r\n    reflectionHints.addAll(hints.proxies().jdkProxyHints().sorted(JDK_PROXY_HINT_COMPARATOR).map(this::toAttributes).toList());\r\n    return reflectionHints;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#jni(RuntimeHints)",
+    "entityType": "method",
+    "code": "public List<Map<String, Object>> jni(RuntimeHints hints) {\r\n    List<Map<String, Object>> jniHints = new ArrayList<>();\r\n    jniHints.addAll(hints.jni().typeHints().sorted(Comparator.comparing(TypeHint::getType)).map(this::toAttributes).toList());\r\n    return jniHints;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#toAttributes(TypeHint)",
+    "entityType": "method",
+    "code": "private Map<String, Object> toAttributes(TypeHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    attributes.put(\"type\", hint.getType());\r\n    handleCondition(attributes, hint);\r\n    handleCategories(attributes, hint.getMemberCategories());\r\n    handleFields(attributes, hint.fields());\r\n    handleExecutables(attributes, Stream.concat(hint.constructors(), hint.methods()).sorted().toList());\r\n    return attributes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleCondition(Map<String,Object>,ConditionalHint)",
+    "entityType": "method",
+    "code": "private void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        attributes.put(\"condition\", Map.of(\"typeReached\", hint.getReachableType()));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleFields(Map<String,Object>,Stream<FieldHint>)",
+    "entityType": "method",
+    "code": "private void handleFields(Map<String, Object> attributes, Stream<FieldHint> fields) {\r\n    addIfNotEmpty(attributes, \"fields\", fields.sorted(Comparator.comparing(FieldHint::getName, String::compareToIgnoreCase)).map(fieldHint -> Map.of(\"name\", fieldHint.getName())).toList());\r\n}",
+    "comment": ""
+  }
+]

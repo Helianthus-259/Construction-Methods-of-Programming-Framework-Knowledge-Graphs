@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#withProperties()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withProperties() {\r\n    String text = \"foo=${foo}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"foo\", \"bar\");\r\n    assertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#withMultipleProperties()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withMultipleProperties() {\r\n    String text = \"foo=${foo},bar=${bar}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"foo\", \"bar\");\r\n    props.setProperty(\"bar\", \"baz\");\r\n    assertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar,bar=baz\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#recurseInProperty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid recurseInProperty() {\r\n    String text = \"foo=${bar}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"bar\", \"${baz}\");\r\n    props.setProperty(\"baz\", \"bar\");\r\n    assertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#recurseInPlaceholder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid recurseInPlaceholder() {\r\n    String text = \"foo=${b${inner}}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"bar\", \"bar\");\r\n    props.setProperty(\"inner\", \"ar\");\r\n    assertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar\");\r\n    text = \"${top}\";\r\n    props = new Properties();\r\n    props.setProperty(\"top\", \"${child}+${child}\");\r\n    props.setProperty(\"child\", \"${${differentiator}.grandchild}\");\r\n    props.setProperty(\"differentiator\", \"first\");\r\n    props.setProperty(\"first.grandchild\", \"actualValue\");\r\n    assertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"actualValue+actualValue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#withResolver()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withResolver() {\r\n    String text = \"foo=${foo}\";\r\n    PlaceholderResolver resolver = placeholderName -> \"foo\".equals(placeholderName) ? \"bar\" : null;\r\n    assertThat(this.helper.replacePlaceholders(text, resolver)).isEqualTo(\"foo=bar\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#unresolvedPlaceholderIsIgnored()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid unresolvedPlaceholderIsIgnored() {\r\n    String text = \"foo=${foo},bar=${bar}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"foo\", \"bar\");\r\n    assertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar,bar=${bar}\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#unresolvedPlaceholderAsError()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid unresolvedPlaceholderAsError() {\r\n    String text = \"foo=${foo},bar=${bar}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"foo\", \"bar\");\r\n    PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper(\"${\", \"}\", null, null, false);\r\n    assertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() -> helper.replacePlaceholders(text, props));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PropertyPlaceholderHelperTests#mockPlaceholderResolver(String)",
+    "entityType": "method",
+    "code": "private static PlaceholderResolver mockPlaceholderResolver(String... pairs) {\r\n    if (pairs.length % 2 == 1) {\r\n        throw new IllegalArgumentException(\"size must be even, it is a set of key=value pairs\");\r\n    }\r\n    PlaceholderResolver resolver = mock();\r\n    for (int i = 0; i < pairs.length; i += 2) {\r\n        String key = pairs[i];\r\n        String value = pairs[i + 1];\r\n        given(resolver.resolvePlaceholder(key)).willReturn(value);\r\n    }\r\n    return resolver;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DefaultValueTests",
+    "entityType": "class",
+    "code": "private final PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper(\"${\", \"}\", \":\", null, true);\n@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"defaultValues\")\r\nvoid defaultValueIsApplied(String text, String value) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"one\", \"1\");\r\n    properties.setProperty(\"two\", \"2\");\r\n    assertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(value);\r\n}\n@Test\r\nvoid defaultValueIsNotEvaluatedEarly() {\r\n    PlaceholderResolver resolver = mockPlaceholderResolver(\"one\", \"1\");\r\n    assertThat(this.helper.replacePlaceholders(\"This is ${one:or${two}}\", resolver)).isEqualTo(\"This is 1\");\r\n    verify(resolver).resolvePlaceholder(\"one\");\r\n    verify(resolver, never()).resolvePlaceholder(\"two\");\r\n}\nstatic Stream<Arguments> defaultValues() {\r\n    return Stream.of(Arguments.of(\"${invalid:test}\", \"test\"), Arguments.of(\"${invalid:${one}}\", \"1\"), Arguments.of(\"${invalid:${one}${two}}\", \"12\"), Arguments.of(\"${invalid:${one}:${two}}\", \"1:2\"), Arguments.of(\"${invalid:${also_invalid:test}}\", \"test\"), Arguments.of(\"${invalid:${also_invalid:${one}}}\", \"1\"));\r\n}\n@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"exactMatchPlaceholders\")\r\nvoid placeholdersWithExactMatchAreConsidered(String text, String expected) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"prefix://my-service\", \"example-service\");\r\n    properties.setProperty(\"px\", \"prefix\");\r\n    properties.setProperty(\"p1\", \"${prefix://my-service}\");\r\n    assertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(expected);\r\n}\nstatic Stream<Arguments> exactMatchPlaceholders() {\r\n    return Stream.of(Arguments.of(\"${prefix://my-service}\", \"example-service\"), Arguments.of(\"${p1}\", \"example-service\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DefaultValueTests#defaultValueIsApplied(String,String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"defaultValues\")\r\nvoid defaultValueIsApplied(String text, String value) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"one\", \"1\");\r\n    properties.setProperty(\"two\", \"2\");\r\n    assertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DefaultValueTests#defaultValueIsNotEvaluatedEarly()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid defaultValueIsNotEvaluatedEarly() {\r\n    PlaceholderResolver resolver = mockPlaceholderResolver(\"one\", \"1\");\r\n    assertThat(this.helper.replacePlaceholders(\"This is ${one:or${two}}\", resolver)).isEqualTo(\"This is 1\");\r\n    verify(resolver).resolvePlaceholder(\"one\");\r\n    verify(resolver, never()).resolvePlaceholder(\"two\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DefaultValueTests#defaultValues()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> defaultValues() {\r\n    return Stream.of(Arguments.of(\"${invalid:test}\", \"test\"), Arguments.of(\"${invalid:${one}}\", \"1\"), Arguments.of(\"${invalid:${one}${two}}\", \"12\"), Arguments.of(\"${invalid:${one}:${two}}\", \"1:2\"), Arguments.of(\"${invalid:${also_invalid:test}}\", \"test\"), Arguments.of(\"${invalid:${also_invalid:${one}}}\", \"1\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DefaultValueTests#placeholdersWithExactMatchAreConsidered(String,String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"exactMatchPlaceholders\")\r\nvoid placeholdersWithExactMatchAreConsidered(String text, String expected) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"prefix://my-service\", \"example-service\");\r\n    properties.setProperty(\"px\", \"prefix\");\r\n    properties.setProperty(\"p1\", \"${prefix://my-service}\");\r\n    assertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(expected);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DefaultValueTests#exactMatchPlaceholders()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> exactMatchPlaceholders() {\r\n    return Stream.of(Arguments.of(\"${prefix://my-service}\", \"example-service\"), Arguments.of(\"${p1}\", \"example-service\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PublicInterface",
+    "entityType": "class",
+    "code": "String getText();",
+    "comment": "\n * This is intentionally a top-level public interface.\n "
+  },
+  {
+    "entityId": "org.springframework.util.PublicInterface#getText()",
+    "entityType": "method",
+    "code": "String getText();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PublicSuperclass",
+    "entityType": "class",
+    "code": "public String getMessage() {\r\n    return \"goodbye\";\r\n}\npublic int getNumber() {\r\n    return 1;\r\n}\npublic String greet(String name) {\r\n    return \"Super, \" + name;\r\n}\npublic int process(int num) {\r\n    return num + 1;\r\n}",
+    "comment": "\n * This is intentionally a top-level public class.\n "
+  },
+  {
+    "entityId": "org.springframework.util.PublicSuperclass#getMessage()",
+    "entityType": "method",
+    "code": "public String getMessage() {\r\n    return \"goodbye\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PublicSuperclass#getNumber()",
+    "entityType": "method",
+    "code": "public int getNumber() {\r\n    return 1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PublicSuperclass#greet(String)",
+    "entityType": "method",
+    "code": "public String greet(String name) {\r\n    return \"Super, \" + name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.PublicSuperclass#process(int)",
+    "entityType": "method",
+    "code": "public int process(int num) {\r\n    return num + 1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid findField() {\r\n    Field field = ReflectionUtils.findField(TestObjectSubclassWithPublicField.class, \"publicField\", String.class);\r\n    assertThat(field).isNotNull();\r\n    assertThat(field.getName()).isEqualTo(\"publicField\");\r\n    assertThat(field.getType()).isEqualTo(String.class);\r\n    assertThat(Modifier.isPublic(field.getModifiers())).as(\"Field should be public.\").isTrue();\r\n    field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, \"prot\", String.class);\r\n    assertThat(field).isNotNull();\r\n    assertThat(field.getName()).isEqualTo(\"prot\");\r\n    assertThat(field.getType()).isEqualTo(String.class);\r\n    assertThat(Modifier.isProtected(field.getModifiers())).as(\"Field should be protected.\").isTrue();\r\n    field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, \"name\", String.class);\r\n    assertThat(field).isNotNull();\r\n    assertThat(field.getName()).isEqualTo(\"name\");\r\n    assertThat(field.getType()).isEqualTo(String.class);\r\n    assertThat(Modifier.isPrivate(field.getModifiers())).as(\"Field should be private.\").isTrue();\r\n}\n@Test\r\nvoid setField() {\r\n    TestObjectSubclassWithNewField testBean = new TestObjectSubclassWithNewField();\r\n    Field field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, \"name\", String.class);\r\n    ReflectionUtils.makeAccessible(field);\r\n    ReflectionUtils.setField(field, testBean, \"FooBar\");\r\n    assertThat(testBean.getName()).isNotNull();\r\n    assertThat(testBean.getName()).isEqualTo(\"FooBar\");\r\n    ReflectionUtils.setField(field, testBean, null);\r\n    assertThat(testBean.getName()).isNull();\r\n}\n@Test\r\nvoid invokeMethod() throws Exception {\r\n    String rob = \"Rob Harrop\";\r\n    TestObject bean = new TestObject();\r\n    bean.setName(rob);\r\n    Method getName = TestObject.class.getMethod(\"getName\");\r\n    Method setName = TestObject.class.getMethod(\"setName\", String.class);\r\n    Object name = ReflectionUtils.invokeMethod(getName, bean);\r\n    assertThat(name).as(\"Incorrect name returned\").isEqualTo(rob);\r\n    String juergen = \"Juergen Hoeller\";\r\n    ReflectionUtils.invokeMethod(setName, bean, juergen);\r\n    assertThat(bean.getName()).as(\"Incorrect name set\").isEqualTo(juergen);\r\n}\n@Test\r\nvoid declaresException() throws Exception {\r\n    Method remoteExMethod = A.class.getDeclaredMethod(\"foo\", Integer.class);\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, RemoteException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, ConnectException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, NoSuchMethodException.class)).isFalse();\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, Exception.class)).isFalse();\r\n    Method illegalExMethod = B.class.getDeclaredMethod(\"bar\", String.class);\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, IllegalArgumentException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, NumberFormatException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, IllegalStateException.class)).isFalse();\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, Exception.class)).isFalse();\r\n}\n@Test\r\nvoid copySrcToDestinationOfIncorrectClass() {\r\n    TestObject src = new TestObject();\r\n    String dest = new String();\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionUtils.shallowCopyFieldState(src, dest));\r\n}\n@Test\r\nvoid rejectsNullSrc() {\r\n    TestObject src = null;\r\n    String dest = new String();\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionUtils.shallowCopyFieldState(src, dest));\r\n}\n@Test\r\nvoid rejectsNullDest() {\r\n    TestObject src = new TestObject();\r\n    String dest = null;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionUtils.shallowCopyFieldState(src, dest));\r\n}\n@Test\r\nvoid validCopy() {\r\n    TestObject src = new TestObject();\r\n    TestObject dest = new TestObject();\r\n    testValidCopy(src, dest);\r\n}\n@Test\r\nvoid validCopyOnSubTypeWithNewField() {\r\n    TestObjectSubclassWithNewField src = new TestObjectSubclassWithNewField();\r\n    TestObjectSubclassWithNewField dest = new TestObjectSubclassWithNewField();\r\n    src.magic = 11;\r\n    // Will check inherited fields are copied\r\n    testValidCopy(src, dest);\r\n    // Check subclass fields were copied\r\n    assertThat(dest.magic).isEqualTo(src.magic);\r\n    assertThat(dest.prot).isEqualTo(src.prot);\r\n}\n@Test\r\nvoid validCopyToSubType() {\r\n    TestObject src = new TestObject();\r\n    TestObjectSubclassWithNewField dest = new TestObjectSubclassWithNewField();\r\n    dest.magic = 11;\r\n    testValidCopy(src, dest);\r\n    // Should have left this one alone\r\n    assertThat(dest.magic).isEqualTo(11);\r\n}\n@Test\r\nvoid validCopyToSubTypeWithFinalField() {\r\n    TestObjectSubclassWithFinalField src = new TestObjectSubclassWithFinalField();\r\n    TestObjectSubclassWithFinalField dest = new TestObjectSubclassWithFinalField();\r\n    // Check that this doesn't fail due to attempt to assign final\r\n    testValidCopy(src, dest);\r\n}\nprivate void testValidCopy(TestObject src, TestObject dest) {\r\n    src.setName(\"freddie\");\r\n    src.setAge(15);\r\n    src.setSpouse(new TestObject());\r\n    assertThat(src.getAge()).isNotEqualTo(dest.getAge());\r\n    ReflectionUtils.shallowCopyFieldState(src, dest);\r\n    assertThat(dest.getAge()).isEqualTo(src.getAge());\r\n    assertThat(dest.getSpouse()).isEqualTo(src.getSpouse());\r\n}\n@Test\r\nvoid doWithMethodsUsingProtectedFilter() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(TestObject.class, mc, method -> Modifier.isProtected(method.getModifiers()));\r\n    assertThat(mc.getMethodNames()).hasSizeGreaterThanOrEqualTo(2).as(\"Must find protected methods on Object\").contains(\"clone\", \"finalize\").as(\"Public, not protected\").doesNotContain(\"hashCode\", \"absquatulate\");\r\n}\n@Test\r\nvoid doWithMethodsUsingUserDeclaredMethodsFilterStartingWithObject() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(Object.class, mc, ReflectionUtils.USER_DECLARED_METHODS);\r\n    assertThat(mc.getMethodNames()).isEmpty();\r\n}\n@Test\r\nvoid doWithMethodsUsingUserDeclaredMethodsFilterStartingWithTestObject() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(TestObject.class, mc, ReflectionUtils.USER_DECLARED_METHODS);\r\n    assertThat(mc.getMethodNames()).as(\"user declared methods\").contains(\"absquatulate\", \"compareTo\", \"getName\", \"setName\", \"getAge\", \"setAge\", \"getSpouse\", \"setSpouse\").as(\"methods on Object\").doesNotContain(\"equals\", \"hashCode\", \"toString\", \"clone\", \"finalize\", \"getClass\", \"notify\", \"notifyAll\", \"wait\");\r\n}\n@Test\r\nvoid doWithMethodsUsingUserDeclaredMethodsComposedFilter() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    // \"q\" because both absquatulate() and equals() contain \"q\"\r\n    MethodFilter isSetterMethodOrNameContainsQ = m -> m.getName().startsWith(\"set\") || m.getName().contains(\"q\");\r\n    MethodFilter methodFilter = ReflectionUtils.USER_DECLARED_METHODS.and(isSetterMethodOrNameContainsQ);\r\n    ReflectionUtils.doWithMethods(TestObject.class, mc, methodFilter);\r\n    assertThat(mc.getMethodNames()).containsExactlyInAnyOrder(\"setName\", \"setAge\", \"setSpouse\", \"absquatulate\");\r\n}\n@Test\r\nvoid doWithMethodsFindsDuplicatesInClassHierarchy() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(TestObjectSubclass.class, mc);\r\n    assertThat(mc.getMethodNames().stream()).filteredOn(\"absquatulate\"::equals).as(\"Found 2 absquatulates\").hasSize(2);\r\n}\n@Test\r\nvoid findMethod() {\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"bar\", String.class)).isNotNull();\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"foo\", Integer.class)).isNotNull();\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"getClass\")).isNotNull();\r\n}\n@Test\r\nvoid findMethodWithVarArgs() {\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"add\", int[].class)).isNotNull();\r\n}\n@Test\r\nvoid isCglibRenamedMethod() throws SecurityException, NoSuchMethodException {\r\n    @SuppressWarnings(\"unused\")\r\n    class C {\r\n\r\n        public void CGLIB$m1$123() ;\r\n\r\n        public void CGLIB$m1$0() ;\r\n\r\n        public void CGLIB$$0() ;\r\n\r\n        public void CGLIB$m1$() ;\r\n\r\n        public void CGLIB$m1() ;\r\n\r\n        public void m1() ;\r\n\r\n        public void m1$() ;\r\n\r\n        public void m1$1() ;\r\n    }\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1$123\"))).isTrue();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1$0\"))).isTrue();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$$0\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1$\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"m1\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"m1$\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"m1$1\"))).isFalse();\r\n}\n@Test\r\nvoid getAllDeclaredMethods() {\r\n    class Foo {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return super.toString();\r\n        }\r\n    }\r\n    Method[] allDeclaredMethods = ReflectionUtils.getAllDeclaredMethods(Foo.class);\r\n    assertThat(allDeclaredMethods).extracting(Method::getName).filteredOn(\"toString\"::equals).hasSize(2);\r\n}\n@Test\r\nvoid getUniqueDeclaredMethods() {\r\n    class Foo {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return super.toString();\r\n        }\r\n    }\r\n    Method[] uniqueDeclaredMethods = ReflectionUtils.getUniqueDeclaredMethods(Foo.class);\r\n    assertThat(uniqueDeclaredMethods).extracting(Method::getName).filteredOn(\"toString\"::equals).hasSize(1);\r\n}\n@Test\r\nvoid getUniqueDeclaredMethods_withCovariantReturnType() throws Exception {\r\n    class Parent {\r\n\r\n        @SuppressWarnings(\"unused\")\r\n        public Number m1() {\r\n            return 42;\r\n        }\r\n    }\r\n    class Leaf extends Parent {\r\n\r\n        @Override\r\n        public Integer m1() {\r\n            return 42;\r\n        }\r\n    }\r\n    Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(Leaf.class);\r\n    assertThat(methods).extracting(Method::getName).filteredOn(\"m1\"::equals).hasSize(1);\r\n    assertThat(methods).contains(Leaf.class.getMethod(\"m1\"));\r\n    assertThat(methods).doesNotContain(Parent.class.getMethod(\"m1\"));\r\n}\n@Test\r\nvoid getDeclaredMethodsReturnsCopy() {\r\n    Method[] m1 = ReflectionUtils.getDeclaredMethods(A.class);\r\n    Method[] m2 = ReflectionUtils.getDeclaredMethods(A.class);\r\n    assertThat(m1).isNotSameAs(m2);\r\n}\nprivate static class ListSavingMethodCallback implements ReflectionUtils.MethodCallback {\r\n\r\n    private List<String> methodNames = new ArrayList<>();\r\n\r\n    private List<Method> methods = new ArrayList<>();\r\n\r\n    @Override\r\n    public void doWith(Method m) throws IllegalArgumentException {\r\n        this.methodNames.add(m.getName());\r\n        this.methods.add(m);\r\n    }\r\n\r\n    public List<String> getMethodNames() {\r\n        return this.methodNames;\r\n    }\r\n\r\n    @SuppressWarnings(\"unused\")\r\n    public List<Method> getMethods() {\r\n        return this.methods;\r\n    }\r\n}\nprivate static class TestObjectSubclass extends TestObject {\r\n\r\n    @Override\r\n    public void absquatulate() {\r\n        throw new UnsupportedOperationException();\r\n    }\r\n}\nprivate static class TestObjectSubclassWithPublicField extends TestObject {\r\n\r\n    @SuppressWarnings(\"unused\")\r\n    public String publicField = \"foo\";\r\n}\nprivate static class TestObjectSubclassWithNewField extends TestObject {\r\n\r\n    private int magic;\r\n\r\n    protected String prot = \"foo\";\r\n}\nprivate static class TestObjectSubclassWithFinalField extends TestObject {\r\n\r\n    @SuppressWarnings(\"unused\")\r\n    private final String foo = \"will break naive copy that doesn't exclude statics\";\r\n}\nprivate static class A {\r\n\r\n    @SuppressWarnings({ \"unused\", \"RedundantThrows\" })\r\n    private void foo(Integer i) throws RemoteException {\r\n    }\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate static class B extends A {\r\n\r\n    void bar(String s) throws IllegalArgumentException {\r\n    }\r\n\r\n    int add(int... args) {\r\n        int sum = 0;\r\n        for (int arg : args) {\r\n            sum += arg;\r\n        }\r\n        return sum;\r\n    }\r\n}",
+    "comment": "\n * @author Rob Harrop\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#findField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findField() {\r\n    Field field = ReflectionUtils.findField(TestObjectSubclassWithPublicField.class, \"publicField\", String.class);\r\n    assertThat(field).isNotNull();\r\n    assertThat(field.getName()).isEqualTo(\"publicField\");\r\n    assertThat(field.getType()).isEqualTo(String.class);\r\n    assertThat(Modifier.isPublic(field.getModifiers())).as(\"Field should be public.\").isTrue();\r\n    field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, \"prot\", String.class);\r\n    assertThat(field).isNotNull();\r\n    assertThat(field.getName()).isEqualTo(\"prot\");\r\n    assertThat(field.getType()).isEqualTo(String.class);\r\n    assertThat(Modifier.isProtected(field.getModifiers())).as(\"Field should be protected.\").isTrue();\r\n    field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, \"name\", String.class);\r\n    assertThat(field).isNotNull();\r\n    assertThat(field.getName()).isEqualTo(\"name\");\r\n    assertThat(field.getType()).isEqualTo(String.class);\r\n    assertThat(Modifier.isPrivate(field.getModifiers())).as(\"Field should be private.\").isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#setField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid setField() {\r\n    TestObjectSubclassWithNewField testBean = new TestObjectSubclassWithNewField();\r\n    Field field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, \"name\", String.class);\r\n    ReflectionUtils.makeAccessible(field);\r\n    ReflectionUtils.setField(field, testBean, \"FooBar\");\r\n    assertThat(testBean.getName()).isNotNull();\r\n    assertThat(testBean.getName()).isEqualTo(\"FooBar\");\r\n    ReflectionUtils.setField(field, testBean, null);\r\n    assertThat(testBean.getName()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#invokeMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid invokeMethod() throws Exception {\r\n    String rob = \"Rob Harrop\";\r\n    TestObject bean = new TestObject();\r\n    bean.setName(rob);\r\n    Method getName = TestObject.class.getMethod(\"getName\");\r\n    Method setName = TestObject.class.getMethod(\"setName\", String.class);\r\n    Object name = ReflectionUtils.invokeMethod(getName, bean);\r\n    assertThat(name).as(\"Incorrect name returned\").isEqualTo(rob);\r\n    String juergen = \"Juergen Hoeller\";\r\n    ReflectionUtils.invokeMethod(setName, bean, juergen);\r\n    assertThat(bean.getName()).as(\"Incorrect name set\").isEqualTo(juergen);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#declaresException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid declaresException() throws Exception {\r\n    Method remoteExMethod = A.class.getDeclaredMethod(\"foo\", Integer.class);\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, RemoteException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, ConnectException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, NoSuchMethodException.class)).isFalse();\r\n    assertThat(ReflectionUtils.declaresException(remoteExMethod, Exception.class)).isFalse();\r\n    Method illegalExMethod = B.class.getDeclaredMethod(\"bar\", String.class);\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, IllegalArgumentException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, NumberFormatException.class)).isTrue();\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, IllegalStateException.class)).isFalse();\r\n    assertThat(ReflectionUtils.declaresException(illegalExMethod, Exception.class)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#copySrcToDestinationOfIncorrectClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid copySrcToDestinationOfIncorrectClass() {\r\n    TestObject src = new TestObject();\r\n    String dest = new String();\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionUtils.shallowCopyFieldState(src, dest));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#rejectsNullSrc()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsNullSrc() {\r\n    TestObject src = null;\r\n    String dest = new String();\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionUtils.shallowCopyFieldState(src, dest));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#rejectsNullDest()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsNullDest() {\r\n    TestObject src = new TestObject();\r\n    String dest = null;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionUtils.shallowCopyFieldState(src, dest));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#validCopy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid validCopy() {\r\n    TestObject src = new TestObject();\r\n    TestObject dest = new TestObject();\r\n    testValidCopy(src, dest);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#validCopyOnSubTypeWithNewField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid validCopyOnSubTypeWithNewField() {\r\n    TestObjectSubclassWithNewField src = new TestObjectSubclassWithNewField();\r\n    TestObjectSubclassWithNewField dest = new TestObjectSubclassWithNewField();\r\n    src.magic = 11;\r\n    // Will check inherited fields are copied\r\n    testValidCopy(src, dest);\r\n    // Check subclass fields were copied\r\n    assertThat(dest.magic).isEqualTo(src.magic);\r\n    assertThat(dest.prot).isEqualTo(src.prot);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#validCopyToSubType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid validCopyToSubType() {\r\n    TestObject src = new TestObject();\r\n    TestObjectSubclassWithNewField dest = new TestObjectSubclassWithNewField();\r\n    dest.magic = 11;\r\n    testValidCopy(src, dest);\r\n    // Should have left this one alone\r\n    assertThat(dest.magic).isEqualTo(11);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#validCopyToSubTypeWithFinalField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid validCopyToSubTypeWithFinalField() {\r\n    TestObjectSubclassWithFinalField src = new TestObjectSubclassWithFinalField();\r\n    TestObjectSubclassWithFinalField dest = new TestObjectSubclassWithFinalField();\r\n    // Check that this doesn't fail due to attempt to assign final\r\n    testValidCopy(src, dest);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#testValidCopy(TestObject,TestObject)",
+    "entityType": "method",
+    "code": "private void testValidCopy(TestObject src, TestObject dest) {\r\n    src.setName(\"freddie\");\r\n    src.setAge(15);\r\n    src.setSpouse(new TestObject());\r\n    assertThat(src.getAge()).isNotEqualTo(dest.getAge());\r\n    ReflectionUtils.shallowCopyFieldState(src, dest);\r\n    assertThat(dest.getAge()).isEqualTo(src.getAge());\r\n    assertThat(dest.getSpouse()).isEqualTo(src.getSpouse());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#doWithMethodsUsingProtectedFilter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doWithMethodsUsingProtectedFilter() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(TestObject.class, mc, method -> Modifier.isProtected(method.getModifiers()));\r\n    assertThat(mc.getMethodNames()).hasSizeGreaterThanOrEqualTo(2).as(\"Must find protected methods on Object\").contains(\"clone\", \"finalize\").as(\"Public, not protected\").doesNotContain(\"hashCode\", \"absquatulate\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#doWithMethodsUsingUserDeclaredMethodsFilterStartingWithObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doWithMethodsUsingUserDeclaredMethodsFilterStartingWithObject() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(Object.class, mc, ReflectionUtils.USER_DECLARED_METHODS);\r\n    assertThat(mc.getMethodNames()).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#doWithMethodsUsingUserDeclaredMethodsFilterStartingWithTestObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doWithMethodsUsingUserDeclaredMethodsFilterStartingWithTestObject() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(TestObject.class, mc, ReflectionUtils.USER_DECLARED_METHODS);\r\n    assertThat(mc.getMethodNames()).as(\"user declared methods\").contains(\"absquatulate\", \"compareTo\", \"getName\", \"setName\", \"getAge\", \"setAge\", \"getSpouse\", \"setSpouse\").as(\"methods on Object\").doesNotContain(\"equals\", \"hashCode\", \"toString\", \"clone\", \"finalize\", \"getClass\", \"notify\", \"notifyAll\", \"wait\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#doWithMethodsUsingUserDeclaredMethodsComposedFilter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doWithMethodsUsingUserDeclaredMethodsComposedFilter() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    // \"q\" because both absquatulate() and equals() contain \"q\"\r\n    MethodFilter isSetterMethodOrNameContainsQ = m -> m.getName().startsWith(\"set\") || m.getName().contains(\"q\");\r\n    MethodFilter methodFilter = ReflectionUtils.USER_DECLARED_METHODS.and(isSetterMethodOrNameContainsQ);\r\n    ReflectionUtils.doWithMethods(TestObject.class, mc, methodFilter);\r\n    assertThat(mc.getMethodNames()).containsExactlyInAnyOrder(\"setName\", \"setAge\", \"setSpouse\", \"absquatulate\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#doWithMethodsFindsDuplicatesInClassHierarchy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doWithMethodsFindsDuplicatesInClassHierarchy() {\r\n    ListSavingMethodCallback mc = new ListSavingMethodCallback();\r\n    ReflectionUtils.doWithMethods(TestObjectSubclass.class, mc);\r\n    assertThat(mc.getMethodNames().stream()).filteredOn(\"absquatulate\"::equals).as(\"Found 2 absquatulates\").hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#findMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findMethod() {\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"bar\", String.class)).isNotNull();\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"foo\", Integer.class)).isNotNull();\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"getClass\")).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#findMethodWithVarArgs()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findMethodWithVarArgs() {\r\n    assertThat(ReflectionUtils.findMethod(B.class, \"add\", int[].class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#isCglibRenamedMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isCglibRenamedMethod() throws SecurityException, NoSuchMethodException {\r\n    @SuppressWarnings(\"unused\")\r\n    class C {\r\n\r\n        public void CGLIB$m1$123() ;\r\n\r\n        public void CGLIB$m1$0() ;\r\n\r\n        public void CGLIB$$0() ;\r\n\r\n        public void CGLIB$m1$() ;\r\n\r\n        public void CGLIB$m1() ;\r\n\r\n        public void m1() ;\r\n\r\n        public void m1$() ;\r\n\r\n        public void m1$1() ;\r\n    }\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1$123\"))).isTrue();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1$0\"))).isTrue();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$$0\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1$\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"CGLIB$m1\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"m1\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"m1$\"))).isFalse();\r\n    assertThat(ReflectionUtils.isCglibRenamedMethod(C.class.getMethod(\"m1$1\"))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#getAllDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAllDeclaredMethods() {\r\n    class Foo {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return super.toString();\r\n        }\r\n    }\r\n    Method[] allDeclaredMethods = ReflectionUtils.getAllDeclaredMethods(Foo.class);\r\n    assertThat(allDeclaredMethods).extracting(Method::getName).filteredOn(\"toString\"::equals).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#getUniqueDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getUniqueDeclaredMethods() {\r\n    class Foo {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return super.toString();\r\n        }\r\n    }\r\n    Method[] uniqueDeclaredMethods = ReflectionUtils.getUniqueDeclaredMethods(Foo.class);\r\n    assertThat(uniqueDeclaredMethods).extracting(Method::getName).filteredOn(\"toString\"::equals).hasSize(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#getUniqueDeclaredMethods_withCovariantReturnType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getUniqueDeclaredMethods_withCovariantReturnType() throws Exception {\r\n    class Parent {\r\n\r\n        @SuppressWarnings(\"unused\")\r\n        public Number m1() {\r\n            return 42;\r\n        }\r\n    }\r\n    class Leaf extends Parent {\r\n\r\n        @Override\r\n        public Integer m1() {\r\n            return 42;\r\n        }\r\n    }\r\n    Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(Leaf.class);\r\n    assertThat(methods).extracting(Method::getName).filteredOn(\"m1\"::equals).hasSize(1);\r\n    assertThat(methods).contains(Leaf.class.getMethod(\"m1\"));\r\n    assertThat(methods).doesNotContain(Parent.class.getMethod(\"m1\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ReflectionUtilsTests#getDeclaredMethodsReturnsCopy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getDeclaredMethodsReturnsCopy() {\r\n    Method[] m1 = ReflectionUtils.getDeclaredMethods(A.class);\r\n    Method[] m2 = ReflectionUtils.getDeclaredMethods(A.class);\r\n    assertThat(m1).isNotSameAs(m2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C",
+    "entityType": "class",
+    "code": "public void CGLIB$m1$123() ;\npublic void CGLIB$m1$0() ;\npublic void CGLIB$$0() ;\npublic void CGLIB$m1$() ;\npublic void CGLIB$m1() ;\npublic void m1() ;\npublic void m1$() ;\npublic void m1$1() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#CGLIB$m1$123()",
+    "entityType": "method",
+    "code": "public void CGLIB$m1$123() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#CGLIB$m1$0()",
+    "entityType": "method",
+    "code": "public void CGLIB$m1$0() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#CGLIB$$0()",
+    "entityType": "method",
+    "code": "public void CGLIB$$0() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#CGLIB$m1$()",
+    "entityType": "method",
+    "code": "public void CGLIB$m1$() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#CGLIB$m1()",
+    "entityType": "method",
+    "code": "public void CGLIB$m1() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#m1()",
+    "entityType": "method",
+    "code": "public void m1() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#m1$()",
+    "entityType": "method",
+    "code": "public void m1$() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.C#m1$1()",
+    "entityType": "method",
+    "code": "public void m1$1() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Foo",
+    "entityType": "class",
+    "code": "@Override\r\npublic String toString() {\r\n    return super.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Foo#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return super.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Foo",
+    "entityType": "class",
+    "code": "@Override\r\npublic String toString() {\r\n    return super.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Foo#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return super.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Parent",
+    "entityType": "class",
+    "code": "@SuppressWarnings(\"unused\")\r\npublic Number m1() {\r\n    return 42;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Parent#m1()",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unused\")\r\npublic Number m1() {\r\n    return 42;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Leaf",
+    "entityType": "class",
+    "code": "@Override\r\npublic Integer m1() {\r\n    return 42;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.Leaf#m1()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Integer m1() {\r\n    return 42;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ListSavingMethodCallback",
+    "entityType": "class",
+    "code": "private List<String> methodNames = new ArrayList<>();\nprivate List<Method> methods = new ArrayList<>();\n@Override\r\npublic void doWith(Method m) throws IllegalArgumentException {\r\n    this.methodNames.add(m.getName());\r\n    this.methods.add(m);\r\n}\npublic List<String> getMethodNames() {\r\n    return this.methodNames;\r\n}\n@SuppressWarnings(\"unused\")\r\npublic List<Method> getMethods() {\r\n    return this.methods;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ListSavingMethodCallback#doWith(Method)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void doWith(Method m) throws IllegalArgumentException {\r\n    this.methodNames.add(m.getName());\r\n    this.methods.add(m);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ListSavingMethodCallback#getMethodNames()",
+    "entityType": "method",
+    "code": "public List<String> getMethodNames() {\r\n    return this.methodNames;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ListSavingMethodCallback#getMethods()",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unused\")\r\npublic List<Method> getMethods() {\r\n    return this.methods;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestObjectSubclass",
+    "entityType": "class",
+    "code": "@Override\r\npublic void absquatulate() {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestObjectSubclass#absquatulate()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void absquatulate() {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestObjectSubclassWithPublicField",
+    "entityType": "class",
+    "code": "@SuppressWarnings(\"unused\")\r\npublic String publicField = \"foo\";",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestObjectSubclassWithNewField",
+    "entityType": "class",
+    "code": "private int magic;\nprotected String prot = \"foo\";",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.TestObjectSubclassWithFinalField",
+    "entityType": "class",
+    "code": "@SuppressWarnings(\"unused\")\r\nprivate final String foo = \"will break naive copy that doesn't exclude statics\";",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.A",
+    "entityType": "class",
+    "code": "@SuppressWarnings({ \"unused\", \"RedundantThrows\" })\r\nprivate void foo(Integer i) throws RemoteException ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.A#foo(Integer)",
+    "entityType": "method",
+    "code": "@SuppressWarnings({ \"unused\", \"RedundantThrows\" })\r\nprivate void foo(Integer i) throws RemoteException ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.B",
+    "entityType": "class",
+    "code": "void bar(String s) throws IllegalArgumentException ;\nint add(int... args) {\r\n    int sum = 0;\r\n    for (int arg : args) {\r\n        sum += arg;\r\n    }\r\n    return sum;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.B#bar(String)",
+    "entityType": "method",
+    "code": "void bar(String s) throws IllegalArgumentException ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.B#add(int)",
+    "entityType": "method",
+    "code": "int add(int... args) {\r\n    int sum = 0;\r\n    for (int arg : args) {\r\n        sum += arg;\r\n    }\r\n    return sum;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests",
+    "entityType": "class",
+    "code": "private static final int INITIAL_CAPACITY = 256;\nprivate ResizableByteArrayOutputStream baos;\nprivate byte[] helloBytes;\n@BeforeEach\r\nvoid setUp() throws Exception {\r\n    this.baos = new ResizableByteArrayOutputStream(INITIAL_CAPACITY);\r\n    this.helloBytes = \"Hello World\".getBytes(StandardCharsets.UTF_8);\r\n}\n@Test\r\nvoid resize() throws Exception {\r\n    assertThat(this.baos.capacity()).isEqualTo(INITIAL_CAPACITY);\r\n    this.baos.write(helloBytes);\r\n    int size = 64;\r\n    this.baos.resize(size);\r\n    assertThat(this.baos.capacity()).isEqualTo(size);\r\n    assertByteArrayEqualsString(this.baos);\r\n}\n@Test\r\nvoid autoGrow() {\r\n    assertThat(this.baos.capacity()).isEqualTo(INITIAL_CAPACITY);\r\n    for (int i = 0; i < 129; i++) {\r\n        this.baos.write(0);\r\n    }\r\n    assertThat(this.baos.capacity()).isEqualTo(256);\r\n}\n@Test\r\nvoid grow() throws Exception {\r\n    assertThat(this.baos.capacity()).isEqualTo(INITIAL_CAPACITY);\r\n    this.baos.write(helloBytes);\r\n    this.baos.grow(1000);\r\n    assertThat(this.baos.capacity()).isEqualTo((this.helloBytes.length + 1000));\r\n    assertByteArrayEqualsString(this.baos);\r\n}\n@Test\r\nvoid write() throws Exception {\r\n    this.baos.write(helloBytes);\r\n    assertByteArrayEqualsString(this.baos);\r\n}\n@Test\r\nvoid failResize() throws Exception {\r\n    this.baos.write(helloBytes);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.baos.resize(5));\r\n}\nprivate void assertByteArrayEqualsString(ResizableByteArrayOutputStream actual) {\r\n    assertThat(actual.toByteArray()).isEqualTo(helloBytes);\r\n}",
+    "comment": "\n * @author Brian Clozel\n * @author Juergen Hoeller\n "
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#setUp()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setUp() throws Exception {\r\n    this.baos = new ResizableByteArrayOutputStream(INITIAL_CAPACITY);\r\n    this.helloBytes = \"Hello World\".getBytes(StandardCharsets.UTF_8);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#resize()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resize() throws Exception {\r\n    assertThat(this.baos.capacity()).isEqualTo(INITIAL_CAPACITY);\r\n    this.baos.write(helloBytes);\r\n    int size = 64;\r\n    this.baos.resize(size);\r\n    assertThat(this.baos.capacity()).isEqualTo(size);\r\n    assertByteArrayEqualsString(this.baos);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#autoGrow()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid autoGrow() {\r\n    assertThat(this.baos.capacity()).isEqualTo(INITIAL_CAPACITY);\r\n    for (int i = 0; i < 129; i++) {\r\n        this.baos.write(0);\r\n    }\r\n    assertThat(this.baos.capacity()).isEqualTo(256);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#grow()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid grow() throws Exception {\r\n    assertThat(this.baos.capacity()).isEqualTo(INITIAL_CAPACITY);\r\n    this.baos.write(helloBytes);\r\n    this.baos.grow(1000);\r\n    assertThat(this.baos.capacity()).isEqualTo((this.helloBytes.length + 1000));\r\n    assertByteArrayEqualsString(this.baos);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#write()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid write() throws Exception {\r\n    this.baos.write(helloBytes);\r\n    assertByteArrayEqualsString(this.baos);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#failResize()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid failResize() throws Exception {\r\n    this.baos.write(helloBytes);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.baos.resize(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResizableByteArrayOutputStreamTests#assertByteArrayEqualsString(ResizableByteArrayOutputStream)",
+    "entityType": "method",
+    "code": "private void assertByteArrayEqualsString(ResizableByteArrayOutputStream actual) {\r\n    assertThat(actual.toByteArray()).isEqualTo(helloBytes);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResourceUtilsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid isJarURL() throws Exception {\r\n    assertThat(ResourceUtils.isJarURL(new URL(\"jar:file:myjar.jar!/mypath\"))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(null, \"zip:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(null, \"wsjar:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(null, \"jar:war:file:mywar.war*/myjar.jar!/mypath\", new DummyURLStreamHandler()))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(\"file:myjar.jar\"))).isFalse();\r\n    assertThat(ResourceUtils.isJarURL(new URL(\"http:myserver/myjar.jar\"))).isFalse();\r\n}\n@Test\r\nvoid extractJarFileURL() throws Exception {\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(\"jar:file:myjar.jar!/mypath\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"jar:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:/myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"zip:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"wsjar:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(\"file:myjar.jar\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(\"jar:file:myjar.jar!/\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"zip:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"wsjar:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n}\n@Test\r\nvoid extractArchiveURL() throws Exception {\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(\"jar:file:myjar.jar!/mypath\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"jar:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:/myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"zip:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"wsjar:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"jar:war:file:mywar.war*/myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:mywar.war\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(\"file:myjar.jar\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(\"jar:file:myjar.jar!/\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"zip:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"wsjar:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"jar:war:file:mywar.war*/myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:mywar.war\"));\r\n}\n/**\r\n * Dummy URLStreamHandler that's just specified to suppress the standard\r\n * {@code java.net.URL} URLStreamHandler lookup, to be able to\r\n * use the standard URL class for parsing \"rmi:...\" URLs.\r\n */\r\nprivate static class DummyURLStreamHandler extends URLStreamHandler {\r\n\r\n    @Override\r\n    protected URLConnection openConnection(URL url) {\r\n        throw new UnsupportedOperationException();\r\n    }\r\n}",
+    "comment": "\n * @author Juergen Hoeller\n "
+  },
+  {
+    "entityId": "org.springframework.util.ResourceUtilsTests#isJarURL()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isJarURL() throws Exception {\r\n    assertThat(ResourceUtils.isJarURL(new URL(\"jar:file:myjar.jar!/mypath\"))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(null, \"zip:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(null, \"wsjar:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(null, \"jar:war:file:mywar.war*/myjar.jar!/mypath\", new DummyURLStreamHandler()))).isTrue();\r\n    assertThat(ResourceUtils.isJarURL(new URL(\"file:myjar.jar\"))).isFalse();\r\n    assertThat(ResourceUtils.isJarURL(new URL(\"http:myserver/myjar.jar\"))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResourceUtilsTests#extractJarFileURL()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid extractJarFileURL() throws Exception {\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(\"jar:file:myjar.jar!/mypath\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"jar:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:/myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"zip:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"wsjar:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(\"file:myjar.jar\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(\"jar:file:myjar.jar!/\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"zip:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractJarFileURL(new URL(null, \"wsjar:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.ResourceUtilsTests#extractArchiveURL()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid extractArchiveURL() throws Exception {\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(\"jar:file:myjar.jar!/mypath\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"jar:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:/myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"zip:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"wsjar:file:myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"jar:war:file:mywar.war*/myjar.jar!/mypath\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:mywar.war\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(\"file:myjar.jar\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(\"jar:file:myjar.jar!/\"))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"zip:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"wsjar:file:myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:myjar.jar\"));\r\n    assertThat(ResourceUtils.extractArchiveURL(new URL(null, \"jar:war:file:mywar.war*/myjar.jar!/\", new DummyURLStreamHandler()))).isEqualTo(new URL(\"file:mywar.war\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DummyURLStreamHandler",
+    "entityType": "class",
+    "code": "@Override\r\nprotected URLConnection openConnection(URL url) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": "\n\t * Dummy URLStreamHandler that's just specified to suppress the standard\n\t * {@code java.net.URL} URLStreamHandler lookup, to be able to\n\t * use the standard URL class for parsing \"rmi:...\" URLs.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.DummyURLStreamHandler#openConnection(URL)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected URLConnection openConnection(URL url) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests",
+    "entityType": "class",
+    "code": "private static final BigInteger FOO = new BigInteger(\"-9702942423549012526722364838327831379660941553432801565505143675386108883970811292563757558516603356009681061\" + \"5697574744209306031461371833798723505120163874786203211176873686513374052845353833564048\");\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid serializeCycleSunnyDay() {\r\n    assertThat(SerializationUtils.deserialize(SerializationUtils.serialize(\"foo\"))).isEqualTo(\"foo\");\r\n}\n@Test\r\nvoid serializeNonSerializableRecord() {\r\n    record Person(String firstName, String lastName) ;\r\n    Person jane = new Person(\"Jane\", \"Doe\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.serialize(jane)).withCauseExactlyInstanceOf(NotSerializableException.class);\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid serializeAndDeserializeSerializableRecord() {\r\n    record Person(String firstName, String lastName) implements Serializable ;\r\n    Person jane = new Person(\"Jane\", \"Doe\");\r\n    assertThat(SerializationUtils.deserialize(SerializationUtils.serialize(jane))).isEqualTo(jane);\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid deserializeUndefined() {\r\n    assertThatIllegalStateException().isThrownBy(() -> SerializationUtils.deserialize(FOO.toByteArray()));\r\n}\n@Test\r\nvoid serializeNonSerializable() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.serialize(new Object()));\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid deserializeNonSerializable() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.deserialize(\"foo\".getBytes()));\r\n}\n@Test\r\nvoid serializeNull() {\r\n    assertThat(SerializationUtils.serialize(null)).isNull();\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid deserializeNull() {\r\n    assertThat(SerializationUtils.deserialize(null)).isNull();\r\n}\n@Test\r\nvoid cloneException() {\r\n    IllegalArgumentException ex = new IllegalArgumentException(\"foo\");\r\n    assertThat(SerializationUtils.clone(ex)).hasMessage(\"foo\").isNotSameAs(ex);\r\n}",
+    "comment": "\n * Tests for {@link SerializationUtils}.\n *\n * @author Dave Syer\n * @author Sam Brannen\n * @since 3.0.5\n "
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#serializeCycleSunnyDay()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid serializeCycleSunnyDay() {\r\n    assertThat(SerializationUtils.deserialize(SerializationUtils.serialize(\"foo\"))).isEqualTo(\"foo\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#serializeNonSerializableRecord()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid serializeNonSerializableRecord() {\r\n    record Person(String firstName, String lastName) ;\r\n    Person jane = new Person(\"Jane\", \"Doe\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.serialize(jane)).withCauseExactlyInstanceOf(NotSerializableException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#serializeAndDeserializeSerializableRecord()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid serializeAndDeserializeSerializableRecord() {\r\n    record Person(String firstName, String lastName) implements Serializable ;\r\n    Person jane = new Person(\"Jane\", \"Doe\");\r\n    assertThat(SerializationUtils.deserialize(SerializationUtils.serialize(jane))).isEqualTo(jane);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#deserializeUndefined()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid deserializeUndefined() {\r\n    assertThatIllegalStateException().isThrownBy(() -> SerializationUtils.deserialize(FOO.toByteArray()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#serializeNonSerializable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid serializeNonSerializable() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.serialize(new Object()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#deserializeNonSerializable()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid deserializeNonSerializable() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.deserialize(\"foo\".getBytes()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#serializeNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid serializeNull() {\r\n    assertThat(SerializationUtils.serialize(null)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.SerializationUtilsTests#deserializeNull()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid deserializeNull() {\r\n    assertThat(SerializationUtils.deserialize(null)).isNull();\r\n}",
+    "comment": ""
+  }
+]

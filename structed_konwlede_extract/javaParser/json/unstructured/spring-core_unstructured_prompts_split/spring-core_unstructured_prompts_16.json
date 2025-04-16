@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.util.FilteredMapTests#keySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid keySet() {\r\n    Map<String, String> map = Map.of(\"foo\", \"bar\", \"baz\", \"qux\", \"quux\", \"corge\");\r\n    FilteredMap<String, String> filtered = new FilteredMap<>(map, s -> !s.equals(\"baz\"));\r\n    Set<String> keySet = filtered.keySet();\r\n    assertThat(keySet).containsExactlyInAnyOrder(\"foo\", \"quux\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FilteredSetTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid testEquals() {\r\n    Set<String> set = Set.of(\"foo\", \"bar\", \"baz\");\r\n    FilteredSet<String> filtered = new FilteredSet<>(set, s -> !s.equals(\"bar\"));\r\n    Set<String> expected = Set.of(\"foo\", \"baz\");\r\n    assertThat(filtered.equals(expected)).isTrue();\r\n    assertThat(filtered.equals(set)).isFalse();\r\n    assertThat(filtered.equals(Collections.emptySet())).isFalse();\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.util.FilteredSetTests#testEquals()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid testEquals() {\r\n    Set<String> set = Set.of(\"foo\", \"bar\", \"baz\");\r\n    FilteredSet<String> filtered = new FilteredSet<>(set, s -> !s.equals(\"bar\"));\r\n    Set<String> expected = Set.of(\"foo\", \"baz\");\r\n    assertThat(filtered.equals(expected)).isTrue();\r\n    assertThat(filtered.equals(set)).isFalse();\r\n    assertThat(filtered.equals(Collections.emptySet())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint",
+    "entityType": "class",
+    "code": "private final TypeReference type;\n@Nullable\r\nprivate final TypeReference reachableType;\nprivate final Set<FieldHint> fields;\nprivate final Set<ExecutableHint> constructors;\nprivate final Set<ExecutableHint> methods;\nprivate final Set<MemberCategory> memberCategories;\nprivate TypeHint(Builder builder) {\r\n    this.type = builder.type;\r\n    this.reachableType = builder.reachableType;\r\n    this.memberCategories = Set.copyOf(builder.memberCategories);\r\n    this.fields = builder.fields.stream().map(FieldHint::new).collect(Collectors.toSet());\r\n    this.constructors = builder.constructors.values().stream().map(ExecutableHint.Builder::build).collect(Collectors.toSet());\r\n    this.methods = builder.methods.values().stream().map(ExecutableHint.Builder::build).collect(Collectors.toSet());\r\n}\n/**\r\n * Initialize a builder for the type defined by the specified\r\n * {@link TypeReference}.\r\n * @param type the type to use\r\n * @return a builder\r\n */\r\nstatic Builder of(TypeReference type) {\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return new Builder(type);\r\n}\n/**\r\n * Return the type that this hint handles.\r\n * @return the type\r\n */\r\npublic TypeReference getType() {\r\n    return this.type;\r\n}\n@Override\r\n@Nullable\r\npublic TypeReference getReachableType() {\r\n    return this.reachableType;\r\n}\n/**\r\n * Return the fields that require reflection.\r\n * @return a stream of {@link FieldHint}\r\n */\r\npublic Stream<FieldHint> fields() {\r\n    return this.fields.stream();\r\n}\n/**\r\n * Return the constructors that require reflection.\r\n * @return a stream of {@link ExecutableHint}\r\n */\r\npublic Stream<ExecutableHint> constructors() {\r\n    return this.constructors.stream();\r\n}\n/**\r\n * Return the methods that require reflection.\r\n * @return a stream of {@link ExecutableHint}\r\n */\r\npublic Stream<ExecutableHint> methods() {\r\n    return this.methods.stream();\r\n}\n/**\r\n * Return the member categories that apply.\r\n * @return the member categories to enable\r\n */\r\npublic Set<MemberCategory> getMemberCategories() {\r\n    return this.memberCategories;\r\n}\n@Override\r\npublic String toString() {\r\n    return TypeHint.class.getSimpleName() + \"[type=\" + this.type + \"]\";\r\n}\n/**\r\n * Return a {@link Consumer} that applies the given {@link MemberCategory\r\n * MemberCategories} to the accepted {@link Builder}.\r\n * @param memberCategories the memberCategories to apply\r\n * @return a consumer to apply the member categories\r\n */\r\npublic static Consumer<Builder> builtWith(MemberCategory... memberCategories) {\r\n    return builder -> builder.withMembers(memberCategories);\r\n}\n/**\r\n * Builder for {@link TypeHint}.\r\n */\r\npublic static class Builder {\r\n\r\n    private final TypeReference type;\r\n\r\n    @Nullable\r\n    private TypeReference reachableType;\r\n\r\n    private final Set<String> fields = new HashSet<>();\r\n\r\n    private final Map<ExecutableKey, ExecutableHint.Builder> constructors = new HashMap<>();\r\n\r\n    private final Map<ExecutableKey, ExecutableHint.Builder> methods = new HashMap<>();\r\n\r\n    private final Set<MemberCategory> memberCategories = new HashSet<>();\r\n\r\n    Builder(TypeReference type) {\r\n        this.type = type;\r\n    }\r\n\r\n    /**\r\n     * Make this hint conditional on the fact that the specified type is in a\r\n     * reachable code path from a static analysis point of view.\r\n     * @param reachableType the type that should be reachable for this hint to apply\r\n     * @return {@code this}, to facilitate method chaining\r\n     */\r\n    public Builder onReachableType(TypeReference reachableType) {\r\n        this.reachableType = reachableType;\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Make this hint conditional on the fact that the specified type is in a\r\n     * reachable code path from a static analysis point of view.\r\n     * @param reachableType the type that should be reachable for this hint to apply\r\n     * @return {@code this}, to facilitate method chaining\r\n     */\r\n    public Builder onReachableType(Class<?> reachableType) {\r\n        this.reachableType = TypeReference.of(reachableType);\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Register the need for reflective access on the field with the specified name.\r\n     * @param name the name of the field\r\n     * @return {@code this}, to facilitate method chaining\r\n     * @see java.lang.reflect.Field#get(Object)\r\n     * @see java.lang.reflect.Field#set(Object, Object)\r\n     */\r\n    public Builder withField(String name) {\r\n        this.fields.add(name);\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Register the need for reflection on the constructor with the specified\r\n     * parameter types, using the specified {@link ExecutableMode}.\r\n     * @param parameterTypes the parameter types of the constructor\r\n     * @param mode the requested mode\r\n     * @return {@code this}, to facilitate method chaining\r\n     */\r\n    public Builder withConstructor(List<TypeReference> parameterTypes, ExecutableMode mode) {\r\n        return withConstructor(parameterTypes, ExecutableHint.builtWith(mode));\r\n    }\r\n\r\n    /**\r\n     * Register the need for reflection on the constructor with the specified\r\n     * parameter types.\r\n     * @param parameterTypes the parameter types of the constructor\r\n     * @param constructorHint a builder to further customize the hints of this\r\n     * constructor\r\n     * @return {@code this}, to facilitate method chaining\r\n     */\r\n    private Builder withConstructor(List<TypeReference> parameterTypes, Consumer<ExecutableHint.Builder> constructorHint) {\r\n        ExecutableKey key = new ExecutableKey(\"<init>\", parameterTypes);\r\n        ExecutableHint.Builder builder = this.constructors.computeIfAbsent(key, k -> ExecutableHint.ofConstructor(parameterTypes));\r\n        constructorHint.accept(builder);\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Register the need for reflection on the method with the specified name\r\n     * and parameter types, using the specified {@link ExecutableMode}.\r\n     * @param name the name of the method\r\n     * @param parameterTypes the parameter types of the constructor\r\n     * @param mode the requested mode\r\n     * @return {@code this}, to facilitate method chaining\r\n     */\r\n    public Builder withMethod(String name, List<TypeReference> parameterTypes, ExecutableMode mode) {\r\n        return withMethod(name, parameterTypes, ExecutableHint.builtWith(mode));\r\n    }\r\n\r\n    /**\r\n     * Register the need for reflection on the method with the specified name\r\n     * and parameter types.\r\n     * @param name the name of the method\r\n     * @param parameterTypes the parameter types of the constructor\r\n     * @param methodHint a builder to further customize the hints of this method\r\n     * @return {@code this}, to facilitate method chaining\r\n     */\r\n    private Builder withMethod(String name, List<TypeReference> parameterTypes, Consumer<ExecutableHint.Builder> methodHint) {\r\n        ExecutableKey key = new ExecutableKey(name, parameterTypes);\r\n        ExecutableHint.Builder builder = this.methods.computeIfAbsent(key, k -> ExecutableHint.ofMethod(name, parameterTypes));\r\n        methodHint.accept(builder);\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Adds the specified {@linkplain MemberCategory member categories}.\r\n     * @param memberCategories the categories to apply\r\n     * @return {@code this}, to facilitate method chaining\r\n     * @see TypeHint#builtWith(MemberCategory...)\r\n     */\r\n    public Builder withMembers(MemberCategory... memberCategories) {\r\n        this.memberCategories.addAll(Arrays.asList(memberCategories));\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Create a {@link TypeHint} based on the state of this builder.\r\n     * @return a type hint\r\n     */\r\n    TypeHint build() {\r\n        return new TypeHint(this);\r\n    }\r\n}\nprivate static final class ExecutableKey {\r\n\r\n    private final String name;\r\n\r\n    private final List<String> parameterTypes;\r\n\r\n    private ExecutableKey(String name, List<TypeReference> parameterTypes) {\r\n        this.name = name;\r\n        this.parameterTypes = parameterTypes.stream().map(TypeReference::getCanonicalName).toList();\r\n    }\r\n\r\n    @Override\r\n    public boolean equals(@Nullable Object other) {\r\n        return (this == other || (other instanceof ExecutableKey that && this.name.equals(that.name) && this.parameterTypes.equals(that.parameterTypes)));\r\n    }\r\n\r\n    @Override\r\n    public int hashCode() {\r\n        return Objects.hash(this.name, this.parameterTypes);\r\n    }\r\n}",
+    "comment": "\n * A hint that describes the need for reflection on a type.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @author Andy Wilkinson\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#of(TypeReference)",
+    "entityType": "method",
+    "code": "/**\r\n * Initialize a builder for the type defined by the specified\r\n * {@link TypeReference}.\r\n * @param type the type to use\r\n * @return a builder\r\n */\r\nstatic Builder of(TypeReference type) {\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return new Builder(type);\r\n}",
+    "comment": "\n\t * Initialize a builder for the type defined by the specified\n\t * {@link TypeReference}.\n\t * @param type the type to use\n\t * @return a builder\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#getType()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the type that this hint handles.\r\n * @return the type\r\n */\r\npublic TypeReference getType() {\r\n    return this.type;\r\n}",
+    "comment": "\n\t * Return the type that this hint handles.\n\t * @return the type\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#getReachableType()",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic TypeReference getReachableType() {\r\n    return this.reachableType;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#fields()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the fields that require reflection.\r\n * @return a stream of {@link FieldHint}\r\n */\r\npublic Stream<FieldHint> fields() {\r\n    return this.fields.stream();\r\n}",
+    "comment": "\n\t * Return the fields that require reflection.\n\t * @return a stream of {@link FieldHint}\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#constructors()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the constructors that require reflection.\r\n * @return a stream of {@link ExecutableHint}\r\n */\r\npublic Stream<ExecutableHint> constructors() {\r\n    return this.constructors.stream();\r\n}",
+    "comment": "\n\t * Return the constructors that require reflection.\n\t * @return a stream of {@link ExecutableHint}\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#methods()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the methods that require reflection.\r\n * @return a stream of {@link ExecutableHint}\r\n */\r\npublic Stream<ExecutableHint> methods() {\r\n    return this.methods.stream();\r\n}",
+    "comment": "\n\t * Return the methods that require reflection.\n\t * @return a stream of {@link ExecutableHint}\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#getMemberCategories()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the member categories that apply.\r\n * @return the member categories to enable\r\n */\r\npublic Set<MemberCategory> getMemberCategories() {\r\n    return this.memberCategories;\r\n}",
+    "comment": "\n\t * Return the member categories that apply.\n\t * @return the member categories to enable\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return TypeHint.class.getSimpleName() + \"[type=\" + this.type + \"]\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeHint#builtWith(MemberCategory)",
+    "entityType": "method",
+    "code": "/**\r\n * Return a {@link Consumer} that applies the given {@link MemberCategory\r\n * MemberCategories} to the accepted {@link Builder}.\r\n * @param memberCategories the memberCategories to apply\r\n * @return a consumer to apply the member categories\r\n */\r\npublic static Consumer<Builder> builtWith(MemberCategory... memberCategories) {\r\n    return builder -> builder.withMembers(memberCategories);\r\n}",
+    "comment": "\n\t * Return a {@link Consumer} that applies the given {@link MemberCategory\n\t * MemberCategories} to the accepted {@link Builder}.\n\t * @param memberCategories the memberCategories to apply\n\t * @return a consumer to apply the member categories\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder",
+    "entityType": "class",
+    "code": "private final TypeReference type;\n@Nullable\r\nprivate TypeReference reachableType;\nprivate final Set<String> fields = new HashSet<>();\nprivate final Map<ExecutableKey, ExecutableHint.Builder> constructors = new HashMap<>();\nprivate final Map<ExecutableKey, ExecutableHint.Builder> methods = new HashMap<>();\nprivate final Set<MemberCategory> memberCategories = new HashSet<>();\nBuilder(TypeReference type) {\r\n    this.type = type;\r\n}\n/**\r\n * Make this hint conditional on the fact that the specified type is in a\r\n * reachable code path from a static analysis point of view.\r\n * @param reachableType the type that should be reachable for this hint to apply\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder onReachableType(TypeReference reachableType) {\r\n    this.reachableType = reachableType;\r\n    return this;\r\n}\n/**\r\n * Make this hint conditional on the fact that the specified type is in a\r\n * reachable code path from a static analysis point of view.\r\n * @param reachableType the type that should be reachable for this hint to apply\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder onReachableType(Class<?> reachableType) {\r\n    this.reachableType = TypeReference.of(reachableType);\r\n    return this;\r\n}\n/**\r\n * Register the need for reflective access on the field with the specified name.\r\n * @param name the name of the field\r\n * @return {@code this}, to facilitate method chaining\r\n * @see java.lang.reflect.Field#get(Object)\r\n * @see java.lang.reflect.Field#set(Object, Object)\r\n */\r\npublic Builder withField(String name) {\r\n    this.fields.add(name);\r\n    return this;\r\n}\n/**\r\n * Register the need for reflection on the constructor with the specified\r\n * parameter types, using the specified {@link ExecutableMode}.\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param mode the requested mode\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder withConstructor(List<TypeReference> parameterTypes, ExecutableMode mode) {\r\n    return withConstructor(parameterTypes, ExecutableHint.builtWith(mode));\r\n}\n/**\r\n * Register the need for reflection on the constructor with the specified\r\n * parameter types.\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param constructorHint a builder to further customize the hints of this\r\n * constructor\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\nprivate Builder withConstructor(List<TypeReference> parameterTypes, Consumer<ExecutableHint.Builder> constructorHint) {\r\n    ExecutableKey key = new ExecutableKey(\"<init>\", parameterTypes);\r\n    ExecutableHint.Builder builder = this.constructors.computeIfAbsent(key, k -> ExecutableHint.ofConstructor(parameterTypes));\r\n    constructorHint.accept(builder);\r\n    return this;\r\n}\n/**\r\n * Register the need for reflection on the method with the specified name\r\n * and parameter types, using the specified {@link ExecutableMode}.\r\n * @param name the name of the method\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param mode the requested mode\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder withMethod(String name, List<TypeReference> parameterTypes, ExecutableMode mode) {\r\n    return withMethod(name, parameterTypes, ExecutableHint.builtWith(mode));\r\n}\n/**\r\n * Register the need for reflection on the method with the specified name\r\n * and parameter types.\r\n * @param name the name of the method\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param methodHint a builder to further customize the hints of this method\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\nprivate Builder withMethod(String name, List<TypeReference> parameterTypes, Consumer<ExecutableHint.Builder> methodHint) {\r\n    ExecutableKey key = new ExecutableKey(name, parameterTypes);\r\n    ExecutableHint.Builder builder = this.methods.computeIfAbsent(key, k -> ExecutableHint.ofMethod(name, parameterTypes));\r\n    methodHint.accept(builder);\r\n    return this;\r\n}\n/**\r\n * Adds the specified {@linkplain MemberCategory member categories}.\r\n * @param memberCategories the categories to apply\r\n * @return {@code this}, to facilitate method chaining\r\n * @see TypeHint#builtWith(MemberCategory...)\r\n */\r\npublic Builder withMembers(MemberCategory... memberCategories) {\r\n    this.memberCategories.addAll(Arrays.asList(memberCategories));\r\n    return this;\r\n}\n/**\r\n * Create a {@link TypeHint} based on the state of this builder.\r\n * @return a type hint\r\n */\r\nTypeHint build() {\r\n    return new TypeHint(this);\r\n}",
+    "comment": "\n\t * Builder for {@link TypeHint}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#onReachableType(TypeReference)",
+    "entityType": "method",
+    "code": "/**\r\n * Make this hint conditional on the fact that the specified type is in a\r\n * reachable code path from a static analysis point of view.\r\n * @param reachableType the type that should be reachable for this hint to apply\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder onReachableType(TypeReference reachableType) {\r\n    this.reachableType = reachableType;\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Make this hint conditional on the fact that the specified type is in a\n\t\t * reachable code path from a static analysis point of view.\n\t\t * @param reachableType the type that should be reachable for this hint to apply\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#onReachableType(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Make this hint conditional on the fact that the specified type is in a\r\n * reachable code path from a static analysis point of view.\r\n * @param reachableType the type that should be reachable for this hint to apply\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder onReachableType(Class<?> reachableType) {\r\n    this.reachableType = TypeReference.of(reachableType);\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Make this hint conditional on the fact that the specified type is in a\n\t\t * reachable code path from a static analysis point of view.\n\t\t * @param reachableType the type that should be reachable for this hint to apply\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#withField(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Register the need for reflective access on the field with the specified name.\r\n * @param name the name of the field\r\n * @return {@code this}, to facilitate method chaining\r\n * @see java.lang.reflect.Field#get(Object)\r\n * @see java.lang.reflect.Field#set(Object, Object)\r\n */\r\npublic Builder withField(String name) {\r\n    this.fields.add(name);\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Register the need for reflective access on the field with the specified name.\n\t\t * @param name the name of the field\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t * @see java.lang.reflect.Field#get(Object)\n\t\t * @see java.lang.reflect.Field#set(Object, Object)\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#withConstructor(List<TypeReference>,ExecutableMode)",
+    "entityType": "method",
+    "code": "/**\r\n * Register the need for reflection on the constructor with the specified\r\n * parameter types, using the specified {@link ExecutableMode}.\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param mode the requested mode\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder withConstructor(List<TypeReference> parameterTypes, ExecutableMode mode) {\r\n    return withConstructor(parameterTypes, ExecutableHint.builtWith(mode));\r\n}",
+    "comment": "\n\t\t * Register the need for reflection on the constructor with the specified\n\t\t * parameter types, using the specified {@link ExecutableMode}.\n\t\t * @param parameterTypes the parameter types of the constructor\n\t\t * @param mode the requested mode\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#withConstructor(List<TypeReference>,Consumer<ExecutableHint.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Register the need for reflection on the constructor with the specified\r\n * parameter types.\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param constructorHint a builder to further customize the hints of this\r\n * constructor\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\nprivate Builder withConstructor(List<TypeReference> parameterTypes, Consumer<ExecutableHint.Builder> constructorHint) {\r\n    ExecutableKey key = new ExecutableKey(\"<init>\", parameterTypes);\r\n    ExecutableHint.Builder builder = this.constructors.computeIfAbsent(key, k -> ExecutableHint.ofConstructor(parameterTypes));\r\n    constructorHint.accept(builder);\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Register the need for reflection on the constructor with the specified\n\t\t * parameter types.\n\t\t * @param parameterTypes the parameter types of the constructor\n\t\t * @param constructorHint a builder to further customize the hints of this\n\t\t * constructor\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#withMethod(String,List<TypeReference>,ExecutableMode)",
+    "entityType": "method",
+    "code": "/**\r\n * Register the need for reflection on the method with the specified name\r\n * and parameter types, using the specified {@link ExecutableMode}.\r\n * @param name the name of the method\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param mode the requested mode\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder withMethod(String name, List<TypeReference> parameterTypes, ExecutableMode mode) {\r\n    return withMethod(name, parameterTypes, ExecutableHint.builtWith(mode));\r\n}",
+    "comment": "\n\t\t * Register the need for reflection on the method with the specified name\n\t\t * and parameter types, using the specified {@link ExecutableMode}.\n\t\t * @param name the name of the method\n\t\t * @param parameterTypes the parameter types of the constructor\n\t\t * @param mode the requested mode\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#withMethod(String,List<TypeReference>,Consumer<ExecutableHint.Builder>)",
+    "entityType": "method",
+    "code": "/**\r\n * Register the need for reflection on the method with the specified name\r\n * and parameter types.\r\n * @param name the name of the method\r\n * @param parameterTypes the parameter types of the constructor\r\n * @param methodHint a builder to further customize the hints of this method\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\nprivate Builder withMethod(String name, List<TypeReference> parameterTypes, Consumer<ExecutableHint.Builder> methodHint) {\r\n    ExecutableKey key = new ExecutableKey(name, parameterTypes);\r\n    ExecutableHint.Builder builder = this.methods.computeIfAbsent(key, k -> ExecutableHint.ofMethod(name, parameterTypes));\r\n    methodHint.accept(builder);\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Register the need for reflection on the method with the specified name\n\t\t * and parameter types.\n\t\t * @param name the name of the method\n\t\t * @param parameterTypes the parameter types of the constructor\n\t\t * @param methodHint a builder to further customize the hints of this method\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#withMembers(MemberCategory)",
+    "entityType": "method",
+    "code": "/**\r\n * Adds the specified {@linkplain MemberCategory member categories}.\r\n * @param memberCategories the categories to apply\r\n * @return {@code this}, to facilitate method chaining\r\n * @see TypeHint#builtWith(MemberCategory...)\r\n */\r\npublic Builder withMembers(MemberCategory... memberCategories) {\r\n    this.memberCategories.addAll(Arrays.asList(memberCategories));\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Adds the specified {@linkplain MemberCategory member categories}.\n\t\t * @param memberCategories the categories to apply\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t * @see TypeHint#builtWith(MemberCategory...)\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Builder#build()",
+    "entityType": "method",
+    "code": "/**\r\n * Create a {@link TypeHint} based on the state of this builder.\r\n * @return a type hint\r\n */\r\nTypeHint build() {\r\n    return new TypeHint(this);\r\n}",
+    "comment": "\n\t\t * Create a {@link TypeHint} based on the state of this builder.\n\t\t * @return a type hint\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ExecutableKey",
+    "entityType": "class",
+    "code": "private final String name;\nprivate final List<String> parameterTypes;\nprivate ExecutableKey(String name, List<TypeReference> parameterTypes) {\r\n    this.name = name;\r\n    this.parameterTypes = parameterTypes.stream().map(TypeReference::getCanonicalName).toList();\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ExecutableKey that && this.name.equals(that.name) && this.parameterTypes.equals(that.parameterTypes)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return Objects.hash(this.name, this.parameterTypes);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ExecutableKey#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ExecutableKey that && this.name.equals(that.name) && this.parameterTypes.equals(that.parameterTypes)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ExecutableKey#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return Objects.hash(this.name, this.parameterTypes);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid defaultInstance() {\r\n    FixedBackOff backOff = new FixedBackOff();\r\n    BackOffExecution execution = backOff.start();\r\n    for (int i = 0; i < 100; i++) {\r\n        assertThat(execution.nextBackOff()).isEqualTo(FixedBackOff.DEFAULT_INTERVAL);\r\n    }\r\n}\n@Test\r\nvoid noAttemptAtAll() {\r\n    FixedBackOff backOff = new FixedBackOff(100L, 0L);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}\n@Test\r\nvoid maxAttemptsReached() {\r\n    FixedBackOff backOff = new FixedBackOff(200L, 2);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(200L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(200L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}\n@Test\r\nvoid startReturnDifferentInstances() {\r\n    FixedBackOff backOff = new FixedBackOff(100L, 1);\r\n    BackOffExecution execution = backOff.start();\r\n    BackOffExecution execution2 = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(100L);\r\n    assertThat(execution2.nextBackOff()).isEqualTo(100L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n    assertThat(execution2.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}\n@Test\r\nvoid liveUpdate() {\r\n    FixedBackOff backOff = new FixedBackOff(100L, 1);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(100L);\r\n    backOff.setInterval(200L);\r\n    backOff.setMaxAttempts(2);\r\n    assertThat(execution.nextBackOff()).isEqualTo(200L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}\n@Test\r\nvoid toStringContent() {\r\n    FixedBackOff backOff = new FixedBackOff(200L, 10);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.toString()).isEqualTo(\"FixedBackOff{interval=200, currentAttempts=0, maxAttempts=10}\");\r\n    execution.nextBackOff();\r\n    assertThat(execution.toString()).isEqualTo(\"FixedBackOff{interval=200, currentAttempts=1, maxAttempts=10}\");\r\n    execution.nextBackOff();\r\n    assertThat(execution.toString()).isEqualTo(\"FixedBackOff{interval=200, currentAttempts=2, maxAttempts=10}\");\r\n}",
+    "comment": "\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests#defaultInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid defaultInstance() {\r\n    FixedBackOff backOff = new FixedBackOff();\r\n    BackOffExecution execution = backOff.start();\r\n    for (int i = 0; i < 100; i++) {\r\n        assertThat(execution.nextBackOff()).isEqualTo(FixedBackOff.DEFAULT_INTERVAL);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests#noAttemptAtAll()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid noAttemptAtAll() {\r\n    FixedBackOff backOff = new FixedBackOff(100L, 0L);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests#maxAttemptsReached()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid maxAttemptsReached() {\r\n    FixedBackOff backOff = new FixedBackOff(200L, 2);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(200L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(200L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests#startReturnDifferentInstances()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid startReturnDifferentInstances() {\r\n    FixedBackOff backOff = new FixedBackOff(100L, 1);\r\n    BackOffExecution execution = backOff.start();\r\n    BackOffExecution execution2 = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(100L);\r\n    assertThat(execution2.nextBackOff()).isEqualTo(100L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n    assertThat(execution2.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests#liveUpdate()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid liveUpdate() {\r\n    FixedBackOff backOff = new FixedBackOff(100L, 1);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(100L);\r\n    backOff.setInterval(200L);\r\n    backOff.setMaxAttempts(2);\r\n    assertThat(execution.nextBackOff()).isEqualTo(200L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.FixedBackOffTests#toStringContent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid toStringContent() {\r\n    FixedBackOff backOff = new FixedBackOff(200L, 10);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.toString()).isEqualTo(\"FixedBackOff{interval=200, currentAttempts=0, maxAttempts=10}\");\r\n    execution.nextBackOff();\r\n    assertThat(execution.toString()).isEqualTo(\"FixedBackOff{interval=200, currentAttempts=1, maxAttempts=10}\");\r\n    execution.nextBackOff();\r\n    assertThat(execution.toString()).isEqualTo(\"FixedBackOff{interval=200, currentAttempts=2, maxAttempts=10}\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference",
+    "entityType": "class",
+    "code": "/**\r\n * Return the fully qualified name of this type reference.\r\n * @return the reflection target name\r\n */\r\nString getName();\n/**\r\n * Return the {@linkplain Class#getCanonicalName() canonical name} of this\r\n * type reference.\r\n * @return the canonical name\r\n */\r\nString getCanonicalName();\n/**\r\n * Return the package name of this type.\r\n * @return the package name\r\n */\r\nString getPackageName();\n/**\r\n * Return the {@linkplain Class#getSimpleName() simple name} of this type\r\n * reference.\r\n * @return the simple name\r\n */\r\nString getSimpleName();\n/**\r\n * Return the enclosing type reference, or {@code null} if this type reference\r\n * does not have an enclosing type.\r\n * @return the enclosing type, if any\r\n */\r\n@Nullable\r\nTypeReference getEnclosingType();\n/**\r\n * Create an instance based on the specified type.\r\n * @param type the type to wrap\r\n * @return a type reference for the specified type\r\n * @throws IllegalArgumentException if the specified type {@linkplain Class#getCanonicalName() canonical name} is {@code null}\r\n */\r\nstatic TypeReference of(Class<?> type) {\r\n    return ReflectionTypeReference.of(type);\r\n}\n/**\r\n * Create an instance based on the specified class name.\r\n * The format of the class name must follow {@linkplain Class#getName()},\r\n * in particular inner classes should be separated by a {@code $}.\r\n * @param className the class name of the type to wrap\r\n * @return a type reference for the specified class name\r\n */\r\nstatic TypeReference of(String className) {\r\n    return SimpleTypeReference.of(className);\r\n}\n/**\r\n * Create a list of {@link TypeReference type references} mapped by the specified\r\n * types.\r\n * @param types the types to map\r\n * @return a list of type references\r\n */\r\nstatic List<TypeReference> listOf(Class<?>... types) {\r\n    return Arrays.stream(types).map(TypeReference::of).toList();\r\n}",
+    "comment": "\n * Type abstraction that can be used to refer to types that are not available as\n * a {@link Class} yet.\n *\n * @author Stephane Nicoll\n * @author Sebastien Deleuze\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#getName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the fully qualified name of this type reference.\r\n * @return the reflection target name\r\n */\r\nString getName();",
+    "comment": "\n\t * Return the fully qualified name of this type reference.\n\t * @return the reflection target name\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#getCanonicalName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@linkplain Class#getCanonicalName() canonical name} of this\r\n * type reference.\r\n * @return the canonical name\r\n */\r\nString getCanonicalName();",
+    "comment": "\n\t * Return the {@linkplain Class#getCanonicalName() canonical name} of this\n\t * type reference.\n\t * @return the canonical name\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#getPackageName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the package name of this type.\r\n * @return the package name\r\n */\r\nString getPackageName();",
+    "comment": "\n\t * Return the package name of this type.\n\t * @return the package name\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#getSimpleName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@linkplain Class#getSimpleName() simple name} of this type\r\n * reference.\r\n * @return the simple name\r\n */\r\nString getSimpleName();",
+    "comment": "\n\t * Return the {@linkplain Class#getSimpleName() simple name} of this type\n\t * reference.\n\t * @return the simple name\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#getEnclosingType()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the enclosing type reference, or {@code null} if this type reference\r\n * does not have an enclosing type.\r\n * @return the enclosing type, if any\r\n */\r\n@Nullable\r\nTypeReference getEnclosingType();",
+    "comment": "\n\t * Return the enclosing type reference, or {@code null} if this type reference\n\t * does not have an enclosing type.\n\t * @return the enclosing type, if any\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#of(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Create an instance based on the specified type.\r\n * @param type the type to wrap\r\n * @return a type reference for the specified type\r\n * @throws IllegalArgumentException if the specified type {@linkplain Class#getCanonicalName() canonical name} is {@code null}\r\n */\r\nstatic TypeReference of(Class<?> type) {\r\n    return ReflectionTypeReference.of(type);\r\n}",
+    "comment": "\n\t * Create an instance based on the specified type.\n\t * @param type the type to wrap\n\t * @return a type reference for the specified type\n\t * @throws IllegalArgumentException if the specified type {@linkplain Class#getCanonicalName() canonical name} is {@code null}\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#of(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Create an instance based on the specified class name.\r\n * The format of the class name must follow {@linkplain Class#getName()},\r\n * in particular inner classes should be separated by a {@code $}.\r\n * @param className the class name of the type to wrap\r\n * @return a type reference for the specified class name\r\n */\r\nstatic TypeReference of(String className) {\r\n    return SimpleTypeReference.of(className);\r\n}",
+    "comment": "\n\t * Create an instance based on the specified class name.\n\t * The format of the class name must follow {@linkplain Class#getName()},\n\t * in particular inner classes should be separated by a {@code $}.\n\t * @param className the class name of the type to wrap\n\t * @return a type reference for the specified class name\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TypeReference#listOf(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a list of {@link TypeReference type references} mapped by the specified\r\n * types.\r\n * @param types the types to map\r\n * @return a list of type references\r\n */\r\nstatic List<TypeReference> listOf(Class<?>... types) {\r\n    return Arrays.stream(types).map(TypeReference::of).toList();\r\n}",
+    "comment": "\n\t * Create a list of {@link TypeReference type references} mapped by the specified\n\t * types.\n\t * @param types the types to map\n\t * @return a list of type references\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid applyWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this, this));\r\n}\n@Test\r\nvoid applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> function.apply(this, this)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this, this, IllegalStateException::new));\r\n}\n@Test\r\nvoid applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this, this, IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIOException;\r\n    ThrowingBiFunction<Object, Object, Object> modified = function.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> modified.apply(this, this)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid ofModifiesThrowException() {\r\n    ThrowingBiFunction<Object, Object, Object> function = ThrowingBiFunction.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this, this)).withCauseInstanceOf(IOException.class);\r\n}\nprivate Object throwIOException(Object o, Object u) throws IOException {\r\n    throw new IOException();\r\n}\nprivate Object throwIllegalArgumentException(Object o, Object u) {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": "\n * Tests for {@link ThrowingBiFunction}.\n *\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#applyWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this, this));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> function.apply(this, this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this, this, IllegalStateException::new));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this, this, IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#throwingModifiesThrownException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingBiFunction<Object, Object, Object> function = this::throwIOException;\r\n    ThrowingBiFunction<Object, Object, Object> modified = function.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> modified.apply(this, this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#ofModifiesThrowException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofModifiesThrowException() {\r\n    ThrowingBiFunction<Object, Object, Object> function = ThrowingBiFunction.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this, this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#throwIOException(Object,Object)",
+    "entityType": "method",
+    "code": "private Object throwIOException(Object o, Object u) throws IOException {\r\n    throw new IOException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingBiFunctionTests#throwIllegalArgumentException(Object,Object)",
+    "entityType": "method",
+    "code": "private Object throwIllegalArgumentException(Object o, Object u) {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter",
+    "entityType": "class",
+    "code": "private final IndentingWriter writer;\n/**\r\n * Create a new instance with the specified indent value.\r\n * @param writer the writer to use\r\n * @param singleIndent the value of one indent\r\n */\r\npublic BasicJsonWriter(Writer writer, String singleIndent) {\r\n    this.writer = new IndentingWriter(writer, singleIndent);\r\n}\n/**\r\n * Create a new instance using two whitespaces for the indent.\r\n * @param writer the writer to use\r\n */\r\npublic BasicJsonWriter(Writer writer) {\r\n    this(writer, \"  \");\r\n}\n/**\r\n * Write an object with the specified attributes. Each attribute is\r\n * written according to its value type:\r\n * <ul>\r\n * <li>Map: write the value as a nested object</li>\r\n * <li>List: write the value as a nested array</li>\r\n * <li>Otherwise, write a single value</li>\r\n * </ul>\r\n * @param attributes the attributes of the object\r\n */\r\npublic void writeObject(Map<String, Object> attributes) {\r\n    writeObject(attributes, true);\r\n}\n/**\r\n * Write an array with the specified items. Each item in the\r\n * list is written either as a nested object or as an attribute\r\n * depending on its type.\r\n * @param items the items to write\r\n * @see #writeObject(Map)\r\n */\r\npublic void writeArray(List<?> items) {\r\n    writeArray(items, true);\r\n}\nprivate void writeObject(Map<String, Object> attributes, boolean newLine) {\r\n    if (attributes.isEmpty()) {\r\n        this.writer.print(\";\");\r\n    } else {\r\n        this.writer.println(\"{\").indented(writeAll(attributes.entrySet().iterator(), entry -> writeAttribute(entry.getKey(), entry.getValue()))).print(\"}\");\r\n    }\r\n    if (newLine) {\r\n        this.writer.println();\r\n    }\r\n}\nprivate void writeArray(List<?> items, boolean newLine) {\r\n    if (items.isEmpty()) {\r\n        this.writer.print(\"[ ]\");\r\n    } else {\r\n        this.writer.println(\"[\").indented(writeAll(items.iterator(), this::writeValue)).print(\"]\");\r\n    }\r\n    if (newLine) {\r\n        this.writer.println();\r\n    }\r\n}\nprivate <T> Runnable writeAll(Iterator<T> it, Consumer<T> writer) {\r\n    return () -> {\r\n        while (it.hasNext()) {\r\n            writer.accept(it.next());\r\n            if (it.hasNext()) {\r\n                this.writer.println(\",\");\r\n            } else {\r\n                this.writer.println();\r\n            }\r\n        }\r\n    };\r\n}\nprivate void writeAttribute(String name, Object value) {\r\n    this.writer.print(quote(name) + \": \");\r\n    writeValue(value);\r\n}\n@SuppressWarnings(\"unchecked\")\r\nprivate void writeValue(Object value) {\r\n    if (value instanceof Map<?, ?> map) {\r\n        writeObject((Map<String, Object>) map, false);\r\n    } else if (value instanceof List<?> list) {\r\n        writeArray(list, false);\r\n    } else if (value instanceof TypeReference typeReference) {\r\n        this.writer.print(quote(typeReference.getName()));\r\n    } else if (value instanceof CharSequence string) {\r\n        this.writer.print(quote(escape(string)));\r\n    } else if (value instanceof Boolean flag) {\r\n        this.writer.print(Boolean.toString(flag));\r\n    } else {\r\n        throw new IllegalStateException(\"unsupported type: \" + value.getClass());\r\n    }\r\n}\nprivate String quote(String name) {\r\n    return \"\\\"\" + name + \"\\\"\";\r\n}\nprivate static String escape(CharSequence input) {\r\n    StringBuilder builder = new StringBuilder();\r\n    input.chars().forEach(c -> builder.append(switch(c) {\r\n        case '\"' ->\r\n            \"\\\\\\\"\";\r\n        case '\\\\' ->\r\n            \"\\\\\\\\\";\r\n        case '/' ->\r\n            \"\\\\/\";\r\n        case '\\b' ->\r\n            \"\\\\b\";\r\n        case '\\f' ->\r\n            \"\\\\f\";\r\n        case '\\n' ->\r\n            \"\\\\n\";\r\n        case '\\r' ->\r\n            \"\\\\r\";\r\n        case '\\t' ->\r\n            \"\\\\t\";\r\n        default ->\r\n            {\r\n                if (c <= 0x1F) {\r\n                    yield String.format(\"\\\\u%04x\", c);\r\n                } else {\r\n                    yield (char) c;\r\n                }\r\n            }\r\n    }));\r\n    return builder.toString();\r\n}\nstatic class IndentingWriter extends Writer {\r\n\r\n    private final Writer out;\r\n\r\n    private final String singleIndent;\r\n\r\n    private int level = 0;\r\n\r\n    private String currentIndent = \"\";\r\n\r\n    private boolean prependIndent = false;\r\n\r\n    IndentingWriter(Writer out, String singleIndent) {\r\n        this.out = out;\r\n        this.singleIndent = singleIndent;\r\n    }\r\n\r\n    /**\r\n     * Write the specified text.\r\n     * @param string the content to write\r\n     */\r\n    public IndentingWriter print(String string) {\r\n        write(string.toCharArray(), 0, string.length());\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Write the specified text and append a new line.\r\n     * @param string the content to write\r\n     */\r\n    public IndentingWriter println(String string) {\r\n        write(string.toCharArray(), 0, string.length());\r\n        return println();\r\n    }\r\n\r\n    /**\r\n     * Write a new line.\r\n     */\r\n    public IndentingWriter println() {\r\n        String separator = System.lineSeparator();\r\n        try {\r\n            this.out.write(separator.toCharArray(), 0, separator.length());\r\n        } catch (IOException ex) {\r\n            throw new IllegalStateException(ex);\r\n        }\r\n        this.prependIndent = true;\r\n        return this;\r\n    }\r\n\r\n    /**\r\n     * Increase the indentation level and execute the {@link Runnable}. Decrease the\r\n     * indentation level on completion.\r\n     * @param runnable the code to execute within an extra indentation level\r\n     */\r\n    public IndentingWriter indented(Runnable runnable) {\r\n        indent();\r\n        runnable.run();\r\n        return outdent();\r\n    }\r\n\r\n    /**\r\n     * Increase the indentation level.\r\n     */\r\n    private IndentingWriter indent() {\r\n        this.level++;\r\n        return refreshIndent();\r\n    }\r\n\r\n    /**\r\n     * Decrease the indentation level.\r\n     */\r\n    private IndentingWriter outdent() {\r\n        this.level--;\r\n        return refreshIndent();\r\n    }\r\n\r\n    private IndentingWriter refreshIndent() {\r\n        this.currentIndent = this.singleIndent.repeat(Math.max(0, this.level));\r\n        return this;\r\n    }\r\n\r\n    @Override\r\n    public void write(char[] chars, int offset, int length) {\r\n        try {\r\n            if (this.prependIndent) {\r\n                this.out.write(this.currentIndent.toCharArray(), 0, this.currentIndent.length());\r\n                this.prependIndent = false;\r\n            }\r\n            this.out.write(chars, offset, length);\r\n        } catch (IOException ex) {\r\n            throw new IllegalStateException(ex);\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void flush() throws IOException {\r\n        this.out.flush();\r\n    }\r\n\r\n    @Override\r\n    public void close() throws IOException {\r\n        this.out.close();\r\n    }\r\n}",
+    "comment": "\n * Very basic json writer for the purposes of translating runtime hints to native\n * configuration.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeObject(Map<String,Object>)",
+    "entityType": "method",
+    "code": "/**\r\n * Write an object with the specified attributes. Each attribute is\r\n * written according to its value type:\r\n * <ul>\r\n * <li>Map: write the value as a nested object</li>\r\n * <li>List: write the value as a nested array</li>\r\n * <li>Otherwise, write a single value</li>\r\n * </ul>\r\n * @param attributes the attributes of the object\r\n */\r\npublic void writeObject(Map<String, Object> attributes) {\r\n    writeObject(attributes, true);\r\n}",
+    "comment": "\n\t * Write an object with the specified attributes. Each attribute is\n\t * written according to its value type:\n\t * <ul>\n\t * <li>Map: write the value as a nested object</li>\n\t * <li>List: write the value as a nested array</li>\n\t * <li>Otherwise, write a single value</li>\n\t * </ul>\n\t * @param attributes the attributes of the object\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeArray(List<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Write an array with the specified items. Each item in the\r\n * list is written either as a nested object or as an attribute\r\n * depending on its type.\r\n * @param items the items to write\r\n * @see #writeObject(Map)\r\n */\r\npublic void writeArray(List<?> items) {\r\n    writeArray(items, true);\r\n}",
+    "comment": "\n\t * Write an array with the specified items. Each item in the\n\t * list is written either as a nested object or as an attribute\n\t * depending on its type.\n\t * @param items the items to write\n\t * @see #writeObject(Map)\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeObject(Map<String,Object>,boolean)",
+    "entityType": "method",
+    "code": "private void writeObject(Map<String, Object> attributes, boolean newLine) {\r\n    if (attributes.isEmpty()) {\r\n        this.writer.print(\";\");\r\n    } else {\r\n        this.writer.println(\"{\").indented(writeAll(attributes.entrySet().iterator(), entry -> writeAttribute(entry.getKey(), entry.getValue()))).print(\"}\");\r\n    }\r\n    if (newLine) {\r\n        this.writer.println();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeArray(List<?>,boolean)",
+    "entityType": "method",
+    "code": "private void writeArray(List<?> items, boolean newLine) {\r\n    if (items.isEmpty()) {\r\n        this.writer.print(\"[ ]\");\r\n    } else {\r\n        this.writer.println(\"[\").indented(writeAll(items.iterator(), this::writeValue)).print(\"]\");\r\n    }\r\n    if (newLine) {\r\n        this.writer.println();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeAll(Iterator<T>,Consumer<T>)",
+    "entityType": "method",
+    "code": "private <T> Runnable writeAll(Iterator<T> it, Consumer<T> writer) {\r\n    return () -> {\r\n        while (it.hasNext()) {\r\n            writer.accept(it.next());\r\n            if (it.hasNext()) {\r\n                this.writer.println(\",\");\r\n            } else {\r\n                this.writer.println();\r\n            }\r\n        }\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeAttribute(String,Object)",
+    "entityType": "method",
+    "code": "private void writeAttribute(String name, Object value) {\r\n    this.writer.print(quote(name) + \": \");\r\n    writeValue(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#writeValue(Object)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unchecked\")\r\nprivate void writeValue(Object value) {\r\n    if (value instanceof Map<?, ?> map) {\r\n        writeObject((Map<String, Object>) map, false);\r\n    } else if (value instanceof List<?> list) {\r\n        writeArray(list, false);\r\n    } else if (value instanceof TypeReference typeReference) {\r\n        this.writer.print(quote(typeReference.getName()));\r\n    } else if (value instanceof CharSequence string) {\r\n        this.writer.print(quote(escape(string)));\r\n    } else if (value instanceof Boolean flag) {\r\n        this.writer.print(Boolean.toString(flag));\r\n    } else {\r\n        throw new IllegalStateException(\"unsupported type: \" + value.getClass());\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#quote(String)",
+    "entityType": "method",
+    "code": "private String quote(String name) {\r\n    return \"\\\"\" + name + \"\\\"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.BasicJsonWriter#escape(CharSequence)",
+    "entityType": "method",
+    "code": "private static String escape(CharSequence input) {\r\n    StringBuilder builder = new StringBuilder();\r\n    input.chars().forEach(c -> builder.append(switch(c) {\r\n        case '\"' ->\r\n            \"\\\\\\\"\";\r\n        case '\\\\' ->\r\n            \"\\\\\\\\\";\r\n        case '/' ->\r\n            \"\\\\/\";\r\n        case '\\b' ->\r\n            \"\\\\b\";\r\n        case '\\f' ->\r\n            \"\\\\f\";\r\n        case '\\n' ->\r\n            \"\\\\n\";\r\n        case '\\r' ->\r\n            \"\\\\r\";\r\n        case '\\t' ->\r\n            \"\\\\t\";\r\n        default ->\r\n            {\r\n                if (c <= 0x1F) {\r\n                    yield String.format(\"\\\\u%04x\", c);\r\n                } else {\r\n                    yield (char) c;\r\n                }\r\n            }\r\n    }));\r\n    return builder.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter",
+    "entityType": "class",
+    "code": "private final Writer out;\nprivate final String singleIndent;\nprivate int level = 0;\nprivate String currentIndent = \"\";\nprivate boolean prependIndent = false;\nIndentingWriter(Writer out, String singleIndent) {\r\n    this.out = out;\r\n    this.singleIndent = singleIndent;\r\n}\n/**\r\n * Write the specified text.\r\n * @param string the content to write\r\n */\r\npublic IndentingWriter print(String string) {\r\n    write(string.toCharArray(), 0, string.length());\r\n    return this;\r\n}\n/**\r\n * Write the specified text and append a new line.\r\n * @param string the content to write\r\n */\r\npublic IndentingWriter println(String string) {\r\n    write(string.toCharArray(), 0, string.length());\r\n    return println();\r\n}\n/**\r\n * Write a new line.\r\n */\r\npublic IndentingWriter println() {\r\n    String separator = System.lineSeparator();\r\n    try {\r\n        this.out.write(separator.toCharArray(), 0, separator.length());\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n    this.prependIndent = true;\r\n    return this;\r\n}\n/**\r\n * Increase the indentation level and execute the {@link Runnable}. Decrease the\r\n * indentation level on completion.\r\n * @param runnable the code to execute within an extra indentation level\r\n */\r\npublic IndentingWriter indented(Runnable runnable) {\r\n    indent();\r\n    runnable.run();\r\n    return outdent();\r\n}\n/**\r\n * Increase the indentation level.\r\n */\r\nprivate IndentingWriter indent() {\r\n    this.level++;\r\n    return refreshIndent();\r\n}\n/**\r\n * Decrease the indentation level.\r\n */\r\nprivate IndentingWriter outdent() {\r\n    this.level--;\r\n    return refreshIndent();\r\n}\nprivate IndentingWriter refreshIndent() {\r\n    this.currentIndent = this.singleIndent.repeat(Math.max(0, this.level));\r\n    return this;\r\n}\n@Override\r\npublic void write(char[] chars, int offset, int length) {\r\n    try {\r\n        if (this.prependIndent) {\r\n            this.out.write(this.currentIndent.toCharArray(), 0, this.currentIndent.length());\r\n            this.prependIndent = false;\r\n        }\r\n        this.out.write(chars, offset, length);\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n}\n@Override\r\npublic void flush() throws IOException {\r\n    this.out.flush();\r\n}\n@Override\r\npublic void close() throws IOException {\r\n    this.out.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#print(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Write the specified text.\r\n * @param string the content to write\r\n */\r\npublic IndentingWriter print(String string) {\r\n    write(string.toCharArray(), 0, string.length());\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Write the specified text.\n\t\t * @param string the content to write\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#println(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Write the specified text and append a new line.\r\n * @param string the content to write\r\n */\r\npublic IndentingWriter println(String string) {\r\n    write(string.toCharArray(), 0, string.length());\r\n    return println();\r\n}",
+    "comment": "\n\t\t * Write the specified text and append a new line.\n\t\t * @param string the content to write\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#println()",
+    "entityType": "method",
+    "code": "/**\r\n * Write a new line.\r\n */\r\npublic IndentingWriter println() {\r\n    String separator = System.lineSeparator();\r\n    try {\r\n        this.out.write(separator.toCharArray(), 0, separator.length());\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n    this.prependIndent = true;\r\n    return this;\r\n}",
+    "comment": "\n\t\t * Write a new line.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#indented(Runnable)",
+    "entityType": "method",
+    "code": "/**\r\n * Increase the indentation level and execute the {@link Runnable}. Decrease the\r\n * indentation level on completion.\r\n * @param runnable the code to execute within an extra indentation level\r\n */\r\npublic IndentingWriter indented(Runnable runnable) {\r\n    indent();\r\n    runnable.run();\r\n    return outdent();\r\n}",
+    "comment": "\n\t\t * Increase the indentation level and execute the {@link Runnable}. Decrease the\n\t\t * indentation level on completion.\n\t\t * @param runnable the code to execute within an extra indentation level\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#indent()",
+    "entityType": "method",
+    "code": "/**\r\n * Increase the indentation level.\r\n */\r\nprivate IndentingWriter indent() {\r\n    this.level++;\r\n    return refreshIndent();\r\n}",
+    "comment": "\n\t\t * Increase the indentation level.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#outdent()",
+    "entityType": "method",
+    "code": "/**\r\n * Decrease the indentation level.\r\n */\r\nprivate IndentingWriter outdent() {\r\n    this.level--;\r\n    return refreshIndent();\r\n}",
+    "comment": "\n\t\t * Decrease the indentation level.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#refreshIndent()",
+    "entityType": "method",
+    "code": "private IndentingWriter refreshIndent() {\r\n    this.currentIndent = this.singleIndent.repeat(Math.max(0, this.level));\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#write(char[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void write(char[] chars, int offset, int length) {\r\n    try {\r\n        if (this.prependIndent) {\r\n            this.out.write(this.currentIndent.toCharArray(), 0, this.currentIndent.length());\r\n            this.prependIndent = false;\r\n        }\r\n        this.out.write(chars, offset, length);\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#flush()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void flush() throws IOException {\r\n    this.out.flush();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.IndentingWriter#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() throws IOException {\r\n    this.out.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid applyWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingConsumer<Object> consumer = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> consumer.accept(this));\r\n}\n@Test\r\nvoid applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingConsumer<Object> consumer = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> consumer.accept(this)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingConsumer<Object> consumer = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> consumer.accept(this, IllegalStateException::new));\r\n}\n@Test\r\nvoid applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingConsumer<Object> consumer = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> consumer.accept(this, IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingConsumer<Object> consumer = this::throwIOException;\r\n    ThrowingConsumer<Object> modified = consumer.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> modified.accept(this)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid ofModifiesThrownException() {\r\n    ThrowingConsumer<Object> consumer = ThrowingConsumer.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> consumer.accept(this)).withCauseInstanceOf(IOException.class);\r\n}\nprivate void throwIOException(Object o) throws IOException {\r\n    throw new IOException();\r\n}\nprivate void throwIllegalArgumentException(Object o) {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": "\n * Tests for {@link ThrowingConsumer}.\n *\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#applyWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingConsumer<Object> consumer = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> consumer.accept(this));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingConsumer<Object> consumer = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> consumer.accept(this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingConsumer<Object> consumer = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> consumer.accept(this, IllegalStateException::new));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingConsumer<Object> consumer = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> consumer.accept(this, IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#throwingModifiesThrownException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingConsumer<Object> consumer = this::throwIOException;\r\n    ThrowingConsumer<Object> modified = consumer.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> modified.accept(this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#ofModifiesThrownException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofModifiesThrownException() {\r\n    ThrowingConsumer<Object> consumer = ThrowingConsumer.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> consumer.accept(this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#throwIOException(Object)",
+    "entityType": "method",
+    "code": "private void throwIOException(Object o) throws IOException {\r\n    throw new IOException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingConsumerTests#throwIllegalArgumentException(Object)",
+    "entityType": "method",
+    "code": "private void throwIllegalArgumentException(Object o) {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid applyWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingFunction<Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this));\r\n}\n@Test\r\nvoid applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingFunction<Object, Object> function = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> function.apply(this)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingFunction<Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this, IllegalStateException::new));\r\n}\n@Test\r\nvoid applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingFunction<Object, Object> function = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this, IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingFunction<Object, Object> function = this::throwIOException;\r\n    ThrowingFunction<Object, Object> modified = function.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> modified.apply(this)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid ofModifiesThrowException() {\r\n    ThrowingFunction<Object, Object> function = ThrowingFunction.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this)).withCauseInstanceOf(IOException.class);\r\n}\nprivate Object throwIOException(Object o) throws IOException {\r\n    throw new IOException();\r\n}\nprivate Object throwIllegalArgumentException(Object o) {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": "\n * Tests for {@link ThrowingFunction}.\n *\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#applyWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingFunction<Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingFunction<Object, Object> function = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> function.apply(this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingFunction<Object, Object> function = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> function.apply(this, IllegalStateException::new));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid applyWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingFunction<Object, Object> function = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this, IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#throwingModifiesThrownException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingFunction<Object, Object> function = this::throwIOException;\r\n    ThrowingFunction<Object, Object> modified = function.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> modified.apply(this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#ofModifiesThrowException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofModifiesThrowException() {\r\n    ThrowingFunction<Object, Object> function = ThrowingFunction.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(() -> function.apply(this)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#throwIOException(Object)",
+    "entityType": "method",
+    "code": "private Object throwIOException(Object o) throws IOException {\r\n    throw new IOException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingFunctionTests#throwIllegalArgumentException(Object)",
+    "entityType": "method",
+    "code": "private Object throwIllegalArgumentException(Object o) {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "entityType": "class",
+    "code": "private static final boolean verbose = \"verbose\".equalsIgnoreCase(System.getProperty(\"spring.native.precompute.log\"));\nprivate static final Pattern[] patterns = { Pattern.compile(Pattern.quote(\"org.springframework.core.NativeDetector#inNativeImage\")), Pattern.compile(Pattern.quote(\"org.springframework.cglib.core.AbstractClassGenerator#inNativeImage\")), Pattern.compile(Pattern.quote(\"org.springframework.aot.AotDetector#inNativeImage\")), Pattern.compile(Pattern.quote(\"org.springframework.\") + \".*#.*Present\"), Pattern.compile(Pattern.quote(\"org.springframework.\") + \".*#.*PRESENT\"), Pattern.compile(Pattern.quote(\"reactor.core.\") + \".*#.*Available\"), Pattern.compile(Pattern.quote(\"org.apache.commons.logging.LogAdapter\") + \"#.*Present\") };\nprivate final ThrowawayClassLoader throwawayClassLoader = new ThrowawayClassLoader(getClass().getClassLoader());\n@Override\r\npublic void beforeAnalysis(BeforeAnalysisAccess access) {\r\n    access.registerSubtypeReachabilityHandler(this::iterateFields, Object.class);\r\n}\n// This method is invoked for every type that is reachable.\r\nprivate void iterateFields(DuringAnalysisAccess access, Class<?> subtype) {\r\n    try {\r\n        for (Field field : subtype.getDeclaredFields()) {\r\n            int modifiers = field.getModifiers();\r\n            if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers) || field.isEnumConstant() || (field.getType() != boolean.class && field.getType() != Boolean.class)) {\r\n                continue;\r\n            }\r\n            String fieldIdentifier = field.getDeclaringClass().getName() + \"#\" + field.getName();\r\n            for (Pattern pattern : patterns) {\r\n                if (pattern.matcher(fieldIdentifier).matches()) {\r\n                    try {\r\n                        Object fieldValue = provideFieldValue(field);\r\n                        access.registerFieldValueTransformer(field, (receiver, originalValue) -> fieldValue);\r\n                        if (verbose) {\r\n                            System.out.println(\"Field \" + fieldIdentifier + \" set to \" + fieldValue + \" at build time\");\r\n                        }\r\n                    } catch (Throwable ex) {\r\n                        if (verbose) {\r\n                            System.out.println(\"Field \" + fieldIdentifier + \" will be evaluated at runtime \" + \"due to this error during build time evaluation: \" + ex);\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    } catch (NoClassDefFoundError ex) {\r\n        // Skip classes that have not all their field types in the classpath\r\n    }\r\n}\n// This method is invoked when the field value is written to the image heap or the field is constant folded.\r\nprivate Object provideFieldValue(Field field) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {\r\n    Class<?> throwawayClass = this.throwawayClassLoader.loadClass(field.getDeclaringClass().getName());\r\n    Field throwawayField = throwawayClass.getDeclaredField(field.getName());\r\n    throwawayField.setAccessible(true);\r\n    return throwawayField.get(null);\r\n}",
+    "comment": "\n * GraalVM {@link Feature} that substitutes boolean field values that match certain patterns\n * with values pre-computed ahead-of-time without causing class build-time initialization.\n *\n * <p>It is possible to pass <pre style=\"code\">-Dspring.native.precompute.log=verbose</pre> as a\n * <pre style=\"code\">native-image</pre> compiler build argument to display detailed logs\n * about pre-computed fields.</p>\n *\n * @author Sebastien Deleuze\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#beforeAnalysis(BeforeAnalysisAccess)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void beforeAnalysis(BeforeAnalysisAccess access) {\r\n    access.registerSubtypeReachabilityHandler(this::iterateFields, Object.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#iterateFields(DuringAnalysisAccess,Class<?>)",
+    "entityType": "method",
+    "code": "// This method is invoked for every type that is reachable.\r\nprivate void iterateFields(DuringAnalysisAccess access, Class<?> subtype) {\r\n    try {\r\n        for (Field field : subtype.getDeclaredFields()) {\r\n            int modifiers = field.getModifiers();\r\n            if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers) || field.isEnumConstant() || (field.getType() != boolean.class && field.getType() != Boolean.class)) {\r\n                continue;\r\n            }\r\n            String fieldIdentifier = field.getDeclaringClass().getName() + \"#\" + field.getName();\r\n            for (Pattern pattern : patterns) {\r\n                if (pattern.matcher(fieldIdentifier).matches()) {\r\n                    try {\r\n                        Object fieldValue = provideFieldValue(field);\r\n                        access.registerFieldValueTransformer(field, (receiver, originalValue) -> fieldValue);\r\n                        if (verbose) {\r\n                            System.out.println(\"Field \" + fieldIdentifier + \" set to \" + fieldValue + \" at build time\");\r\n                        }\r\n                    } catch (Throwable ex) {\r\n                        if (verbose) {\r\n                            System.out.println(\"Field \" + fieldIdentifier + \" will be evaluated at runtime \" + \"due to this error during build time evaluation: \" + ex);\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    } catch (NoClassDefFoundError ex) {\r\n        // Skip classes that have not all their field types in the classpath\r\n    }\r\n}",
+    "comment": " This method is invoked for every type that is reachable."
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#provideFieldValue(Field)",
+    "entityType": "method",
+    "code": "// This method is invoked when the field value is written to the image heap or the field is constant folded.\r\nprivate Object provideFieldValue(Field field) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {\r\n    Class<?> throwawayClass = this.throwawayClassLoader.loadClass(field.getDeclaringClass().getName());\r\n    Field throwawayField = throwawayClass.getDeclaredField(field.getName());\r\n    throwawayField.setAccessible(true);\r\n    return throwawayField.get(null);\r\n}",
+    "comment": " This method is invoked when the field value is written to the image heap or the field is constant folded."
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid getWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingSupplier<Object> supplier = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(supplier::get);\r\n}\n@Test\r\nvoid getWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingSupplier<Object> supplier = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(supplier::get).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid getWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingSupplier<Object> supplier = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> supplier.get(IllegalStateException::new));\r\n}\n@Test\r\nvoid getWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingSupplier<Object> supplier = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> supplier.get(IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingSupplier<Object> supplier = this::throwIOException;\r\n    ThrowingSupplier<Object> modified = supplier.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(modified::get).withCauseInstanceOf(IOException.class);\r\n}\n@Test\r\nvoid ofModifiesThrowException() {\r\n    ThrowingSupplier<Object> supplier = ThrowingSupplier.of(this::throwIOException, IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(supplier::get).withCauseInstanceOf(IOException.class);\r\n}\nprivate Object throwIOException() throws IOException {\r\n    throw new IOException();\r\n}\nprivate Object throwIllegalArgumentException() {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": "\n * Tests for {@link ThrowingSupplier}.\n *\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#getWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingSupplier<Object> supplier = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(supplier::get);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#getWhenThrowingCheckedExceptionThrowsWrapperRuntimeException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWhenThrowingCheckedExceptionThrowsWrapperRuntimeException() {\r\n    ThrowingSupplier<Object> supplier = this::throwIOException;\r\n    assertThatExceptionOfType(RuntimeException.class).isThrownBy(supplier::get).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#getWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWithExceptionWrapperWhenThrowingUncheckedExceptionThrowsOriginal() {\r\n    ThrowingSupplier<Object> supplier = this::throwIllegalArgumentException;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> supplier.get(IllegalStateException::new));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#getWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWithExceptionWrapperWhenThrowingCheckedExceptionThrowsWrapper() {\r\n    ThrowingSupplier<Object> supplier = this::throwIOException;\r\n    assertThatIllegalStateException().isThrownBy(() -> supplier.get(IllegalStateException::new)).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.function.ThrowingSupplierTests#throwingModifiesThrownException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwingModifiesThrownException() {\r\n    ThrowingSupplier<Object> supplier = this::throwIOException;\r\n    ThrowingSupplier<Object> modified = supplier.throwing(IllegalStateException::new);\r\n    assertThatIllegalStateException().isThrownBy(modified::get).withCauseInstanceOf(IOException.class);\r\n}",
+    "comment": ""
+  }
+]

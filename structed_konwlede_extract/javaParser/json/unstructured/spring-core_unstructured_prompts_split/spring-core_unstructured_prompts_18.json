@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleExecutables(Map<String,Object>,List<ExecutableHint>)",
+    "entityType": "method",
+    "code": "private void handleExecutables(Map<String, Object> attributes, List<ExecutableHint> hints) {\r\n    addIfNotEmpty(attributes, \"methods\", hints.stream().filter(h -> h.getMode().equals(ExecutableMode.INVOKE)).map(this::toAttributes).toList());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#toAttributes(ExecutableHint)",
+    "entityType": "method",
+    "code": "private Map<String, Object> toAttributes(ExecutableHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    attributes.put(\"name\", hint.getName());\r\n    attributes.put(\"parameterTypes\", hint.getParameterTypes());\r\n    return attributes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleCategories(Map<String,Object>,Set<MemberCategory>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"removal\")\r\nprivate void handleCategories(Map<String, Object> attributes, Set<MemberCategory> categories) {\r\n    categories.stream().sorted().forEach(category -> {\r\n        switch(category) {\r\n            case ACCESS_PUBLIC_FIELDS, PUBLIC_FIELDS ->\r\n                attributes.put(\"allPublicFields\", true);\r\n            case ACCESS_DECLARED_FIELDS, DECLARED_FIELDS ->\r\n                attributes.put(\"allDeclaredFields\", true);\r\n            case INVOKE_PUBLIC_CONSTRUCTORS ->\r\n                attributes.put(\"allPublicConstructors\", true);\r\n            case INVOKE_DECLARED_CONSTRUCTORS ->\r\n                attributes.put(\"allDeclaredConstructors\", true);\r\n            case INVOKE_PUBLIC_METHODS ->\r\n                attributes.put(\"allPublicMethods\", true);\r\n            case INVOKE_DECLARED_METHODS ->\r\n                attributes.put(\"allDeclaredMethods\", true);\r\n            case PUBLIC_CLASSES ->\r\n                attributes.put(\"allPublicClasses\", true);\r\n            case DECLARED_CLASSES ->\r\n                attributes.put(\"allDeclaredClasses\", true);\r\n            case UNSAFE_ALLOCATED ->\r\n                attributes.put(\"unsafeAllocated\", true);\r\n        }\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#addIfNotEmpty(Map<String,Object>,String,Object)",
+    "entityType": "method",
+    "code": "private void addIfNotEmpty(Map<String, Object> attributes, String name, @Nullable Object value) {\r\n    if (value != null && (value instanceof Collection<?> collection && !collection.isEmpty())) {\r\n        attributes.put(name, value);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ReflectionHintsAttributes#toAttributes(JdkProxyHint)",
+    "entityType": "method",
+    "code": "private Map<String, Object> toAttributes(JdkProxyHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, hint);\r\n    attributes.put(\"type\", Map.of(\"proxy\", hint.getProxiedInterfaces()));\r\n    return attributes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ResourceHintsAttributes",
+    "entityType": "class",
+    "code": "private static final Comparator<ResourcePatternHint> RESOURCE_PATTERN_HINT_COMPARATOR = Comparator.comparing(ResourcePatternHint::getPattern);\nprivate static final Comparator<ResourceBundleHint> RESOURCE_BUNDLE_HINT_COMPARATOR = Comparator.comparing(ResourceBundleHint::getBaseName);\npublic List<Map<String, Object>> resources(ResourceHints hint) {\r\n    return hint.resourcePatternHints().map(ResourcePatternHints::getIncludes).flatMap(List::stream).distinct().sorted(RESOURCE_PATTERN_HINT_COMPARATOR).map(this::toAttributes).toList();\r\n}\npublic List<Map<String, Object>> resourceBundles(ResourceHints hint) {\r\n    return hint.resourceBundleHints().sorted(RESOURCE_BUNDLE_HINT_COMPARATOR).map(this::toAttributes).toList();\r\n}\nprivate Map<String, Object> toAttributes(ResourceBundleHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, hint);\r\n    attributes.put(\"name\", hint.getBaseName());\r\n    return attributes;\r\n}\nprivate Map<String, Object> toAttributes(ResourcePatternHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, hint);\r\n    attributes.put(\"glob\", hint.getPattern());\r\n    return attributes;\r\n}\nprivate void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        Map<String, Object> conditionAttributes = new LinkedHashMap<>();\r\n        conditionAttributes.put(\"typeReached\", hint.getReachableType());\r\n        attributes.put(\"condition\", conditionAttributes);\r\n    }\r\n}",
+    "comment": "\n * Collect {@link ResourceHints} as map attributes ready for JSON serialization for the GraalVM\n * {@code native-image} compiler.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Brian Clozel\n * @since 6.0\n * @see <a href=\"https://www.graalvm.org/22.1/reference-manual/native-image/Resources/\">Accessing Resources in Native Images</a>\n * @see <a href=\"https://www.graalvm.org/22.1/reference-manual/native-image/BuildConfiguration/\">Native Image Build Configuration</a>\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ResourceHintsAttributes#resources(ResourceHints)",
+    "entityType": "method",
+    "code": "public List<Map<String, Object>> resources(ResourceHints hint) {\r\n    return hint.resourcePatternHints().map(ResourcePatternHints::getIncludes).flatMap(List::stream).distinct().sorted(RESOURCE_PATTERN_HINT_COMPARATOR).map(this::toAttributes).toList();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ResourceHintsAttributes#resourceBundles(ResourceHints)",
+    "entityType": "method",
+    "code": "public List<Map<String, Object>> resourceBundles(ResourceHints hint) {\r\n    return hint.resourceBundleHints().sorted(RESOURCE_BUNDLE_HINT_COMPARATOR).map(this::toAttributes).toList();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ResourceHintsAttributes#toAttributes(ResourceBundleHint)",
+    "entityType": "method",
+    "code": "private Map<String, Object> toAttributes(ResourceBundleHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, hint);\r\n    attributes.put(\"name\", hint.getBaseName());\r\n    return attributes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ResourceHintsAttributes#toAttributes(ResourcePatternHint)",
+    "entityType": "method",
+    "code": "private Map<String, Object> toAttributes(ResourcePatternHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, hint);\r\n    attributes.put(\"glob\", hint.getPattern());\r\n    return attributes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.ResourceHintsAttributes#handleCondition(Map<String,Object>,ConditionalHint)",
+    "entityType": "method",
+    "code": "private void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        Map<String, Object> conditionAttributes = new LinkedHashMap<>();\r\n        conditionAttributes.put(\"typeReached\", hint.getReachableType());\r\n        attributes.put(\"condition\", conditionAttributes);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid slashInSubtype() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new MimeType(\"text\", \"/\"));\r\n}\n@Test\r\nvoid valueOfNoSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio\"));\r\n}\n@Test\r\nvoid valueOfNoSubtypeSlash() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio/\"));\r\n}\n@Test\r\nvoid valueOfIllegalType() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio(/basic\"));\r\n}\n@Test\r\nvoid valueOfIllegalSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio/basic)\"));\r\n}\n@Test\r\nvoid valueOfIllegalCharset() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"text/html; charset=foo-bar\"));\r\n}\n@Test\r\nvoid parseCharset() {\r\n    String s = \"text/html; charset=iso-8859-1\";\r\n    MimeType mimeType = MimeType.valueOf(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"text\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"html\");\r\n    assertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.ISO_8859_1);\r\n}\n@Test\r\nvoid parseQuotedCharset() {\r\n    String s = \"application/xml;charset=\\\"utf-8\\\"\";\r\n    MimeType mimeType = MimeType.valueOf(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"application\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"xml\");\r\n    assertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.UTF_8);\r\n}\n@Test\r\nvoid parseQuotedSeparator() {\r\n    String s = \"application/xop+xml;charset=utf-8;type=\\\"application/soap+xml;action=\\\\\\\"https://x.y.z\\\\\\\"\\\"\";\r\n    MimeType mimeType = MimeType.valueOf(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"application\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"xop+xml\");\r\n    assertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.UTF_8);\r\n    assertThat(mimeType.getParameter(\"type\")).isEqualTo(\"\\\"application/soap+xml;action=\\\\\\\"https://x.y.z\\\\\\\"\\\"\");\r\n}\n@Test\r\nvoid withConversionService() {\r\n    ConversionService conversionService = new DefaultConversionService();\r\n    assertThat(conversionService.canConvert(String.class, MimeType.class)).isTrue();\r\n    MimeType mimeType = MimeType.valueOf(\"application/xml\");\r\n    assertThat(conversionService.convert(\"application/xml\", MimeType.class)).isEqualTo(mimeType);\r\n}\n@Test\r\nvoid includes() {\r\n    MimeType textPlain = MimeTypeUtils.TEXT_PLAIN;\r\n    assertThat(textPlain.includes(textPlain)).as(\"Equal types is not inclusive\").isTrue();\r\n    MimeType allText = new MimeType(\"text\");\r\n    assertThat(allText.includes(textPlain)).as(\"All subtypes is not inclusive\").isTrue();\r\n    assertThat(textPlain.includes(allText)).as(\"All subtypes is inclusive\").isFalse();\r\n    assertThat(MimeTypeUtils.ALL.includes(textPlain)).as(\"All types is not inclusive\").isTrue();\r\n    assertThat(textPlain.includes(MimeTypeUtils.ALL)).as(\"All types is inclusive\").isFalse();\r\n    assertThat(MimeTypeUtils.ALL.includes(textPlain)).as(\"All types is not inclusive\").isTrue();\r\n    assertThat(textPlain.includes(MimeTypeUtils.ALL)).as(\"All types is inclusive\").isFalse();\r\n    MimeType applicationSoapXml = new MimeType(\"application\", \"soap+xml\");\r\n    MimeType applicationWildcardXml = new MimeType(\"application\", \"*+xml\");\r\n    // SPR-15795\r\n    MimeType suffixXml = new MimeType(\"application\", \"x.y+z+xml\");\r\n    assertThat(applicationSoapXml.includes(applicationSoapXml)).isTrue();\r\n    assertThat(applicationWildcardXml.includes(applicationWildcardXml)).isTrue();\r\n    assertThat(applicationWildcardXml.includes(suffixXml)).isTrue();\r\n    assertThat(applicationWildcardXml.includes(applicationSoapXml)).isTrue();\r\n    assertThat(applicationSoapXml.includes(applicationWildcardXml)).isFalse();\r\n    assertThat(suffixXml.includes(applicationWildcardXml)).isFalse();\r\n    assertThat(applicationWildcardXml.includes(MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}\n@Test\r\nvoid isCompatible() {\r\n    MimeType textPlain = MimeTypeUtils.TEXT_PLAIN;\r\n    assertThat(textPlain.isCompatibleWith(textPlain)).as(\"Equal types is not compatible\").isTrue();\r\n    MimeType allText = new MimeType(\"text\");\r\n    assertThat(allText.isCompatibleWith(textPlain)).as(\"All subtypes is not compatible\").isTrue();\r\n    assertThat(textPlain.isCompatibleWith(allText)).as(\"All subtypes is not compatible\").isTrue();\r\n    assertThat(MimeTypeUtils.ALL.isCompatibleWith(textPlain)).as(\"All types is not compatible\").isTrue();\r\n    assertThat(textPlain.isCompatibleWith(MimeTypeUtils.ALL)).as(\"All types is not compatible\").isTrue();\r\n    assertThat(MimeTypeUtils.ALL.isCompatibleWith(textPlain)).as(\"All types is not compatible\").isTrue();\r\n    assertThat(textPlain.isCompatibleWith(MimeTypeUtils.ALL)).as(\"All types is compatible\").isTrue();\r\n    MimeType applicationSoapXml = new MimeType(\"application\", \"soap+xml\");\r\n    MimeType applicationWildcardXml = new MimeType(\"application\", \"*+xml\");\r\n    // SPR-15795\r\n    MimeType suffixXml = new MimeType(\"application\", \"x.y+z+xml\");\r\n    assertThat(applicationSoapXml.isCompatibleWith(applicationSoapXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(applicationWildcardXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(suffixXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(applicationSoapXml)).isTrue();\r\n    assertThat(applicationSoapXml.isCompatibleWith(applicationWildcardXml)).isTrue();\r\n    assertThat(suffixXml.isCompatibleWith(applicationWildcardXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}\n@Test\r\nvoid testToString() {\r\n    MimeType mimeType = new MimeType(\"text\", \"plain\");\r\n    String result = mimeType.toString();\r\n    assertThat(result).as(\"Invalid toString() returned\").isEqualTo(\"text/plain\");\r\n}\n@Test\r\nvoid parseMimeType() {\r\n    String s = \"audio/*\";\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"audio\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"*\");\r\n}\n@Test\r\nvoid parseMimeTypeNoSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio\"));\r\n}\n@Test\r\nvoid parseMimeTypeNoSubtypeSlash() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/\"));\r\n}\n@Test\r\nvoid parseMimeTypeTypeRange() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"*/json\"));\r\n}\n@Test\r\nvoid parseMimeTypeIllegalType() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio(/basic\"));\r\n}\n@Test\r\nvoid parseMimeTypeIllegalSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/basic)\"));\r\n}\n@Test\r\nvoid parseMimeTypeMissingTypeAndSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"     ;a=b\"));\r\n}\n@Test\r\nvoid parseMimeTypeEmptyParameterAttribute() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;=value\"));\r\n}\n@Test\r\nvoid parseMimeTypeEmptyParameterValue() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr=\"));\r\n}\n@Test\r\nvoid parseMimeTypeIllegalParameterAttribute() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr<=value\"));\r\n}\n@Test\r\nvoid parseMimeTypeIllegalParameterValue() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr=v>alue\"));\r\n}\n@Test\r\nvoid parseMimeTypeIllegalCharset() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"text/html; charset=foo-bar\"));\r\n}\n// SPR-8917\r\n@Test\r\nvoid parseMimeTypeQuotedParameterValue() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"audio/*;attr=\\\"v>alue\\\"\");\r\n    assertThat(mimeType.getParameter(\"attr\")).isEqualTo(\"\\\"v>alue\\\"\");\r\n}\n// SPR-8917\r\n@Test\r\nvoid parseMimeTypeSingleQuotedParameterValue() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"audio/*;attr='v>alue'\");\r\n    assertThat(mimeType.getParameter(\"attr\")).isEqualTo(\"'v>alue'\");\r\n}\n// SPR-16630\r\n@Test\r\nvoid parseMimeTypeWithSpacesAroundEquals() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"multipart/x-mixed-replace;boundary = --myboundary\");\r\n    assertThat(mimeType.getParameter(\"boundary\")).isEqualTo(\"--myboundary\");\r\n}\n// SPR-16630\r\n@Test\r\nvoid parseMimeTypeWithSpacesAroundEqualsAndQuotedValue() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"text/plain; foo = \\\" bar \\\" \");\r\n    assertThat(mimeType.getParameter(\"foo\")).isEqualTo(\"\\\" bar \\\"\");\r\n}\n@Test\r\nvoid parseMimeTypeIllegalQuotedParameterValue() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr=\\\"\"));\r\n}\n@Test\r\nvoid parseMimeTypeNull() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(null));\r\n}\n@Test\r\nvoid parseMimeTypes() {\r\n    String s = \"text/plain, text/html, text/x-dvi, text/x-c\";\r\n    List<MimeType> mimeTypes = MimeTypeUtils.parseMimeTypes(s);\r\n    assertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\r\n    assertThat(mimeTypes).as(\"Invalid amount of mime types\").hasSize(4);\r\n    mimeTypes = MimeTypeUtils.parseMimeTypes(null);\r\n    assertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\r\n    assertThat(mimeTypes).as(\"Invalid amount of mime types\").isEmpty();\r\n}\n// gh-23241\r\n@Test\r\nvoid parseMimeTypesWithTrailingComma() {\r\n    List<MimeType> mimeTypes = MimeTypeUtils.parseMimeTypes(\"text/plain, text/html,\");\r\n    assertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\r\n    assertThat(mimeTypes).as(\"Incorrect number of mime types\").hasSize(2);\r\n}\n// SPR-17459\r\n@Test\r\nvoid parseMimeTypesWithQuotedParameters() {\r\n    testWithQuotedParameters(\"foo/bar;param=\\\",\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"s,a,\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"s,\\\"\", \"text/x-c\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"a\\\\\\\"b,c\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"\\\\\\\\\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"\\\\,\\\\\\\"\");\r\n}\n@Test\r\nvoid parseSubtypeSuffix() {\r\n    MimeType type = new MimeType(\"application\", \"vdn.something+json\");\r\n    assertThat(type.getSubtypeSuffix()).isEqualTo(\"json\");\r\n    type = new MimeType(\"application\", \"vdn.something\");\r\n    assertThat(type.getSubtypeSuffix()).isNull();\r\n    type = new MimeType(\"application\", \"vdn.something+\");\r\n    assertThat(type.getSubtypeSuffix()).isEmpty();\r\n    type = new MimeType(\"application\", \"vdn.some+thing+json\");\r\n    assertThat(type.getSubtypeSuffix()).isEqualTo(\"json\");\r\n}\n// gh-25350\r\n@Test\r\nvoid wildcardSubtypeCompatibleWithSuffix() {\r\n    MimeType applicationStar = new MimeType(\"application\", \"*\");\r\n    MimeType applicationVndJson = new MimeType(\"application\", \"vnd.something+json\");\r\n    assertThat(applicationStar.isCompatibleWith(applicationVndJson)).isTrue();\r\n}\nprivate void testWithQuotedParameters(String... mimeTypes) {\r\n    String s = String.join(\",\", mimeTypes);\r\n    List<MimeType> actual = MimeTypeUtils.parseMimeTypes(s);\r\n    assertThat(actual).hasSameSizeAs(mimeTypes);\r\n    for (int i = 0; i < mimeTypes.length; i++) {\r\n        assertThat(actual.get(i).toString()).isEqualTo(mimeTypes[i]);\r\n    }\r\n}\n@Test\r\nvoid compareTo() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    // equal\r\n    assertThat(audioBasic.compareTo(audioBasic)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(audio.compareTo(audio)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(audioBasicLevel.compareTo(audioBasicLevel)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(audioBasicLevel.compareTo(audio)).as(\"Invalid comparison result\").isGreaterThan(0);\r\n    List<MimeType> expected = new ArrayList<>();\r\n    expected.add(audio);\r\n    expected.add(audioBasic);\r\n    expected.add(audioBasicLevel);\r\n    expected.add(audioWave);\r\n    List<MimeType> result = new ArrayList<>(expected);\r\n    Random rnd = new Random();\r\n    // shuffle & sort 10 times\r\n    for (int i = 0; i < 10; i++) {\r\n        Collections.shuffle(result, rnd);\r\n        Collections.sort(result);\r\n        for (int j = 0; j < result.size(); j++) {\r\n            assertThat(result.get(j)).as(\"Invalid media type at \" + j + \", run \" + i).isSameAs(expected.get(j));\r\n        }\r\n    }\r\n}\n@Test\r\nvoid compareToCaseSensitivity() {\r\n    MimeType m1 = new MimeType(\"audio\", \"basic\");\r\n    MimeType m2 = new MimeType(\"Audio\", \"Basic\");\r\n    assertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    m1 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"bar\"));\r\n    m2 = new MimeType(\"audio\", \"basic\", singletonMap(\"Foo\", \"bar\"));\r\n    assertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    m1 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"bar\"));\r\n    m2 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"Bar\"));\r\n    assertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isNotEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isNotEqualTo(0);\r\n}\n@Test\r\nvoid isMoreSpecific() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    assertThat(audioBasic.isMoreSpecific(audioBasicLevel)).isFalse();\r\n    assertThat(audioBasicLevel.isMoreSpecific(audioBasic)).isTrue();\r\n    assertThat(audio.isMoreSpecific(MimeTypeUtils.ALL)).isTrue();\r\n    assertThat(MimeTypeUtils.ALL.isMoreSpecific(audio)).isFalse();\r\n    assertThat(audioBasicLevel.isMoreSpecific(audioBasic)).isTrue();\r\n    assertThat(audioBasic.isMoreSpecific(audioBasicLevel)).isFalse();\r\n    assertThat(audioBasic.isMoreSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n    assertThat(audioBasic.isMoreSpecific(audioWave)).isFalse();\r\n    assertThat(audioBasicLevel.isMoreSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n}\n@Test\r\nvoid isLessSpecific() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    assertThat(audioBasic.isLessSpecific(audioBasicLevel)).isTrue();\r\n    assertThat(audioBasicLevel.isLessSpecific(audioBasic)).isFalse();\r\n    assertThat(audio.isLessSpecific(MimeTypeUtils.ALL)).isFalse();\r\n    assertThat(MimeTypeUtils.ALL.isLessSpecific(audio)).isTrue();\r\n    assertThat(audioBasicLevel.isLessSpecific(audioBasic)).isFalse();\r\n    assertThat(audioBasic.isLessSpecific(audioBasicLevel)).isTrue();\r\n    assertThat(audioBasic.isLessSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n    assertThat(audioBasic.isLessSpecific(audioWave)).isFalse();\r\n    assertThat(audioBasicLevel.isLessSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n}\n@Test\r\nvoid sortBySpecificity() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    List<MimeType> mimeTypes = new ArrayList<>(List.of(MimeTypeUtils.ALL, audio, audioWave, audioBasic, audioBasicLevel));\r\n    MimeTypeUtils.sortBySpecificity(mimeTypes);\r\n    assertThat(mimeTypes).containsExactly(audioWave, audioBasicLevel, audioBasic, audio, MimeTypeUtils.ALL);\r\n}\n@Test\r\nvoid bubbleSort() {\r\n    List<Integer> list = new ArrayList<>(List.of(10, 9, 8, 7, 6, 5, 4, 3, 2, 1));\r\n    MimeTypeUtils.bubbleSort(list, (i1, i2) -> i1 > i2);\r\n    assertThat(list).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);\r\n}\n// SPR-13157\r\n@Test\r\nvoid equalsIsCaseInsensitiveForCharsets() {\r\n    MimeType m1 = new MimeType(\"text\", \"plain\", singletonMap(\"charset\", \"UTF-8\"));\r\n    MimeType m2 = new MimeType(\"text\", \"plain\", singletonMap(\"charset\", \"utf-8\"));\r\n    assertThat(m2).isEqualTo(m1);\r\n    assertThat(m1).isEqualTo(m2);\r\n    assertThat(m1.compareTo(m2)).isEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).isEqualTo(0);\r\n}\n// gh-26127\r\n@Test\r\nvoid serialize() throws Exception {\r\n    MimeType original = new MimeType(\"text\", \"plain\", StandardCharsets.UTF_8);\r\n    MimeType deserialized = SerializationTestUtils.serializeAndDeserialize(original);\r\n    assertThat(deserialized).isEqualTo(original);\r\n    assertThat(original).isEqualTo(deserialized);\r\n}",
+    "comment": "\n * Tests for {@link MimeType}.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @author Dimitrios Liapis\n "
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#slashInSubtype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid slashInSubtype() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new MimeType(\"text\", \"/\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#valueOfNoSubtype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfNoSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#valueOfNoSubtypeSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfNoSubtypeSlash() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio/\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#valueOfIllegalType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfIllegalType() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio(/basic\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#valueOfIllegalSubtype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfIllegalSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio/basic)\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#valueOfIllegalCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfIllegalCharset() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"text/html; charset=foo-bar\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseCharset() {\r\n    String s = \"text/html; charset=iso-8859-1\";\r\n    MimeType mimeType = MimeType.valueOf(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"text\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"html\");\r\n    assertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.ISO_8859_1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseQuotedCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseQuotedCharset() {\r\n    String s = \"application/xml;charset=\\\"utf-8\\\"\";\r\n    MimeType mimeType = MimeType.valueOf(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"application\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"xml\");\r\n    assertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.UTF_8);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseQuotedSeparator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseQuotedSeparator() {\r\n    String s = \"application/xop+xml;charset=utf-8;type=\\\"application/soap+xml;action=\\\\\\\"https://x.y.z\\\\\\\"\\\"\";\r\n    MimeType mimeType = MimeType.valueOf(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"application\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"xop+xml\");\r\n    assertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.UTF_8);\r\n    assertThat(mimeType.getParameter(\"type\")).isEqualTo(\"\\\"application/soap+xml;action=\\\\\\\"https://x.y.z\\\\\\\"\\\"\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#withConversionService()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withConversionService() {\r\n    ConversionService conversionService = new DefaultConversionService();\r\n    assertThat(conversionService.canConvert(String.class, MimeType.class)).isTrue();\r\n    MimeType mimeType = MimeType.valueOf(\"application/xml\");\r\n    assertThat(conversionService.convert(\"application/xml\", MimeType.class)).isEqualTo(mimeType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#includes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid includes() {\r\n    MimeType textPlain = MimeTypeUtils.TEXT_PLAIN;\r\n    assertThat(textPlain.includes(textPlain)).as(\"Equal types is not inclusive\").isTrue();\r\n    MimeType allText = new MimeType(\"text\");\r\n    assertThat(allText.includes(textPlain)).as(\"All subtypes is not inclusive\").isTrue();\r\n    assertThat(textPlain.includes(allText)).as(\"All subtypes is inclusive\").isFalse();\r\n    assertThat(MimeTypeUtils.ALL.includes(textPlain)).as(\"All types is not inclusive\").isTrue();\r\n    assertThat(textPlain.includes(MimeTypeUtils.ALL)).as(\"All types is inclusive\").isFalse();\r\n    assertThat(MimeTypeUtils.ALL.includes(textPlain)).as(\"All types is not inclusive\").isTrue();\r\n    assertThat(textPlain.includes(MimeTypeUtils.ALL)).as(\"All types is inclusive\").isFalse();\r\n    MimeType applicationSoapXml = new MimeType(\"application\", \"soap+xml\");\r\n    MimeType applicationWildcardXml = new MimeType(\"application\", \"*+xml\");\r\n    // SPR-15795\r\n    MimeType suffixXml = new MimeType(\"application\", \"x.y+z+xml\");\r\n    assertThat(applicationSoapXml.includes(applicationSoapXml)).isTrue();\r\n    assertThat(applicationWildcardXml.includes(applicationWildcardXml)).isTrue();\r\n    assertThat(applicationWildcardXml.includes(suffixXml)).isTrue();\r\n    assertThat(applicationWildcardXml.includes(applicationSoapXml)).isTrue();\r\n    assertThat(applicationSoapXml.includes(applicationWildcardXml)).isFalse();\r\n    assertThat(suffixXml.includes(applicationWildcardXml)).isFalse();\r\n    assertThat(applicationWildcardXml.includes(MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#isCompatible()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isCompatible() {\r\n    MimeType textPlain = MimeTypeUtils.TEXT_PLAIN;\r\n    assertThat(textPlain.isCompatibleWith(textPlain)).as(\"Equal types is not compatible\").isTrue();\r\n    MimeType allText = new MimeType(\"text\");\r\n    assertThat(allText.isCompatibleWith(textPlain)).as(\"All subtypes is not compatible\").isTrue();\r\n    assertThat(textPlain.isCompatibleWith(allText)).as(\"All subtypes is not compatible\").isTrue();\r\n    assertThat(MimeTypeUtils.ALL.isCompatibleWith(textPlain)).as(\"All types is not compatible\").isTrue();\r\n    assertThat(textPlain.isCompatibleWith(MimeTypeUtils.ALL)).as(\"All types is not compatible\").isTrue();\r\n    assertThat(MimeTypeUtils.ALL.isCompatibleWith(textPlain)).as(\"All types is not compatible\").isTrue();\r\n    assertThat(textPlain.isCompatibleWith(MimeTypeUtils.ALL)).as(\"All types is compatible\").isTrue();\r\n    MimeType applicationSoapXml = new MimeType(\"application\", \"soap+xml\");\r\n    MimeType applicationWildcardXml = new MimeType(\"application\", \"*+xml\");\r\n    // SPR-15795\r\n    MimeType suffixXml = new MimeType(\"application\", \"x.y+z+xml\");\r\n    assertThat(applicationSoapXml.isCompatibleWith(applicationSoapXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(applicationWildcardXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(suffixXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(applicationSoapXml)).isTrue();\r\n    assertThat(applicationSoapXml.isCompatibleWith(applicationWildcardXml)).isTrue();\r\n    assertThat(suffixXml.isCompatibleWith(applicationWildcardXml)).isTrue();\r\n    assertThat(applicationWildcardXml.isCompatibleWith(MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#testToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid testToString() {\r\n    MimeType mimeType = new MimeType(\"text\", \"plain\");\r\n    String result = mimeType.toString();\r\n    assertThat(result).as(\"Invalid toString() returned\").isEqualTo(\"text/plain\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeType() {\r\n    String s = \"audio/*\";\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(s);\r\n    assertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"audio\");\r\n    assertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"*\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeNoSubtype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeNoSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeNoSubtypeSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeNoSubtypeSlash() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeTypeRange()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeTypeRange() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"*/json\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeIllegalType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeIllegalType() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio(/basic\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeIllegalSubtype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeIllegalSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/basic)\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeMissingTypeAndSubtype()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeMissingTypeAndSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"     ;a=b\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeEmptyParameterAttribute()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeEmptyParameterAttribute() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;=value\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeEmptyParameterValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeEmptyParameterValue() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr=\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeIllegalParameterAttribute()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeIllegalParameterAttribute() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr<=value\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeIllegalParameterValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeIllegalParameterValue() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr=v>alue\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeIllegalCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeIllegalCharset() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"text/html; charset=foo-bar\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeQuotedParameterValue()",
+    "entityType": "method",
+    "code": "// SPR-8917\r\n@Test\r\nvoid parseMimeTypeQuotedParameterValue() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"audio/*;attr=\\\"v>alue\\\"\");\r\n    assertThat(mimeType.getParameter(\"attr\")).isEqualTo(\"\\\"v>alue\\\"\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeSingleQuotedParameterValue()",
+    "entityType": "method",
+    "code": "// SPR-8917\r\n@Test\r\nvoid parseMimeTypeSingleQuotedParameterValue() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"audio/*;attr='v>alue'\");\r\n    assertThat(mimeType.getParameter(\"attr\")).isEqualTo(\"'v>alue'\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeWithSpacesAroundEquals()",
+    "entityType": "method",
+    "code": "// SPR-16630\r\n@Test\r\nvoid parseMimeTypeWithSpacesAroundEquals() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"multipart/x-mixed-replace;boundary = --myboundary\");\r\n    assertThat(mimeType.getParameter(\"boundary\")).isEqualTo(\"--myboundary\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeWithSpacesAroundEqualsAndQuotedValue()",
+    "entityType": "method",
+    "code": "// SPR-16630\r\n@Test\r\nvoid parseMimeTypeWithSpacesAroundEqualsAndQuotedValue() {\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"text/plain; foo = \\\" bar \\\" \");\r\n    assertThat(mimeType.getParameter(\"foo\")).isEqualTo(\"\\\" bar \\\"\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeIllegalQuotedParameterValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeIllegalQuotedParameterValue() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(\"audio/*;attr=\\\"\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypeNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypeNull() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeTypeUtils.parseMimeType(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseMimeTypes() {\r\n    String s = \"text/plain, text/html, text/x-dvi, text/x-c\";\r\n    List<MimeType> mimeTypes = MimeTypeUtils.parseMimeTypes(s);\r\n    assertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\r\n    assertThat(mimeTypes).as(\"Invalid amount of mime types\").hasSize(4);\r\n    mimeTypes = MimeTypeUtils.parseMimeTypes(null);\r\n    assertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\r\n    assertThat(mimeTypes).as(\"Invalid amount of mime types\").isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypesWithTrailingComma()",
+    "entityType": "method",
+    "code": "// gh-23241\r\n@Test\r\nvoid parseMimeTypesWithTrailingComma() {\r\n    List<MimeType> mimeTypes = MimeTypeUtils.parseMimeTypes(\"text/plain, text/html,\");\r\n    assertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\r\n    assertThat(mimeTypes).as(\"Incorrect number of mime types\").hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseMimeTypesWithQuotedParameters()",
+    "entityType": "method",
+    "code": "// SPR-17459\r\n@Test\r\nvoid parseMimeTypesWithQuotedParameters() {\r\n    testWithQuotedParameters(\"foo/bar;param=\\\",\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"s,a,\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"s,\\\"\", \"text/x-c\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"a\\\\\\\"b,c\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"\\\\\\\\\\\"\");\r\n    testWithQuotedParameters(\"foo/bar;param=\\\"\\\\,\\\\\\\"\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#parseSubtypeSuffix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseSubtypeSuffix() {\r\n    MimeType type = new MimeType(\"application\", \"vdn.something+json\");\r\n    assertThat(type.getSubtypeSuffix()).isEqualTo(\"json\");\r\n    type = new MimeType(\"application\", \"vdn.something\");\r\n    assertThat(type.getSubtypeSuffix()).isNull();\r\n    type = new MimeType(\"application\", \"vdn.something+\");\r\n    assertThat(type.getSubtypeSuffix()).isEmpty();\r\n    type = new MimeType(\"application\", \"vdn.some+thing+json\");\r\n    assertThat(type.getSubtypeSuffix()).isEqualTo(\"json\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#wildcardSubtypeCompatibleWithSuffix()",
+    "entityType": "method",
+    "code": "// gh-25350\r\n@Test\r\nvoid wildcardSubtypeCompatibleWithSuffix() {\r\n    MimeType applicationStar = new MimeType(\"application\", \"*\");\r\n    MimeType applicationVndJson = new MimeType(\"application\", \"vnd.something+json\");\r\n    assertThat(applicationStar.isCompatibleWith(applicationVndJson)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#testWithQuotedParameters(String)",
+    "entityType": "method",
+    "code": "private void testWithQuotedParameters(String... mimeTypes) {\r\n    String s = String.join(\",\", mimeTypes);\r\n    List<MimeType> actual = MimeTypeUtils.parseMimeTypes(s);\r\n    assertThat(actual).hasSameSizeAs(mimeTypes);\r\n    for (int i = 0; i < mimeTypes.length; i++) {\r\n        assertThat(actual.get(i).toString()).isEqualTo(mimeTypes[i]);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#compareTo()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid compareTo() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    // equal\r\n    assertThat(audioBasic.compareTo(audioBasic)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(audio.compareTo(audio)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(audioBasicLevel.compareTo(audioBasicLevel)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(audioBasicLevel.compareTo(audio)).as(\"Invalid comparison result\").isGreaterThan(0);\r\n    List<MimeType> expected = new ArrayList<>();\r\n    expected.add(audio);\r\n    expected.add(audioBasic);\r\n    expected.add(audioBasicLevel);\r\n    expected.add(audioWave);\r\n    List<MimeType> result = new ArrayList<>(expected);\r\n    Random rnd = new Random();\r\n    // shuffle & sort 10 times\r\n    for (int i = 0; i < 10; i++) {\r\n        Collections.shuffle(result, rnd);\r\n        Collections.sort(result);\r\n        for (int j = 0; j < result.size(); j++) {\r\n            assertThat(result.get(j)).as(\"Invalid media type at \" + j + \", run \" + i).isSameAs(expected.get(j));\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#compareToCaseSensitivity()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid compareToCaseSensitivity() {\r\n    MimeType m1 = new MimeType(\"audio\", \"basic\");\r\n    MimeType m2 = new MimeType(\"Audio\", \"Basic\");\r\n    assertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    m1 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"bar\"));\r\n    m2 = new MimeType(\"audio\", \"basic\", singletonMap(\"Foo\", \"bar\"));\r\n    assertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isEqualTo(0);\r\n    m1 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"bar\"));\r\n    m2 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"Bar\"));\r\n    assertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isNotEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isNotEqualTo(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#isMoreSpecific()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isMoreSpecific() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    assertThat(audioBasic.isMoreSpecific(audioBasicLevel)).isFalse();\r\n    assertThat(audioBasicLevel.isMoreSpecific(audioBasic)).isTrue();\r\n    assertThat(audio.isMoreSpecific(MimeTypeUtils.ALL)).isTrue();\r\n    assertThat(MimeTypeUtils.ALL.isMoreSpecific(audio)).isFalse();\r\n    assertThat(audioBasicLevel.isMoreSpecific(audioBasic)).isTrue();\r\n    assertThat(audioBasic.isMoreSpecific(audioBasicLevel)).isFalse();\r\n    assertThat(audioBasic.isMoreSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n    assertThat(audioBasic.isMoreSpecific(audioWave)).isFalse();\r\n    assertThat(audioBasicLevel.isMoreSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#isLessSpecific()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isLessSpecific() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    assertThat(audioBasic.isLessSpecific(audioBasicLevel)).isTrue();\r\n    assertThat(audioBasicLevel.isLessSpecific(audioBasic)).isFalse();\r\n    assertThat(audio.isLessSpecific(MimeTypeUtils.ALL)).isFalse();\r\n    assertThat(MimeTypeUtils.ALL.isLessSpecific(audio)).isTrue();\r\n    assertThat(audioBasicLevel.isLessSpecific(audioBasic)).isFalse();\r\n    assertThat(audioBasic.isLessSpecific(audioBasicLevel)).isTrue();\r\n    assertThat(audioBasic.isLessSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n    assertThat(audioBasic.isLessSpecific(audioWave)).isFalse();\r\n    assertThat(audioBasicLevel.isLessSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#sortBySpecificity()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortBySpecificity() {\r\n    MimeType audioBasic = new MimeType(\"audio\", \"basic\");\r\n    MimeType audio = new MimeType(\"audio\");\r\n    MimeType audioWave = new MimeType(\"audio\", \"wave\");\r\n    MimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\r\n    List<MimeType> mimeTypes = new ArrayList<>(List.of(MimeTypeUtils.ALL, audio, audioWave, audioBasic, audioBasicLevel));\r\n    MimeTypeUtils.sortBySpecificity(mimeTypes);\r\n    assertThat(mimeTypes).containsExactly(audioWave, audioBasicLevel, audioBasic, audio, MimeTypeUtils.ALL);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#bubbleSort()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid bubbleSort() {\r\n    List<Integer> list = new ArrayList<>(List.of(10, 9, 8, 7, 6, 5, 4, 3, 2, 1));\r\n    MimeTypeUtils.bubbleSort(list, (i1, i2) -> i1 > i2);\r\n    assertThat(list).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#equalsIsCaseInsensitiveForCharsets()",
+    "entityType": "method",
+    "code": "// SPR-13157\r\n@Test\r\nvoid equalsIsCaseInsensitiveForCharsets() {\r\n    MimeType m1 = new MimeType(\"text\", \"plain\", singletonMap(\"charset\", \"UTF-8\"));\r\n    MimeType m2 = new MimeType(\"text\", \"plain\", singletonMap(\"charset\", \"utf-8\"));\r\n    assertThat(m2).isEqualTo(m1);\r\n    assertThat(m1).isEqualTo(m2);\r\n    assertThat(m1.compareTo(m2)).isEqualTo(0);\r\n    assertThat(m2.compareTo(m1)).isEqualTo(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MimeTypeTests#serialize()",
+    "entityType": "method",
+    "code": "// gh-26127\r\n@Test\r\nvoid serialize() throws Exception {\r\n    MimeType original = new MimeType(\"text\", \"plain\", StandardCharsets.UTF_8);\r\n    MimeType deserialized = SerializationTestUtils.serializeAndDeserialize(original);\r\n    assertThat(deserialized).isEqualTo(original);\r\n    assertThat(original).isEqualTo(deserialized);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.RuntimeHintsWriter",
+    "entityType": "class",
+    "code": "public void write(BasicJsonWriter writer, RuntimeHints hints) {\r\n    Map<String, Object> document = new LinkedHashMap<>();\r\n    String springVersion = SpringVersion.getVersion();\r\n    if (springVersion != null) {\r\n        document.put(\"comment\", \"Spring Framework \" + springVersion);\r\n    }\r\n    List<Map<String, Object>> reflection = new ReflectionHintsAttributes().reflection(hints);\r\n    if (!reflection.isEmpty()) {\r\n        document.put(\"reflection\", reflection);\r\n    }\r\n    List<Map<String, Object>> jni = new ReflectionHintsAttributes().jni(hints);\r\n    if (!jni.isEmpty()) {\r\n        document.put(\"jni\", jni);\r\n    }\r\n    List<Map<String, Object>> resourceHints = new ResourceHintsAttributes().resources(hints.resources());\r\n    if (!resourceHints.isEmpty()) {\r\n        document.put(\"resources\", resourceHints);\r\n    }\r\n    List<Map<String, Object>> resourceBundles = new ResourceHintsAttributes().resourceBundles(hints.resources());\r\n    if (!resourceBundles.isEmpty()) {\r\n        document.put(\"bundles\", resourceBundles);\r\n    }\r\n    List<Map<String, Object>> serialization = new SerializationHintsAttributes().toAttributes(hints.serialization());\r\n    if (!serialization.isEmpty()) {\r\n        document.put(\"serialization\", serialization);\r\n    }\r\n    writer.writeObject(document);\r\n}",
+    "comment": "\n * Write a {@link RuntimeHints} instance to the JSON output expected by the\n * GraalVM {@code native-image} compiler, typically named {@code reachability-metadata.json}.\n *\n * @author Brian Clozel\n * @since 7.0\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/metadata/#specifying-metadata-with-json\">GraalVM Reachability Metadata</a>\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.RuntimeHintsWriter#write(BasicJsonWriter,RuntimeHints)",
+    "entityType": "method",
+    "code": "public void write(BasicJsonWriter writer, RuntimeHints hints) {\r\n    Map<String, Object> document = new LinkedHashMap<>();\r\n    String springVersion = SpringVersion.getVersion();\r\n    if (springVersion != null) {\r\n        document.put(\"comment\", \"Spring Framework \" + springVersion);\r\n    }\r\n    List<Map<String, Object>> reflection = new ReflectionHintsAttributes().reflection(hints);\r\n    if (!reflection.isEmpty()) {\r\n        document.put(\"reflection\", reflection);\r\n    }\r\n    List<Map<String, Object>> jni = new ReflectionHintsAttributes().jni(hints);\r\n    if (!jni.isEmpty()) {\r\n        document.put(\"jni\", jni);\r\n    }\r\n    List<Map<String, Object>> resourceHints = new ResourceHintsAttributes().resources(hints.resources());\r\n    if (!resourceHints.isEmpty()) {\r\n        document.put(\"resources\", resourceHints);\r\n    }\r\n    List<Map<String, Object>> resourceBundles = new ResourceHintsAttributes().resourceBundles(hints.resources());\r\n    if (!resourceBundles.isEmpty()) {\r\n        document.put(\"bundles\", resourceBundles);\r\n    }\r\n    List<Map<String, Object>> serialization = new SerializationHintsAttributes().toAttributes(hints.serialization());\r\n    if (!serialization.isEmpty()) {\r\n        document.put(\"serialization\", serialization);\r\n    }\r\n    writer.writeObject(document);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests",
+    "entityType": "class",
+    "code": "private LinkedMultiValueMap<String, String> delegate;\nprivate Map<String, String> adapter;\n@BeforeEach\r\nvoid setUp() {\r\n    this.delegate = new LinkedMultiValueMap<>();\r\n    this.delegate.add(\"foo\", \"bar\");\r\n    this.delegate.add(\"foo\", \"baz\");\r\n    this.delegate.add(\"qux\", \"quux\");\r\n    this.adapter = new MultiToSingleValueMapAdapter<>(this.delegate);\r\n}\n@Test\r\nvoid size() {\r\n    assertThat(this.adapter.size()).isEqualTo(this.delegate.size()).isEqualTo(2);\r\n}\n@Test\r\nvoid isEmpty() {\r\n    assertThat(this.adapter.isEmpty()).isFalse();\r\n    this.adapter = new MultiToSingleValueMapAdapter<>(new LinkedMultiValueMap<>());\r\n    assertThat(this.adapter.isEmpty()).isTrue();\r\n}\n@Test\r\nvoid containsKey() {\r\n    assertThat(this.adapter.containsKey(\"foo\")).isTrue();\r\n    assertThat(this.adapter.containsKey(\"qux\")).isTrue();\r\n    assertThat(this.adapter.containsKey(\"corge\")).isFalse();\r\n}\n@Test\r\nvoid containsValue() {\r\n    assertThat(this.adapter.containsValue(\"bar\")).isTrue();\r\n    assertThat(this.adapter.containsValue(\"quux\")).isTrue();\r\n    assertThat(this.adapter.containsValue(\"corge\")).isFalse();\r\n}\n@Test\r\nvoid get() {\r\n    assertThat(this.adapter.get(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(this.adapter.get(\"qux\")).isEqualTo(\"quux\");\r\n    assertThat(this.adapter.get(\"corge\")).isNull();\r\n}\n@Test\r\nvoid put() {\r\n    String result = this.adapter.put(\"foo\", \"bar\");\r\n    assertThat(result).isEqualTo(\"bar\");\r\n    assertThat(this.delegate.get(\"foo\")).containsExactly(\"bar\");\r\n}\n@Test\r\nvoid remove() {\r\n    this.adapter.remove(\"foo\");\r\n    assertThat(this.adapter.containsKey(\"foo\")).isFalse();\r\n    assertThat(this.delegate.containsKey(\"foo\")).isFalse();\r\n}\n@Test\r\nvoid putAll() {\r\n    LinkedHashMap<String, String> map = new LinkedHashMap<>();\r\n    map.put(\"foo\", \"bar\");\r\n    map.put(\"qux\", null);\r\n    this.adapter.putAll(map);\r\n    assertThat(this.adapter.get(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(this.adapter.get(\"qux\")).isNull();\r\n    assertThat(this.delegate.get(\"foo\")).isEqualTo(List.of(\"bar\"));\r\n    assertThat(this.adapter.get(\"qux\")).isNull();\r\n}\n@Test\r\nvoid clear() {\r\n    this.adapter.clear();\r\n    assertThat(this.adapter).isEmpty();\r\n    assertThat(this.delegate).isEmpty();\r\n}\n@Test\r\nvoid keySet() {\r\n    assertThat(this.adapter.keySet()).containsExactly(\"foo\", \"qux\");\r\n}\n@Test\r\nvoid values() {\r\n    assertThat(this.adapter.values()).containsExactly(\"bar\", \"quux\");\r\n}\n@Test\r\nvoid entrySet() {\r\n    assertThat(this.adapter.entrySet()).containsExactly(entry(\"foo\", \"bar\"), entry(\"qux\", \"quux\"));\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#setUp()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setUp() {\r\n    this.delegate = new LinkedMultiValueMap<>();\r\n    this.delegate.add(\"foo\", \"bar\");\r\n    this.delegate.add(\"foo\", \"baz\");\r\n    this.delegate.add(\"qux\", \"quux\");\r\n    this.adapter = new MultiToSingleValueMapAdapter<>(this.delegate);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#size()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid size() {\r\n    assertThat(this.adapter.size()).isEqualTo(this.delegate.size()).isEqualTo(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#isEmpty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isEmpty() {\r\n    assertThat(this.adapter.isEmpty()).isFalse();\r\n    this.adapter = new MultiToSingleValueMapAdapter<>(new LinkedMultiValueMap<>());\r\n    assertThat(this.adapter.isEmpty()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#containsKey()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsKey() {\r\n    assertThat(this.adapter.containsKey(\"foo\")).isTrue();\r\n    assertThat(this.adapter.containsKey(\"qux\")).isTrue();\r\n    assertThat(this.adapter.containsKey(\"corge\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#containsValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid containsValue() {\r\n    assertThat(this.adapter.containsValue(\"bar\")).isTrue();\r\n    assertThat(this.adapter.containsValue(\"quux\")).isTrue();\r\n    assertThat(this.adapter.containsValue(\"corge\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#get()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid get() {\r\n    assertThat(this.adapter.get(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(this.adapter.get(\"qux\")).isEqualTo(\"quux\");\r\n    assertThat(this.adapter.get(\"corge\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#put()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid put() {\r\n    String result = this.adapter.put(\"foo\", \"bar\");\r\n    assertThat(result).isEqualTo(\"bar\");\r\n    assertThat(this.delegate.get(\"foo\")).containsExactly(\"bar\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#remove()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid remove() {\r\n    this.adapter.remove(\"foo\");\r\n    assertThat(this.adapter.containsKey(\"foo\")).isFalse();\r\n    assertThat(this.delegate.containsKey(\"foo\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#putAll()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid putAll() {\r\n    LinkedHashMap<String, String> map = new LinkedHashMap<>();\r\n    map.put(\"foo\", \"bar\");\r\n    map.put(\"qux\", null);\r\n    this.adapter.putAll(map);\r\n    assertThat(this.adapter.get(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(this.adapter.get(\"qux\")).isNull();\r\n    assertThat(this.delegate.get(\"foo\")).isEqualTo(List.of(\"bar\"));\r\n    assertThat(this.adapter.get(\"qux\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#clear()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid clear() {\r\n    this.adapter.clear();\r\n    assertThat(this.adapter).isEmpty();\r\n    assertThat(this.delegate).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#keySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid keySet() {\r\n    assertThat(this.adapter.keySet()).containsExactly(\"foo\", \"qux\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#values()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid values() {\r\n    assertThat(this.adapter.values()).containsExactly(\"bar\", \"quux\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiToSingleValueMapAdapterTests#entrySet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid entrySet() {\r\n    assertThat(this.adapter.entrySet()).containsExactly(entry(\"foo\", \"bar\"), entry(\"qux\", \"quux\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.SerializationHintsAttributes",
+    "entityType": "class",
+    "code": "private static final Comparator<JavaSerializationHint> JAVA_SERIALIZATION_HINT_COMPARATOR = Comparator.comparing(JavaSerializationHint::getType);\npublic List<Map<String, Object>> toAttributes(SerializationHints hints) {\r\n    return hints.javaSerializationHints().sorted(JAVA_SERIALIZATION_HINT_COMPARATOR).map(this::toAttributes).toList();\r\n}\nprivate Map<String, Object> toAttributes(JavaSerializationHint serializationHint) {\r\n    LinkedHashMap<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, serializationHint);\r\n    attributes.put(\"type\", serializationHint.getType());\r\n    return attributes;\r\n}\nprivate void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        Map<String, Object> conditionAttributes = new LinkedHashMap<>();\r\n        conditionAttributes.put(\"typeReached\", hint.getReachableType());\r\n        attributes.put(\"condition\", conditionAttributes);\r\n    }\r\n}",
+    "comment": "\n * Collect {@link SerializationHints} as map attributes ready for JSON serialization for the GraalVM\n * {@code native-image} compiler.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Brian Clozel\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/overview/BuildConfiguration/\">Native Image Build Configuration</a>\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.SerializationHintsAttributes#toAttributes(SerializationHints)",
+    "entityType": "method",
+    "code": "public List<Map<String, Object>> toAttributes(SerializationHints hints) {\r\n    return hints.javaSerializationHints().sorted(JAVA_SERIALIZATION_HINT_COMPARATOR).map(this::toAttributes).toList();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.SerializationHintsAttributes#toAttributes(JavaSerializationHint)",
+    "entityType": "method",
+    "code": "private Map<String, Object> toAttributes(JavaSerializationHint serializationHint) {\r\n    LinkedHashMap<String, Object> attributes = new LinkedHashMap<>();\r\n    handleCondition(attributes, serializationHint);\r\n    attributes.put(\"type\", serializationHint.getType());\r\n    return attributes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.SerializationHintsAttributes#handleCondition(Map<String,Object>,ConditionalHint)",
+    "entityType": "method",
+    "code": "private void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        Map<String, Object> conditionAttributes = new LinkedHashMap<>();\r\n        conditionAttributes.put(\"typeReached\", hint.getReachableType());\r\n        attributes.put(\"condition\", conditionAttributes);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests",
+    "entityType": "class",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid add(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.add(\"key\", \"value1\");\r\n    map.add(\"key\", \"value2\");\r\n    assertThat(map).hasSize(initialSize + 1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\");\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid addIfAbsentWhenAbsent(MultiValueMap<String, String> map) {\r\n    map.addIfAbsent(\"key\", \"value1\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid addIfAbsentWhenPresent(MultiValueMap<String, String> map) {\r\n    map.add(\"key\", \"value1\");\r\n    map.addIfAbsent(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid set(MultiValueMap<String, String> map) {\r\n    map.set(\"key\", \"value1\");\r\n    map.set(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value2\");\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid addAll(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.add(\"key\", \"value1\");\r\n    map.addAll(\"key\", Arrays.asList(\"value2\", \"value3\"));\r\n    assertThat(map).hasSize(initialSize + 1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\", \"value3\");\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid addAllWithEmptyList(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.addAll(\"key\", List.of());\r\n    assertThat(map).hasSize(initialSize + 1);\r\n    assertThat(map.get(\"key\")).isEmpty();\r\n    assertThat(map.getFirst(\"key\")).isNull();\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid getFirst(MultiValueMap<String, String> map) {\r\n    List<String> values = List.of(\"value1\", \"value2\");\r\n    map.put(\"key\", values);\r\n    assertThat(map.getFirst(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.getFirst(\"other\")).isNull();\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid toSingleValueMap(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    List<String> values = List.of(\"value1\", \"value2\");\r\n    map.put(\"key\", values);\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).hasSize(initialSize + 1);\r\n    assertThat(singleValueMap.get(\"key\")).isEqualTo(\"value1\");\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid toSingleValueMapWithEmptyList(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.put(\"key\", List.of());\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).hasSize(initialSize);\r\n    assertThat(singleValueMap.get(\"key\")).isNull();\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid equalsOnExistingValues(MultiValueMap<String, String> map) {\r\n    map.clear();\r\n    map.set(\"key1\", \"value1\");\r\n    assertThat(map).isEqualTo(map);\r\n}\n@ParameterizedMultiValueMapTest\r\nvoid equalsOnEmpty(MultiValueMap<String, String> map) {\r\n    map.clear();\r\n    map.set(\"key1\", \"value1\");\r\n    MultiValueMap<String, String> map1 = new LinkedMultiValueMap<>();\r\n    map1.set(\"key1\", \"value1\");\r\n    assertThat(map1).isEqualTo(map);\r\n    assertThat(map).isEqualTo(map1);\r\n    Map<String, List<String>> map2 = Map.of(\"key1\", List.of(\"value1\"));\r\n    assertThat(map2).isEqualTo(map);\r\n    assertThat(map).isEqualTo(map2);\r\n}\n@Test\r\nvoid canNotChangeAnUnmodifiableMultiValueMap() {\r\n    MultiValueMap<String, String> map = new LinkedMultiValueMap<>();\r\n    MultiValueMap<String, String> unmodifiableMap = CollectionUtils.unmodifiableMultiValueMap(map);\r\n    assertSoftly(softly -> {\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.add(\"key\", \"value\"));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.addIfAbsent(\"key\", \"value\"));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.addAll(\"key\", exampleListOfValues()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.addAll(exampleMultiValueMap()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.set(\"key\", \"value\"));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.setAll(exampleHashMap()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.put(\"key\", exampleListOfValues()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.putIfAbsent(\"key\", exampleListOfValues()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.putAll(exampleMultiValueMap()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.remove(\"key1\"));\r\n    });\r\n}\nprivate static List<String> exampleListOfValues() {\r\n    return List.of(\"value1\", \"value2\");\r\n}\nprivate static Map<String, String> exampleHashMap() {\r\n    return Map.of(\"key2\", \"key2.value1\");\r\n}\nprivate static MultiValueMap<String, String> exampleMultiValueMap() {\r\n    LinkedMultiValueMap<String, String> map = new LinkedMultiValueMap<>();\r\n    map.put(\"key1\", Arrays.asList(\"key1.value1\", \"key1.value2\"));\r\n    return map;\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@ParameterizedTest\r\n@MethodSource(\"mapsUnderTest\")\r\n@interface ParameterizedMultiValueMapTest {\r\n}\nstatic Stream<Arguments> mapsUnderTest() {\r\n    return Stream.of(argumentSet(\"new LinkedMultiValueMap<>()\", new LinkedMultiValueMap<>()), argumentSet(\"new LinkedMultiValueMap<>(new HashMap<>())\", new LinkedMultiValueMap<>(new HashMap<>())), argumentSet(\"new LinkedMultiValueMap<>(new LinkedHashMap<>())\", new LinkedMultiValueMap<>(new LinkedHashMap<>())), argumentSet(\"new LinkedMultiValueMap<>(Map.of(...))\", new LinkedMultiValueMap<>(Map.of(\"existingkey\", List.of(\"existingvalue1\", \"existingvalue2\")))), argumentSet(\"CollectionUtils.toMultiValueMap\", CollectionUtils.toMultiValueMap(new HashMap<>())));\r\n}",
+    "comment": "\n * Tests for {@link MultiValueMap}.\n *\n * @author Mihai Dumitrescu\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @author Stephane Nicoll\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#add(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid add(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.add(\"key\", \"value1\");\r\n    map.add(\"key\", \"value2\");\r\n    assertThat(map).hasSize(initialSize + 1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#addIfAbsentWhenAbsent(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid addIfAbsentWhenAbsent(MultiValueMap<String, String> map) {\r\n    map.addIfAbsent(\"key\", \"value1\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#addIfAbsentWhenPresent(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid addIfAbsentWhenPresent(MultiValueMap<String, String> map) {\r\n    map.add(\"key\", \"value1\");\r\n    map.addIfAbsent(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#set(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid set(MultiValueMap<String, String> map) {\r\n    map.set(\"key\", \"value1\");\r\n    map.set(\"key\", \"value2\");\r\n    assertThat(map.get(\"key\")).containsExactly(\"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#addAll(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid addAll(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.add(\"key\", \"value1\");\r\n    map.addAll(\"key\", Arrays.asList(\"value2\", \"value3\"));\r\n    assertThat(map).hasSize(initialSize + 1);\r\n    assertThat(map.get(\"key\")).containsExactly(\"value1\", \"value2\", \"value3\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#addAllWithEmptyList(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid addAllWithEmptyList(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.addAll(\"key\", List.of());\r\n    assertThat(map).hasSize(initialSize + 1);\r\n    assertThat(map.get(\"key\")).isEmpty();\r\n    assertThat(map.getFirst(\"key\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#getFirst(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid getFirst(MultiValueMap<String, String> map) {\r\n    List<String> values = List.of(\"value1\", \"value2\");\r\n    map.put(\"key\", values);\r\n    assertThat(map.getFirst(\"key\")).isEqualTo(\"value1\");\r\n    assertThat(map.getFirst(\"other\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#toSingleValueMap(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid toSingleValueMap(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    List<String> values = List.of(\"value1\", \"value2\");\r\n    map.put(\"key\", values);\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).hasSize(initialSize + 1);\r\n    assertThat(singleValueMap.get(\"key\")).isEqualTo(\"value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#toSingleValueMapWithEmptyList(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid toSingleValueMapWithEmptyList(MultiValueMap<String, String> map) {\r\n    int initialSize = map.size();\r\n    map.put(\"key\", List.of());\r\n    Map<String, String> singleValueMap = map.toSingleValueMap();\r\n    assertThat(singleValueMap).hasSize(initialSize);\r\n    assertThat(singleValueMap.get(\"key\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#equalsOnExistingValues(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid equalsOnExistingValues(MultiValueMap<String, String> map) {\r\n    map.clear();\r\n    map.set(\"key1\", \"value1\");\r\n    assertThat(map).isEqualTo(map);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#equalsOnEmpty(MultiValueMap<String,String>)",
+    "entityType": "method",
+    "code": "@ParameterizedMultiValueMapTest\r\nvoid equalsOnEmpty(MultiValueMap<String, String> map) {\r\n    map.clear();\r\n    map.set(\"key1\", \"value1\");\r\n    MultiValueMap<String, String> map1 = new LinkedMultiValueMap<>();\r\n    map1.set(\"key1\", \"value1\");\r\n    assertThat(map1).isEqualTo(map);\r\n    assertThat(map).isEqualTo(map1);\r\n    Map<String, List<String>> map2 = Map.of(\"key1\", List.of(\"value1\"));\r\n    assertThat(map2).isEqualTo(map);\r\n    assertThat(map).isEqualTo(map2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#canNotChangeAnUnmodifiableMultiValueMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canNotChangeAnUnmodifiableMultiValueMap() {\r\n    MultiValueMap<String, String> map = new LinkedMultiValueMap<>();\r\n    MultiValueMap<String, String> unmodifiableMap = CollectionUtils.unmodifiableMultiValueMap(map);\r\n    assertSoftly(softly -> {\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.add(\"key\", \"value\"));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.addIfAbsent(\"key\", \"value\"));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.addAll(\"key\", exampleListOfValues()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.addAll(exampleMultiValueMap()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.set(\"key\", \"value\"));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.setAll(exampleHashMap()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.put(\"key\", exampleListOfValues()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.putIfAbsent(\"key\", exampleListOfValues()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.putAll(exampleMultiValueMap()));\r\n        softly.assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> unmodifiableMap.remove(\"key1\"));\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#exampleListOfValues()",
+    "entityType": "method",
+    "code": "private static List<String> exampleListOfValues() {\r\n    return List.of(\"value1\", \"value2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#exampleHashMap()",
+    "entityType": "method",
+    "code": "private static Map<String, String> exampleHashMap() {\r\n    return Map.of(\"key2\", \"key2.value1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#exampleMultiValueMap()",
+    "entityType": "method",
+    "code": "private static MultiValueMap<String, String> exampleMultiValueMap() {\r\n    LinkedMultiValueMap<String, String> map = new LinkedMultiValueMap<>();\r\n    map.put(\"key1\", Arrays.asList(\"key1.value1\", \"key1.value2\"));\r\n    return map;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.MultiValueMapTests#mapsUnderTest()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> mapsUnderTest() {\r\n    return Stream.of(argumentSet(\"new LinkedMultiValueMap<>()\", new LinkedMultiValueMap<>()), argumentSet(\"new LinkedMultiValueMap<>(new HashMap<>())\", new LinkedMultiValueMap<>(new HashMap<>())), argumentSet(\"new LinkedMultiValueMap<>(new LinkedHashMap<>())\", new LinkedMultiValueMap<>(new LinkedHashMap<>())), argumentSet(\"new LinkedMultiValueMap<>(Map.of(...))\", new LinkedMultiValueMap<>(Map.of(\"existingkey\", List.of(\"existingvalue1\", \"existingvalue2\")))), argumentSet(\"CollectionUtils.toMultiValueMap\", CollectionUtils.toMultiValueMap(new HashMap<>())));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.substitution.Target_ClassFinder",
+    "entityType": "class",
+    "code": "@Alias\r\npublic static Class<?> findClass(String name, ClassLoader loader) throws ClassNotFoundException {\r\n    return null;\r\n}",
+    "comment": "\n * Allow to reference {@code com.sun.beans.finder.ClassFinder} from\n * {@link Target_Introspector}.\n *\n * TODO Remove once Spring Framework requires GraalVM 23.0+, see <a href=\"https://github.com/oracle/graal/pull/5224\">graal#5224</a>.\n *\n * @author Sebastien Deleuze\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.nativex.substitution.Target_ClassFinder#findClass(String,ClassLoader)",
+    "entityType": "method",
+    "code": "@Alias\r\npublic static Class<?> findClass(String name, ClassLoader loader) throws ClassNotFoundException {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NumberUtilsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid parseNumber() {\r\n    String aByte = \"\" + Byte.MAX_VALUE;\r\n    String aShort = \"\" + Short.MAX_VALUE;\r\n    String anInteger = \"\" + Integer.MAX_VALUE;\r\n    String aLong = \"\" + Long.MAX_VALUE;\r\n    String aFloat = \"\" + Float.MAX_VALUE;\r\n    String aDouble = \"\" + Double.MAX_VALUE;\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}\n@Test\r\nvoid parseNumberUsingNumberFormat() {\r\n    NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);\r\n    String aByte = \"\" + Byte.MAX_VALUE;\r\n    String aShort = \"\" + Short.MAX_VALUE;\r\n    String anInteger = \"\" + Integer.MAX_VALUE;\r\n    String aLong = \"\" + Long.MAX_VALUE;\r\n    String aFloat = \"\" + Float.MAX_VALUE;\r\n    String aDouble = \"\" + Double.MAX_VALUE;\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class, nf)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class, nf)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class, nf)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class, nf)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class, nf)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class, nf)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}\n@Test\r\nvoid parseNumberRequiringTrim() {\r\n    String aByte = \" \" + Byte.MAX_VALUE + \" \";\r\n    String aShort = \" \" + Short.MAX_VALUE + \" \";\r\n    String anInteger = \" \" + Integer.MAX_VALUE + \" \";\r\n    String aLong = \" \" + Long.MAX_VALUE + \" \";\r\n    String aFloat = \" \" + Float.MAX_VALUE + \" \";\r\n    String aDouble = \" \" + Double.MAX_VALUE + \" \";\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}\n@Test\r\nvoid parseNumberRequiringTrimUsingNumberFormat() {\r\n    NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);\r\n    String aByte = \" \" + Byte.MAX_VALUE + \" \";\r\n    String aShort = \" \" + Short.MAX_VALUE + \" \";\r\n    String anInteger = \" \" + Integer.MAX_VALUE + \" \";\r\n    String aLong = \" \" + Long.MAX_VALUE + \" \";\r\n    String aFloat = \" \" + Float.MAX_VALUE + \" \";\r\n    String aDouble = \" \" + Double.MAX_VALUE + \" \";\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class, nf)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class, nf)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class, nf)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class, nf)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class, nf)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class, nf)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}\n@Test\r\nvoid parseNumberAsHex() {\r\n    String aByte = \"0x\" + Integer.toHexString(Byte.MAX_VALUE);\r\n    String aShort = \"0x\" + Integer.toHexString(Short.MAX_VALUE);\r\n    String anInteger = \"0x\" + Integer.toHexString(Integer.MAX_VALUE);\r\n    String aLong = \"0x\" + Long.toHexString(Long.MAX_VALUE);\r\n    String aReallyBigInt = \"FEBD4E677898DFEBFFEE44\";\r\n    assertByteEquals(aByte);\r\n    assertShortEquals(aShort);\r\n    assertIntegerEquals(anInteger);\r\n    assertLongEquals(aLong);\r\n    assertThat(NumberUtils.parseNumber(\"0x\" + aReallyBigInt, BigInteger.class)).as(\"BigInteger did not parse\").isEqualTo(new BigInteger(aReallyBigInt, 16));\r\n}\n@Test\r\nvoid parseNumberAsNegativeHex() {\r\n    String aByte = \"-0x80\";\r\n    String aShort = \"-0x8000\";\r\n    String anInteger = \"-0x80000000\";\r\n    String aLong = \"-0x8000000000000000\";\r\n    String aReallyBigInt = \"FEBD4E677898DFEBFFEE44\";\r\n    assertNegativeByteEquals(aByte);\r\n    assertNegativeShortEquals(aShort);\r\n    assertNegativeIntegerEquals(anInteger);\r\n    assertNegativeLongEquals(aLong);\r\n    assertThat(NumberUtils.parseNumber(\"-0x\" + aReallyBigInt, BigInteger.class)).as(\"BigInteger did not parse\").isEqualTo(new BigInteger(aReallyBigInt, 16).negate());\r\n}\n@Test\r\nvoid convertDoubleToBigInteger() {\r\n    Double decimal = 3.14d;\r\n    assertThat(NumberUtils.convertNumberToTargetClass(decimal, BigInteger.class)).isEqualTo(new BigInteger(\"3\"));\r\n}\n@Test\r\nvoid convertBigDecimalToBigInteger() {\r\n    String number = \"987459837583750387355346\";\r\n    BigDecimal decimal = new BigDecimal(number);\r\n    assertThat(NumberUtils.convertNumberToTargetClass(decimal, BigInteger.class)).isEqualTo(new BigInteger(number));\r\n}\n@Test\r\nvoid convertNonExactBigDecimalToBigInteger() {\r\n    BigDecimal decimal = new BigDecimal(\"987459837583750387355346.14\");\r\n    assertThat(NumberUtils.convertNumberToTargetClass(decimal, BigInteger.class)).isEqualTo(new BigInteger(\"987459837583750387355346\"));\r\n}\n@Test\r\nvoid parseBigDecimalNumber1() {\r\n    String bigDecimalAsString = \"0.10\";\r\n    Number bigDecimal = NumberUtils.parseNumber(bigDecimalAsString, BigDecimal.class);\r\n    assertThat(bigDecimal).isEqualTo(new BigDecimal(bigDecimalAsString));\r\n}\n@Test\r\nvoid parseBigDecimalNumber2() {\r\n    String bigDecimalAsString = \"0.001\";\r\n    Number bigDecimal = NumberUtils.parseNumber(bigDecimalAsString, BigDecimal.class);\r\n    assertThat(bigDecimal).isEqualTo(new BigDecimal(bigDecimalAsString));\r\n}\n@Test\r\nvoid parseBigDecimalNumber3() {\r\n    String bigDecimalAsString = \"3.14159265358979323846\";\r\n    Number bigDecimal = NumberUtils.parseNumber(bigDecimalAsString, BigDecimal.class);\r\n    assertThat(bigDecimal).isEqualTo(new BigDecimal(bigDecimalAsString));\r\n}\n@Test\r\nvoid parseLocalizedBigDecimalNumber1() {\r\n    String bigDecimalAsString = \"0.10\";\r\n    NumberFormat numberFormat = NumberFormat.getInstance(Locale.ENGLISH);\r\n    Number bigDecimal = NumberUtils.parseNumber(bigDecimalAsString, BigDecimal.class, numberFormat);\r\n    assertThat(bigDecimal).isEqualTo(new BigDecimal(bigDecimalAsString));\r\n}\n@Test\r\nvoid parseLocalizedBigDecimalNumber2() {\r\n    String bigDecimalAsString = \"0.001\";\r\n    NumberFormat numberFormat = NumberFormat.getInstance(Locale.ENGLISH);\r\n    Number bigDecimal = NumberUtils.parseNumber(bigDecimalAsString, BigDecimal.class, numberFormat);\r\n    assertThat(bigDecimal).isEqualTo(new BigDecimal(bigDecimalAsString));\r\n}\n@Test\r\nvoid parseLocalizedBigDecimalNumber3() {\r\n    String bigDecimalAsString = \"3.14159265358979323846\";\r\n    NumberFormat numberFormat = NumberFormat.getInstance(Locale.ENGLISH);\r\n    Number bigDecimal = NumberUtils.parseNumber(bigDecimalAsString, BigDecimal.class, numberFormat);\r\n    assertThat(bigDecimal).isEqualTo(new BigDecimal(bigDecimalAsString));\r\n}\n@Test\r\nvoid parseOverflow() {\r\n    String aLong = \"\" + Long.MAX_VALUE;\r\n    String aDouble = \"\" + Double.MAX_VALUE;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Byte.class));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Short.class));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Integer.class));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class)).isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}\n@Test\r\nvoid parseNegativeOverflow() {\r\n    String aLong = \"\" + Long.MIN_VALUE;\r\n    String aDouble = \"\" + Double.MIN_VALUE;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Byte.class));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Short.class));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Integer.class));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).isEqualTo(Long.valueOf(Long.MIN_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class)).isEqualTo(Double.valueOf(Double.MIN_VALUE));\r\n}\n@Test\r\nvoid parseOverflowUsingNumberFormat() {\r\n    NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);\r\n    String aLong = \"\" + Long.MAX_VALUE;\r\n    String aDouble = \"\" + Double.MAX_VALUE;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Byte.class, nf));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Short.class, nf));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Integer.class, nf));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class, nf)).isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class, nf)).isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}\n@Test\r\nvoid parseNegativeOverflowUsingNumberFormat() {\r\n    NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);\r\n    String aLong = \"\" + Long.MIN_VALUE;\r\n    String aDouble = \"\" + Double.MIN_VALUE;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Byte.class, nf));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Short.class, nf));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> NumberUtils.parseNumber(aLong, Integer.class, nf));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class, nf)).isEqualTo(Long.valueOf(Long.MIN_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class, nf)).isEqualTo(Double.valueOf(Double.MIN_VALUE));\r\n}\n@Test\r\nvoid convertToInteger() {\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(-1), Integer.class)).isEqualTo(Integer.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(0), Integer.class)).isEqualTo(Integer.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(1), Integer.class)).isEqualTo(Integer.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Integer.MAX_VALUE), Integer.class)).isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Integer.MAX_VALUE + 1), Integer.class)).isEqualTo(Integer.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Integer.MIN_VALUE), Integer.class)).isEqualTo(Integer.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Integer.MIN_VALUE - 1), Integer.class)).isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((long) -1, Integer.class)).isEqualTo(Integer.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(0L, Integer.class)).isEqualTo(Integer.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(1L, Integer.class)).isEqualTo(Integer.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((long) Integer.MAX_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((long) (Integer.MAX_VALUE + 1), Integer.class)).isEqualTo(Integer.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((long) Integer.MIN_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((long) (Integer.MIN_VALUE - 1), Integer.class)).isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(-1, Integer.class)).isEqualTo(Integer.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(0, Integer.class)).isEqualTo(Integer.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(1, Integer.class)).isEqualTo(Integer.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MAX_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MAX_VALUE + 1, Integer.class)).isEqualTo(Integer.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MIN_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MIN_VALUE - 1, Integer.class)).isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) -1, Integer.class)).isEqualTo(Integer.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) 0, Integer.class)).isEqualTo(Integer.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) 1, Integer.class)).isEqualTo(Integer.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Short.MAX_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) (Short.MAX_VALUE + 1), Integer.class)).isEqualTo(Integer.valueOf(Short.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Short.MIN_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Short.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) (Short.MIN_VALUE - 1), Integer.class)).isEqualTo(Integer.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) -1, Integer.class)).isEqualTo(Integer.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) 0, Integer.class)).isEqualTo(Integer.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) 1, Integer.class)).isEqualTo(Integer.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Byte.MAX_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) (Byte.MAX_VALUE + 1), Integer.class)).isEqualTo(Integer.valueOf(Byte.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Byte.MIN_VALUE, Integer.class)).isEqualTo(Integer.valueOf(Byte.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) (Byte.MIN_VALUE - 1), Integer.class)).isEqualTo(Integer.valueOf(Byte.MAX_VALUE));\r\n    assertToNumberOverflow(Long.MAX_VALUE + 1, Integer.class);\r\n    assertToNumberOverflow(Long.MIN_VALUE - 1, Integer.class);\r\n    assertToNumberOverflow(BigInteger.valueOf(Integer.MAX_VALUE).add(BigInteger.ONE), Integer.class);\r\n    assertToNumberOverflow(BigInteger.valueOf(Integer.MIN_VALUE).subtract(BigInteger.ONE), Integer.class);\r\n    assertToNumberOverflow(new BigDecimal(\"18446744073709551611\"), Integer.class);\r\n}\n@Test\r\nvoid convertToLong() {\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(-1), Long.class)).isEqualTo(Long.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(0), Long.class)).isEqualTo(Long.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(1), Long.class)).isEqualTo(Long.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Long.MAX_VALUE), Long.class)).isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Long.MAX_VALUE + 1), Long.class)).isEqualTo(Long.valueOf(Long.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Long.MIN_VALUE), Long.class)).isEqualTo(Long.valueOf(Long.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(BigInteger.valueOf(Long.MIN_VALUE - 1), Long.class)).isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((long) -1, Long.class)).isEqualTo(Long.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(0L, Long.class)).isEqualTo(Long.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(1L, Long.class)).isEqualTo(Long.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Long.MAX_VALUE, Long.class)).isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Long.MAX_VALUE + 1, Long.class)).isEqualTo(Long.valueOf(Long.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Long.MIN_VALUE, Long.class)).isEqualTo(Long.valueOf(Long.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Long.MIN_VALUE - 1, Long.class)).isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(-1, Long.class)).isEqualTo(Long.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(0, Long.class)).isEqualTo(Long.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(1, Long.class)).isEqualTo(Long.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MAX_VALUE, Long.class)).isEqualTo(Long.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MAX_VALUE + 1, Long.class)).isEqualTo(Long.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MIN_VALUE, Long.class)).isEqualTo(Long.valueOf(Integer.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Integer.MIN_VALUE - 1, Long.class)).isEqualTo(Long.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) -1, Long.class)).isEqualTo(Long.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) 0, Long.class)).isEqualTo(Long.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) 1, Long.class)).isEqualTo(Long.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Short.MAX_VALUE, Long.class)).isEqualTo(Long.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) (Short.MAX_VALUE + 1), Long.class)).isEqualTo(Long.valueOf(Short.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Short.MIN_VALUE, Long.class)).isEqualTo(Long.valueOf(Short.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((short) (Short.MIN_VALUE - 1), Long.class)).isEqualTo(Long.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) -1, Long.class)).isEqualTo(Long.valueOf(-1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) 0, Long.class)).isEqualTo(Long.valueOf(0));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) 1, Long.class)).isEqualTo(Long.valueOf(1));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Byte.MAX_VALUE, Long.class)).isEqualTo(Long.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) (Byte.MAX_VALUE + 1), Long.class)).isEqualTo(Long.valueOf(Byte.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass(Byte.MIN_VALUE, Long.class)).isEqualTo(Long.valueOf(Byte.MIN_VALUE));\r\n    assertThat(NumberUtils.convertNumberToTargetClass((byte) (Byte.MIN_VALUE - 1), Long.class)).isEqualTo(Long.valueOf(Byte.MAX_VALUE));\r\n    assertToNumberOverflow(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE), Long.class);\r\n    assertToNumberOverflow(BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE), Long.class);\r\n    assertToNumberOverflow(new BigDecimal(\"18446744073709551611\"), Long.class);\r\n}\nprivate void assertLongEquals(String aLong) {\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).as(\"Long did not parse\").isEqualTo(Long.MAX_VALUE);\r\n}\nprivate void assertIntegerEquals(String anInteger) {\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class)).as(\"Integer did not parse\").isEqualTo(Integer.MAX_VALUE);\r\n}\nprivate void assertShortEquals(String aShort) {\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class)).as(\"Short did not parse\").isEqualTo(Short.MAX_VALUE);\r\n}\nprivate void assertByteEquals(String aByte) {\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class)).as(\"Byte did not parse\").isEqualTo(Byte.MAX_VALUE);\r\n}\nprivate void assertNegativeLongEquals(String aLong) {\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).as(\"Long did not parse\").isEqualTo(Long.MIN_VALUE);\r\n}\nprivate void assertNegativeIntegerEquals(String anInteger) {\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class)).as(\"Integer did not parse\").isEqualTo(Integer.MIN_VALUE);\r\n}\nprivate void assertNegativeShortEquals(String aShort) {\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class)).as(\"Short did not parse\").isEqualTo(Short.MIN_VALUE);\r\n}\nprivate void assertNegativeByteEquals(String aByte) {\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class)).as(\"Byte did not parse\").isEqualTo(Byte.MIN_VALUE);\r\n}\nprivate void assertToNumberOverflow(Number number, Class<? extends Number> targetClass) {\r\n    String msg = \"overflow: from=\" + number + \", toClass=\" + targetClass;\r\n    assertThatIllegalArgumentException().as(msg).isThrownBy(() -> NumberUtils.convertNumberToTargetClass(number, targetClass)).withMessageEndingWith(\"overflow\");\r\n}",
+    "comment": "\n * @author Rob Harrop\n * @author Juergen Hoeller\n "
+  },
+  {
+    "entityId": "org.springframework.util.NumberUtilsTests#parseNumber()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseNumber() {\r\n    String aByte = \"\" + Byte.MAX_VALUE;\r\n    String aShort = \"\" + Short.MAX_VALUE;\r\n    String anInteger = \"\" + Integer.MAX_VALUE;\r\n    String aLong = \"\" + Long.MAX_VALUE;\r\n    String aFloat = \"\" + Float.MAX_VALUE;\r\n    String aDouble = \"\" + Double.MAX_VALUE;\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NumberUtilsTests#parseNumberUsingNumberFormat()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseNumberUsingNumberFormat() {\r\n    NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);\r\n    String aByte = \"\" + Byte.MAX_VALUE;\r\n    String aShort = \"\" + Short.MAX_VALUE;\r\n    String anInteger = \"\" + Integer.MAX_VALUE;\r\n    String aLong = \"\" + Long.MAX_VALUE;\r\n    String aFloat = \"\" + Float.MAX_VALUE;\r\n    String aDouble = \"\" + Double.MAX_VALUE;\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class, nf)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class, nf)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class, nf)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class, nf)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class, nf)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class, nf)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.NumberUtilsTests#parseNumberRequiringTrim()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseNumberRequiringTrim() {\r\n    String aByte = \" \" + Byte.MAX_VALUE + \" \";\r\n    String aShort = \" \" + Short.MAX_VALUE + \" \";\r\n    String anInteger = \" \" + Integer.MAX_VALUE + \" \";\r\n    String aLong = \" \" + Long.MAX_VALUE + \" \";\r\n    String aFloat = \" \" + Float.MAX_VALUE + \" \";\r\n    String aDouble = \" \" + Double.MAX_VALUE + \" \";\r\n    assertThat(NumberUtils.parseNumber(aByte, Byte.class)).as(\"Byte did not parse\").isEqualTo(Byte.valueOf(Byte.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aShort, Short.class)).as(\"Short did not parse\").isEqualTo(Short.valueOf(Short.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(anInteger, Integer.class)).as(\"Integer did not parse\").isEqualTo(Integer.valueOf(Integer.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aLong, Long.class)).as(\"Long did not parse\").isEqualTo(Long.valueOf(Long.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aFloat, Float.class)).as(\"Float did not parse\").isEqualTo(Float.valueOf(Float.MAX_VALUE));\r\n    assertThat(NumberUtils.parseNumber(aDouble, Double.class)).as(\"Double did not parse\").isEqualTo(Double.valueOf(Double.MAX_VALUE));\r\n}",
+    "comment": ""
+  }
+]

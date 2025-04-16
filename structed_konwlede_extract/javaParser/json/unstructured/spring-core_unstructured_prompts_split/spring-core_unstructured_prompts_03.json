@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#styleBasics()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleBasics() {\r\n    assertThat(styler.style(null)).isEqualTo(\"null\");\r\n    assertThat(styler.style(true)).isEqualTo(\"true\");\r\n    assertThat(styler.style(99.9)).isEqualTo(\"99.9\");\r\n    assertThat(styler.style(\"str\")).isEqualTo(\"\\\"str\\\"\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#stylePlainObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stylePlainObject() {\r\n    Object obj = new Object();\r\n    assertThat(styler.style(obj)).isEqualTo(String.valueOf(obj));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#styleMaps()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleMaps() {\r\n    assertThat(styler.style(Map.of())).isEqualTo(\";\");\r\n    assertThat(styler.style(Map.of(\"key\", 1))).isEqualTo(\"{\\\"key\\\" -> 1}\");\r\n    Map<String, Integer> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", 1);\r\n            put(\"key2\", 2);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"{\\\"key1\\\" -> 1, \\\"key2\\\" -> 2}\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#styleMapEntries()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleMapEntries() {\r\n    Map<String, Integer> map = Map.of(\"key1\", 1, \"key2\", 2);\r\n    assertThat(map.entrySet()).map(styler::style).containsExactlyInAnyOrder(\"\\\"key1\\\" -> 1\", \"\\\"key2\\\" -> 2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#styleLists()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleLists() {\r\n    assertThat(styler.style(List.of())).isEqualTo(\"[]\");\r\n    assertThat(styler.style(List.of(1))).isEqualTo(\"[1]\");\r\n    assertThat(styler.style(List.of(1, 2))).isEqualTo(\"[1, 2]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#stylePrimitiveArrays()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stylePrimitiveArrays() {\r\n    int[] array = new int[0];\r\n    assertThat(styler.style(array)).isEqualTo(\"[]\");\r\n    array = new int[] { 1 };\r\n    assertThat(styler.style(array)).isEqualTo(\"[1]\");\r\n    array = new int[] { 1, 2 };\r\n    assertThat(styler.style(array)).isEqualTo(\"[1, 2]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CommonStyling#styleObjectArrays()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleObjectArrays() {\r\n    String[] array = new String[0];\r\n    assertThat(styler.style(array)).isEqualTo(\"[]\");\r\n    array = new String[] { \"str1\" };\r\n    assertThat(styler.style(array)).isEqualTo(\"[\\\"str1\\\"]\");\r\n    array = new String[] { \"str1\", \"str2\" };\r\n    assertThat(styler.style(array)).isEqualTo(\"[\\\"str1\\\", \\\"str2\\\"]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.StringUtilsBenchmark",
+    "entityType": "class",
+    "code": "@Benchmark\r\npublic void collectionToDelimitedString(DelimitedStringState state, Blackhole bh) {\r\n    bh.consume(StringUtils.collectionToCommaDelimitedString(state.elements));\r\n}\n@State(Scope.Benchmark)\r\npublic static class DelimitedStringState {\r\n\r\n    @Param(\"10\")\r\n    int elementMinSize;\r\n\r\n    @Param(\"20\")\r\n    int elementMaxSize;\r\n\r\n    @Param(\"10\")\r\n    int elementCount;\r\n\r\n    Collection<String> elements;\r\n\r\n    @Setup(Level.Iteration)\r\n    public void setup() {\r\n        Random random = new Random();\r\n        this.elements = new ArrayList<>(this.elementCount);\r\n        int bound = this.elementMaxSize - this.elementMinSize;\r\n        for (int i = 0; i < this.elementCount; i++) {\r\n            this.elements.add(String.format(\"%0\" + (random.nextInt(bound) + this.elementMinSize) + \"d\", 1));\r\n        }\r\n    }\r\n}\n@Benchmark\r\npublic void cleanPath(CleanPathState state, Blackhole bh) {\r\n    for (String path : state.paths) {\r\n        bh.consume(StringUtils.cleanPath(path));\r\n    }\r\n}\n@State(Scope.Benchmark)\r\npublic static class CleanPathState {\r\n\r\n    private static final List<String> SEGMENTS = Arrays.asList(\"some\", \"path\", \".\", \"..\", \"springspring\");\r\n\r\n    @Param(\"10\")\r\n    int segmentCount;\r\n\r\n    @Param(\"20\")\r\n    int pathsCount;\r\n\r\n    Collection<String> paths;\r\n\r\n    @Setup(Level.Iteration)\r\n    public void setup() {\r\n        this.paths = new ArrayList<>(this.pathsCount);\r\n        Random random = new Random();\r\n        for (int i = 0; i < this.pathsCount; i++) {\r\n            this.paths.add(createSamplePath(random));\r\n        }\r\n    }\r\n\r\n    private String createSamplePath(Random random) {\r\n        String separator = (random.nextBoolean() ? \"/\" : \"\\\\\");\r\n        StringBuilder sb = new StringBuilder();\r\n        sb.append(\"jar:file:///c:\");\r\n        for (int i = 0; i < this.segmentCount; i++) {\r\n            sb.append(separator);\r\n            sb.append(SEGMENTS.get(random.nextInt(SEGMENTS.size())));\r\n        }\r\n        sb.append(separator);\r\n        sb.append(\"the%20file.txt\");\r\n        return sb.toString();\r\n    }\r\n}",
+    "comment": "\n * Benchmarks for {@link StringUtils}.\n *\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultClassAndMethodStylers",
+    "entityType": "class",
+    "code": "private final SimpleValueStyler styler = new SimpleValueStyler();\n@Test\r\nvoid styleClass() {\r\n    assertThat(styler.style(String.class)).isEqualTo(\"java.lang.String\");\r\n    assertThat(styler.style(getClass())).isEqualTo(getClass().getCanonicalName());\r\n    assertThat(styler.style(String[].class)).isEqualTo(\"java.lang.String[]\");\r\n    assertThat(styler.style(int[][].class)).isEqualTo(\"int[][]\");\r\n}\n@Test\r\nvoid styleMethod() throws NoSuchMethodException {\r\n    assertThat(styler.style(String.class.getMethod(\"toString\"))).isEqualTo(\"toString()\");\r\n    assertThat(styler.style(String.class.getMethod(\"getBytes\", Charset.class))).isEqualTo(\"getBytes(Charset)\");\r\n}\n@Test\r\nvoid styleClassMap() {\r\n    Map<String, Class<?>> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", Integer.class);\r\n            put(\"key2\", DefaultClassAndMethodStylers.class);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"{\\\"key1\\\" -> java.lang.Integer, \\\"key2\\\" -> %s}\", DefaultClassAndMethodStylers.class.getCanonicalName());\r\n}\n@Test\r\nvoid styleClassList() {\r\n    assertThat(styler.style(List.of(Integer.class, String.class))).isEqualTo(\"[java.lang.Integer, java.lang.String]\");\r\n}\n@Test\r\nvoid styleClassArray() {\r\n    Class<?>[] array = new Class<?>[] { Integer.class, getClass() };\r\n    assertThat(styler.style(array)).isEqualTo(\"[%s, %s]\", Integer.class.getCanonicalName(), getClass().getCanonicalName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.StringUtilsBenchmark#collectionToDelimitedString(DelimitedStringState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void collectionToDelimitedString(DelimitedStringState state, Blackhole bh) {\r\n    bh.consume(StringUtils.collectionToCommaDelimitedString(state.elements));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultClassAndMethodStylers#styleClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClass() {\r\n    assertThat(styler.style(String.class)).isEqualTo(\"java.lang.String\");\r\n    assertThat(styler.style(getClass())).isEqualTo(getClass().getCanonicalName());\r\n    assertThat(styler.style(String[].class)).isEqualTo(\"java.lang.String[]\");\r\n    assertThat(styler.style(int[][].class)).isEqualTo(\"int[][]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.StringUtilsBenchmark#cleanPath(CleanPathState,Blackhole)",
+    "entityType": "method",
+    "code": "@Benchmark\r\npublic void cleanPath(CleanPathState state, Blackhole bh) {\r\n    for (String path : state.paths) {\r\n        bh.consume(StringUtils.cleanPath(path));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultClassAndMethodStylers#styleMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleMethod() throws NoSuchMethodException {\r\n    assertThat(styler.style(String.class.getMethod(\"toString\"))).isEqualTo(\"toString()\");\r\n    assertThat(styler.style(String.class.getMethod(\"getBytes\", Charset.class))).isEqualTo(\"getBytes(Charset)\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultClassAndMethodStylers#styleClassMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClassMap() {\r\n    Map<String, Class<?>> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", Integer.class);\r\n            put(\"key2\", DefaultClassAndMethodStylers.class);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"{\\\"key1\\\" -> java.lang.Integer, \\\"key2\\\" -> %s}\", DefaultClassAndMethodStylers.class.getCanonicalName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultClassAndMethodStylers#styleClassList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClassList() {\r\n    assertThat(styler.style(List.of(Integer.class, String.class))).isEqualTo(\"[java.lang.Integer, java.lang.String]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.DefaultClassAndMethodStylers#styleClassArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClassArray() {\r\n    Class<?>[] array = new Class<?>[] { Integer.class, getClass() };\r\n    assertThat(styler.style(array)).isEqualTo(\"[%s, %s]\", Integer.class.getCanonicalName(), getClass().getCanonicalName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DelimitedStringState",
+    "entityType": "class",
+    "code": "@Param(\"10\")\r\nint elementMinSize;\n@Param(\"20\")\r\nint elementMaxSize;\n@Param(\"10\")\r\nint elementCount;\nCollection<String> elements;\n@Setup(Level.Iteration)\r\npublic void setup() {\r\n    Random random = new Random();\r\n    this.elements = new ArrayList<>(this.elementCount);\r\n    int bound = this.elementMaxSize - this.elementMinSize;\r\n    for (int i = 0; i < this.elementCount; i++) {\r\n        this.elements.add(String.format(\"%0\" + (random.nextInt(bound) + this.elementMinSize) + \"d\", 1));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CustomClassAndMethodStylers",
+    "entityType": "class",
+    "code": "private final SimpleValueStyler styler = new SimpleValueStyler(Class::getSimpleName, Method::toGenericString);\n@Test\r\nvoid styleClass() {\r\n    assertThat(styler.style(String.class)).isEqualTo(\"String\");\r\n    assertThat(styler.style(getClass())).isEqualTo(getClass().getSimpleName());\r\n    assertThat(styler.style(String[].class)).isEqualTo(\"String[]\");\r\n    assertThat(styler.style(int[][].class)).isEqualTo(\"int[][]\");\r\n}\n@Test\r\nvoid styleMethod() throws NoSuchMethodException {\r\n    Method method = String.class.getMethod(\"toString\");\r\n    assertThat(styler.style(method)).isEqualTo(method.toGenericString());\r\n}\n@Test\r\nvoid styleClassMap() {\r\n    Map<String, Class<?>> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", Integer.class);\r\n            put(\"key2\", CustomClassAndMethodStylers.class);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"{\\\"key1\\\" -> %s, \\\"key2\\\" -> %s}\", Integer.class.getSimpleName(), CustomClassAndMethodStylers.class.getSimpleName());\r\n}\n@Test\r\nvoid styleClassList() {\r\n    assertThat(styler.style(List.of(Integer.class, String.class))).isEqualTo(\"[Integer, String]\");\r\n}\n@Test\r\nvoid styleClassArray() {\r\n    Class<?>[] array = new Class<?>[] { Integer.class, getClass() };\r\n    assertThat(styler.style(array)).isEqualTo(\"[%s, %s]\", Integer.class.getSimpleName(), getClass().getSimpleName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.DelimitedStringState#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    Random random = new Random();\r\n    this.elements = new ArrayList<>(this.elementCount);\r\n    int bound = this.elementMaxSize - this.elementMinSize;\r\n    for (int i = 0; i < this.elementCount; i++) {\r\n        this.elements.add(String.format(\"%0\" + (random.nextInt(bound) + this.elementMinSize) + \"d\", 1));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CustomClassAndMethodStylers#styleClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClass() {\r\n    assertThat(styler.style(String.class)).isEqualTo(\"String\");\r\n    assertThat(styler.style(getClass())).isEqualTo(getClass().getSimpleName());\r\n    assertThat(styler.style(String[].class)).isEqualTo(\"String[]\");\r\n    assertThat(styler.style(int[][].class)).isEqualTo(\"int[][]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CustomClassAndMethodStylers#styleMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleMethod() throws NoSuchMethodException {\r\n    Method method = String.class.getMethod(\"toString\");\r\n    assertThat(styler.style(method)).isEqualTo(method.toGenericString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CustomClassAndMethodStylers#styleClassMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClassMap() {\r\n    Map<String, Class<?>> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", Integer.class);\r\n            put(\"key2\", CustomClassAndMethodStylers.class);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"{\\\"key1\\\" -> %s, \\\"key2\\\" -> %s}\", Integer.class.getSimpleName(), CustomClassAndMethodStylers.class.getSimpleName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CustomClassAndMethodStylers#styleClassList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClassList() {\r\n    assertThat(styler.style(List.of(Integer.class, String.class))).isEqualTo(\"[Integer, String]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.CustomClassAndMethodStylers#styleClassArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid styleClassArray() {\r\n    Class<?>[] array = new Class<?>[] { Integer.class, getClass() };\r\n    assertThat(styler.style(array)).isEqualTo(\"[%s, %s]\", Integer.class.getSimpleName(), getClass().getSimpleName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CleanPathState",
+    "entityType": "class",
+    "code": "private static final List<String> SEGMENTS = Arrays.asList(\"some\", \"path\", \".\", \"..\", \"springspring\");\n@Param(\"10\")\r\nint segmentCount;\n@Param(\"20\")\r\nint pathsCount;\nCollection<String> paths;\n@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.paths = new ArrayList<>(this.pathsCount);\r\n    Random random = new Random();\r\n    for (int i = 0; i < this.pathsCount; i++) {\r\n        this.paths.add(createSamplePath(random));\r\n    }\r\n}\nprivate String createSamplePath(Random random) {\r\n    String separator = (random.nextBoolean() ? \"/\" : \"\\\\\");\r\n    StringBuilder sb = new StringBuilder();\r\n    sb.append(\"jar:file:///c:\");\r\n    for (int i = 0; i < this.segmentCount; i++) {\r\n        sb.append(separator);\r\n        sb.append(SEGMENTS.get(random.nextInt(SEGMENTS.size())));\r\n    }\r\n    sb.append(separator);\r\n    sb.append(\"the%20file.txt\");\r\n    return sb.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CleanPathState#setup()",
+    "entityType": "method",
+    "code": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.paths = new ArrayList<>(this.pathsCount);\r\n    Random random = new Random();\r\n    for (int i = 0; i < this.pathsCount; i++) {\r\n        this.paths.add(createSamplePath(random));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.CleanPathState#createSamplePath(Random)",
+    "entityType": "method",
+    "code": "private String createSamplePath(Random random) {\r\n    String separator = (random.nextBoolean() ? \"/\" : \"\\\\\");\r\n    StringBuilder sb = new StringBuilder();\r\n    sb.append(\"jar:file:///c:\");\r\n    for (int i = 0; i < this.segmentCount; i++) {\r\n        sb.append(separator);\r\n        sb.append(SEGMENTS.get(random.nextInt(SEGMENTS.size())));\r\n    }\r\n    sb.append(separator);\r\n    sb.append(\"the%20file.txt\");\r\n    return sb.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.AotDetector",
+    "entityType": "class",
+    "code": "/**\r\n * System property that indicates the application should run with AOT\r\n * generated artifacts. If such optimizations are not available, it is\r\n * recommended to throw an exception rather than fall back to the regular\r\n * runtime behavior.\r\n */\r\npublic static final String AOT_ENABLED = \"spring.aot.enabled\";\nprivate static final boolean inNativeImage = NativeDetector.inNativeImage(Context.RUN, Context.BUILD);\n/**\r\n * Determine whether AOT optimizations must be considered at runtime. This\r\n * is mandatory in a native image but can be triggered on the JVM using\r\n * the {@value #AOT_ENABLED} Spring property.\r\n * @return whether AOT optimizations must be considered\r\n */\r\npublic static boolean useGeneratedArtifacts() {\r\n    return (inNativeImage || SpringProperties.getFlag(AOT_ENABLED));\r\n}",
+    "comment": "\n * Utility for determining if AOT-processed optimizations must be used rather\n * than the regular runtime. Strictly for internal use within the framework.\n *\n * @author Stephane Nicoll\n * @author Sebastien Deleuze\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.AotDetector#useGeneratedArtifacts()",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether AOT optimizations must be considered at runtime. This\r\n * is mandatory in a native image but can be triggered on the JVM using\r\n * the {@value #AOT_ENABLED} Spring property.\r\n * @return whether AOT optimizations must be considered\r\n */\r\npublic static boolean useGeneratedArtifacts() {\r\n    return (inNativeImage || SpringProperties.getFlag(AOT_ENABLED));\r\n}",
+    "comment": "\n\t * Determine whether AOT optimizations must be considered at runtime. This\n\t * is mandatory in a native image but can be triggered on the JVM using\n\t * the {@value #AOT_ENABLED} Spring property.\n\t * @return whether AOT optimizations must be considered\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests",
+    "entityType": "class",
+    "code": "private final SomeObject s1 = new SomeObject() {\r\n\r\n    @Override\r\n    public String toString() {\r\n        return \"A\";\r\n    }\r\n};\nprivate final SomeObject s2 = new SomeObject() {\r\n\r\n    @Override\r\n    public String toString() {\r\n        return \"B\";\r\n    }\r\n};\nprivate final SomeObject s3 = new SomeObject() {\r\n\r\n    @Override\r\n    public String toString() {\r\n        return \"C\";\r\n    }\r\n};\n@Test\r\nvoid primitiveArray() {\r\n    int[] integers = { 0, 1, 2, 3, 4 };\r\n    String str = new ToStringCreator(integers).toString();\r\n    assertThat(str).isEqualTo(\"[@%s array<Integer>[0, 1, 2, 3, 4]]\", ObjectUtils.getIdentityHexString(integers));\r\n}\n@Test\r\nvoid objectArray() {\r\n    SomeObject[] array = new SomeObject[] { s1, s2, s3 };\r\n    String str = new ToStringCreator(array).toString();\r\n    assertThat(str).isEqualTo(\"[@%s array<ToStringCreatorTests.SomeObject>[A, B, C]]\", ObjectUtils.getIdentityHexString(array));\r\n}\n@Test\r\nvoid appendTopLevelClass() {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myClass\", Integer.class).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myClass = Integer]\", ObjectUtils.getIdentityHexString(object));\r\n}\n@Test\r\nvoid appendNestedClass() {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myClass\", object.getClass()).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myClass = ToStringCreatorTests.SomeObject]\", ObjectUtils.getIdentityHexString(object));\r\n}\n@Test\r\nvoid appendTopLevelMethod() throws Exception {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myMethod\", ToStringCreatorTests.class.getDeclaredMethod(\"someMethod\")).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myMethod = someMethod@ToStringCreatorTests]\", ObjectUtils.getIdentityHexString(object));\r\n}\n@Test\r\nvoid appendNestedMethod() throws Exception {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myMethod\", SomeObject.class.getDeclaredMethod(\"someMethod\")).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myMethod = someMethod@ToStringCreatorTests.SomeObject]\", ObjectUtils.getIdentityHexString(object));\r\n}\n@Test\r\nvoid appendList() {\r\n    SomeObject object = new SomeObject();\r\n    List<SomeObject> list = List.of(s1, s2, s3);\r\n    String str = new ToStringCreator(object).append(\"myLetters\", list).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myLetters = list[A, B, C]]\", ObjectUtils.getIdentityHexString(object));\r\n}\n@Test\r\nvoid appendSet() {\r\n    SomeObject object = new SomeObject();\r\n    Set<SomeObject> set = new LinkedHashSet<>();\r\n    set.add(s1);\r\n    set.add(s2);\r\n    set.add(s3);\r\n    String str = new ToStringCreator(object).append(\"myLetters\", set).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myLetters = set[A, B, C]]\", ObjectUtils.getIdentityHexString(object));\r\n}\n@Test\r\nvoid appendMap() {\r\n    Map<String, String> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"Keri\", \"Softball\");\r\n            put(\"Scot\", \"Fishing\");\r\n            put(\"Keith\", \"Flag Football\");\r\n        }\r\n    };\r\n    Object stringy = new Object() {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return new ToStringCreator(this).append(\"familyFavoriteSport\", map).toString();\r\n        }\r\n    };\r\n    assertThat(stringy.toString()).containsSubsequence(\"[\", ClassUtils.getShortName(stringy.getClass().getName()), \"@\", ObjectUtils.getIdentityHexString(stringy), \"familyFavoriteSport = map['Keri' -> 'Softball', 'Scot' -> 'Fishing', 'Keith' -> 'Flag Football']\", \"]\");\r\n}\nprivate static class SomeObject {\r\n\r\n    @SuppressWarnings(\"unused\")\r\n    private static void someMethod() {\r\n    }\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate static void someMethod() ;",
+    "comment": "\n * Tests for {@link ToStringCreator}.\n *\n * @author Keith Donald\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#primitiveArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid primitiveArray() {\r\n    int[] integers = { 0, 1, 2, 3, 4 };\r\n    String str = new ToStringCreator(integers).toString();\r\n    assertThat(str).isEqualTo(\"[@%s array<Integer>[0, 1, 2, 3, 4]]\", ObjectUtils.getIdentityHexString(integers));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#objectArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid objectArray() {\r\n    SomeObject[] array = new SomeObject[] { s1, s2, s3 };\r\n    String str = new ToStringCreator(array).toString();\r\n    assertThat(str).isEqualTo(\"[@%s array<ToStringCreatorTests.SomeObject>[A, B, C]]\", ObjectUtils.getIdentityHexString(array));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendTopLevelClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendTopLevelClass() {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myClass\", Integer.class).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myClass = Integer]\", ObjectUtils.getIdentityHexString(object));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendNestedClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendNestedClass() {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myClass\", object.getClass()).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myClass = ToStringCreatorTests.SomeObject]\", ObjectUtils.getIdentityHexString(object));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendTopLevelMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendTopLevelMethod() throws Exception {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myMethod\", ToStringCreatorTests.class.getDeclaredMethod(\"someMethod\")).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myMethod = someMethod@ToStringCreatorTests]\", ObjectUtils.getIdentityHexString(object));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendNestedMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendNestedMethod() throws Exception {\r\n    SomeObject object = new SomeObject();\r\n    String str = new ToStringCreator(object).append(\"myMethod\", SomeObject.class.getDeclaredMethod(\"someMethod\")).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myMethod = someMethod@ToStringCreatorTests.SomeObject]\", ObjectUtils.getIdentityHexString(object));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendList() {\r\n    SomeObject object = new SomeObject();\r\n    List<SomeObject> list = List.of(s1, s2, s3);\r\n    String str = new ToStringCreator(object).append(\"myLetters\", list).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myLetters = list[A, B, C]]\", ObjectUtils.getIdentityHexString(object));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendSet() {\r\n    SomeObject object = new SomeObject();\r\n    Set<SomeObject> set = new LinkedHashSet<>();\r\n    set.add(s1);\r\n    set.add(s2);\r\n    set.add(s3);\r\n    String str = new ToStringCreator(object).append(\"myLetters\", set).toString();\r\n    assertThat(str).isEqualTo(\"[ToStringCreatorTests.SomeObject@%s myLetters = set[A, B, C]]\", ObjectUtils.getIdentityHexString(object));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#appendMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid appendMap() {\r\n    Map<String, String> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"Keri\", \"Softball\");\r\n            put(\"Scot\", \"Fishing\");\r\n            put(\"Keith\", \"Flag Football\");\r\n        }\r\n    };\r\n    Object stringy = new Object() {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return new ToStringCreator(this).append(\"familyFavoriteSport\", map).toString();\r\n        }\r\n    };\r\n    assertThat(stringy.toString()).containsSubsequence(\"[\", ClassUtils.getShortName(stringy.getClass().getName()), \"@\", ObjectUtils.getIdentityHexString(stringy), \"familyFavoriteSport = map['Keri' -> 'Softball', 'Scot' -> 'Fishing', 'Keith' -> 'Flag Football']\", \"]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.ToStringCreatorTests#someMethod()",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unused\")\r\nprivate static void someMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.SomeObject",
+    "entityType": "class",
+    "code": "@SuppressWarnings(\"unused\")\r\nprivate static void someMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.style.SomeObject#someMethod()",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unused\")\r\nprivate static void someMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid cannotExecuteWhenConcurrencyIsSwitchedOff() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        executor.setConcurrencyLimit(ConcurrencyThrottleSupport.NO_CONCURRENCY);\r\n        assertThat(executor.isThrottleActive()).isTrue();\r\n        assertThatIllegalStateException().isThrownBy(() -> executor.execute(new NoOpRunnable()));\r\n    }\r\n}\n@Test\r\nvoid throttleIsNotActiveByDefault() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        assertThat(executor.isThrottleActive()).as(\"Concurrency throttle must not default to being active (on)\").isFalse();\r\n    }\r\n}\n@Test\r\nvoid threadNameGetsSetCorrectly() {\r\n    final String customPrefix = \"chankPop#\";\r\n    final Object monitor = new Object();\r\n    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(customPrefix);\r\n    ThreadNameHarvester task = new ThreadNameHarvester(monitor);\r\n    executeAndWait(executor, task, monitor);\r\n    assertThat(task.getThreadName()).startsWith(customPrefix);\r\n}\n@Test\r\nvoid threadFactoryOverridesDefaults() {\r\n    final Object monitor = new Object();\r\n    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(runnable -> new Thread(runnable, \"test\"));\r\n    ThreadNameHarvester task = new ThreadNameHarvester(monitor);\r\n    executeAndWait(executor, task, monitor);\r\n    assertThat(task.getThreadName()).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid throwsExceptionWhenSuppliedWithNullRunnable() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        assertThatIllegalArgumentException().isThrownBy(() -> executor.execute(null));\r\n    }\r\n}\nprivate void executeAndWait(SimpleAsyncTaskExecutor executor, Runnable task, Object monitor) {\r\n    synchronized (monitor) {\r\n        executor.execute(task);\r\n        try {\r\n            monitor.wait();\r\n        } catch (InterruptedException ignored) ;\r\n    }\r\n}\nprivate static final class NoOpRunnable implements Runnable {\r\n\r\n    @Override\r\n    public void run() {\r\n        // no-op\r\n    }\r\n}\nprivate abstract static class AbstractNotifyingRunnable implements Runnable {\r\n\r\n    private final Object monitor;\r\n\r\n    protected AbstractNotifyingRunnable(Object monitor) {\r\n        this.monitor = monitor;\r\n    }\r\n\r\n    @Override\r\n    public final void run() {\r\n        synchronized (this.monitor) {\r\n            try {\r\n                doRun();\r\n            } finally {\r\n                this.monitor.notifyAll();\r\n            }\r\n        }\r\n    }\r\n\r\n    protected abstract void doRun();\r\n}\nprivate static final class ThreadNameHarvester extends AbstractNotifyingRunnable {\r\n\r\n    private String threadName;\r\n\r\n    protected ThreadNameHarvester(Object monitor) {\r\n        super(monitor);\r\n    }\r\n\r\n    public String getThreadName() {\r\n        return this.threadName;\r\n    }\r\n\r\n    @Override\r\n    protected void doRun() {\r\n        this.threadName = Thread.currentThread().getName();\r\n    }\r\n}",
+    "comment": "\n * @author Rick Evans\n * @author Juergen Hoeller\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#cannotExecuteWhenConcurrencyIsSwitchedOff()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid cannotExecuteWhenConcurrencyIsSwitchedOff() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        executor.setConcurrencyLimit(ConcurrencyThrottleSupport.NO_CONCURRENCY);\r\n        assertThat(executor.isThrottleActive()).isTrue();\r\n        assertThatIllegalStateException().isThrownBy(() -> executor.execute(new NoOpRunnable()));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throttleIsNotActiveByDefault()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throttleIsNotActiveByDefault() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        assertThat(executor.isThrottleActive()).as(\"Concurrency throttle must not default to being active (on)\").isFalse();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadNameGetsSetCorrectly()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid threadNameGetsSetCorrectly() {\r\n    final String customPrefix = \"chankPop#\";\r\n    final Object monitor = new Object();\r\n    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(customPrefix);\r\n    ThreadNameHarvester task = new ThreadNameHarvester(monitor);\r\n    executeAndWait(executor, task, monitor);\r\n    assertThat(task.getThreadName()).startsWith(customPrefix);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadFactoryOverridesDefaults()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid threadFactoryOverridesDefaults() {\r\n    final Object monitor = new Object();\r\n    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(runnable -> new Thread(runnable, \"test\"));\r\n    ThreadNameHarvester task = new ThreadNameHarvester(monitor);\r\n    executeAndWait(executor, task, monitor);\r\n    assertThat(task.getThreadName()).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throwsExceptionWhenSuppliedWithNullRunnable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwsExceptionWhenSuppliedWithNullRunnable() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        assertThatIllegalArgumentException().isThrownBy(() -> executor.execute(null));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#executeAndWait(SimpleAsyncTaskExecutor,Runnable,Object)",
+    "entityType": "method",
+    "code": "private void executeAndWait(SimpleAsyncTaskExecutor executor, Runnable task, Object monitor) {\r\n    synchronized (monitor) {\r\n        executor.execute(task);\r\n        try {\r\n            monitor.wait();\r\n        } catch (InterruptedException ignored) ;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.NoOpRunnable",
+    "entityType": "class",
+    "code": "@Override\r\npublic void run() {\r\n    // no-op\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.NoOpRunnable#run()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void run() {\r\n    // no-op\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.AbstractNotifyingRunnable",
+    "entityType": "class",
+    "code": "private final Object monitor;\nprotected AbstractNotifyingRunnable(Object monitor) {\r\n    this.monitor = monitor;\r\n}\n@Override\r\npublic final void run() {\r\n    synchronized (this.monitor) {\r\n        try {\r\n            doRun();\r\n        } finally {\r\n            this.monitor.notifyAll();\r\n        }\r\n    }\r\n}\nprotected abstract void doRun();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.AbstractNotifyingRunnable#run()",
+    "entityType": "method",
+    "code": "@Override\r\npublic final void run() {\r\n    synchronized (this.monitor) {\r\n        try {\r\n            doRun();\r\n        } finally {\r\n            this.monitor.notifyAll();\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.AbstractNotifyingRunnable#doRun()",
+    "entityType": "method",
+    "code": "protected abstract void doRun();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.ThreadNameHarvester",
+    "entityType": "class",
+    "code": "private String threadName;\nprotected ThreadNameHarvester(Object monitor) {\r\n    super(monitor);\r\n}\npublic String getThreadName() {\r\n    return this.threadName;\r\n}\n@Override\r\nprotected void doRun() {\r\n    this.threadName = Thread.currentThread().getName();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.ThreadNameHarvester#getThreadName()",
+    "entityType": "method",
+    "code": "public String getThreadName() {\r\n    return this.threadName;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.ThreadNameHarvester#doRun()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void doRun() {\r\n    this.threadName = Thread.currentThread().getName();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl",
+    "entityType": "class",
+    "code": "private final Class<?> target;\nprivate final Visibility visibility;\nAccessControl(Class<?> target, Visibility visibility) {\r\n    this.target = target;\r\n    this.visibility = visibility;\r\n}\n/**\r\n * Create an {@link AccessControl} for the given member. This considers the\r\n * member modifier, parameter types, return types and any enclosing classes.\r\n * The lowest overall {@link Visibility} is used.\r\n * @param member the source member\r\n * @return the {@link AccessControl} for the member\r\n */\r\npublic static AccessControl forMember(Member member) {\r\n    return new AccessControl(member.getDeclaringClass(), Visibility.forMember(member));\r\n}\n/**\r\n * Create an {@link AccessControl} for the given {@link ResolvableType}.\r\n * This considers the type itself as well as any generics.\r\n * @param resolvableType the source resolvable type\r\n * @return the {@link AccessControl} for the type\r\n */\r\npublic static AccessControl forResolvableType(ResolvableType resolvableType) {\r\n    return new AccessControl(resolvableType.toClass(), Visibility.forResolvableType(resolvableType));\r\n}\n/**\r\n * Create an {@link AccessControl} for the given {@link Class}.\r\n * @param type the source class\r\n * @return the {@link AccessControl} for the class\r\n */\r\npublic static AccessControl forClass(Class<?> type) {\r\n    return new AccessControl(type, Visibility.forClass(type));\r\n}\n/**\r\n * Returns the lowest {@link AccessControl} from the given candidates.\r\n * @param candidates the candidates to check\r\n * @return the lowest {@link AccessControl} from the candidates\r\n */\r\npublic static AccessControl lowest(AccessControl... candidates) {\r\n    int index = Visibility.lowestIndex(Arrays.stream(candidates).map(AccessControl::getVisibility).toArray(Visibility[]::new));\r\n    return candidates[index];\r\n}\n/**\r\n * Return the lowest {@link Visibility} of this instance.\r\n * @return the visibility\r\n */\r\npublic Visibility getVisibility() {\r\n    return this.visibility;\r\n}\n/**\r\n * Return whether the member or type signature backed by ths instance is\r\n * accessible from any package.\r\n * @return {@code true} if it is public\r\n */\r\npublic boolean isPublic() {\r\n    return this.visibility == Visibility.PUBLIC;\r\n}\n/**\r\n * Specify whether the member or type signature backed by this instance is\r\n * accessible from the specified {@link ClassName}.\r\n * @param type the type to check\r\n * @return {@code true} if it is accessible\r\n */\r\npublic boolean isAccessibleFrom(ClassName type) {\r\n    if (this.visibility == Visibility.PRIVATE) {\r\n        return false;\r\n    }\r\n    if (this.visibility == Visibility.PUBLIC) {\r\n        return true;\r\n    }\r\n    return this.target.getPackageName().equals(type.packageName());\r\n}\n/**\r\n * Access visibility types as determined by the <a href=\r\n * \"https://docs.oracle.com/javase/tutorial/java/javaOO/accesscontrol.html\">modifiers</a>\r\n * on a {@link Member} or {@link ResolvableType}.\r\n */\r\npublic enum Visibility {\r\n\r\n    /**\r\n     * Public visibility. The member or type is visible to all classes.\r\n     */\r\n    PUBLIC,\r\n    /**\r\n     * Protected visibility. The member or type is only visible to classes\r\n     * in the same package or subclasses.\r\n     */\r\n    PROTECTED,\r\n    /**\r\n     * Package-private visibility. The member or type is only visible to classes\r\n     * in the same package.\r\n     */\r\n    PACKAGE_PRIVATE,\r\n    /**\r\n     * Private visibility. The member or type is not visible to other classes.\r\n     */\r\n    PRIVATE;\r\n\r\n    private static Visibility forMember(Member member) {\r\n        Assert.notNull(member, \"'member' must not be null\");\r\n        Visibility visibility = forModifiers(member.getModifiers());\r\n        Visibility declaringClassVisibility = forClass(member.getDeclaringClass());\r\n        visibility = lowest(visibility, declaringClassVisibility);\r\n        if (visibility != PRIVATE) {\r\n            if (member instanceof Field field) {\r\n                Visibility fieldVisibility = forResolvableType(ResolvableType.forField(field));\r\n                return lowest(visibility, fieldVisibility);\r\n            }\r\n            if (member instanceof Constructor<?> constructor) {\r\n                Visibility parameterVisibility = forParameterTypes(constructor, i -> ResolvableType.forConstructorParameter(constructor, i));\r\n                return lowest(visibility, parameterVisibility);\r\n            }\r\n            if (member instanceof Method method) {\r\n                Visibility parameterVisibility = forParameterTypes(method, i -> ResolvableType.forMethodParameter(method, i));\r\n                Visibility returnTypeVisibility = forResolvableType(ResolvableType.forMethodReturnType(method));\r\n                return lowest(visibility, parameterVisibility, returnTypeVisibility);\r\n            }\r\n        }\r\n        return PRIVATE;\r\n    }\r\n\r\n    private static Visibility forResolvableType(ResolvableType resolvableType) {\r\n        return forResolvableType(resolvableType, new HashSet<>());\r\n    }\r\n\r\n    private static Visibility forResolvableType(ResolvableType resolvableType, Set<ResolvableType> seen) {\r\n        if (!seen.add(resolvableType)) {\r\n            return Visibility.PUBLIC;\r\n        }\r\n        Class<?> userClass = ClassUtils.getUserClass(resolvableType.toClass());\r\n        ResolvableType userType = resolvableType.as(userClass);\r\n        Visibility visibility = forClass(userType.toClass());\r\n        for (ResolvableType generic : userType.getGenerics()) {\r\n            visibility = lowest(visibility, forResolvableType(generic, seen));\r\n        }\r\n        return visibility;\r\n    }\r\n\r\n    private static Visibility forParameterTypes(Executable executable, IntFunction<ResolvableType> resolvableTypeFactory) {\r\n        Visibility visibility = Visibility.PUBLIC;\r\n        Class<?>[] parameterTypes = executable.getParameterTypes();\r\n        for (int i = 0; i < parameterTypes.length; i++) {\r\n            ResolvableType type = resolvableTypeFactory.apply(i);\r\n            visibility = lowest(visibility, forResolvableType(type));\r\n        }\r\n        return visibility;\r\n    }\r\n\r\n    private static Visibility forClass(Class<?> clazz) {\r\n        clazz = ClassUtils.getUserClass(clazz);\r\n        Visibility visibility = forModifiers(clazz.getModifiers());\r\n        if (clazz.isArray()) {\r\n            visibility = lowest(visibility, forClass(clazz.componentType()));\r\n        }\r\n        Class<?> enclosingClass = clazz.getEnclosingClass();\r\n        if (enclosingClass != null) {\r\n            visibility = lowest(visibility, forClass(clazz.getEnclosingClass()));\r\n        }\r\n        return visibility;\r\n    }\r\n\r\n    private static Visibility forModifiers(int modifiers) {\r\n        if (Modifier.isPublic(modifiers)) {\r\n            return PUBLIC;\r\n        }\r\n        if (Modifier.isProtected(modifiers)) {\r\n            return PROTECTED;\r\n        }\r\n        if (Modifier.isPrivate(modifiers)) {\r\n            return PRIVATE;\r\n        }\r\n        return PACKAGE_PRIVATE;\r\n    }\r\n\r\n    /**\r\n     * Returns the lowest {@link Visibility} from the given candidates.\r\n     * @param candidates the candidates to check\r\n     * @return the lowest {@link Visibility} from the candidates\r\n     */\r\n    static Visibility lowest(Visibility... candidates) {\r\n        Visibility visibility = PUBLIC;\r\n        for (Visibility candidate : candidates) {\r\n            if (candidate.ordinal() > visibility.ordinal()) {\r\n                visibility = candidate;\r\n            }\r\n        }\r\n        return visibility;\r\n    }\r\n\r\n    /**\r\n     * Returns the index of the lowest {@link Visibility} from the given\r\n     * candidates.\r\n     * @param candidates the candidates to check\r\n     * @return the index of the lowest {@link Visibility} from the candidates\r\n     */\r\n    static int lowestIndex(Visibility... candidates) {\r\n        Visibility visibility = PUBLIC;\r\n        int index = 0;\r\n        for (int i = 0; i < candidates.length; i++) {\r\n            Visibility candidate = candidates[i];\r\n            if (candidate.ordinal() > visibility.ordinal()) {\r\n                visibility = candidate;\r\n                index = i;\r\n            }\r\n        }\r\n        return index;\r\n    }\r\n}",
+    "comment": "\n * Determine the access control of a {@link Member} or type signature.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#forMember(Member)",
+    "entityType": "method",
+    "code": "/**\r\n * Create an {@link AccessControl} for the given member. This considers the\r\n * member modifier, parameter types, return types and any enclosing classes.\r\n * The lowest overall {@link Visibility} is used.\r\n * @param member the source member\r\n * @return the {@link AccessControl} for the member\r\n */\r\npublic static AccessControl forMember(Member member) {\r\n    return new AccessControl(member.getDeclaringClass(), Visibility.forMember(member));\r\n}",
+    "comment": "\n\t * Create an {@link AccessControl} for the given member. This considers the\n\t * member modifier, parameter types, return types and any enclosing classes.\n\t * The lowest overall {@link Visibility} is used.\n\t * @param member the source member\n\t * @return the {@link AccessControl} for the member\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#forResolvableType(ResolvableType)",
+    "entityType": "method",
+    "code": "/**\r\n * Create an {@link AccessControl} for the given {@link ResolvableType}.\r\n * This considers the type itself as well as any generics.\r\n * @param resolvableType the source resolvable type\r\n * @return the {@link AccessControl} for the type\r\n */\r\npublic static AccessControl forResolvableType(ResolvableType resolvableType) {\r\n    return new AccessControl(resolvableType.toClass(), Visibility.forResolvableType(resolvableType));\r\n}",
+    "comment": "\n\t * Create an {@link AccessControl} for the given {@link ResolvableType}.\n\t * This considers the type itself as well as any generics.\n\t * @param resolvableType the source resolvable type\n\t * @return the {@link AccessControl} for the type\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#forClass(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Create an {@link AccessControl} for the given {@link Class}.\r\n * @param type the source class\r\n * @return the {@link AccessControl} for the class\r\n */\r\npublic static AccessControl forClass(Class<?> type) {\r\n    return new AccessControl(type, Visibility.forClass(type));\r\n}",
+    "comment": "\n\t * Create an {@link AccessControl} for the given {@link Class}.\n\t * @param type the source class\n\t * @return the {@link AccessControl} for the class\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#lowest(AccessControl)",
+    "entityType": "method",
+    "code": "/**\r\n * Returns the lowest {@link AccessControl} from the given candidates.\r\n * @param candidates the candidates to check\r\n * @return the lowest {@link AccessControl} from the candidates\r\n */\r\npublic static AccessControl lowest(AccessControl... candidates) {\r\n    int index = Visibility.lowestIndex(Arrays.stream(candidates).map(AccessControl::getVisibility).toArray(Visibility[]::new));\r\n    return candidates[index];\r\n}",
+    "comment": "\n\t * Returns the lowest {@link AccessControl} from the given candidates.\n\t * @param candidates the candidates to check\n\t * @return the lowest {@link AccessControl} from the candidates\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#getVisibility()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the lowest {@link Visibility} of this instance.\r\n * @return the visibility\r\n */\r\npublic Visibility getVisibility() {\r\n    return this.visibility;\r\n}",
+    "comment": "\n\t * Return the lowest {@link Visibility} of this instance.\n\t * @return the visibility\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#isPublic()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the member or type signature backed by ths instance is\r\n * accessible from any package.\r\n * @return {@code true} if it is public\r\n */\r\npublic boolean isPublic() {\r\n    return this.visibility == Visibility.PUBLIC;\r\n}",
+    "comment": "\n\t * Return whether the member or type signature backed by ths instance is\n\t * accessible from any package.\n\t * @return {@code true} if it is public\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControl#isAccessibleFrom(ClassName)",
+    "entityType": "method",
+    "code": "/**\r\n * Specify whether the member or type signature backed by this instance is\r\n * accessible from the specified {@link ClassName}.\r\n * @param type the type to check\r\n * @return {@code true} if it is accessible\r\n */\r\npublic boolean isAccessibleFrom(ClassName type) {\r\n    if (this.visibility == Visibility.PRIVATE) {\r\n        return false;\r\n    }\r\n    if (this.visibility == Visibility.PUBLIC) {\r\n        return true;\r\n    }\r\n    return this.target.getPackageName().equals(type.packageName());\r\n}",
+    "comment": "\n\t * Specify whether the member or type signature backed by this instance is\n\t * accessible from the specified {@link ClassName}.\n\t * @param type the type to check\n\t * @return {@code true} if it is accessible\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid createWithNullCollection() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new CompositeTaskDecorator(null)).withMessage(\"TaskDecorators must not be null\");\r\n}\n@Test\r\nvoid decorateWithNullRunnable() {\r\n    CompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of());\r\n    assertThatIllegalArgumentException().isThrownBy(() -> taskDecorator.decorate(null)).withMessage(\"Runnable must not be null\");\r\n}\n@Test\r\nvoid decorate() {\r\n    TaskDecorator first = mockNoOpTaskDecorator();\r\n    TaskDecorator second = mockNoOpTaskDecorator();\r\n    TaskDecorator third = mockNoOpTaskDecorator();\r\n    CompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of(first, second, third));\r\n    Runnable runnable = mock();\r\n    taskDecorator.decorate(runnable);\r\n    InOrder ordered = inOrder(first, second, third);\r\n    ordered.verify(first).decorate(runnable);\r\n    ordered.verify(second).decorate(runnable);\r\n    ordered.verify(third).decorate(runnable);\r\n}\n@Test\r\nvoid decorateReusesResultOfPreviousRun() {\r\n    Runnable original = mock();\r\n    Runnable firstDecorated = mock();\r\n    TaskDecorator first = mock();\r\n    given(first.decorate(original)).willReturn(firstDecorated);\r\n    Runnable secondDecorated = mock();\r\n    TaskDecorator second = mock();\r\n    given(second.decorate(firstDecorated)).willReturn(secondDecorated);\r\n    Runnable result = new CompositeTaskDecorator(List.of(first, second)).decorate(original);\r\n    assertThat(result).isSameAs(secondDecorated);\r\n    verify(first).decorate(original);\r\n    verify(second).decorate(firstDecorated);\r\n}\nprivate TaskDecorator mockNoOpTaskDecorator() {\r\n    TaskDecorator mock = mock();\r\n    given(mock.decorate(any())).willAnswer(invocation -> invocation.getArguments()[0]);\r\n    return mock;\r\n}",
+    "comment": "\n * Tests for {@link CompositeTaskDecorator}.\n *\n * @author Tadaya Tsuyukubo\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecoratorTests#createWithNullCollection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWithNullCollection() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new CompositeTaskDecorator(null)).withMessage(\"TaskDecorators must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateWithNullRunnable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decorateWithNullRunnable() {\r\n    CompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of());\r\n    assertThatIllegalArgumentException().isThrownBy(() -> taskDecorator.decorate(null)).withMessage(\"Runnable must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorate()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decorate() {\r\n    TaskDecorator first = mockNoOpTaskDecorator();\r\n    TaskDecorator second = mockNoOpTaskDecorator();\r\n    TaskDecorator third = mockNoOpTaskDecorator();\r\n    CompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of(first, second, third));\r\n    Runnable runnable = mock();\r\n    taskDecorator.decorate(runnable);\r\n    InOrder ordered = inOrder(first, second, third);\r\n    ordered.verify(first).decorate(runnable);\r\n    ordered.verify(second).decorate(runnable);\r\n    ordered.verify(third).decorate(runnable);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateReusesResultOfPreviousRun()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decorateReusesResultOfPreviousRun() {\r\n    Runnable original = mock();\r\n    Runnable firstDecorated = mock();\r\n    TaskDecorator first = mock();\r\n    given(first.decorate(original)).willReturn(firstDecorated);\r\n    Runnable secondDecorated = mock();\r\n    TaskDecorator second = mock();\r\n    given(second.decorate(firstDecorated)).willReturn(secondDecorated);\r\n    Runnable result = new CompositeTaskDecorator(List.of(first, second)).decorate(original);\r\n    assertThat(result).isSameAs(secondDecorated);\r\n    verify(first).decorate(original);\r\n    verify(second).decorate(firstDecorated);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecoratorTests#mockNoOpTaskDecorator()",
+    "entityType": "method",
+    "code": "private TaskDecorator mockNoOpTaskDecorator() {\r\n    TaskDecorator mock = mock();\r\n    given(mock.decorate(any())).willAnswer(invocation -> invocation.getArguments()[0]);\r\n    return mock;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AppendableConsumerInputStreamSource",
+    "entityType": "class",
+    "code": "private final ThrowingConsumer<Appendable> content;\nAppendableConsumerInputStreamSource(ThrowingConsumer<Appendable> content) {\r\n    this.content = content;\r\n}\n@Override\r\npublic InputStream getInputStream() {\r\n    return new ByteArrayInputStream(toString().getBytes(StandardCharsets.UTF_8));\r\n}\n@Override\r\npublic String toString() {\r\n    StringBuilder buffer = new StringBuilder();\r\n    this.content.accept(buffer);\r\n    return buffer.toString();\r\n}",
+    "comment": "\n * Adapter class to convert a {@link ThrowingConsumer} of {@link Appendable} to\n * an {@link InputStreamSource}.\n *\n * @author Phillip Webb\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AppendableConsumerInputStreamSource#getInputStream()",
+    "entityType": "method",
+    "code": "@Override\r\npublic InputStream getInputStream() {\r\n    return new ByteArrayInputStream(toString().getBytes(StandardCharsets.UTF_8));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AppendableConsumerInputStreamSource#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    StringBuilder buffer = new StringBuilder();\r\n    this.content.accept(buffer);\r\n    return buffer.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ContextPropagatingTaskDecoratorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid shouldPropagateContextInTaskExecution() throws Exception {\r\n    AtomicReference<String> actual = new AtomicReference<>(\"\");\r\n    ContextRegistry registry = new ContextRegistry();\r\n    registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());\r\n    ContextSnapshotFactory snapshotFactory = ContextSnapshotFactory.builder().contextRegistry(registry).build();\r\n    Runnable task = () -> actual.set(TestThreadLocalHolder.getValue());\r\n    TestThreadLocalHolder.setValue(\"expected\");\r\n    Thread execution = new Thread(new ContextPropagatingTaskDecorator(snapshotFactory).decorate(task));\r\n    execution.start();\r\n    execution.join();\r\n    assertThat(actual.get()).isEqualTo(\"expected\");\r\n    TestThreadLocalHolder.reset();\r\n}\nstatic class TestThreadLocalHolder {\r\n\r\n    private static final ThreadLocal<String> holder = new ThreadLocal<>();\r\n\r\n    static void setValue(String value) {\r\n        holder.set(value);\r\n    }\r\n\r\n    static String getValue() {\r\n        return holder.get();\r\n    }\r\n\r\n    static void reset() {\r\n        holder.remove();\r\n    }\r\n}\nstatic class TestThreadLocalAccessor implements ThreadLocalAccessor<String> {\r\n\r\n    static final String KEY = \"test.threadlocal\";\r\n\r\n    @Override\r\n    public Object key() {\r\n        return KEY;\r\n    }\r\n\r\n    @Override\r\n    public String getValue() {\r\n        return TestThreadLocalHolder.getValue();\r\n    }\r\n\r\n    @Override\r\n    public void setValue(String value) {\r\n        TestThreadLocalHolder.setValue(value);\r\n    }\r\n\r\n    @Override\r\n    public void setValue() {\r\n        TestThreadLocalHolder.reset();\r\n    }\r\n\r\n    @Override\r\n    public void restore(String previousValue) {\r\n        setValue(previousValue);\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link ContextPropagatingTaskDecorator}.\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ContextPropagatingTaskDecoratorTests#shouldPropagateContextInTaskExecution()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldPropagateContextInTaskExecution() throws Exception {\r\n    AtomicReference<String> actual = new AtomicReference<>(\"\");\r\n    ContextRegistry registry = new ContextRegistry();\r\n    registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());\r\n    ContextSnapshotFactory snapshotFactory = ContextSnapshotFactory.builder().contextRegistry(registry).build();\r\n    Runnable task = () -> actual.set(TestThreadLocalHolder.getValue());\r\n    TestThreadLocalHolder.setValue(\"expected\");\r\n    Thread execution = new Thread(new ContextPropagatingTaskDecorator(snapshotFactory).decorate(task));\r\n    execution.start();\r\n    execution.join();\r\n    assertThat(actual.get()).isEqualTo(\"expected\");\r\n    TestThreadLocalHolder.reset();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalHolder",
+    "entityType": "class",
+    "code": "private static final ThreadLocal<String> holder = new ThreadLocal<>();\nstatic void setValue(String value) {\r\n    holder.set(value);\r\n}\nstatic String getValue() {\r\n    return holder.get();\r\n}\nstatic void reset() {\r\n    holder.remove();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalHolder#setValue(String)",
+    "entityType": "method",
+    "code": "static void setValue(String value) {\r\n    holder.set(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalHolder#getValue()",
+    "entityType": "method",
+    "code": "static String getValue() {\r\n    return holder.get();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalHolder#reset()",
+    "entityType": "method",
+    "code": "static void reset() {\r\n    holder.remove();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalAccessor",
+    "entityType": "class",
+    "code": "static final String KEY = \"test.threadlocal\";\n@Override\r\npublic Object key() {\r\n    return KEY;\r\n}\n@Override\r\npublic String getValue() {\r\n    return TestThreadLocalHolder.getValue();\r\n}\n@Override\r\npublic void setValue(String value) {\r\n    TestThreadLocalHolder.setValue(value);\r\n}\n@Override\r\npublic void setValue() {\r\n    TestThreadLocalHolder.reset();\r\n}\n@Override\r\npublic void restore(String previousValue) {\r\n    setValue(previousValue);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalAccessor#key()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Object key() {\r\n    return KEY;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalAccessor#getValue()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getValue() {\r\n    return TestThreadLocalHolder.getValue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setValue(String value) {\r\n    TestThreadLocalHolder.setValue(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setValue() {\r\n    TestThreadLocalHolder.reset();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TestThreadLocalAccessor#restore(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void restore(String previousValue) {\r\n    setValue(previousValue);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator",
+    "entityType": "class",
+    "code": "private static final String SEPARATOR = \"__\";\nprivate static final String AOT_FEATURE = \"Aot\";\nprivate final ClassName defaultTarget;\nprivate final String featureNamePrefix;\nprivate final Map<String, AtomicInteger> sequenceGenerator;\n/**\r\n * Create a new instance using the specified {@code defaultTarget} and no\r\n * feature name prefix.\r\n * @param defaultTarget the default target class to use\r\n */\r\npublic ClassNameGenerator(ClassName defaultTarget) {\r\n    this(defaultTarget, \"\");\r\n}\n/**\r\n * Create a new instance using the specified {@code defaultTarget} and\r\n * feature name prefix.\r\n * @param defaultTarget the default target class to use\r\n * @param featureNamePrefix the prefix to use to qualify feature names\r\n */\r\npublic ClassNameGenerator(ClassName defaultTarget, String featureNamePrefix) {\r\n    this(defaultTarget, featureNamePrefix, new ConcurrentHashMap<>());\r\n}\nprivate ClassNameGenerator(ClassName defaultTarget, String featureNamePrefix, Map<String, AtomicInteger> sequenceGenerator) {\r\n    Assert.notNull(defaultTarget, \"'defaultTarget' must not be null\");\r\n    this.defaultTarget = defaultTarget;\r\n    this.featureNamePrefix = (!StringUtils.hasText(featureNamePrefix) ? \"\" : featureNamePrefix);\r\n    this.sequenceGenerator = sequenceGenerator;\r\n}\nString getFeatureNamePrefix() {\r\n    return this.featureNamePrefix;\r\n}\n/**\r\n * Generate a unique {@link ClassName} based on the specified\r\n * {@code featureName} and {@code target}. If the {@code target} is\r\n * {@code null}, the configured main target of this instance is used.\r\n * <p>The class name is a suffixed version of the target. For instance, a\r\n * {@code com.example.Demo} target with an {@code Initializer} feature name\r\n * leads to a {@code com.example.Demo__Initializer} generated class name.\r\n * The feature name is qualified by the configured feature name prefix,\r\n * if any.\r\n * <p>Generated class names are unique. If such a feature was already\r\n * requested for this target, a counter is used to ensure uniqueness.\r\n * @param featureName the name of the feature that the generated class\r\n * supports\r\n * @param target the class the newly generated class relates to, or\r\n * {@code null} to use the main target\r\n * @return a unique generated class name\r\n */\r\npublic ClassName generateClassName(String featureName, @Nullable ClassName target) {\r\n    return generateSequencedClassName(getRootName(featureName, target));\r\n}\nprivate String getRootName(String featureName, @Nullable ClassName target) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    featureName = clean(featureName);\r\n    ClassName targetToUse = (target != null ? target : this.defaultTarget);\r\n    String featureNameToUse = this.featureNamePrefix + featureName;\r\n    return toName(targetToUse).replace(\"$\", \"_\") + SEPARATOR + StringUtils.capitalize(featureNameToUse);\r\n}\nprivate String clean(String name) {\r\n    StringBuilder clean = new StringBuilder();\r\n    boolean lastNotLetter = true;\r\n    for (char ch : name.toCharArray()) {\r\n        if (!Character.isLetter(ch)) {\r\n            lastNotLetter = true;\r\n            continue;\r\n        }\r\n        clean.append(lastNotLetter ? Character.toUpperCase(ch) : ch);\r\n        lastNotLetter = false;\r\n    }\r\n    return (!clean.isEmpty()) ? clean.toString() : AOT_FEATURE;\r\n}\nprivate ClassName generateSequencedClassName(String name) {\r\n    int sequence = this.sequenceGenerator.computeIfAbsent(name, key -> new AtomicInteger()).getAndIncrement();\r\n    if (sequence > 0) {\r\n        name = name + sequence;\r\n    }\r\n    return ClassName.get(ClassUtils.getPackageName(name), ClassUtils.getShortName(name));\r\n}\n/**\r\n * Create a new {@link ClassNameGenerator} instance for the specified\r\n * feature name prefix, keeping track of all the class names generated\r\n * by this instance.\r\n * @param featureNamePrefix the feature name prefix to use\r\n * @return a new instance for the specified feature name prefix\r\n */\r\nClassNameGenerator withFeatureNamePrefix(String featureNamePrefix) {\r\n    return new ClassNameGenerator(this.defaultTarget, featureNamePrefix, this.sequenceGenerator);\r\n}\nprivate static String toName(ClassName className) {\r\n    return GeneratedTypeReference.of(className).getName();\r\n}",
+    "comment": "\n * Generate unique class names based on a target {@link ClassName} and a\n * feature name.\n *\n * <p>This class is stateful, so the same instance should be used for all name\n * generation.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#getFeatureNamePrefix()",
+    "entityType": "method",
+    "code": "String getFeatureNamePrefix() {\r\n    return this.featureNamePrefix;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#generateClassName(String,ClassName)",
+    "entityType": "method",
+    "code": "/**\r\n * Generate a unique {@link ClassName} based on the specified\r\n * {@code featureName} and {@code target}. If the {@code target} is\r\n * {@code null}, the configured main target of this instance is used.\r\n * <p>The class name is a suffixed version of the target. For instance, a\r\n * {@code com.example.Demo} target with an {@code Initializer} feature name\r\n * leads to a {@code com.example.Demo__Initializer} generated class name.\r\n * The feature name is qualified by the configured feature name prefix,\r\n * if any.\r\n * <p>Generated class names are unique. If such a feature was already\r\n * requested for this target, a counter is used to ensure uniqueness.\r\n * @param featureName the name of the feature that the generated class\r\n * supports\r\n * @param target the class the newly generated class relates to, or\r\n * {@code null} to use the main target\r\n * @return a unique generated class name\r\n */\r\npublic ClassName generateClassName(String featureName, @Nullable ClassName target) {\r\n    return generateSequencedClassName(getRootName(featureName, target));\r\n}",
+    "comment": "\n\t * Generate a unique {@link ClassName} based on the specified\n\t * {@code featureName} and {@code target}. If the {@code target} is\n\t * {@code null}, the configured main target of this instance is used.\n\t * <p>The class name is a suffixed version of the target. For instance, a\n\t * {@code com.example.Demo} target with an {@code Initializer} feature name\n\t * leads to a {@code com.example.Demo__Initializer} generated class name.\n\t * The feature name is qualified by the configured feature name prefix,\n\t * if any.\n\t * <p>Generated class names are unique. If such a feature was already\n\t * requested for this target, a counter is used to ensure uniqueness.\n\t * @param featureName the name of the feature that the generated class\n\t * supports\n\t * @param target the class the newly generated class relates to, or\n\t * {@code null} to use the main target\n\t * @return a unique generated class name\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#getRootName(String,ClassName)",
+    "entityType": "method",
+    "code": "private String getRootName(String featureName, @Nullable ClassName target) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    featureName = clean(featureName);\r\n    ClassName targetToUse = (target != null ? target : this.defaultTarget);\r\n    String featureNameToUse = this.featureNamePrefix + featureName;\r\n    return toName(targetToUse).replace(\"$\", \"_\") + SEPARATOR + StringUtils.capitalize(featureNameToUse);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#clean(String)",
+    "entityType": "method",
+    "code": "private String clean(String name) {\r\n    StringBuilder clean = new StringBuilder();\r\n    boolean lastNotLetter = true;\r\n    for (char ch : name.toCharArray()) {\r\n        if (!Character.isLetter(ch)) {\r\n            lastNotLetter = true;\r\n            continue;\r\n        }\r\n        clean.append(lastNotLetter ? Character.toUpperCase(ch) : ch);\r\n        lastNotLetter = false;\r\n    }\r\n    return (!clean.isEmpty()) ? clean.toString() : AOT_FEATURE;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#generateSequencedClassName(String)",
+    "entityType": "method",
+    "code": "private ClassName generateSequencedClassName(String name) {\r\n    int sequence = this.sequenceGenerator.computeIfAbsent(name, key -> new AtomicInteger()).getAndIncrement();\r\n    if (sequence > 0) {\r\n        name = name + sequence;\r\n    }\r\n    return ClassName.get(ClassUtils.getPackageName(name), ClassUtils.getShortName(name));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#withFeatureNamePrefix(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a new {@link ClassNameGenerator} instance for the specified\r\n * feature name prefix, keeping track of all the class names generated\r\n * by this instance.\r\n * @param featureNamePrefix the feature name prefix to use\r\n * @return a new instance for the specified feature name prefix\r\n */\r\nClassNameGenerator withFeatureNamePrefix(String featureNamePrefix) {\r\n    return new ClassNameGenerator(this.defaultTarget, featureNamePrefix, this.sequenceGenerator);\r\n}",
+    "comment": "\n\t * Create a new {@link ClassNameGenerator} instance for the specified\n\t * feature name prefix, keeping track of all the class names generated\n\t * by this instance.\n\t * @param featureNamePrefix the feature name prefix to use\n\t * @return a new instance for the specified feature name prefix\n\t "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassNameGenerator#toName(ClassName)",
+    "entityType": "method",
+    "code": "private static String toName(ClassName className) {\r\n    return GeneratedTypeReference.of(className).getName();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.TestGroupParsingTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid parseNull() {\r\n    assertThat(TestGroup.parse(null)).isEqualTo(Collections.emptySet());\r\n}\n@Test\r\nvoid parseEmptyString() {\r\n    assertThat(TestGroup.parse(\"\")).isEqualTo(Collections.emptySet());\r\n}\n@Test\r\nvoid parseBlankString() {\r\n    assertThat(TestGroup.parse(\"     \")).isEqualTo(Collections.emptySet());\r\n}\n@Test\r\nvoid parseWithSpaces() {\r\n    assertThat(TestGroup.parse(\" LONG_RUNNING,  LONG_RUNNING \")).containsOnly(TestGroup.LONG_RUNNING);\r\n}\n@Test\r\nvoid parseInMixedCase() {\r\n    assertThat(TestGroup.parse(\"long_running,  LonG_RunnING\")).containsOnly(TestGroup.LONG_RUNNING);\r\n}\n@Test\r\nvoid parseMissing() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> TestGroup.parse(\"long_running, missing\")).withMessageContaining(\"Unable to find test group 'missing' when parsing \" + \"testGroups value: 'long_running, missing'. Available groups include: \" + \"[LONG_RUNNING]\");\r\n}\n@Test\r\nvoid parseAll() {\r\n    assertThat(TestGroup.parse(\"all\")).isEqualTo(EnumSet.allOf(TestGroup.class));\r\n}\n@Test\r\nvoid parseAllExceptLongRunning() {\r\n    Set<TestGroup> expected = EnumSet.allOf(TestGroup.class);\r\n    expected.remove(TestGroup.LONG_RUNNING);\r\n    assertThat(TestGroup.parse(\"all-long_running\")).isEqualTo(expected);\r\n}\n@Test\r\nvoid parseAllExceptMissing() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> TestGroup.parse(\"all-missing\")).withMessageContaining(\"Unable to find test group 'missing' when parsing \" + \"testGroups value: 'all-missing'. Available groups include: \" + \"[LONG_RUNNING]\");\r\n}",
+    "comment": "\n * Tests for {@link TestGroup} parsing.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.TestGroupParsingTests#parseNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseNull() {\r\n    assertThat(TestGroup.parse(null)).isEqualTo(Collections.emptySet());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.TestGroupParsingTests#parseEmptyString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseEmptyString() {\r\n    assertThat(TestGroup.parse(\"\")).isEqualTo(Collections.emptySet());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.TestGroupParsingTests#parseBlankString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseBlankString() {\r\n    assertThat(TestGroup.parse(\"     \")).isEqualTo(Collections.emptySet());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.TestGroupParsingTests#parseWithSpaces()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseWithSpaces() {\r\n    assertThat(TestGroup.parse(\" LONG_RUNNING,  LONG_RUNNING \")).containsOnly(TestGroup.LONG_RUNNING);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.testfixture.TestGroupParsingTests#parseInMixedCase()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parseInMixedCase() {\r\n    assertThat(TestGroup.parse(\"long_running,  LonG_RunnING\")).containsOnly(TestGroup.LONG_RUNNING);\r\n}",
+    "comment": ""
+  }
+]
