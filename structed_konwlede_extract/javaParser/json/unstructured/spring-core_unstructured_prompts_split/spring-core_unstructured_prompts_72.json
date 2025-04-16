@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.task.ConcurrencyThrottleAdapter",
+    "entityType": "class",
+    "code": "@Override\r\nprotected void beforeAccess() {\r\n    super.beforeAccess();\r\n}\n@Override\r\nprotected void afterAccess() {\r\n    super.afterAccess();\r\n}",
+    "comment": "\n\t * Subclass of the general ConcurrencyThrottleSupport class,\n\t * making {@code beforeAccess()} and {@code afterAccess()}\n\t * visible to the surrounding class.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.ConcurrencyThrottleAdapter#beforeAccess()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void beforeAccess() {\r\n    super.beforeAccess();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.ConcurrencyThrottleAdapter#afterAccess()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void afterAccess() {\r\n    super.afterAccess();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskTrackingRunnable",
+    "entityType": "class",
+    "code": "private final Runnable task;\npublic TaskTrackingRunnable(Runnable task) {\r\n    Assert.notNull(task, \"Task must not be null\");\r\n    this.task = task;\r\n}\n@Override\r\npublic void run() {\r\n    Set<Thread> threads = activeThreads;\r\n    Thread thread = null;\r\n    if (threads != null) {\r\n        thread = Thread.currentThread();\r\n        threads.add(thread);\r\n    }\r\n    try {\r\n        this.task.run();\r\n    } finally {\r\n        if (threads != null) {\r\n            threads.remove(thread);\r\n            if (!isActive()) {\r\n                synchronized (threads) {\r\n                    if (threads.isEmpty()) {\r\n                        threads.notify();\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        concurrencyThrottle.afterAccess();\r\n    }\r\n}",
+    "comment": "\n\t * Decorates a target task with active thread tracking\n\t * and concurrency throttle management, if necessary.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskTrackingRunnable#run()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void run() {\r\n    Set<Thread> threads = activeThreads;\r\n    Thread thread = null;\r\n    if (threads != null) {\r\n        thread = Thread.currentThread();\r\n        threads.add(thread);\r\n    }\r\n    try {\r\n        this.task.run();\r\n    } finally {\r\n        if (threads != null) {\r\n            threads.remove(thread);\r\n            if (!isActive()) {\r\n                synchronized (threads) {\r\n                    if (threads.isEmpty()) {\r\n                        threads.notify();\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        concurrencyThrottle.afterAccess();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecorator",
+    "entityType": "class",
+    "code": "private final List<TaskDecorator> taskDecorators;\n/**\r\n * Create a new instance.\r\n * @param taskDecorators the taskDecorators to delegate to\r\n */\r\npublic CompositeTaskDecorator(Collection<? extends TaskDecorator> taskDecorators) {\r\n    Assert.notNull(taskDecorators, \"TaskDecorators must not be null\");\r\n    this.taskDecorators = new ArrayList<>(taskDecorators);\r\n}\n@Override\r\npublic Runnable decorate(Runnable runnable) {\r\n    Assert.notNull(runnable, \"Runnable must not be null\");\r\n    for (TaskDecorator taskDecorator : this.taskDecorators) {\r\n        runnable = taskDecorator.decorate(runnable);\r\n    }\r\n    return runnable;\r\n}",
+    "comment": "\n * Composite {@link TaskDecorator} that delegates to other task decorators.\n *\n * @author Tadaya Tsuyukubo\n * @since 6.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.CompositeTaskDecorator#decorate(Runnable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Runnable decorate(Runnable runnable) {\r\n    Assert.notNull(runnable, \"Runnable must not be null\");\r\n    for (TaskDecorator taskDecorator : this.taskDecorators) {\r\n        runnable = taskDecorator.decorate(runnable);\r\n    }\r\n    return runnable;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ContextPropagatingTaskDecorator",
+    "entityType": "class",
+    "code": "private final ContextSnapshotFactory factory;\n/**\r\n * Create a new decorator that uses a default instance of the {@link ContextSnapshotFactory}.\r\n */\r\npublic ContextPropagatingTaskDecorator() {\r\n    this(ContextSnapshotFactory.builder().build());\r\n}\n/**\r\n * Create a new decorator using the given {@link ContextSnapshotFactory}.\r\n * @param factory the context snapshot factory to use.\r\n */\r\npublic ContextPropagatingTaskDecorator(ContextSnapshotFactory factory) {\r\n    this.factory = factory;\r\n}\n@Override\r\npublic Runnable decorate(Runnable runnable) {\r\n    return this.factory.captureAll().wrap(runnable);\r\n}",
+    "comment": "\n * {@link TaskDecorator} that {@link ContextSnapshot#wrap(Runnable) wraps the execution}\n * of tasks, assisting with context propagation.\n *\n * <p>This operation is only useful when the task execution is scheduled on a different\n * thread than the original call stack; this depends on the choice of\n * {@link org.springframework.core.task.TaskExecutor}. This is particularly useful for\n * restoring a logging context or an observation context for the task execution. Note that\n * this decorator will cause some overhead for task execution and is not recommended for\n * applications that run lots of very small tasks.\n *\n * @author Brian Clozel\n * @since 6.1\n * @see CompositeTaskDecorator\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ContextPropagatingTaskDecorator#decorate(Runnable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Runnable decorate(Runnable runnable) {\r\n    return this.factory.captureAll().wrap(runnable);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter",
+    "entityType": "class",
+    "code": "private final TaskExecutor taskExecutor;\n/**\r\n * Create a new ExecutorServiceAdapter, using the given target executor.\r\n * @param taskExecutor the target executor to delegate to\r\n */\r\npublic ExecutorServiceAdapter(TaskExecutor taskExecutor) {\r\n    Assert.notNull(taskExecutor, \"TaskExecutor must not be null\");\r\n    this.taskExecutor = taskExecutor;\r\n}\n@Override\r\npublic void execute(Runnable task) {\r\n    this.taskExecutor.execute(task);\r\n}\n@Override\r\npublic void shutdown() {\r\n    throw new IllegalStateException(\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\r\n}\n@Override\r\npublic List<Runnable> shutdownNow() {\r\n    throw new IllegalStateException(\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\r\n}\n@Override\r\npublic boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {\r\n    throw new IllegalStateException(\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\r\n}\n@Override\r\npublic boolean isShutdown() {\r\n    return false;\r\n}\n@Override\r\npublic boolean isTerminated() {\r\n    return false;\r\n}\n// @Override on JDK 19\r\npublic void close() {\r\n    // no-op in order to avoid container-triggered shutdown call which would lead to exception logging\r\n}",
+    "comment": "\n * Adapter that takes a Spring {@link org.springframework.core.task.TaskExecutor}\n * and exposes a full {@code java.util.concurrent.ExecutorService} for it.\n *\n * <p>This is primarily for adapting to client components that communicate via the\n * {@code java.util.concurrent.ExecutorService} API. It can also be used as\n * common ground between a local Spring {@code TaskExecutor} backend and a\n * JNDI-located {@code ManagedExecutorService} in a Jakarta EE environment.\n *\n * <p><b>NOTE:</b> This ExecutorService adapter does <em>not</em> support the\n * lifecycle methods in the {@code java.util.concurrent.ExecutorService} API\n * (\"shutdown()\" etc.), similar to a server-wide {@code ManagedExecutorService}\n * in a Jakarta EE environment. The lifecycle is always up to the backend pool,\n * with this adapter acting as an access-only proxy for that target pool.\n *\n * @author Juergen Hoeller\n * @since 3.0\n * @see java.util.concurrent.ExecutorService\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#execute(Runnable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void execute(Runnable task) {\r\n    this.taskExecutor.execute(task);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#shutdown()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void shutdown() {\r\n    throw new IllegalStateException(\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#shutdownNow()",
+    "entityType": "method",
+    "code": "@Override\r\npublic List<Runnable> shutdownNow() {\r\n    throw new IllegalStateException(\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#awaitTermination(long,TimeUnit)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {\r\n    throw new IllegalStateException(\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#isShutdown()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isShutdown() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#isTerminated()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isTerminated() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.ExecutorServiceAdapter#close()",
+    "entityType": "method",
+    "code": "// @Override on JDK 19\r\npublic void close() {\r\n    // no-op in order to avoid container-triggered shutdown call which would lead to exception logging\r\n}",
+    "comment": " @Override on JDK 19"
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TaskExecutorAdapter",
+    "entityType": "class",
+    "code": "private final Executor concurrentExecutor;\n@Nullable\r\nprivate TaskDecorator taskDecorator;\n/**\r\n * Create a new TaskExecutorAdapter,\r\n * using the given JDK concurrent executor.\r\n * @param concurrentExecutor the JDK concurrent executor to delegate to\r\n */\r\npublic TaskExecutorAdapter(Executor concurrentExecutor) {\r\n    Assert.notNull(concurrentExecutor, \"Executor must not be null\");\r\n    this.concurrentExecutor = concurrentExecutor;\r\n}\n/**\r\n * Specify a custom {@link TaskDecorator} to be applied to any {@link Runnable}\r\n * about to be executed.\r\n * <p>Note that such a decorator is not necessarily being applied to the\r\n * user-supplied {@code Runnable}/{@code Callable} but rather to the actual\r\n * execution callback (which may be a wrapper around the user-supplied task).\r\n * <p>The primary use case is to set some execution context around the task's\r\n * invocation, or to provide some monitoring/statistics for task execution.\r\n * <p><b>NOTE:</b> Exception handling in {@code TaskDecorator} implementations\r\n * is limited to plain {@code Runnable} execution via {@code execute} calls.\r\n * In case of {@code #submit} calls, the exposed {@code Runnable} will be a\r\n * {@code FutureTask} which does not propagate any exceptions; you might\r\n * have to cast it and call {@code Future#get} to evaluate exceptions.\r\n * @since 4.3\r\n */\r\npublic final void setTaskDecorator(TaskDecorator taskDecorator) {\r\n    this.taskDecorator = taskDecorator;\r\n}\n/**\r\n * Delegates to the specified JDK concurrent executor.\r\n * @see java.util.concurrent.Executor#execute(Runnable)\r\n */\r\n@Override\r\npublic void execute(Runnable task) {\r\n    try {\r\n        doExecute(this.concurrentExecutor, this.taskDecorator, task);\r\n    } catch (RejectedExecutionException ex) {\r\n        throw new TaskRejectedException(this.concurrentExecutor, task, ex);\r\n    }\r\n}\n@Override\r\npublic Future<?> submit(Runnable task) {\r\n    try {\r\n        if (this.taskDecorator == null && this.concurrentExecutor instanceof ExecutorService executorService) {\r\n            return executorService.submit(task);\r\n        } else {\r\n            FutureTask<Object> future = new FutureTask<>(task, null);\r\n            doExecute(this.concurrentExecutor, this.taskDecorator, future);\r\n            return future;\r\n        }\r\n    } catch (RejectedExecutionException ex) {\r\n        throw new TaskRejectedException(this.concurrentExecutor, task, ex);\r\n    }\r\n}\n@Override\r\npublic <T> Future<T> submit(Callable<T> task) {\r\n    try {\r\n        if (this.taskDecorator == null && this.concurrentExecutor instanceof ExecutorService executorService) {\r\n            return executorService.submit(task);\r\n        } else {\r\n            FutureTask<T> future = new FutureTask<>(task);\r\n            doExecute(this.concurrentExecutor, this.taskDecorator, future);\r\n            return future;\r\n        }\r\n    } catch (RejectedExecutionException ex) {\r\n        throw new TaskRejectedException(this.concurrentExecutor, task, ex);\r\n    }\r\n}\n/**\r\n * Actually execute the given {@code Runnable} (which may be a user-supplied task\r\n * or a wrapper around a user-supplied task) with the given executor.\r\n * @param concurrentExecutor the underlying JDK concurrent executor to delegate to\r\n * @param taskDecorator the specified decorator to be applied, if any\r\n * @param runnable the runnable to execute\r\n * @throws RejectedExecutionException if the given runnable cannot be accepted\r\n * @since 4.3\r\n */\r\nprotected void doExecute(Executor concurrentExecutor, @Nullable TaskDecorator taskDecorator, Runnable runnable) throws RejectedExecutionException {\r\n    concurrentExecutor.execute(taskDecorator != null ? taskDecorator.decorate(runnable) : runnable);\r\n}",
+    "comment": "\n * Adapter that takes a JDK {@code java.util.concurrent.Executor} and\n * exposes a Spring {@link org.springframework.core.task.TaskExecutor} for it.\n * Also detects an extended {@code java.util.concurrent.ExecutorService}, adapting\n * the {@link org.springframework.core.task.AsyncTaskExecutor} interface accordingly.\n *\n * @author Juergen Hoeller\n * @since 3.0\n * @see java.util.concurrent.Executor\n * @see java.util.concurrent.ExecutorService\n * @see java.util.concurrent.Executors\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TaskExecutorAdapter#setTaskDecorator(TaskDecorator)",
+    "entityType": "method",
+    "code": "/**\r\n * Specify a custom {@link TaskDecorator} to be applied to any {@link Runnable}\r\n * about to be executed.\r\n * <p>Note that such a decorator is not necessarily being applied to the\r\n * user-supplied {@code Runnable}/{@code Callable} but rather to the actual\r\n * execution callback (which may be a wrapper around the user-supplied task).\r\n * <p>The primary use case is to set some execution context around the task's\r\n * invocation, or to provide some monitoring/statistics for task execution.\r\n * <p><b>NOTE:</b> Exception handling in {@code TaskDecorator} implementations\r\n * is limited to plain {@code Runnable} execution via {@code execute} calls.\r\n * In case of {@code #submit} calls, the exposed {@code Runnable} will be a\r\n * {@code FutureTask} which does not propagate any exceptions; you might\r\n * have to cast it and call {@code Future#get} to evaluate exceptions.\r\n * @since 4.3\r\n */\r\npublic final void setTaskDecorator(TaskDecorator taskDecorator) {\r\n    this.taskDecorator = taskDecorator;\r\n}",
+    "comment": "\n\t * Specify a custom {@link TaskDecorator} to be applied to any {@link Runnable}\n\t * about to be executed.\n\t * <p>Note that such a decorator is not necessarily being applied to the\n\t * user-supplied {@code Runnable}/{@code Callable} but rather to the actual\n\t * execution callback (which may be a wrapper around the user-supplied task).\n\t * <p>The primary use case is to set some execution context around the task's\n\t * invocation, or to provide some monitoring/statistics for task execution.\n\t * <p><b>NOTE:</b> Exception handling in {@code TaskDecorator} implementations\n\t * is limited to plain {@code Runnable} execution via {@code execute} calls.\n\t * In case of {@code #submit} calls, the exposed {@code Runnable} will be a\n\t * {@code FutureTask} which does not propagate any exceptions; you might\n\t * have to cast it and call {@code Future#get} to evaluate exceptions.\n\t * @since 4.3\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TaskExecutorAdapter#execute(Runnable)",
+    "entityType": "method",
+    "code": "/**\r\n * Delegates to the specified JDK concurrent executor.\r\n * @see java.util.concurrent.Executor#execute(Runnable)\r\n */\r\n@Override\r\npublic void execute(Runnable task) {\r\n    try {\r\n        doExecute(this.concurrentExecutor, this.taskDecorator, task);\r\n    } catch (RejectedExecutionException ex) {\r\n        throw new TaskRejectedException(this.concurrentExecutor, task, ex);\r\n    }\r\n}",
+    "comment": "\n\t * Delegates to the specified JDK concurrent executor.\n\t * @see java.util.concurrent.Executor#execute(Runnable)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TaskExecutorAdapter#submit(Runnable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Future<?> submit(Runnable task) {\r\n    try {\r\n        if (this.taskDecorator == null && this.concurrentExecutor instanceof ExecutorService executorService) {\r\n            return executorService.submit(task);\r\n        } else {\r\n            FutureTask<Object> future = new FutureTask<>(task, null);\r\n            doExecute(this.concurrentExecutor, this.taskDecorator, future);\r\n            return future;\r\n        }\r\n    } catch (RejectedExecutionException ex) {\r\n        throw new TaskRejectedException(this.concurrentExecutor, task, ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TaskExecutorAdapter#submit(Callable<T>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic <T> Future<T> submit(Callable<T> task) {\r\n    try {\r\n        if (this.taskDecorator == null && this.concurrentExecutor instanceof ExecutorService executorService) {\r\n            return executorService.submit(task);\r\n        } else {\r\n            FutureTask<T> future = new FutureTask<>(task);\r\n            doExecute(this.concurrentExecutor, this.taskDecorator, future);\r\n            return future;\r\n        }\r\n    } catch (RejectedExecutionException ex) {\r\n        throw new TaskRejectedException(this.concurrentExecutor, task, ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.support.TaskExecutorAdapter#doExecute(Executor,TaskDecorator,Runnable)",
+    "entityType": "method",
+    "code": "/**\r\n * Actually execute the given {@code Runnable} (which may be a user-supplied task\r\n * or a wrapper around a user-supplied task) with the given executor.\r\n * @param concurrentExecutor the underlying JDK concurrent executor to delegate to\r\n * @param taskDecorator the specified decorator to be applied, if any\r\n * @param runnable the runnable to execute\r\n * @throws RejectedExecutionException if the given runnable cannot be accepted\r\n * @since 4.3\r\n */\r\nprotected void doExecute(Executor concurrentExecutor, @Nullable TaskDecorator taskDecorator, Runnable runnable) throws RejectedExecutionException {\r\n    concurrentExecutor.execute(taskDecorator != null ? taskDecorator.decorate(runnable) : runnable);\r\n}",
+    "comment": "\n\t * Actually execute the given {@code Runnable} (which may be a user-supplied task\n\t * or a wrapper around a user-supplied task) with the given executor.\n\t * @param concurrentExecutor the underlying JDK concurrent executor to delegate to\n\t * @param taskDecorator the specified decorator to be applied, if any\n\t * @param runnable the runnable to execute\n\t * @throws RejectedExecutionException if the given runnable cannot be accepted\n\t * @since 4.3\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.SyncTaskExecutor",
+    "entityType": "class",
+    "code": "/**\r\n * Executes the given {@code task} synchronously, through direct\r\n * invocation of it's {@link Runnable#run() run()} method.\r\n * @throws IllegalArgumentException if the given {@code task} is {@code null}\r\n */\r\n@Override\r\npublic void execute(Runnable task) {\r\n    Assert.notNull(task, \"Runnable must not be null\");\r\n    task.run();\r\n}",
+    "comment": "\n * {@link TaskExecutor} implementation that executes each task <i>synchronously</i>\n * in the calling thread.\n *\n * <p>Mainly intended for testing scenarios.\n *\n * <p>Execution in the calling thread does have the advantage of participating\n * in its thread context, for example the thread context class loader or the\n * thread's current transaction association. That said, in many cases,\n * asynchronous execution will be preferable: choose an asynchronous\n * {@code TaskExecutor} instead for such scenarios.\n *\n * @author Juergen Hoeller\n * @since 2.0\n * @see SimpleAsyncTaskExecutor\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.SyncTaskExecutor#execute(Runnable)",
+    "entityType": "method",
+    "code": "/**\r\n * Executes the given {@code task} synchronously, through direct\r\n * invocation of it's {@link Runnable#run() run()} method.\r\n * @throws IllegalArgumentException if the given {@code task} is {@code null}\r\n */\r\n@Override\r\npublic void execute(Runnable task) {\r\n    Assert.notNull(task, \"Runnable must not be null\");\r\n    task.run();\r\n}",
+    "comment": "\n\t * Executes the given {@code task} synchronously, through direct\n\t * invocation of it's {@link Runnable#run() run()} method.\n\t * @throws IllegalArgumentException if the given {@code task} is {@code null}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskDecorator",
+    "entityType": "class",
+    "code": "/**\r\n * Decorate the given {@code Runnable}, returning a potentially wrapped\r\n * {@code Runnable} for actual execution, internally delegating to the\r\n * original {@link Runnable#run()} implementation.\r\n * @param runnable the original {@code Runnable}\r\n * @return the decorated {@code Runnable}\r\n */\r\nRunnable decorate(Runnable runnable);",
+    "comment": "\n * A callback interface for a decorator to be applied to any {@link Runnable}\n * about to be executed.\n *\n * <p>Note that such a decorator is not necessarily being applied to the\n * user-supplied {@code Runnable}/{@code Callable} but rather to the actual\n * execution callback (which may be a wrapper around the user-supplied task).\n *\n * <p>The primary use case is to set some execution context around the task's\n * invocation, or to provide some monitoring/statistics for task execution.\n *\n * <p><b>NOTE:</b> Exception handling in {@code TaskDecorator} implementations\n * may be limited. Specifically in case of a {@code Future}-based operation,\n * the exposed {@code Runnable} will be a wrapper which does not propagate\n * any exceptions from its {@code run} method.\n *\n * @author Juergen Hoeller\n * @since 4.3\n * @see TaskExecutor#execute(Runnable)\n * @see SimpleAsyncTaskExecutor#setTaskDecorator\n * @see org.springframework.core.task.support.TaskExecutorAdapter#setTaskDecorator\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskDecorator#decorate(Runnable)",
+    "entityType": "method",
+    "code": "/**\r\n * Decorate the given {@code Runnable}, returning a potentially wrapped\r\n * {@code Runnable} for actual execution, internally delegating to the\r\n * original {@link Runnable#run()} implementation.\r\n * @param runnable the original {@code Runnable}\r\n * @return the decorated {@code Runnable}\r\n */\r\nRunnable decorate(Runnable runnable);",
+    "comment": "\n\t * Decorate the given {@code Runnable}, returning a potentially wrapped\n\t * {@code Runnable} for actual execution, internally delegating to the\n\t * original {@link Runnable#run()} implementation.\n\t * @param runnable the original {@code Runnable}\n\t * @return the decorated {@code Runnable}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskExecutor",
+    "entityType": "class",
+    "code": "/**\r\n * Execute the given {@code task}.\r\n * <p>The call might return immediately if the implementation uses\r\n * an asynchronous execution strategy, or might block in the case\r\n * of synchronous execution.\r\n * @param task the {@code Runnable} to execute (never {@code null})\r\n * @throws TaskRejectedException if the given task was not accepted\r\n */\r\n@Override\r\nvoid execute(Runnable task);",
+    "comment": "\n * Simple task executor interface that abstracts the execution\n * of a {@link Runnable}.\n *\n * <p>Implementations can use all sorts of different execution strategies,\n * such as: synchronous, asynchronous, using a thread pool, and more.\n *\n * <p>Equivalent to Java's {@link java.util.concurrent.Executor} interface,\n * so that clients may declare a dependency on an {@code Executor} and receive\n * any {@code TaskExecutor} implementation. This interface remains separate from\n * the standard {@code Executor} interface primarily for backwards compatibility\n * with older APIs that depend on the {@code TaskExecutor} interface.\n *\n * @author Juergen Hoeller\n * @since 2.0\n * @see java.util.concurrent.Executor\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskExecutor#execute(Runnable)",
+    "entityType": "method",
+    "code": "/**\r\n * Execute the given {@code task}.\r\n * <p>The call might return immediately if the implementation uses\r\n * an asynchronous execution strategy, or might block in the case\r\n * of synchronous execution.\r\n * @param task the {@code Runnable} to execute (never {@code null})\r\n * @throws TaskRejectedException if the given task was not accepted\r\n */\r\n@Override\r\nvoid execute(Runnable task);",
+    "comment": "\n\t * Execute the given {@code task}.\n\t * <p>The call might return immediately if the implementation uses\n\t * an asynchronous execution strategy, or might block in the case\n\t * of synchronous execution.\n\t * @param task the {@code Runnable} to execute (never {@code null})\n\t * @throws TaskRejectedException if the given task was not accepted\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskRejectedException",
+    "entityType": "class",
+    "code": "/**\r\n * Create a new {@code TaskRejectedException}\r\n * with the specified detail message and no root cause.\r\n * @param msg the detail message\r\n */\r\npublic TaskRejectedException(String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Create a new {@code TaskRejectedException}\r\n * with the specified detail message and the given root cause.\r\n * @param msg the detail message\r\n * @param cause the root cause (usually from using an underlying\r\n * API such as the {@code java.util.concurrent} package)\r\n * @see java.util.concurrent.RejectedExecutionException\r\n */\r\npublic TaskRejectedException(String msg, Throwable cause) {\r\n    super(msg, cause);\r\n}\n/**\r\n * Create a new {@code TaskRejectedException}\r\n * with a default message for the given executor and task.\r\n * @param executor the {@code Executor} that rejected the task\r\n * @param task the task object that got rejected\r\n * @param cause the original {@link RejectedExecutionException}\r\n * @since 6.1\r\n * @see ExecutorService#isShutdown()\r\n * @see java.util.concurrent.RejectedExecutionException\r\n */\r\npublic TaskRejectedException(Executor executor, Object task, RejectedExecutionException cause) {\r\n    super(executorDescription(executor) + \" did not accept task: \" + task, cause);\r\n}\nprivate static String executorDescription(Executor executor) {\r\n    if (executor instanceof ExecutorService executorService) {\r\n        return \"ExecutorService in \" + (executorService.isShutdown() ? \"shutdown\" : \"active\") + \" state\";\r\n    }\r\n    return executor.toString();\r\n}",
+    "comment": "\n * Exception thrown when a {@link TaskExecutor} rejects to accept\n * a given task for execution.\n *\n * @author Juergen Hoeller\n * @since 2.0.1\n * @see TaskExecutor#execute(Runnable)\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskRejectedException#executorDescription(Executor)",
+    "entityType": "method",
+    "code": "private static String executorDescription(Executor executor) {\r\n    if (executor instanceof ExecutorService executorService) {\r\n        return \"ExecutorService in \" + (executorService.isShutdown() ? \"shutdown\" : \"active\") + \" state\";\r\n    }\r\n    return executor.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.TaskTimeoutException",
+    "entityType": "class",
+    "code": "/**\r\n * Create a new {@code TaskTimeoutException}\r\n * with the specified detail message and no root cause.\r\n * @param msg the detail message\r\n */\r\npublic TaskTimeoutException(String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Create a new {@code TaskTimeoutException}\r\n * with the specified detail message and the given root cause.\r\n * @param msg the detail message\r\n * @param cause the root cause (usually from using an underlying\r\n * API such as the {@code java.util.concurrent} package)\r\n * @see java.util.concurrent.RejectedExecutionException\r\n */\r\npublic TaskTimeoutException(String msg, Throwable cause) {\r\n    super(msg, cause);\r\n}",
+    "comment": "\n * Exception thrown when a {@link AsyncTaskExecutor} rejects to accept\n * a given task for execution because of the specified timeout.\n *\n * @author Juergen Hoeller\n * @since 2.0.3\n * @see AsyncTaskExecutor#execute(Runnable, long)\n * @deprecated as of 5.3.16 since the common executors do not support start timeouts\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate",
+    "entityType": "class",
+    "code": "public VirtualThreadDelegate() {\r\n    throw new UnsupportedOperationException(\"Virtual threads not supported on JDK <21\");\r\n}\npublic ThreadFactory virtualThreadFactory() {\r\n    throw new UnsupportedOperationException();\r\n}\npublic ThreadFactory virtualThreadFactory(String threadNamePrefix) {\r\n    throw new UnsupportedOperationException();\r\n}\npublic Thread newVirtualThread(String name, Runnable task) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": "\n * Internal delegate for virtual thread handling on JDK 21.\n * This is a dummy version for reachability on JDK <21.\n *\n * @author Juergen Hoeller\n * @since 6.1\n * @see VirtualThreadTaskExecutor\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate#virtualThreadFactory()",
+    "entityType": "method",
+    "code": "public ThreadFactory virtualThreadFactory() {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate#virtualThreadFactory(String)",
+    "entityType": "method",
+    "code": "public ThreadFactory virtualThreadFactory(String threadNamePrefix) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate#newVirtualThread(String,Runnable)",
+    "entityType": "method",
+    "code": "public Thread newVirtualThread(String name, Runnable task) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadTaskExecutor",
+    "entityType": "class",
+    "code": "private final ThreadFactory virtualThreadFactory;\n/**\r\n * Create a new {@code VirtualThreadTaskExecutor} without thread naming.\r\n */\r\npublic VirtualThreadTaskExecutor() {\r\n    this.virtualThreadFactory = new VirtualThreadDelegate().virtualThreadFactory();\r\n}\n/**\r\n * Create a new {@code VirtualThreadTaskExecutor} with thread names based\r\n * on the given thread name prefix followed by a counter (for example, \"test-0\").\r\n * @param threadNamePrefix the prefix for thread names (for example, \"test-\")\r\n */\r\npublic VirtualThreadTaskExecutor(String threadNamePrefix) {\r\n    this.virtualThreadFactory = new VirtualThreadDelegate().virtualThreadFactory(threadNamePrefix);\r\n}\n/**\r\n * Return the underlying virtual {@link ThreadFactory}.\r\n * Can also be used for custom thread creation elsewhere.\r\n */\r\npublic final ThreadFactory getVirtualThreadFactory() {\r\n    return this.virtualThreadFactory;\r\n}\n@Override\r\npublic void execute(Runnable task) {\r\n    this.virtualThreadFactory.newThread(task).start();\r\n}",
+    "comment": "\n * A {@link TaskExecutor} implementation based on virtual threads in JDK 21+.\n * The only configuration option is a thread name prefix.\n *\n * <p>For additional features such as concurrency limiting or task decoration,\n * consider using {@link SimpleAsyncTaskExecutor#setVirtualThreads} instead.\n *\n * @author Juergen Hoeller\n * @since 6.1\n * @see SimpleAsyncTaskExecutor#setVirtualThreads\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadTaskExecutor#getVirtualThreadFactory()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the underlying virtual {@link ThreadFactory}.\r\n * Can also be used for custom thread creation elsewhere.\r\n */\r\npublic final ThreadFactory getVirtualThreadFactory() {\r\n    return this.virtualThreadFactory;\r\n}",
+    "comment": "\n\t * Return the underlying virtual {@link ThreadFactory}.\n\t * Can also be used for custom thread creation elsewhere.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadTaskExecutor#execute(Runnable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void execute(Runnable task) {\r\n    this.virtualThreadFactory.newThread(task).start();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata",
+    "entityType": "class",
+    "code": "/**\r\n * Get annotation details based on the direct annotations and meta-annotations\r\n * of the underlying element.\r\n * @return merged annotations based on the direct annotations and meta-annotations\r\n * @since 5.2\r\n */\r\nMergedAnnotations getAnnotations();\n/**\r\n * Determine whether the underlying element has an annotation or meta-annotation\r\n * of the given type defined.\r\n * <p>If this method returns {@code true}, then\r\n * {@link #getAnnotationAttributes} will return a non-null Map.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return whether a matching annotation is defined\r\n */\r\ndefault boolean isAnnotated(String annotationName) {\r\n    return getAnnotations().isPresent(annotationName);\r\n}\n/**\r\n * Retrieve the attributes of the annotation of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a {@link Map} of attributes, with each annotation attribute name\r\n * as map key (for example, \"location\") and the attribute's value as map value; or\r\n * {@code null} if no matching annotation is found\r\n */\r\n@Nullable\r\ndefault Map<String, @Nullable Object> getAnnotationAttributes(String annotationName) {\r\n    return getAnnotationAttributes(annotationName, false);\r\n}\n/**\r\n * Retrieve the attributes of the annotation of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @param classValuesAsString whether to convert class references to String\r\n * class names for exposure as values in the returned Map, instead of Class\r\n * references which might potentially have to be loaded first\r\n * @return a {@link Map} of attributes, with each annotation attribute name\r\n * as map key (for example, \"location\") and the attribute's value as map value; or\r\n * {@code null} if no matching annotation is found\r\n */\r\n@Nullable\r\ndefault Map<String, @Nullable Object> getAnnotationAttributes(String annotationName, boolean classValuesAsString) {\r\n    MergedAnnotation<Annotation> annotation = getAnnotations().get(annotationName, null, MergedAnnotationSelectors.firstDirectlyDeclared());\r\n    if (!annotation.isPresent()) {\r\n        return null;\r\n    }\r\n    return annotation.asAnnotationAttributes(Adapt.values(classValuesAsString, true));\r\n}\n/**\r\n * Retrieve all attributes of all annotations of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>Note: this method does <i>not</i> take attribute overrides on composed\r\n * annotations into account.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a {@link MultiValueMap} of attributes, with each annotation attribute\r\n * name as map key (for example, \"location\") and a list of the attribute's values as\r\n * map value; or {@code null} if no matching annotation is found\r\n * @see #getAllAnnotationAttributes(String, boolean)\r\n */\r\n@Nullable\r\ndefault MultiValueMap<String, @Nullable Object> getAllAnnotationAttributes(String annotationName) {\r\n    return getAllAnnotationAttributes(annotationName, false);\r\n}\n/**\r\n * Retrieve all attributes of all annotations of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>Note: this method does <i>not</i> take attribute overrides on composed\r\n * annotations into account.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @param classValuesAsString whether to convert class references to String\r\n * class names for exposure as values in the returned Map, instead of Class\r\n * references which might potentially have to be loaded first\r\n * @return a {@link MultiValueMap} of attributes, with each annotation attribute\r\n * name as map key (for example, \"location\") and a list of the attribute's values as\r\n * map value; or {@code null} if no matching annotation is found\r\n * @see #getAllAnnotationAttributes(String)\r\n */\r\n@Nullable\r\ndefault MultiValueMap<String, @Nullable Object> getAllAnnotationAttributes(String annotationName, boolean classValuesAsString) {\r\n    Adapt[] adaptations = Adapt.values(classValuesAsString, true);\r\n    return getAnnotations().stream(annotationName).filter(MergedAnnotationPredicates.unique(MergedAnnotation::getMetaTypes)).map(MergedAnnotation::withNonMergedAttributes).collect(MergedAnnotationCollectors.toMultiValueMap((MultiValueMap<String, @Nullable Object> map) -> (map.isEmpty() ? null : map), adaptations));\r\n}\n/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, Predicate, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, boolean classValuesAsString) {\r\n    return getMergedRepeatableAnnotationAttributes(annotationType, containerType, classValuesAsString, false);\r\n}\n/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\r\n * the results will be sorted in {@link Comparator#reversed() reversed} order\r\n * based on each annotation's {@linkplain MergedAnnotation#getDistance()\r\n * meta distance}, which effectively orders meta-annotations before annotations\r\n * that are declared directly on the underlying element.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @param sortByReversedMetaDistance {@code true} if the results should be\r\n * sorted in reversed order based on each annotation's meta distance\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, Predicate, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, boolean classValuesAsString, boolean sortByReversedMetaDistance) {\r\n    return getMergedRepeatableAnnotationAttributes(annotationType, containerType, mergedAnnotation -> true, classValuesAsString, sortByReversedMetaDistance);\r\n}\n/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * <p>The supplied {@link Predicate} will be used to filter the results. For\r\n * example, supply {@code mergedAnnotation -> true} to include all annotations\r\n * in the results; supply {@code MergedAnnotation::isDirectlyPresent} to limit\r\n * the results to directly declared annotations, etc.\r\n * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\r\n * the results will be sorted in {@link Comparator#reversed() reversed} order\r\n * based on each annotation's {@linkplain MergedAnnotation#getDistance()\r\n * meta distance}, which effectively orders meta-annotations before annotations\r\n * that are declared directly on the underlying element.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param predicate a {@code Predicate} to apply to each {@code MergedAnnotation}\r\n * to determine if it should be included in the results\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @param sortByReversedMetaDistance {@code true} if the results should be\r\n * sorted in reversed order based on each annotation's meta distance\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1.2\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, Predicate<MergedAnnotation<? extends Annotation>> predicate, boolean classValuesAsString, boolean sortByReversedMetaDistance) {\r\n    Stream<MergedAnnotation<Annotation>> stream = getAnnotations().stream().filter(predicate).filter(MergedAnnotationPredicates.typeIn(containerType, annotationType));\r\n    if (sortByReversedMetaDistance) {\r\n        stream = stream.sorted(reversedMetaDistance());\r\n    }\r\n    Adapt[] adaptations = Adapt.values(classValuesAsString, true);\r\n    return stream.map(annotation -> annotation.asAnnotationAttributes(adaptations)).flatMap(attributes -> {\r\n        if (containerType.equals(attributes.annotationType())) {\r\n            return Stream.of(attributes.getAnnotationArray(MergedAnnotation.VALUE));\r\n        }\r\n        return Stream.of(attributes);\r\n    }).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}\nprivate static Comparator<MergedAnnotation<Annotation>> reversedMetaDistance() {\r\n    return Comparator.<MergedAnnotation<Annotation>>comparingInt(MergedAnnotation::getDistance).reversed();\r\n}",
+    "comment": "\n * Defines access to the annotations of a specific type ({@link AnnotationMetadata class}\n * or {@link MethodMetadata method}), in a form that does not necessarily require\n * class loading of the types being inspected. Note, however, that classes for\n * encountered annotations will be loaded.\n *\n * @author Juergen Hoeller\n * @author Mark Fisher\n * @author Mark Pollack\n * @author Chris Beams\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 4.0\n * @see AnnotationMetadata\n * @see MethodMetadata\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getAnnotations()",
+    "entityType": "method",
+    "code": "/**\r\n * Get annotation details based on the direct annotations and meta-annotations\r\n * of the underlying element.\r\n * @return merged annotations based on the direct annotations and meta-annotations\r\n * @since 5.2\r\n */\r\nMergedAnnotations getAnnotations();",
+    "comment": "\n\t * Get annotation details based on the direct annotations and meta-annotations\n\t * of the underlying element.\n\t * @return merged annotations based on the direct annotations and meta-annotations\n\t * @since 5.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#isAnnotated(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the underlying element has an annotation or meta-annotation\r\n * of the given type defined.\r\n * <p>If this method returns {@code true}, then\r\n * {@link #getAnnotationAttributes} will return a non-null Map.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return whether a matching annotation is defined\r\n */\r\ndefault boolean isAnnotated(String annotationName) {\r\n    return getAnnotations().isPresent(annotationName);\r\n}",
+    "comment": "\n\t * Determine whether the underlying element has an annotation or meta-annotation\n\t * of the given type defined.\n\t * <p>If this method returns {@code true}, then\n\t * {@link #getAnnotationAttributes} will return a non-null Map.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return whether a matching annotation is defined\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getAnnotationAttributes(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the attributes of the annotation of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a {@link Map} of attributes, with each annotation attribute name\r\n * as map key (for example, \"location\") and the attribute's value as map value; or\r\n * {@code null} if no matching annotation is found\r\n */\r\n@Nullable\r\ndefault Map<String, @Nullable Object> getAnnotationAttributes(String annotationName) {\r\n    return getAnnotationAttributes(annotationName, false);\r\n}",
+    "comment": "\n\t * Retrieve the attributes of the annotation of the given type, if any (i.e. if\n\t * defined on the underlying element, as direct annotation or meta-annotation).\n\t * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\n\t * are fully supported, both within a single annotation and within annotation\n\t * hierarchies.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return a {@link Map} of attributes, with each annotation attribute name\n\t * as map key (for example, \"location\") and the attribute's value as map value; or\n\t * {@code null} if no matching annotation is found\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getAnnotationAttributes(String,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the attributes of the annotation of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @param classValuesAsString whether to convert class references to String\r\n * class names for exposure as values in the returned Map, instead of Class\r\n * references which might potentially have to be loaded first\r\n * @return a {@link Map} of attributes, with each annotation attribute name\r\n * as map key (for example, \"location\") and the attribute's value as map value; or\r\n * {@code null} if no matching annotation is found\r\n */\r\n@Nullable\r\ndefault Map<String, @Nullable Object> getAnnotationAttributes(String annotationName, boolean classValuesAsString) {\r\n    MergedAnnotation<Annotation> annotation = getAnnotations().get(annotationName, null, MergedAnnotationSelectors.firstDirectlyDeclared());\r\n    if (!annotation.isPresent()) {\r\n        return null;\r\n    }\r\n    return annotation.asAnnotationAttributes(Adapt.values(classValuesAsString, true));\r\n}",
+    "comment": "\n\t * Retrieve the attributes of the annotation of the given type, if any (i.e. if\n\t * defined on the underlying element, as direct annotation or meta-annotation).\n\t * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\n\t * are fully supported, both within a single annotation and within annotation\n\t * hierarchies.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @param classValuesAsString whether to convert class references to String\n\t * class names for exposure as values in the returned Map, instead of Class\n\t * references which might potentially have to be loaded first\n\t * @return a {@link Map} of attributes, with each annotation attribute name\n\t * as map key (for example, \"location\") and the attribute's value as map value; or\n\t * {@code null} if no matching annotation is found\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getAllAnnotationAttributes(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve all attributes of all annotations of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>Note: this method does <i>not</i> take attribute overrides on composed\r\n * annotations into account.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a {@link MultiValueMap} of attributes, with each annotation attribute\r\n * name as map key (for example, \"location\") and a list of the attribute's values as\r\n * map value; or {@code null} if no matching annotation is found\r\n * @see #getAllAnnotationAttributes(String, boolean)\r\n */\r\n@Nullable\r\ndefault MultiValueMap<String, @Nullable Object> getAllAnnotationAttributes(String annotationName) {\r\n    return getAllAnnotationAttributes(annotationName, false);\r\n}",
+    "comment": "\n\t * Retrieve all attributes of all annotations of the given type, if any (i.e. if\n\t * defined on the underlying element, as direct annotation or meta-annotation).\n\t * <p>Note: this method does <i>not</i> take attribute overrides on composed\n\t * annotations into account.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return a {@link MultiValueMap} of attributes, with each annotation attribute\n\t * name as map key (for example, \"location\") and a list of the attribute's values as\n\t * map value; or {@code null} if no matching annotation is found\n\t * @see #getAllAnnotationAttributes(String, boolean)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getAllAnnotationAttributes(String,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve all attributes of all annotations of the given type, if any (i.e. if\r\n * defined on the underlying element, as direct annotation or meta-annotation).\r\n * <p>Note: this method does <i>not</i> take attribute overrides on composed\r\n * annotations into account.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @param classValuesAsString whether to convert class references to String\r\n * class names for exposure as values in the returned Map, instead of Class\r\n * references which might potentially have to be loaded first\r\n * @return a {@link MultiValueMap} of attributes, with each annotation attribute\r\n * name as map key (for example, \"location\") and a list of the attribute's values as\r\n * map value; or {@code null} if no matching annotation is found\r\n * @see #getAllAnnotationAttributes(String)\r\n */\r\n@Nullable\r\ndefault MultiValueMap<String, @Nullable Object> getAllAnnotationAttributes(String annotationName, boolean classValuesAsString) {\r\n    Adapt[] adaptations = Adapt.values(classValuesAsString, true);\r\n    return getAnnotations().stream(annotationName).filter(MergedAnnotationPredicates.unique(MergedAnnotation::getMetaTypes)).map(MergedAnnotation::withNonMergedAttributes).collect(MergedAnnotationCollectors.toMultiValueMap((MultiValueMap<String, @Nullable Object> map) -> (map.isEmpty() ? null : map), adaptations));\r\n}",
+    "comment": "\n\t * Retrieve all attributes of all annotations of the given type, if any (i.e. if\n\t * defined on the underlying element, as direct annotation or meta-annotation).\n\t * <p>Note: this method does <i>not</i> take attribute overrides on composed\n\t * annotations into account.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @param classValuesAsString whether to convert class references to String\n\t * class names for exposure as values in the returned Map, instead of Class\n\t * references which might potentially have to be loaded first\n\t * @return a {@link MultiValueMap} of attributes, with each annotation attribute\n\t * name as map key (for example, \"location\") and a list of the attribute's values as\n\t * map value; or {@code null} if no matching annotation is found\n\t * @see #getAllAnnotationAttributes(String)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getMergedRepeatableAnnotationAttributes(Class<? extends Annotation>,Class<? extends Annotation>,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, Predicate, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, boolean classValuesAsString) {\r\n    return getMergedRepeatableAnnotationAttributes(annotationType, containerType, classValuesAsString, false);\r\n}",
+    "comment": "\n\t * Retrieve all <em>repeatable annotations</em> of the given type within the\n\t * annotation hierarchy <em>above</em> the underlying element (as direct\n\t * annotation or meta-annotation); and for each annotation found, merge that\n\t * annotation's attributes with <em>matching</em> attributes from annotations\n\t * in lower levels of the annotation hierarchy and store the results in an\n\t * instance of {@link AnnotationAttributes}.\n\t * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\n\t * are fully supported, both within a single annotation and within annotation\n\t * hierarchies.\n\t * @param annotationType the annotation type to find\n\t * @param containerType the type of the container that holds the annotations\n\t * @param classValuesAsString whether to convert class references to {@code String}\n\t * class names for exposure as values in the returned {@code AnnotationAttributes},\n\t * instead of {@code Class} references which might potentially have to be loaded\n\t * first\n\t * @return the set of all merged repeatable {@code AnnotationAttributes} found,\n\t * or an empty set if none were found\n\t * @since 6.1\n\t * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\n\t * @see #getMergedRepeatableAnnotationAttributes(Class, Class, Predicate, boolean, boolean)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getMergedRepeatableAnnotationAttributes(Class<? extends Annotation>,Class<? extends Annotation>,boolean,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\r\n * the results will be sorted in {@link Comparator#reversed() reversed} order\r\n * based on each annotation's {@linkplain MergedAnnotation#getDistance()\r\n * meta distance}, which effectively orders meta-annotations before annotations\r\n * that are declared directly on the underlying element.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @param sortByReversedMetaDistance {@code true} if the results should be\r\n * sorted in reversed order based on each annotation's meta distance\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, Predicate, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, boolean classValuesAsString, boolean sortByReversedMetaDistance) {\r\n    return getMergedRepeatableAnnotationAttributes(annotationType, containerType, mergedAnnotation -> true, classValuesAsString, sortByReversedMetaDistance);\r\n}",
+    "comment": "\n\t * Retrieve all <em>repeatable annotations</em> of the given type within the\n\t * annotation hierarchy <em>above</em> the underlying element (as direct\n\t * annotation or meta-annotation); and for each annotation found, merge that\n\t * annotation's attributes with <em>matching</em> attributes from annotations\n\t * in lower levels of the annotation hierarchy and store the results in an\n\t * instance of {@link AnnotationAttributes}.\n\t * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\n\t * are fully supported, both within a single annotation and within annotation\n\t * hierarchies.\n\t * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\n\t * the results will be sorted in {@link Comparator#reversed() reversed} order\n\t * based on each annotation's {@linkplain MergedAnnotation#getDistance()\n\t * meta distance}, which effectively orders meta-annotations before annotations\n\t * that are declared directly on the underlying element.\n\t * @param annotationType the annotation type to find\n\t * @param containerType the type of the container that holds the annotations\n\t * @param classValuesAsString whether to convert class references to {@code String}\n\t * class names for exposure as values in the returned {@code AnnotationAttributes},\n\t * instead of {@code Class} references which might potentially have to be loaded\n\t * first\n\t * @param sortByReversedMetaDistance {@code true} if the results should be\n\t * sorted in reversed order based on each annotation's meta distance\n\t * @return the set of all merged repeatable {@code AnnotationAttributes} found,\n\t * or an empty set if none were found\n\t * @since 6.1\n\t * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\n\t * @see #getMergedRepeatableAnnotationAttributes(Class, Class, Predicate, boolean, boolean)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#getMergedRepeatableAnnotationAttributes(Class<? extends Annotation>,Class<? extends Annotation>,Predicate<MergedAnnotation<? extends Annotation>>,boolean,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * <p>The supplied {@link Predicate} will be used to filter the results. For\r\n * example, supply {@code mergedAnnotation -> true} to include all annotations\r\n * in the results; supply {@code MergedAnnotation::isDirectlyPresent} to limit\r\n * the results to directly declared annotations, etc.\r\n * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\r\n * the results will be sorted in {@link Comparator#reversed() reversed} order\r\n * based on each annotation's {@linkplain MergedAnnotation#getDistance()\r\n * meta distance}, which effectively orders meta-annotations before annotations\r\n * that are declared directly on the underlying element.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param predicate a {@code Predicate} to apply to each {@code MergedAnnotation}\r\n * to determine if it should be included in the results\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @param sortByReversedMetaDistance {@code true} if the results should be\r\n * sorted in reversed order based on each annotation's meta distance\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1.2\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, Predicate<MergedAnnotation<? extends Annotation>> predicate, boolean classValuesAsString, boolean sortByReversedMetaDistance) {\r\n    Stream<MergedAnnotation<Annotation>> stream = getAnnotations().stream().filter(predicate).filter(MergedAnnotationPredicates.typeIn(containerType, annotationType));\r\n    if (sortByReversedMetaDistance) {\r\n        stream = stream.sorted(reversedMetaDistance());\r\n    }\r\n    Adapt[] adaptations = Adapt.values(classValuesAsString, true);\r\n    return stream.map(annotation -> annotation.asAnnotationAttributes(adaptations)).flatMap(attributes -> {\r\n        if (containerType.equals(attributes.annotationType())) {\r\n            return Stream.of(attributes.getAnnotationArray(MergedAnnotation.VALUE));\r\n        }\r\n        return Stream.of(attributes);\r\n    }).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}",
+    "comment": "\n\t * Retrieve all <em>repeatable annotations</em> of the given type within the\n\t * annotation hierarchy <em>above</em> the underlying element (as direct\n\t * annotation or meta-annotation); and for each annotation found, merge that\n\t * annotation's attributes with <em>matching</em> attributes from annotations\n\t * in lower levels of the annotation hierarchy and store the results in an\n\t * instance of {@link AnnotationAttributes}.\n\t * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\n\t * are fully supported, both within a single annotation and within annotation\n\t * hierarchies.\n\t * <p>The supplied {@link Predicate} will be used to filter the results. For\n\t * example, supply {@code mergedAnnotation -> true} to include all annotations\n\t * in the results; supply {@code MergedAnnotation::isDirectlyPresent} to limit\n\t * the results to directly declared annotations, etc.\n\t * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\n\t * the results will be sorted in {@link Comparator#reversed() reversed} order\n\t * based on each annotation's {@linkplain MergedAnnotation#getDistance()\n\t * meta distance}, which effectively orders meta-annotations before annotations\n\t * that are declared directly on the underlying element.\n\t * @param annotationType the annotation type to find\n\t * @param containerType the type of the container that holds the annotations\n\t * @param predicate a {@code Predicate} to apply to each {@code MergedAnnotation}\n\t * to determine if it should be included in the results\n\t * @param classValuesAsString whether to convert class references to {@code String}\n\t * class names for exposure as values in the returned {@code AnnotationAttributes},\n\t * instead of {@code Class} references which might potentially have to be loaded\n\t * first\n\t * @param sortByReversedMetaDistance {@code true} if the results should be\n\t * sorted in reversed order based on each annotation's meta distance\n\t * @return the set of all merged repeatable {@code AnnotationAttributes} found,\n\t * or an empty set if none were found\n\t * @since 6.1.2\n\t * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\n\t * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotatedTypeMetadata#reversedMetaDistance()",
+    "entityType": "method",
+    "code": "private static Comparator<MergedAnnotation<Annotation>> reversedMetaDistance() {\r\n    return Comparator.<MergedAnnotation<Annotation>>comparingInt(MergedAnnotation::getDistance).reversed();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata",
+    "entityType": "class",
+    "code": "/**\r\n * Get the fully-qualified class names of all annotation types that are\r\n * <em>directly present</em> on the underlying class.\r\n * @return the annotation type names\r\n */\r\ndefault Set<String> getAnnotationTypes() {\r\n    return getAnnotations().stream().filter(MergedAnnotation::isDirectlyPresent).map(annotation -> annotation.getType().getName()).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}\n/**\r\n * Get the fully-qualified class names of all meta-annotation types that are\r\n * <em>present</em> on the given annotation type on the underlying class.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for meta-annotations on\r\n * @return the meta-annotation type names, or an empty set if none found\r\n */\r\ndefault Set<String> getMetaAnnotationTypes(String annotationName) {\r\n    MergedAnnotation<?> annotation = getAnnotations().get(annotationName, MergedAnnotation::isDirectlyPresent);\r\n    if (!annotation.isPresent()) {\r\n        return Collections.emptySet();\r\n    }\r\n    return MergedAnnotations.from(annotation.getType()).stream().map(mergedAnnotation -> mergedAnnotation.getType().getName()).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}\n/**\r\n * Determine whether an annotation of the given type is <em>directly present</em>\r\n * on the underlying class.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return {@code true} if a matching annotation is directly present\r\n */\r\ndefault boolean hasAnnotation(String annotationName) {\r\n    return getAnnotations().isDirectlyPresent(annotationName);\r\n}\n/**\r\n * Determine whether the underlying class has an annotation that is itself\r\n * annotated with the meta-annotation of the given type.\r\n * @param metaAnnotationName the fully-qualified class name of the\r\n * meta-annotation type to look for\r\n * @return {@code true} if a matching meta-annotation is present\r\n */\r\ndefault boolean hasMetaAnnotation(String metaAnnotationName) {\r\n    return getAnnotations().get(metaAnnotationName, MergedAnnotation::isMetaPresent).isPresent();\r\n}\n/**\r\n * Determine whether the underlying class has any methods that are\r\n * annotated (or meta-annotated) with the given annotation type.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n */\r\ndefault boolean hasAnnotatedMethods(String annotationName) {\r\n    return !getAnnotatedMethods(annotationName).isEmpty();\r\n}\n/**\r\n * Retrieve the method metadata for all methods that are annotated\r\n * (or meta-annotated) with the given annotation type.\r\n * <p>For any returned method, {@link MethodMetadata#isAnnotated} will\r\n * return {@code true} for the given annotation type.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a set of {@link MethodMetadata} for methods that have a matching\r\n * annotation. The return value will be an empty set if no methods match\r\n * the annotation type.\r\n */\r\nSet<MethodMetadata> getAnnotatedMethods(String annotationName);\n/**\r\n * Retrieve the method metadata for all user-declared methods on the\r\n * underlying class, preserving declaration order as far as possible.\r\n * @return a set of {@link MethodMetadata}\r\n * @since 6.0\r\n */\r\nSet<MethodMetadata> getDeclaredMethods();\n/**\r\n * Factory method to create a new {@link AnnotationMetadata} instance\r\n * for the given class using standard reflection.\r\n * @param type the class to introspect\r\n * @return a new {@link AnnotationMetadata} instance\r\n * @since 5.2\r\n */\r\nstatic AnnotationMetadata introspect(Class<?> type) {\r\n    return StandardAnnotationMetadata.from(type);\r\n}",
+    "comment": "\n * Interface that defines abstract access to the annotations of a specific\n * class, in a form that does not require that class to be loaded yet.\n *\n * @author Juergen Hoeller\n * @author Mark Fisher\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 2.5\n * @see StandardAnnotationMetadata\n * @see org.springframework.core.type.classreading.MetadataReader#getAnnotationMetadata()\n * @see AnnotatedTypeMetadata\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#getAnnotationTypes()",
+    "entityType": "method",
+    "code": "/**\r\n * Get the fully-qualified class names of all annotation types that are\r\n * <em>directly present</em> on the underlying class.\r\n * @return the annotation type names\r\n */\r\ndefault Set<String> getAnnotationTypes() {\r\n    return getAnnotations().stream().filter(MergedAnnotation::isDirectlyPresent).map(annotation -> annotation.getType().getName()).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}",
+    "comment": "\n\t * Get the fully-qualified class names of all annotation types that are\n\t * <em>directly present</em> on the underlying class.\n\t * @return the annotation type names\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#getMetaAnnotationTypes(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Get the fully-qualified class names of all meta-annotation types that are\r\n * <em>present</em> on the given annotation type on the underlying class.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for meta-annotations on\r\n * @return the meta-annotation type names, or an empty set if none found\r\n */\r\ndefault Set<String> getMetaAnnotationTypes(String annotationName) {\r\n    MergedAnnotation<?> annotation = getAnnotations().get(annotationName, MergedAnnotation::isDirectlyPresent);\r\n    if (!annotation.isPresent()) {\r\n        return Collections.emptySet();\r\n    }\r\n    return MergedAnnotations.from(annotation.getType()).stream().map(mergedAnnotation -> mergedAnnotation.getType().getName()).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}",
+    "comment": "\n\t * Get the fully-qualified class names of all meta-annotation types that are\n\t * <em>present</em> on the given annotation type on the underlying class.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for meta-annotations on\n\t * @return the meta-annotation type names, or an empty set if none found\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#hasAnnotation(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether an annotation of the given type is <em>directly present</em>\r\n * on the underlying class.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return {@code true} if a matching annotation is directly present\r\n */\r\ndefault boolean hasAnnotation(String annotationName) {\r\n    return getAnnotations().isDirectlyPresent(annotationName);\r\n}",
+    "comment": "\n\t * Determine whether an annotation of the given type is <em>directly present</em>\n\t * on the underlying class.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return {@code true} if a matching annotation is directly present\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#hasMetaAnnotation(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the underlying class has an annotation that is itself\r\n * annotated with the meta-annotation of the given type.\r\n * @param metaAnnotationName the fully-qualified class name of the\r\n * meta-annotation type to look for\r\n * @return {@code true} if a matching meta-annotation is present\r\n */\r\ndefault boolean hasMetaAnnotation(String metaAnnotationName) {\r\n    return getAnnotations().get(metaAnnotationName, MergedAnnotation::isMetaPresent).isPresent();\r\n}",
+    "comment": "\n\t * Determine whether the underlying class has an annotation that is itself\n\t * annotated with the meta-annotation of the given type.\n\t * @param metaAnnotationName the fully-qualified class name of the\n\t * meta-annotation type to look for\n\t * @return {@code true} if a matching meta-annotation is present\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#hasAnnotatedMethods(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the underlying class has any methods that are\r\n * annotated (or meta-annotated) with the given annotation type.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n */\r\ndefault boolean hasAnnotatedMethods(String annotationName) {\r\n    return !getAnnotatedMethods(annotationName).isEmpty();\r\n}",
+    "comment": "\n\t * Determine whether the underlying class has any methods that are\n\t * annotated (or meta-annotated) with the given annotation type.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#getAnnotatedMethods(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the method metadata for all methods that are annotated\r\n * (or meta-annotated) with the given annotation type.\r\n * <p>For any returned method, {@link MethodMetadata#isAnnotated} will\r\n * return {@code true} for the given annotation type.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a set of {@link MethodMetadata} for methods that have a matching\r\n * annotation. The return value will be an empty set if no methods match\r\n * the annotation type.\r\n */\r\nSet<MethodMetadata> getAnnotatedMethods(String annotationName);",
+    "comment": "\n\t * Retrieve the method metadata for all methods that are annotated\n\t * (or meta-annotated) with the given annotation type.\n\t * <p>For any returned method, {@link MethodMetadata#isAnnotated} will\n\t * return {@code true} for the given annotation type.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return a set of {@link MethodMetadata} for methods that have a matching\n\t * annotation. The return value will be an empty set if no methods match\n\t * the annotation type.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#getDeclaredMethods()",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the method metadata for all user-declared methods on the\r\n * underlying class, preserving declaration order as far as possible.\r\n * @return a set of {@link MethodMetadata}\r\n * @since 6.0\r\n */\r\nSet<MethodMetadata> getDeclaredMethods();",
+    "comment": "\n\t * Retrieve the method metadata for all user-declared methods on the\n\t * underlying class, preserving declaration order as far as possible.\n\t * @return a set of {@link MethodMetadata}\n\t * @since 6.0\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.AnnotationMetadata#introspect(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Factory method to create a new {@link AnnotationMetadata} instance\r\n * for the given class using standard reflection.\r\n * @param type the class to introspect\r\n * @return a new {@link AnnotationMetadata} instance\r\n * @since 5.2\r\n */\r\nstatic AnnotationMetadata introspect(Class<?> type) {\r\n    return StandardAnnotationMetadata.from(type);\r\n}",
+    "comment": "\n\t * Factory method to create a new {@link AnnotationMetadata} instance\n\t * for the given class using standard reflection.\n\t * @param type the class to introspect\n\t * @return a new {@link AnnotationMetadata} instance\n\t * @since 5.2\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata",
+    "entityType": "class",
+    "code": "/**\r\n * Return the name of the underlying class.\r\n */\r\nString getClassName();\n/**\r\n * Return whether the underlying class represents an interface.\r\n */\r\nboolean isInterface();\n/**\r\n * Return whether the underlying class represents an annotation.\r\n * @since 4.1\r\n */\r\nboolean isAnnotation();\n/**\r\n * Return whether the underlying class is marked as abstract.\r\n */\r\nboolean isAbstract();\n/**\r\n * Return whether the underlying class represents a concrete class,\r\n * i.e. neither an interface nor an abstract class.\r\n */\r\ndefault boolean isConcrete() {\r\n    return !(isInterface() || isAbstract());\r\n}\n/**\r\n * Return whether the underlying class is marked as 'final'.\r\n */\r\nboolean isFinal();\n/**\r\n * Determine whether the underlying class is independent, i.e. whether\r\n * it is a top-level class or a nested class (static inner class) that\r\n * can be constructed independently of an enclosing class.\r\n */\r\nboolean isIndependent();\n/**\r\n * Return whether the underlying class is declared within an enclosing\r\n * class (i.e. the underlying class is an inner/nested class or a\r\n * local class within a method).\r\n * <p>If this method returns {@code false}, then the underlying\r\n * class is a top-level class.\r\n */\r\ndefault boolean hasEnclosingClass() {\r\n    return (getEnclosingClassName() != null);\r\n}\n/**\r\n * Return the name of the enclosing class of the underlying class,\r\n * or {@code null} if the underlying class is a top-level class.\r\n */\r\n@Nullable\r\nString getEnclosingClassName();\n/**\r\n * Return whether the underlying class has a superclass.\r\n */\r\ndefault boolean hasSuperClass() {\r\n    return (getSuperClassName() != null);\r\n}\n/**\r\n * Return the name of the superclass of the underlying class,\r\n * or {@code null} if there is no superclass defined.\r\n */\r\n@Nullable\r\nString getSuperClassName();\n/**\r\n * Return the names of all interfaces that the underlying class\r\n * implements, or an empty array if there are none.\r\n */\r\nString[] getInterfaceNames();\n/**\r\n * Return the names of all classes declared as members of the class represented by\r\n * this ClassMetadata object. This includes public, protected, default (package)\r\n * access, and private classes and interfaces declared by the class, but excludes\r\n * inherited classes and interfaces. An empty array is returned if no member classes\r\n * or interfaces exist.\r\n * @since 3.1\r\n */\r\nString[] getMemberClassNames();",
+    "comment": "\n * Interface that defines abstract metadata of a specific class,\n * in a form that does not require that class to be loaded yet.\n *\n * @author Juergen Hoeller\n * @since 2.5\n * @see StandardClassMetadata\n * @see org.springframework.core.type.classreading.MetadataReader#getClassMetadata()\n * @see AnnotationMetadata\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#getClassName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the name of the underlying class.\r\n */\r\nString getClassName();",
+    "comment": "\n\t * Return the name of the underlying class.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#isInterface()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class represents an interface.\r\n */\r\nboolean isInterface();",
+    "comment": "\n\t * Return whether the underlying class represents an interface.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#isAnnotation()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class represents an annotation.\r\n * @since 4.1\r\n */\r\nboolean isAnnotation();",
+    "comment": "\n\t * Return whether the underlying class represents an annotation.\n\t * @since 4.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#isAbstract()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class is marked as abstract.\r\n */\r\nboolean isAbstract();",
+    "comment": "\n\t * Return whether the underlying class is marked as abstract.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#isConcrete()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class represents a concrete class,\r\n * i.e. neither an interface nor an abstract class.\r\n */\r\ndefault boolean isConcrete() {\r\n    return !(isInterface() || isAbstract());\r\n}",
+    "comment": "\n\t * Return whether the underlying class represents a concrete class,\n\t * i.e. neither an interface nor an abstract class.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#isFinal()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class is marked as 'final'.\r\n */\r\nboolean isFinal();",
+    "comment": "\n\t * Return whether the underlying class is marked as 'final'.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#isIndependent()",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the underlying class is independent, i.e. whether\r\n * it is a top-level class or a nested class (static inner class) that\r\n * can be constructed independently of an enclosing class.\r\n */\r\nboolean isIndependent();",
+    "comment": "\n\t * Determine whether the underlying class is independent, i.e. whether\n\t * it is a top-level class or a nested class (static inner class) that\n\t * can be constructed independently of an enclosing class.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#hasEnclosingClass()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class is declared within an enclosing\r\n * class (i.e. the underlying class is an inner/nested class or a\r\n * local class within a method).\r\n * <p>If this method returns {@code false}, then the underlying\r\n * class is a top-level class.\r\n */\r\ndefault boolean hasEnclosingClass() {\r\n    return (getEnclosingClassName() != null);\r\n}",
+    "comment": "\n\t * Return whether the underlying class is declared within an enclosing\n\t * class (i.e. the underlying class is an inner/nested class or a\n\t * local class within a method).\n\t * <p>If this method returns {@code false}, then the underlying\n\t * class is a top-level class.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#getEnclosingClassName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the name of the enclosing class of the underlying class,\r\n * or {@code null} if the underlying class is a top-level class.\r\n */\r\n@Nullable\r\nString getEnclosingClassName();",
+    "comment": "\n\t * Return the name of the enclosing class of the underlying class,\n\t * or {@code null} if the underlying class is a top-level class.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#hasSuperClass()",
+    "entityType": "method",
+    "code": "/**\r\n * Return whether the underlying class has a superclass.\r\n */\r\ndefault boolean hasSuperClass() {\r\n    return (getSuperClassName() != null);\r\n}",
+    "comment": "\n\t * Return whether the underlying class has a superclass.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#getSuperClassName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the name of the superclass of the underlying class,\r\n * or {@code null} if there is no superclass defined.\r\n */\r\n@Nullable\r\nString getSuperClassName();",
+    "comment": "\n\t * Return the name of the superclass of the underlying class,\n\t * or {@code null} if there is no superclass defined.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#getInterfaceNames()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the names of all interfaces that the underlying class\r\n * implements, or an empty array if there are none.\r\n */\r\nString[] getInterfaceNames();",
+    "comment": "\n\t * Return the names of all interfaces that the underlying class\n\t * implements, or an empty array if there are none.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.ClassMetadata#getMemberClassNames()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the names of all classes declared as members of the class represented by\r\n * this ClassMetadata object. This includes public, protected, default (package)\r\n * access, and private classes and interfaces declared by the class, but excludes\r\n * inherited classes and interfaces. An empty array is returned if no member classes\r\n * or interfaces exist.\r\n * @since 3.1\r\n */\r\nString[] getMemberClassNames();",
+    "comment": "\n\t * Return the names of all classes declared as members of the class represented by\n\t * this ClassMetadata object. This includes public, protected, default (package)\n\t * access, and private classes and interfaces declared by the class, but excludes\n\t * inherited classes and interfaces. An empty array is returned if no member classes\n\t * or interfaces exist.\n\t * @since 3.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.CachingMetadataReaderFactory",
+    "entityType": "class",
+    "code": "/**\r\n * Default maximum number of entries for a local MetadataReader cache: 256.\r\n */\r\npublic static final int DEFAULT_CACHE_LIMIT = 256;\n/**\r\n * MetadataReader cache: either local or shared at the ResourceLoader level.\r\n */\r\n@Nullable\r\nprivate Map<Resource, MetadataReader> metadataReaderCache;\n/**\r\n * Create a new CachingMetadataReaderFactory for the default class loader,\r\n * using a local resource cache.\r\n */\r\npublic CachingMetadataReaderFactory() {\r\n    super();\r\n    setCacheLimit(DEFAULT_CACHE_LIMIT);\r\n}\n/**\r\n * Create a new CachingMetadataReaderFactory for the given {@link ClassLoader},\r\n * using a local resource cache.\r\n * @param classLoader the ClassLoader to use\r\n */\r\npublic CachingMetadataReaderFactory(@Nullable ClassLoader classLoader) {\r\n    super(classLoader);\r\n    setCacheLimit(DEFAULT_CACHE_LIMIT);\r\n}\n/**\r\n * Create a new CachingMetadataReaderFactory for the given {@link ResourceLoader},\r\n * using a shared resource cache if supported or a local resource cache otherwise.\r\n * @param resourceLoader the Spring ResourceLoader to use\r\n * (also determines the ClassLoader to use)\r\n * @see DefaultResourceLoader#getResourceCache\r\n */\r\npublic CachingMetadataReaderFactory(@Nullable ResourceLoader resourceLoader) {\r\n    super(resourceLoader);\r\n    if (resourceLoader instanceof DefaultResourceLoader defaultResourceLoader) {\r\n        this.metadataReaderCache = defaultResourceLoader.getResourceCache(MetadataReader.class);\r\n    } else {\r\n        setCacheLimit(DEFAULT_CACHE_LIMIT);\r\n    }\r\n}\n/**\r\n * Specify the maximum number of entries for the MetadataReader cache.\r\n * <p>Default is 256 for a local cache, whereas a shared cache is\r\n * typically unbounded. This method enforces a local resource cache,\r\n * even if the {@link ResourceLoader} supports a shared resource cache.\r\n */\r\npublic void setCacheLimit(int cacheLimit) {\r\n    if (cacheLimit <= 0) {\r\n        this.metadataReaderCache = null;\r\n    } else if (this.metadataReaderCache instanceof LocalResourceCache localResourceCache) {\r\n        localResourceCache.setCacheLimit(cacheLimit);\r\n    } else {\r\n        this.metadataReaderCache = new LocalResourceCache(cacheLimit);\r\n    }\r\n}\n/**\r\n * Return the maximum number of entries for the MetadataReader cache.\r\n */\r\npublic int getCacheLimit() {\r\n    if (this.metadataReaderCache instanceof LocalResourceCache localResourceCache) {\r\n        return localResourceCache.getCacheLimit();\r\n    } else {\r\n        return (this.metadataReaderCache != null ? Integer.MAX_VALUE : 0);\r\n    }\r\n}\n@Override\r\npublic MetadataReader getMetadataReader(Resource resource) throws IOException {\r\n    if (this.metadataReaderCache instanceof ConcurrentMap) {\r\n        // No synchronization necessary...\r\n        MetadataReader metadataReader = this.metadataReaderCache.get(resource);\r\n        if (metadataReader == null) {\r\n            metadataReader = super.getMetadataReader(resource);\r\n            this.metadataReaderCache.put(resource, metadataReader);\r\n        }\r\n        return metadataReader;\r\n    } else if (this.metadataReaderCache != null) {\r\n        synchronized (this.metadataReaderCache) {\r\n            MetadataReader metadataReader = this.metadataReaderCache.get(resource);\r\n            if (metadataReader == null) {\r\n                metadataReader = super.getMetadataReader(resource);\r\n                this.metadataReaderCache.put(resource, metadataReader);\r\n            }\r\n            return metadataReader;\r\n        }\r\n    } else {\r\n        return super.getMetadataReader(resource);\r\n    }\r\n}\n/**\r\n * Clear the local MetadataReader cache, if any, removing all cached class metadata.\r\n */\r\npublic void clearCache() {\r\n    if (this.metadataReaderCache instanceof LocalResourceCache) {\r\n        synchronized (this.metadataReaderCache) {\r\n            this.metadataReaderCache.clear();\r\n        }\r\n    } else if (this.metadataReaderCache != null) {\r\n        // Shared resource cache -> reset to local cache.\r\n        setCacheLimit(DEFAULT_CACHE_LIMIT);\r\n    }\r\n}\n@SuppressWarnings(\"serial\")\r\nprivate static class LocalResourceCache extends LinkedHashMap<Resource, MetadataReader> {\r\n\r\n    private volatile int cacheLimit;\r\n\r\n    public LocalResourceCache(int cacheLimit) {\r\n        super(cacheLimit, 0.75f, true);\r\n        this.cacheLimit = cacheLimit;\r\n    }\r\n\r\n    public void setCacheLimit(int cacheLimit) {\r\n        this.cacheLimit = cacheLimit;\r\n    }\r\n\r\n    public int getCacheLimit() {\r\n        return this.cacheLimit;\r\n    }\r\n\r\n    @Override\r\n    protected boolean removeEldestEntry(Map.Entry<Resource, MetadataReader> eldest) {\r\n        return size() > this.cacheLimit;\r\n    }\r\n}",
+    "comment": "\n * Caching implementation of the {@link MetadataReaderFactory} interface,\n * caching a {@link MetadataReader} instance per Spring {@link Resource} handle\n * (i.e. per \".class\" file).\n *\n * @author Juergen Hoeller\n * @author Costin Leau\n * @since 2.5\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.CachingMetadataReaderFactory#setCacheLimit(int)",
+    "entityType": "method",
+    "code": "/**\r\n * Specify the maximum number of entries for the MetadataReader cache.\r\n * <p>Default is 256 for a local cache, whereas a shared cache is\r\n * typically unbounded. This method enforces a local resource cache,\r\n * even if the {@link ResourceLoader} supports a shared resource cache.\r\n */\r\npublic void setCacheLimit(int cacheLimit) {\r\n    if (cacheLimit <= 0) {\r\n        this.metadataReaderCache = null;\r\n    } else if (this.metadataReaderCache instanceof LocalResourceCache localResourceCache) {\r\n        localResourceCache.setCacheLimit(cacheLimit);\r\n    } else {\r\n        this.metadataReaderCache = new LocalResourceCache(cacheLimit);\r\n    }\r\n}",
+    "comment": "\n\t * Specify the maximum number of entries for the MetadataReader cache.\n\t * <p>Default is 256 for a local cache, whereas a shared cache is\n\t * typically unbounded. This method enforces a local resource cache,\n\t * even if the {@link ResourceLoader} supports a shared resource cache.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.CachingMetadataReaderFactory#getCacheLimit()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the maximum number of entries for the MetadataReader cache.\r\n */\r\npublic int getCacheLimit() {\r\n    if (this.metadataReaderCache instanceof LocalResourceCache localResourceCache) {\r\n        return localResourceCache.getCacheLimit();\r\n    } else {\r\n        return (this.metadataReaderCache != null ? Integer.MAX_VALUE : 0);\r\n    }\r\n}",
+    "comment": "\n\t * Return the maximum number of entries for the MetadataReader cache.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.CachingMetadataReaderFactory#getMetadataReader(Resource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic MetadataReader getMetadataReader(Resource resource) throws IOException {\r\n    if (this.metadataReaderCache instanceof ConcurrentMap) {\r\n        // No synchronization necessary...\r\n        MetadataReader metadataReader = this.metadataReaderCache.get(resource);\r\n        if (metadataReader == null) {\r\n            metadataReader = super.getMetadataReader(resource);\r\n            this.metadataReaderCache.put(resource, metadataReader);\r\n        }\r\n        return metadataReader;\r\n    } else if (this.metadataReaderCache != null) {\r\n        synchronized (this.metadataReaderCache) {\r\n            MetadataReader metadataReader = this.metadataReaderCache.get(resource);\r\n            if (metadataReader == null) {\r\n                metadataReader = super.getMetadataReader(resource);\r\n                this.metadataReaderCache.put(resource, metadataReader);\r\n            }\r\n            return metadataReader;\r\n        }\r\n    } else {\r\n        return super.getMetadataReader(resource);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.CachingMetadataReaderFactory#clearCache()",
+    "entityType": "method",
+    "code": "/**\r\n * Clear the local MetadataReader cache, if any, removing all cached class metadata.\r\n */\r\npublic void clearCache() {\r\n    if (this.metadataReaderCache instanceof LocalResourceCache) {\r\n        synchronized (this.metadataReaderCache) {\r\n            this.metadataReaderCache.clear();\r\n        }\r\n    } else if (this.metadataReaderCache != null) {\r\n        // Shared resource cache -> reset to local cache.\r\n        setCacheLimit(DEFAULT_CACHE_LIMIT);\r\n    }\r\n}",
+    "comment": "\n\t * Clear the local MetadataReader cache, if any, removing all cached class metadata.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.LocalResourceCache",
+    "entityType": "class",
+    "code": "private volatile int cacheLimit;\npublic LocalResourceCache(int cacheLimit) {\r\n    super(cacheLimit, 0.75f, true);\r\n    this.cacheLimit = cacheLimit;\r\n}\npublic void setCacheLimit(int cacheLimit) {\r\n    this.cacheLimit = cacheLimit;\r\n}\npublic int getCacheLimit() {\r\n    return this.cacheLimit;\r\n}\n@Override\r\nprotected boolean removeEldestEntry(Map.Entry<Resource, MetadataReader> eldest) {\r\n    return size() > this.cacheLimit;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.LocalResourceCache#setCacheLimit(int)",
+    "entityType": "method",
+    "code": "public void setCacheLimit(int cacheLimit) {\r\n    this.cacheLimit = cacheLimit;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.LocalResourceCache#getCacheLimit()",
+    "entityType": "method",
+    "code": "public int getCacheLimit() {\r\n    return this.cacheLimit;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.LocalResourceCache#removeEldestEntry(Map.Entry<Resource,MetadataReader>)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected boolean removeEldestEntry(Map.Entry<Resource, MetadataReader> eldest) {\r\n    return size() > this.cacheLimit;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ClassFormatException",
+    "entityType": "class",
+    "code": "/**\r\n * Construct a new {@code ClassFormatException} with the\r\n * supplied message.\r\n * @param message the detail message\r\n */\r\npublic ClassFormatException(String message) {\r\n    super(message);\r\n}\n/**\r\n * Construct a new {@code ClassFormatException} with the\r\n * supplied message and cause.\r\n * @param message the detail message\r\n * @param cause the root cause\r\n */\r\npublic ClassFormatException(String message, Throwable cause) {\r\n    super(message, cause);\r\n}",
+    "comment": "\n * Exception that indicates an incompatible class format encountered\n * in a class file during metadata reading.\n *\n * @author Juergen Hoeller\n * @since 6.1.2\n * @see MetadataReaderFactory#getMetadataReader(Resource)\n * @see ClassFormatError\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate final ClassLoader classLoader;\n@Nullable\r\nprivate final Object source;\nprivate final Class<A> annotationType;\nprivate final Consumer<MergedAnnotation<A>> consumer;\nprivate final Map<String, Object> attributes = new LinkedHashMap<>(4);\npublic MergedAnnotationReadingVisitor(@Nullable ClassLoader classLoader, @Nullable Object source, Class<A> annotationType, Consumer<MergedAnnotation<A>> consumer) {\r\n    super(SpringAsmInfo.ASM_VERSION);\r\n    this.classLoader = classLoader;\r\n    this.source = source;\r\n    this.annotationType = annotationType;\r\n    this.consumer = consumer;\r\n}\n@Override\r\npublic void visit(String name, Object value) {\r\n    if (value instanceof Type type) {\r\n        value = type.getClassName();\r\n    }\r\n    this.attributes.put(name, value);\r\n}\n@Override\r\npublic void visitEnum(String name, String descriptor, String value) {\r\n    visitEnum(descriptor, value, enumValue -> this.attributes.put(name, enumValue));\r\n}\n@Override\r\n@Nullable\r\npublic AnnotationVisitor visitAnnotation(String name, String descriptor) {\r\n    return visitAnnotation(descriptor, annotation -> this.attributes.put(name, annotation));\r\n}\n@Override\r\npublic AnnotationVisitor visitArray(String name) {\r\n    return new ArrayVisitor(value -> this.attributes.put(name, value));\r\n}\n@Override\r\npublic void visitEnd() {\r\n    Map<String, Object> compactedAttributes = (this.attributes.isEmpty() ? Collections.emptyMap() : this.attributes);\r\n    MergedAnnotation<A> annotation = MergedAnnotation.of(this.classLoader, this.source, this.annotationType, compactedAttributes);\r\n    this.consumer.accept(annotation);\r\n}\n@SuppressWarnings(\"unchecked\")\r\npublic <E extends Enum<E>> void visitEnum(String descriptor, String value, Consumer<E> consumer) {\r\n    String className = Type.getType(descriptor).getClassName();\r\n    Class<E> type = (Class<E>) ClassUtils.resolveClassName(className, this.classLoader);\r\n    consumer.accept(Enum.valueOf(type, value));\r\n}\n@SuppressWarnings(\"unchecked\")\r\n@Nullable\r\nprivate <T extends Annotation> AnnotationVisitor visitAnnotation(String descriptor, Consumer<MergedAnnotation<T>> consumer) {\r\n    String className = Type.getType(descriptor).getClassName();\r\n    if (AnnotationFilter.PLAIN.matches(className)) {\r\n        return null;\r\n    }\r\n    Class<T> type = (Class<T>) ClassUtils.resolveClassName(className, this.classLoader);\r\n    return new MergedAnnotationReadingVisitor<>(this.classLoader, this.source, type, consumer);\r\n}\n@SuppressWarnings(\"unchecked\")\r\n@Nullable\r\nstatic <A extends Annotation> AnnotationVisitor get(@Nullable ClassLoader classLoader, @Nullable Object source, String descriptor, boolean visible, Consumer<MergedAnnotation<A>> consumer) {\r\n    if (!visible) {\r\n        return null;\r\n    }\r\n    String typeName = Type.getType(descriptor).getClassName();\r\n    if (AnnotationFilter.PLAIN.matches(typeName)) {\r\n        return null;\r\n    }\r\n    try {\r\n        Class<A> annotationType = (Class<A>) ClassUtils.forName(typeName, classLoader);\r\n        return new MergedAnnotationReadingVisitor<>(classLoader, source, annotationType, consumer);\r\n    } catch (ClassNotFoundException | LinkageError ex) {\r\n        return null;\r\n    }\r\n}\n/**\r\n * {@link AnnotationVisitor} to deal with array attributes.\r\n */\r\nprivate class ArrayVisitor extends AnnotationVisitor {\r\n\r\n    private final List<Object> elements = new ArrayList<>();\r\n\r\n    private final Consumer<Object[]> consumer;\r\n\r\n    ArrayVisitor(Consumer<Object[]> consumer) {\r\n        super(SpringAsmInfo.ASM_VERSION);\r\n        this.consumer = consumer;\r\n    }\r\n\r\n    @Override\r\n    public void visit(String name, Object value) {\r\n        if (value instanceof Type type) {\r\n            value = type.getClassName();\r\n        }\r\n        this.elements.add(value);\r\n    }\r\n\r\n    @Override\r\n    public void visitEnum(String name, String descriptor, String value) {\r\n        MergedAnnotationReadingVisitor.this.visitEnum(descriptor, value, this.elements::add);\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public AnnotationVisitor visitAnnotation(String name, String descriptor) {\r\n        return MergedAnnotationReadingVisitor.this.visitAnnotation(descriptor, this.elements::add);\r\n    }\r\n\r\n    @Override\r\n    public void visitEnd() {\r\n        Class<?> componentType = getComponentType();\r\n        Object[] array = (Object[]) Array.newInstance(componentType, this.elements.size());\r\n        this.consumer.accept(this.elements.toArray(array));\r\n    }\r\n\r\n    private Class<?> getComponentType() {\r\n        if (this.elements.isEmpty()) {\r\n            return Object.class;\r\n        }\r\n        Object firstElement = this.elements.get(0);\r\n        if (firstElement instanceof Enum<?> enumeration) {\r\n            return enumeration.getDeclaringClass();\r\n        }\r\n        return firstElement.getClass();\r\n    }\r\n}",
+    "comment": "\n * {@link AnnotationVisitor} that can be used to construct a\n * {@link MergedAnnotation}.\n *\n * @author Phillip Webb\n * @since 5.2\n * @param <A> the annotation type\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visit(String,Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visit(String name, Object value) {\r\n    if (value instanceof Type type) {\r\n        value = type.getClassName();\r\n    }\r\n    this.attributes.put(name, value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visitEnum(String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitEnum(String name, String descriptor, String value) {\r\n    visitEnum(descriptor, value, enumValue -> this.attributes.put(name, enumValue));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visitAnnotation(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic AnnotationVisitor visitAnnotation(String name, String descriptor) {\r\n    return visitAnnotation(descriptor, annotation -> this.attributes.put(name, annotation));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visitArray(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic AnnotationVisitor visitArray(String name) {\r\n    return new ArrayVisitor(value -> this.attributes.put(name, value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visitEnd()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitEnd() {\r\n    Map<String, Object> compactedAttributes = (this.attributes.isEmpty() ? Collections.emptyMap() : this.attributes);\r\n    MergedAnnotation<A> annotation = MergedAnnotation.of(this.classLoader, this.source, this.annotationType, compactedAttributes);\r\n    this.consumer.accept(annotation);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visitEnum(String,String,Consumer<E>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unchecked\")\r\npublic <E extends Enum<E>> void visitEnum(String descriptor, String value, Consumer<E> consumer) {\r\n    String className = Type.getType(descriptor).getClassName();\r\n    Class<E> type = (Class<E>) ClassUtils.resolveClassName(className, this.classLoader);\r\n    consumer.accept(Enum.valueOf(type, value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#visitAnnotation(String,Consumer<MergedAnnotation<T>>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unchecked\")\r\n@Nullable\r\nprivate <T extends Annotation> AnnotationVisitor visitAnnotation(String descriptor, Consumer<MergedAnnotation<T>> consumer) {\r\n    String className = Type.getType(descriptor).getClassName();\r\n    if (AnnotationFilter.PLAIN.matches(className)) {\r\n        return null;\r\n    }\r\n    Class<T> type = (Class<T>) ClassUtils.resolveClassName(className, this.classLoader);\r\n    return new MergedAnnotationReadingVisitor<>(this.classLoader, this.source, type, consumer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MergedAnnotationReadingVisitor#get(ClassLoader,Object,String,boolean,Consumer<MergedAnnotation<A>>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"unchecked\")\r\n@Nullable\r\nstatic <A extends Annotation> AnnotationVisitor get(@Nullable ClassLoader classLoader, @Nullable Object source, String descriptor, boolean visible, Consumer<MergedAnnotation<A>> consumer) {\r\n    if (!visible) {\r\n        return null;\r\n    }\r\n    String typeName = Type.getType(descriptor).getClassName();\r\n    if (AnnotationFilter.PLAIN.matches(typeName)) {\r\n        return null;\r\n    }\r\n    try {\r\n        Class<A> annotationType = (Class<A>) ClassUtils.forName(typeName, classLoader);\r\n        return new MergedAnnotationReadingVisitor<>(classLoader, source, annotationType, consumer);\r\n    } catch (ClassNotFoundException | LinkageError ex) {\r\n        return null;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ArrayVisitor",
+    "entityType": "class",
+    "code": "private final List<Object> elements = new ArrayList<>();\nprivate final Consumer<Object[]> consumer;\nArrayVisitor(Consumer<Object[]> consumer) {\r\n    super(SpringAsmInfo.ASM_VERSION);\r\n    this.consumer = consumer;\r\n}\n@Override\r\npublic void visit(String name, Object value) {\r\n    if (value instanceof Type type) {\r\n        value = type.getClassName();\r\n    }\r\n    this.elements.add(value);\r\n}\n@Override\r\npublic void visitEnum(String name, String descriptor, String value) {\r\n    MergedAnnotationReadingVisitor.this.visitEnum(descriptor, value, this.elements::add);\r\n}\n@Override\r\n@Nullable\r\npublic AnnotationVisitor visitAnnotation(String name, String descriptor) {\r\n    return MergedAnnotationReadingVisitor.this.visitAnnotation(descriptor, this.elements::add);\r\n}\n@Override\r\npublic void visitEnd() {\r\n    Class<?> componentType = getComponentType();\r\n    Object[] array = (Object[]) Array.newInstance(componentType, this.elements.size());\r\n    this.consumer.accept(this.elements.toArray(array));\r\n}\nprivate Class<?> getComponentType() {\r\n    if (this.elements.isEmpty()) {\r\n        return Object.class;\r\n    }\r\n    Object firstElement = this.elements.get(0);\r\n    if (firstElement instanceof Enum<?> enumeration) {\r\n        return enumeration.getDeclaringClass();\r\n    }\r\n    return firstElement.getClass();\r\n}",
+    "comment": "\n\t * {@link AnnotationVisitor} to deal with array attributes.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ArrayVisitor#visit(String,Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visit(String name, Object value) {\r\n    if (value instanceof Type type) {\r\n        value = type.getClassName();\r\n    }\r\n    this.elements.add(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ArrayVisitor#visitEnum(String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitEnum(String name, String descriptor, String value) {\r\n    MergedAnnotationReadingVisitor.this.visitEnum(descriptor, value, this.elements::add);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ArrayVisitor#visitAnnotation(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic AnnotationVisitor visitAnnotation(String name, String descriptor) {\r\n    return MergedAnnotationReadingVisitor.this.visitAnnotation(descriptor, this.elements::add);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ArrayVisitor#visitEnd()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void visitEnd() {\r\n    Class<?> componentType = getComponentType();\r\n    Object[] array = (Object[]) Array.newInstance(componentType, this.elements.size());\r\n    this.consumer.accept(this.elements.toArray(array));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.ArrayVisitor#getComponentType()",
+    "entityType": "method",
+    "code": "private Class<?> getComponentType() {\r\n    if (this.elements.isEmpty()) {\r\n        return Object.class;\r\n    }\r\n    Object firstElement = this.elements.get(0);\r\n    if (firstElement instanceof Enum<?> enumeration) {\r\n        return enumeration.getDeclaringClass();\r\n    }\r\n    return firstElement.getClass();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MetadataReader",
+    "entityType": "class",
+    "code": "/**\r\n * Return the resource reference for the class file.\r\n */\r\nResource getResource();\n/**\r\n * Read basic class metadata for the underlying class.\r\n */\r\nClassMetadata getClassMetadata();\n/**\r\n * Read full annotation metadata for the underlying class,\r\n * including metadata for annotated methods.\r\n */\r\nAnnotationMetadata getAnnotationMetadata();",
+    "comment": "\n * Simple facade for accessing class metadata,\n * as read by an ASM {@link org.springframework.asm.ClassReader}.\n *\n * @author Juergen Hoeller\n * @since 2.5\n "
+  },
+  {
+    "entityId": "org.springframework.core.type.classreading.MetadataReader#getResource()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the resource reference for the class file.\r\n */\r\nResource getResource();",
+    "comment": "\n\t * Return the resource reference for the class file.\n\t "
+  }
+]

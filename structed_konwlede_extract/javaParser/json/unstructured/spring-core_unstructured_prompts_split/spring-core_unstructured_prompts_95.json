@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.aot.hint.predicate.FirstTestInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SecondTestInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionHintsPredicatesTests",
+    "entityType": "class",
+    "code": "private static Constructor<?> privateConstructor;\nprivate static Constructor<?> publicConstructor;\n@SuppressWarnings(\"unused\")\r\nprivate static Method publicMethod;\n@SuppressWarnings(\"unused\")\r\nprivate static Field publicField;\nprivate final ReflectionHintsPredicates reflection = new ReflectionHintsPredicates();\nprivate final RuntimeHints runtimeHints = new RuntimeHints();\n@BeforeAll\r\nstatic void setupAll() throws Exception {\r\n    privateConstructor = SampleClass.class.getDeclaredConstructor(String.class);\r\n    publicConstructor = SampleClass.class.getConstructor();\r\n    publicMethod = SampleClass.class.getMethod(\"publicMethod\");\r\n    publicField = SampleClass.class.getField(\"publicField\");\r\n}\n@Nested\r\nclass ReflectionOnType {\r\n\r\n    @Test\r\n    void shouldFailForNullType() {\r\n        assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType((TypeReference) null));\r\n    }\r\n\r\n    @Test\r\n    void reflectionOnClassShouldMatchIntrospection() {\r\n        runtimeHints.reflection().registerType(SampleClass.class);\r\n        assertPredicateMatches(reflection.onType(SampleClass.class));\r\n    }\r\n\r\n    @Test\r\n    void reflectionOnTypeReferenceShouldMatchIntrospection() {\r\n        runtimeHints.reflection().registerType(SampleClass.class);\r\n        assertPredicateMatches(reflection.onType(TypeReference.of(SampleClass.class)));\r\n    }\r\n\r\n    @Test\r\n    void reflectionOnDifferentClassShouldNotMatchIntrospection() {\r\n        runtimeHints.reflection().registerType(Integer.class);\r\n        assertPredicateDoesNotMatch(reflection.onType(TypeReference.of(SampleClass.class)));\r\n    }\r\n\r\n    @Test\r\n    void typeWithMemberCategoryFailsWithNullCategory() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType(SampleClass.class).withMemberCategory(null));\r\n    }\r\n\r\n    @Test\r\n    void typeWithMemberCategoryMatchesCategory() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateMatches(reflection.onType(SampleClass.class).withMemberCategory(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n    }\r\n\r\n    @Test\r\n    void typeWithMemberCategoryDoesNotMatchOtherCategory() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withMemberCategory(MemberCategory.INVOKE_PUBLIC_METHODS));\r\n    }\r\n\r\n    @Test\r\n    void typeWithMemberCategoriesMatchesCategories() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateMatches(reflection.onType(SampleClass.class).withMemberCategories(MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n    }\r\n\r\n    @Test\r\n    void typeWithMemberCategoriesDoesNotMatchMissingCategory() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withMemberCategories(MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n    }\r\n\r\n    @Test\r\n    void typeWithAnyMemberCategoryFailsWithNullCategories() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType(SampleClass.class).withAnyMemberCategory(new MemberCategory[0]));\r\n    }\r\n\r\n    @Test\r\n    void typeWithAnyMemberCategoryMatchesCategory() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n        assertPredicateMatches(reflection.onType(SampleClass.class).withAnyMemberCategory(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n    }\r\n\r\n    @Test\r\n    void typeWithAnyMemberCategoryDoesNotMatchOtherCategory() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withAnyMemberCategory(MemberCategory.INVOKE_DECLARED_METHODS));\r\n    }\r\n}\n@Nested\r\nclass ReflectionOnConstructor {\r\n\r\n    @Test\r\n    void constructorInvocationDoesNotMatchConstructorHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n    }\r\n\r\n    @Test\r\n    void constructorInvocationMatchesConstructorInvocationHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(Collections.emptyList(), ExecutableMode.INVOKE));\r\n        assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n    }\r\n\r\n    @Test\r\n    void constructorInvocationDoesNotMatchIntrospectPublicConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS);\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n    }\r\n\r\n    @Test\r\n    void constructorInvocationMatchesInvokePublicConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n        assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n    }\r\n\r\n    @Test\r\n    void constructorInvocationDoesNotMatchIntrospectDeclaredConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_CONSTRUCTORS);\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n    }\r\n\r\n    @Test\r\n    void constructorInvocationMatchesInvokeDeclaredConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n        assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n    }\r\n\r\n    @Test\r\n    void privateConstructorInvocationDoesNotMatchConstructorHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(TypeReference.listOf(String.class), ExecutableMode.INTROSPECT));\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n    }\r\n\r\n    @Test\r\n    void privateConstructorInvocationMatchesConstructorInvocationHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(TypeReference.listOf(String.class), ExecutableMode.INVOKE));\r\n        assertPredicateMatches(reflection.onConstructorInvocation(privateConstructor));\r\n    }\r\n\r\n    @Test\r\n    void privateConstructorInvocationDoesNotMatchIntrospectPublicConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS);\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n    }\r\n\r\n    @Test\r\n    void privateConstructorInvocationDoesNotMatchInvokePublicConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n    }\r\n\r\n    @Test\r\n    void privateConstructorInvocationDoesNotMatchIntrospectDeclaredConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_CONSTRUCTORS);\r\n        assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n    }\r\n\r\n    @Test\r\n    void privateConstructorInvocationMatchesInvokeDeclaredConstructors() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n        assertPredicateMatches(reflection.onConstructorInvocation(privateConstructor));\r\n    }\r\n}\n@Nested\r\nclass ReflectionOnMethod {\r\n\r\n    @Test\r\n    void methodIntrospectionMatchesTypeHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void methodIntrospectionMatchesMethodHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void methodIntrospectionFailsForUnknownType() {\r\n        assertThatThrownBy(() -> reflection.onMethod(\"com.example.DoesNotExist\", \"publicMethod\").introspect()).isInstanceOf(ClassNotFoundException.class);\r\n    }\r\n\r\n    @Test\r\n    void methodIntrospectionMatchesIntrospectPublicMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void methodIntrospectionMatchesInvokePublicMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void methodInvocationDoesNotMatchMethodHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void methodInvocationMatchesMethodInvocationHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INVOKE));\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void methodInvocationDoesNotMatchIntrospectPublicMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void methodInvocationMatchesInvokePublicMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void methodInvocationDoesNotMatchIntrospectDeclaredMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void methodInvocationDoesNotMatchInvokeDeclaredMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodIntrospectionMatchesTypeHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodIntrospectionMatchesMethodHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodIntrospectionMatchesIntrospectDeclaredMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodIntrospectionMatchesInvokeDeclaredMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodInvocationDoesNotMatchMethodHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodInvocationMatchesMethodInvocationHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INVOKE));\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodInvocationDoesNotMatchIntrospectPublicMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodInvocationDoesNotMatchInvokePublicMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodInvocationDoesNotMatchIntrospectDeclaredMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n        assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n    }\r\n\r\n    @Test\r\n    void privateMethodInvocationMatchesInvokeDeclaredMethods() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n        assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n    }\r\n}\n@Nested\r\nclass ReflectionOnField {\r\n\r\n    @Test\r\n    void shouldFailForMissingField() {\r\n        assertThatIllegalArgumentException().isThrownBy(() -> reflection.onField(SampleClass.class, \"missingField\"));\r\n    }\r\n\r\n    @Test\r\n    void shouldFailForUnknownClass() {\r\n        assertThatThrownBy(() -> reflection.onFieldAccess(\"com.example.DoesNotExist\", \"missingField\")).isInstanceOf(ClassNotFoundException.class);\r\n    }\r\n\r\n    @Test\r\n    void publicFieldAccessMatchesFieldHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withField(\"publicField\"));\r\n        assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n    }\r\n\r\n    @Test\r\n    void publicFieldAccessMatchesPublicFieldsHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.PUBLIC_FIELDS);\r\n        assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n    }\r\n\r\n    @Test\r\n    void publicFieldAccessMatchesAccessPublicFieldsHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.ACCESS_PUBLIC_FIELDS);\r\n        assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n    }\r\n\r\n    @Test\r\n    void fieldAccessDoesNotMatchTypeHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class);\r\n        assertPredicateDoesNotMatch(reflection.onField(SampleClass.class, \"publicField\"));\r\n    }\r\n\r\n    @Test\r\n    void privateFieldAccessDoesNotMatchTypeHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class);\r\n        assertPredicateDoesNotMatch(reflection.onField(SampleClass.class, \"privateField\"));\r\n    }\r\n\r\n    @Test\r\n    void privateFieldAccessMatchesFieldHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withField(\"privateField\"));\r\n        assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n    }\r\n\r\n    @Test\r\n    void privateFieldAccessMatchesDeclaredFieldsHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.DECLARED_FIELDS);\r\n        assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n    }\r\n\r\n    @Test\r\n    void privateFieldAccessMatchesAccessDeclaredFieldsHint() {\r\n        runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.ACCESS_DECLARED_FIELDS);\r\n        assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n    }\r\n}\nprivate void assertPredicateMatches(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).accepts(this.runtimeHints);\r\n}\nprivate void assertPredicateDoesNotMatch(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).rejects(this.runtimeHints);\r\n}\n@SuppressWarnings(\"unused\")\r\nstatic class SampleClass {\r\n\r\n    private String privateField;\r\n\r\n    public String publicField;\r\n\r\n    public SampleClass() {\r\n    }\r\n\r\n    private SampleClass(String message) {\r\n    }\r\n\r\n    public void publicMethod() {\r\n    }\r\n\r\n    private void privateMethod() {\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link ReflectionHintsPredicates}\n *\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionHintsPredicatesTests#setupAll()",
+    "entityType": "method",
+    "code": "@BeforeAll\r\nstatic void setupAll() throws Exception {\r\n    privateConstructor = SampleClass.class.getDeclaredConstructor(String.class);\r\n    publicConstructor = SampleClass.class.getConstructor();\r\n    publicMethod = SampleClass.class.getMethod(\"publicMethod\");\r\n    publicField = SampleClass.class.getField(\"publicField\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionHintsPredicatesTests#assertPredicateMatches(Predicate<RuntimeHints>)",
+    "entityType": "method",
+    "code": "private void assertPredicateMatches(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).accepts(this.runtimeHints);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionHintsPredicatesTests#assertPredicateDoesNotMatch(Predicate<RuntimeHints>)",
+    "entityType": "method",
+    "code": "private void assertPredicateDoesNotMatch(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).rejects(this.runtimeHints);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType",
+    "entityType": "class",
+    "code": "@Test\r\nvoid shouldFailForNullType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType((TypeReference) null));\r\n}\n@Test\r\nvoid reflectionOnClassShouldMatchIntrospection() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class));\r\n}\n@Test\r\nvoid reflectionOnTypeReferenceShouldMatchIntrospection() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onType(TypeReference.of(SampleClass.class)));\r\n}\n@Test\r\nvoid reflectionOnDifferentClassShouldNotMatchIntrospection() {\r\n    runtimeHints.reflection().registerType(Integer.class);\r\n    assertPredicateDoesNotMatch(reflection.onType(TypeReference.of(SampleClass.class)));\r\n}\n@Test\r\nvoid typeWithMemberCategoryFailsWithNullCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType(SampleClass.class).withMemberCategory(null));\r\n}\n@Test\r\nvoid typeWithMemberCategoryMatchesCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class).withMemberCategory(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}\n@Test\r\nvoid typeWithMemberCategoryDoesNotMatchOtherCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withMemberCategory(MemberCategory.INVOKE_PUBLIC_METHODS));\r\n}\n@Test\r\nvoid typeWithMemberCategoriesMatchesCategories() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class).withMemberCategories(MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}\n@Test\r\nvoid typeWithMemberCategoriesDoesNotMatchMissingCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withMemberCategories(MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}\n@Test\r\nvoid typeWithAnyMemberCategoryFailsWithNullCategories() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType(SampleClass.class).withAnyMemberCategory(new MemberCategory[0]));\r\n}\n@Test\r\nvoid typeWithAnyMemberCategoryMatchesCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class).withAnyMemberCategory(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}\n@Test\r\nvoid typeWithAnyMemberCategoryDoesNotMatchOtherCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withAnyMemberCategory(MemberCategory.INVOKE_DECLARED_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#shouldFailForNullType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldFailForNullType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType((TypeReference) null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#reflectionOnClassShouldMatchIntrospection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid reflectionOnClassShouldMatchIntrospection() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#reflectionOnTypeReferenceShouldMatchIntrospection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid reflectionOnTypeReferenceShouldMatchIntrospection() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onType(TypeReference.of(SampleClass.class)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#reflectionOnDifferentClassShouldNotMatchIntrospection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid reflectionOnDifferentClassShouldNotMatchIntrospection() {\r\n    runtimeHints.reflection().registerType(Integer.class);\r\n    assertPredicateDoesNotMatch(reflection.onType(TypeReference.of(SampleClass.class)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithMemberCategoryFailsWithNullCategory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithMemberCategoryFailsWithNullCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType(SampleClass.class).withMemberCategory(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithMemberCategoryMatchesCategory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithMemberCategoryMatchesCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class).withMemberCategory(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithMemberCategoryDoesNotMatchOtherCategory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithMemberCategoryDoesNotMatchOtherCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withMemberCategory(MemberCategory.INVOKE_PUBLIC_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithMemberCategoriesMatchesCategories()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithMemberCategoriesMatchesCategories() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class).withMemberCategories(MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithMemberCategoriesDoesNotMatchMissingCategory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithMemberCategoriesDoesNotMatchMissingCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withMemberCategories(MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS, MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithAnyMemberCategoryFailsWithNullCategories()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithAnyMemberCategoryFailsWithNullCategories() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onType(SampleClass.class).withAnyMemberCategory(new MemberCategory[0]));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithAnyMemberCategoryMatchesCategory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithAnyMemberCategoryMatchesCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onType(SampleClass.class).withAnyMemberCategory(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnType#typeWithAnyMemberCategoryDoesNotMatchOtherCategory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeWithAnyMemberCategoryDoesNotMatchOtherCategory() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onType(SampleClass.class).withAnyMemberCategory(MemberCategory.INVOKE_DECLARED_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor",
+    "entityType": "class",
+    "code": "@Test\r\nvoid constructorInvocationDoesNotMatchConstructorHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n}\n@Test\r\nvoid constructorInvocationMatchesConstructorInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(Collections.emptyList(), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n}\n@Test\r\nvoid constructorInvocationDoesNotMatchIntrospectPublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n}\n@Test\r\nvoid constructorInvocationMatchesInvokePublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n}\n@Test\r\nvoid constructorInvocationDoesNotMatchIntrospectDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n}\n@Test\r\nvoid constructorInvocationMatchesInvokeDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n}\n@Test\r\nvoid privateConstructorInvocationDoesNotMatchConstructorHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(TypeReference.listOf(String.class), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}\n@Test\r\nvoid privateConstructorInvocationMatchesConstructorInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(TypeReference.listOf(String.class), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onConstructorInvocation(privateConstructor));\r\n}\n@Test\r\nvoid privateConstructorInvocationDoesNotMatchIntrospectPublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}\n@Test\r\nvoid privateConstructorInvocationDoesNotMatchInvokePublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}\n@Test\r\nvoid privateConstructorInvocationDoesNotMatchIntrospectDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}\n@Test\r\nvoid privateConstructorInvocationMatchesInvokeDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    assertPredicateMatches(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#constructorInvocationDoesNotMatchConstructorHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constructorInvocationDoesNotMatchConstructorHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#constructorInvocationMatchesConstructorInvocationHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constructorInvocationMatchesConstructorInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(Collections.emptyList(), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#constructorInvocationDoesNotMatchIntrospectPublicConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constructorInvocationDoesNotMatchIntrospectPublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#constructorInvocationMatchesInvokePublicConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constructorInvocationMatchesInvokePublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#constructorInvocationDoesNotMatchIntrospectDeclaredConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constructorInvocationDoesNotMatchIntrospectDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(publicConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#constructorInvocationMatchesInvokeDeclaredConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constructorInvocationMatchesInvokeDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    assertPredicateMatches(reflection.onConstructorInvocation(publicConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#privateConstructorInvocationDoesNotMatchConstructorHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateConstructorInvocationDoesNotMatchConstructorHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(TypeReference.listOf(String.class), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#privateConstructorInvocationMatchesConstructorInvocationHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateConstructorInvocationMatchesConstructorInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withConstructor(TypeReference.listOf(String.class), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#privateConstructorInvocationDoesNotMatchIntrospectPublicConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateConstructorInvocationDoesNotMatchIntrospectPublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#privateConstructorInvocationDoesNotMatchInvokePublicConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateConstructorInvocationDoesNotMatchInvokePublicConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#privateConstructorInvocationDoesNotMatchIntrospectDeclaredConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateConstructorInvocationDoesNotMatchIntrospectDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_CONSTRUCTORS);\r\n    assertPredicateDoesNotMatch(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnConstructor#privateConstructorInvocationMatchesInvokeDeclaredConstructors()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateConstructorInvocationMatchesInvokeDeclaredConstructors() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    assertPredicateMatches(reflection.onConstructorInvocation(privateConstructor));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod",
+    "entityType": "class",
+    "code": "@Test\r\nvoid methodIntrospectionMatchesTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}\n@Test\r\nvoid methodIntrospectionMatchesMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}\n@Test\r\nvoid methodIntrospectionFailsForUnknownType() {\r\n    assertThatThrownBy(() -> reflection.onMethod(\"com.example.DoesNotExist\", \"publicMethod\").introspect()).isInstanceOf(ClassNotFoundException.class);\r\n}\n@Test\r\nvoid methodIntrospectionMatchesIntrospectPublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}\n@Test\r\nvoid methodIntrospectionMatchesInvokePublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}\n@Test\r\nvoid methodInvocationDoesNotMatchMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}\n@Test\r\nvoid methodInvocationMatchesMethodInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}\n@Test\r\nvoid methodInvocationDoesNotMatchIntrospectPublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}\n@Test\r\nvoid methodInvocationMatchesInvokePublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}\n@Test\r\nvoid methodInvocationDoesNotMatchIntrospectDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}\n@Test\r\nvoid methodInvocationDoesNotMatchInvokeDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}\n@Test\r\nvoid privateMethodIntrospectionMatchesTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}\n@Test\r\nvoid privateMethodIntrospectionMatchesMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}\n@Test\r\nvoid privateMethodIntrospectionMatchesIntrospectDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}\n@Test\r\nvoid privateMethodIntrospectionMatchesInvokeDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}\n@Test\r\nvoid privateMethodInvocationDoesNotMatchMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}\n@Test\r\nvoid privateMethodInvocationMatchesMethodInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}\n@Test\r\nvoid privateMethodInvocationDoesNotMatchIntrospectPublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}\n@Test\r\nvoid privateMethodInvocationDoesNotMatchInvokePublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}\n@Test\r\nvoid privateMethodInvocationDoesNotMatchIntrospectDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}\n@Test\r\nvoid privateMethodInvocationMatchesInvokeDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodIntrospectionMatchesTypeHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodIntrospectionMatchesTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodIntrospectionMatchesMethodHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodIntrospectionMatchesMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodIntrospectionFailsForUnknownType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodIntrospectionFailsForUnknownType() {\r\n    assertThatThrownBy(() -> reflection.onMethod(\"com.example.DoesNotExist\", \"publicMethod\").introspect()).isInstanceOf(ClassNotFoundException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodIntrospectionMatchesIntrospectPublicMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodIntrospectionMatchesIntrospectPublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodIntrospectionMatchesInvokePublicMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodIntrospectionMatchesInvokePublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodInvocationDoesNotMatchMethodHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodInvocationDoesNotMatchMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodInvocationMatchesMethodInvocationHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodInvocationMatchesMethodInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"publicMethod\", Collections.emptyList(), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodInvocationDoesNotMatchIntrospectPublicMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodInvocationDoesNotMatchIntrospectPublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodInvocationMatchesInvokePublicMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodInvocationMatchesInvokePublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodInvocationDoesNotMatchIntrospectDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodInvocationDoesNotMatchIntrospectDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#methodInvocationDoesNotMatchInvokeDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodInvocationDoesNotMatchInvokeDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"publicMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodIntrospectionMatchesTypeHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodIntrospectionMatchesTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodIntrospectionMatchesMethodHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodIntrospectionMatchesMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodIntrospectionMatchesIntrospectDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodIntrospectionMatchesIntrospectDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodIntrospectionMatchesInvokeDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodIntrospectionMatchesInvokeDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").introspect());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodInvocationDoesNotMatchMethodHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodInvocationDoesNotMatchMethodHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INTROSPECT));\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodInvocationMatchesMethodInvocationHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodInvocationMatchesMethodInvocationHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withMethod(\"privateMethod\", Collections.emptyList(), ExecutableMode.INVOKE));\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodInvocationDoesNotMatchIntrospectPublicMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodInvocationDoesNotMatchIntrospectPublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodInvocationDoesNotMatchInvokePublicMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodInvocationDoesNotMatchInvokePublicMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodInvocationDoesNotMatchIntrospectDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodInvocationDoesNotMatchIntrospectDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INTROSPECT_DECLARED_METHODS);\r\n    assertPredicateDoesNotMatch(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnMethod#privateMethodInvocationMatchesInvokeDeclaredMethods()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateMethodInvocationMatchesInvokeDeclaredMethods() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.INVOKE_DECLARED_METHODS);\r\n    assertPredicateMatches(reflection.onMethod(SampleClass.class, \"privateMethod\").invoke());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField",
+    "entityType": "class",
+    "code": "@Test\r\nvoid shouldFailForMissingField() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onField(SampleClass.class, \"missingField\"));\r\n}\n@Test\r\nvoid shouldFailForUnknownClass() {\r\n    assertThatThrownBy(() -> reflection.onFieldAccess(\"com.example.DoesNotExist\", \"missingField\")).isInstanceOf(ClassNotFoundException.class);\r\n}\n@Test\r\nvoid publicFieldAccessMatchesFieldHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withField(\"publicField\"));\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n}\n@Test\r\nvoid publicFieldAccessMatchesPublicFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.PUBLIC_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n}\n@Test\r\nvoid publicFieldAccessMatchesAccessPublicFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.ACCESS_PUBLIC_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n}\n@Test\r\nvoid fieldAccessDoesNotMatchTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateDoesNotMatch(reflection.onField(SampleClass.class, \"publicField\"));\r\n}\n@Test\r\nvoid privateFieldAccessDoesNotMatchTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateDoesNotMatch(reflection.onField(SampleClass.class, \"privateField\"));\r\n}\n@Test\r\nvoid privateFieldAccessMatchesFieldHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withField(\"privateField\"));\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n}\n@Test\r\nvoid privateFieldAccessMatchesDeclaredFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.DECLARED_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n}\n@Test\r\nvoid privateFieldAccessMatchesAccessDeclaredFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.ACCESS_DECLARED_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#shouldFailForMissingField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldFailForMissingField() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> reflection.onField(SampleClass.class, \"missingField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#shouldFailForUnknownClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldFailForUnknownClass() {\r\n    assertThatThrownBy(() -> reflection.onFieldAccess(\"com.example.DoesNotExist\", \"missingField\")).isInstanceOf(ClassNotFoundException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#publicFieldAccessMatchesFieldHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicFieldAccessMatchesFieldHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withField(\"publicField\"));\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#publicFieldAccessMatchesPublicFieldsHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicFieldAccessMatchesPublicFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.PUBLIC_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#publicFieldAccessMatchesAccessPublicFieldsHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid publicFieldAccessMatchesAccessPublicFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.ACCESS_PUBLIC_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"publicField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#fieldAccessDoesNotMatchTypeHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldAccessDoesNotMatchTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateDoesNotMatch(reflection.onField(SampleClass.class, \"publicField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#privateFieldAccessDoesNotMatchTypeHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateFieldAccessDoesNotMatchTypeHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class);\r\n    assertPredicateDoesNotMatch(reflection.onField(SampleClass.class, \"privateField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#privateFieldAccessMatchesFieldHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateFieldAccessMatchesFieldHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, typeHint -> typeHint.withField(\"privateField\"));\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#privateFieldAccessMatchesDeclaredFieldsHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateFieldAccessMatchesDeclaredFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.DECLARED_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ReflectionOnField#privateFieldAccessMatchesAccessDeclaredFieldsHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid privateFieldAccessMatchesAccessDeclaredFieldsHint() {\r\n    runtimeHints.reflection().registerType(SampleClass.class, MemberCategory.ACCESS_DECLARED_FIELDS);\r\n    assertPredicateMatches(reflection.onField(SampleClass.class, \"privateField\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SampleClass",
+    "entityType": "class",
+    "code": "private String privateField;\npublic String publicField;\npublic SampleClass() {\r\n}\nprivate SampleClass(String message) {\r\n}\npublic void publicMethod() ;\nprivate void privateMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SampleClass#publicMethod()",
+    "entityType": "method",
+    "code": "public void publicMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SampleClass#privateMethod()",
+    "entityType": "method",
+    "code": "private void privateMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests",
+    "entityType": "class",
+    "code": "private final ResourceHintsPredicates resources = new ResourceHintsPredicates();\nprivate final RuntimeHints runtimeHints = new RuntimeHints();\n@Test\r\nvoid resourcePatternMatchesResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"test/*\");\r\n    assertPredicateMatches(resources.forResource(\"/test/spring.properties\"));\r\n}\n@Test\r\nvoid resourcePatternDoesNotMatchResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"test/spring.*\");\r\n    assertPredicateDoesNotMatch(resources.forResource(\"/test/other.properties\"));\r\n}\n@Test\r\nvoid resourcePatternMatchesTypeAndResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"org/springframework/aot/hint/predicate/spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(getClass()), \"spring.properties\"));\r\n}\n@Test\r\nvoid resourcePatternMatchesTypeAndAbsoluteResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(getClass()), \"/spring.properties\"));\r\n}\n@Test\r\nvoid resourcePatternMatchesTypeInDefaultPackageAndResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(\"DummyClass\"), \"spring.properties\"));\r\n}\n@Test\r\nvoid resourcePatternMatchesTypeInDefaultPackageAndAbsoluteResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(\"DummyClass\"), \"/spring.properties\"));\r\n}\n@Test\r\nvoid resourcePatternDoesNotMatchTypeAndResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateDoesNotMatch(resources.forResource(TypeReference.of(getClass()), \"spring.properties\"));\r\n}\n@Test\r\nvoid resourceBundleMatchesBundleName() {\r\n    this.runtimeHints.resources().registerResourceBundle(\"spring\");\r\n    assertPredicateMatches(resources.forBundle(\"spring\"));\r\n}\n@Test\r\nvoid resourceBundleDoesNotMatchBundleName() {\r\n    this.runtimeHints.resources().registerResourceBundle(\"spring\");\r\n    assertPredicateDoesNotMatch(resources.forBundle(\"other\"));\r\n}\nprivate void assertPredicateMatches(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).accepts(this.runtimeHints);\r\n}\nprivate void assertPredicateDoesNotMatch(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).rejects(this.runtimeHints);\r\n}",
+    "comment": "\n * Tests for {@link ReflectionHintsPredicates}.\n *\n * @author Brian Clozel\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternMatchesResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternMatchesResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"test/*\");\r\n    assertPredicateMatches(resources.forResource(\"/test/spring.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternDoesNotMatchResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternDoesNotMatchResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"test/spring.*\");\r\n    assertPredicateDoesNotMatch(resources.forResource(\"/test/other.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternMatchesTypeAndResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternMatchesTypeAndResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"org/springframework/aot/hint/predicate/spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(getClass()), \"spring.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternMatchesTypeAndAbsoluteResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternMatchesTypeAndAbsoluteResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(getClass()), \"/spring.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternMatchesTypeInDefaultPackageAndResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternMatchesTypeInDefaultPackageAndResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(\"DummyClass\"), \"spring.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternMatchesTypeInDefaultPackageAndAbsoluteResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternMatchesTypeInDefaultPackageAndAbsoluteResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateMatches(resources.forResource(TypeReference.of(\"DummyClass\"), \"/spring.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourcePatternDoesNotMatchTypeAndResourceName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcePatternDoesNotMatchTypeAndResourceName() {\r\n    this.runtimeHints.resources().registerPattern(\"spring.*\");\r\n    assertPredicateDoesNotMatch(resources.forResource(TypeReference.of(getClass()), \"spring.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourceBundleMatchesBundleName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourceBundleMatchesBundleName() {\r\n    this.runtimeHints.resources().registerResourceBundle(\"spring\");\r\n    assertPredicateMatches(resources.forBundle(\"spring\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#resourceBundleDoesNotMatchBundleName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourceBundleDoesNotMatchBundleName() {\r\n    this.runtimeHints.resources().registerResourceBundle(\"spring\");\r\n    assertPredicateDoesNotMatch(resources.forBundle(\"other\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#assertPredicateMatches(Predicate<RuntimeHints>)",
+    "entityType": "method",
+    "code": "private void assertPredicateMatches(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).accepts(this.runtimeHints);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.ResourceHintsPredicatesTests#assertPredicateDoesNotMatch(Predicate<RuntimeHints>)",
+    "entityType": "method",
+    "code": "private void assertPredicateDoesNotMatch(Predicate<RuntimeHints> predicate) {\r\n    assertThat(predicate).rejects(this.runtimeHints);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SerializationHintsPredicatesTests",
+    "entityType": "class",
+    "code": "private final SerializationHintsPredicates serialization = new SerializationHintsPredicates();\nprivate final RuntimeHints runtimeHints = new RuntimeHints();\n@Test\r\nvoid shouldMatchRegisteredClass() {\r\n    runtimeHints.serialization().registerType(String.class);\r\n    assertThat(serialization.onType(String.class).test(runtimeHints)).isTrue();\r\n}\n@Test\r\nvoid shouldMatchRegisteredTypeReference() {\r\n    runtimeHints.serialization().registerType(TypeReference.of(String.class));\r\n    assertThat(serialization.onType(String.class).test(runtimeHints)).isTrue();\r\n}\n@Test\r\nvoid shouldNotMatchUnregisteredType() {\r\n    runtimeHints.serialization().registerType(Integer.class);\r\n    assertThat(serialization.onType(Long.class).test(runtimeHints)).isFalse();\r\n}",
+    "comment": "\n * Tests for {@link SerializationHintsPredicates}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SerializationHintsPredicatesTests#shouldMatchRegisteredClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldMatchRegisteredClass() {\r\n    runtimeHints.serialization().registerType(String.class);\r\n    assertThat(serialization.onType(String.class).test(runtimeHints)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SerializationHintsPredicatesTests#shouldMatchRegisteredTypeReference()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldMatchRegisteredTypeReference() {\r\n    runtimeHints.serialization().registerType(TypeReference.of(String.class));\r\n    assertThat(serialization.onType(String.class).test(runtimeHints)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.predicate.SerializationHintsPredicatesTests#shouldNotMatchUnregisteredType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldNotMatchUnregisteredType() {\r\n    runtimeHints.serialization().registerType(Integer.class);\r\n    assertThat(serialization.onType(Long.class).test(runtimeHints)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests",
+    "entityType": "class",
+    "code": "private final ProxyHints proxyHints = new ProxyHints();\n@Test\r\nvoid registerJdkProxyWithSealedInterface() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.proxyHints.registerJdkProxy(SealedInterface.class)).withMessageContaining(SealedInterface.class.getName());\r\n}\n@Test\r\nvoid registerJdkProxyWithConcreteClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.proxyHints.registerJdkProxy(String.class)).withMessageContaining(String.class.getName());\r\n}\n@Test\r\nvoid registerJdkProxyWithInterface() {\r\n    this.proxyHints.registerJdkProxy(Function.class);\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(Function.class));\r\n}\n@Test\r\nvoid registerJdkProxyWithTypeReferences() {\r\n    this.proxyHints.registerJdkProxy(TypeReference.of(Function.class), TypeReference.of(\"com.example.Advised\"));\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(Function.class.getName(), \"com.example.Advised\"));\r\n}\n@Test\r\nvoid registerJdkProxyWithConsumer() {\r\n    this.proxyHints.registerJdkProxy(springProxy(\"com.example.Test\"));\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(\"com.example.Test\", \"org.springframework.aop.SpringProxy\", \"org.springframework.aop.framework.Advised\", \"org.springframework.core.DecoratingProxy\"));\r\n}\n@Test\r\nvoid registerJdkProxyTwiceExposesOneHint() {\r\n    this.proxyHints.registerJdkProxy(Function.class);\r\n    this.proxyHints.registerJdkProxy(TypeReference.of(Function.class.getName()));\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(Function.class));\r\n}\nprivate static Consumer<JdkProxyHint.Builder> springProxy(String proxiedInterface) {\r\n    return builder -> builder.proxiedInterfaces(toTypeReferences(proxiedInterface, \"org.springframework.aop.SpringProxy\", \"org.springframework.aop.framework.Advised\", \"org.springframework.core.DecoratingProxy\"));\r\n}\nprivate static Consumer<JdkProxyHint> proxiedInterfaces(String... proxiedInterfaces) {\r\n    return jdkProxyHint -> assertThat(jdkProxyHint.getProxiedInterfaces()).containsExactly(toTypeReferences(proxiedInterfaces));\r\n}\nprivate static Consumer<JdkProxyHint> proxiedInterfaces(Class<?>... proxiedInterfaces) {\r\n    return jdkProxyHint -> assertThat(jdkProxyHint.getProxiedInterfaces()).containsExactlyElementsOf(TypeReference.listOf(proxiedInterfaces));\r\n}\nprivate static TypeReference[] toTypeReferences(String... proxiedInterfaces) {\r\n    return Arrays.stream(proxiedInterfaces).map(TypeReference::of).toArray(TypeReference[]::new);\r\n}\nsealed interface SealedInterface {\r\n}\n@SuppressWarnings(\"unused\")\r\nstatic final class SealedClass implements SealedInterface {\r\n}",
+    "comment": "\n * Tests for {@link ProxyHints}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#registerJdkProxyWithSealedInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerJdkProxyWithSealedInterface() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.proxyHints.registerJdkProxy(SealedInterface.class)).withMessageContaining(SealedInterface.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#registerJdkProxyWithConcreteClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerJdkProxyWithConcreteClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.proxyHints.registerJdkProxy(String.class)).withMessageContaining(String.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#registerJdkProxyWithInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerJdkProxyWithInterface() {\r\n    this.proxyHints.registerJdkProxy(Function.class);\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(Function.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#registerJdkProxyWithTypeReferences()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerJdkProxyWithTypeReferences() {\r\n    this.proxyHints.registerJdkProxy(TypeReference.of(Function.class), TypeReference.of(\"com.example.Advised\"));\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(Function.class.getName(), \"com.example.Advised\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#registerJdkProxyWithConsumer()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerJdkProxyWithConsumer() {\r\n    this.proxyHints.registerJdkProxy(springProxy(\"com.example.Test\"));\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(\"com.example.Test\", \"org.springframework.aop.SpringProxy\", \"org.springframework.aop.framework.Advised\", \"org.springframework.core.DecoratingProxy\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#registerJdkProxyTwiceExposesOneHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerJdkProxyTwiceExposesOneHint() {\r\n    this.proxyHints.registerJdkProxy(Function.class);\r\n    this.proxyHints.registerJdkProxy(TypeReference.of(Function.class.getName()));\r\n    assertThat(this.proxyHints.jdkProxyHints()).singleElement().satisfies(proxiedInterfaces(Function.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#springProxy(String)",
+    "entityType": "method",
+    "code": "private static Consumer<JdkProxyHint.Builder> springProxy(String proxiedInterface) {\r\n    return builder -> builder.proxiedInterfaces(toTypeReferences(proxiedInterface, \"org.springframework.aop.SpringProxy\", \"org.springframework.aop.framework.Advised\", \"org.springframework.core.DecoratingProxy\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#proxiedInterfaces(String)",
+    "entityType": "method",
+    "code": "private static Consumer<JdkProxyHint> proxiedInterfaces(String... proxiedInterfaces) {\r\n    return jdkProxyHint -> assertThat(jdkProxyHint.getProxiedInterfaces()).containsExactly(toTypeReferences(proxiedInterfaces));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#proxiedInterfaces(Class<?>)",
+    "entityType": "method",
+    "code": "private static Consumer<JdkProxyHint> proxiedInterfaces(Class<?>... proxiedInterfaces) {\r\n    return jdkProxyHint -> assertThat(jdkProxyHint.getProxiedInterfaces()).containsExactlyElementsOf(TypeReference.listOf(proxiedInterfaces));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ProxyHintsTests#toTypeReferences(String)",
+    "entityType": "method",
+    "code": "private static TypeReference[] toTypeReferences(String... proxiedInterfaces) {\r\n    return Arrays.stream(proxiedInterfaces).map(TypeReference::of).toArray(TypeReference[]::new);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SealedInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SealedClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests",
+    "entityType": "class",
+    "code": "private final ReflectionHints reflectionHints = new ReflectionHints();\n@Test\r\nvoid registerType() {\r\n    this.reflectionHints.registerType(TypeReference.of(String.class), hint -> hint.withMembers(MemberCategory.DECLARED_FIELDS));\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}\n@Test\r\nvoid registerTypeIfPresentRegistersExistingClass() {\r\n    this.reflectionHints.registerTypeIfPresent(null, String.class.getName(), MemberCategory.DECLARED_FIELDS);\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}\n@Test\r\nvoid registerTypeIfPresentIgnoresMissingClass() {\r\n    Consumer<TypeHint.Builder> hintBuilder = mock();\r\n    this.reflectionHints.registerTypeIfPresent(null, \"com.example.DoesNotExist\", hintBuilder);\r\n    assertThat(this.reflectionHints.typeHints()).isEmpty();\r\n    verifyNoInteractions(hintBuilder);\r\n}\n@Test\r\nvoid getTypeUsingType() {\r\n    this.reflectionHints.registerType(TypeReference.of(String.class), hint -> hint.withMembers(MemberCategory.DECLARED_FIELDS));\r\n    assertThat(this.reflectionHints.getTypeHint(String.class)).satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}\n@Test\r\nvoid getTypeUsingTypeReference() {\r\n    this.reflectionHints.registerType(String.class, MemberCategory.DECLARED_FIELDS);\r\n    assertThat(this.reflectionHints.getTypeHint(TypeReference.of(String.class))).satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}\n@Test\r\nvoid getTypeForNonExistingType() {\r\n    assertThat(this.reflectionHints.getTypeHint(String.class)).isNull();\r\n}\n@Test\r\nvoid registerTypeReusesBuilder() {\r\n    this.reflectionHints.registerType(TypeReference.of(String.class), MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    Field field = ReflectionUtils.findField(String.class, \"value\");\r\n    assertThat(field).isNotNull();\r\n    this.reflectionHints.registerField(field);\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(String.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).singleElement().satisfies(fieldHint -> assertThat(fieldHint.getName()).isEqualTo(\"value\"));\r\n        assertThat(typeHint.getMemberCategories()).containsOnly(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    });\r\n}\n@Test\r\nvoid registerClass() {\r\n    this.reflectionHints.registerType(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n}\n@Test\r\nvoid registerClassWithCustomizer() {\r\n    this.reflectionHints.registerType(Integer.class, typeHint -> typeHint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n}\n@Test\r\nvoid registerTypesAppliesTheSameHints() {\r\n    this.reflectionHints.registerTypes(TypeReference.listOf(Integer.class, String.class, Double.class), TypeHint.builtWith(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n    assertThat(this.reflectionHints.typeHints()).anySatisfy(typeWithMemberCategories(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).anySatisfy(typeWithMemberCategories(String.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).anySatisfy(typeWithMemberCategories(Double.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).hasSize(3);\r\n}\n@Test\r\nvoid registerField() {\r\n    Field field = ReflectionUtils.findField(TestType.class, \"field\");\r\n    assertThat(field).isNotNull();\r\n    this.reflectionHints.registerField(field);\r\n    assertTestTypeFieldHint(fieldHint -> assertThat(fieldHint.getName()).isEqualTo(\"field\"));\r\n}\n@Test\r\nvoid registerTypeIgnoresLambda() {\r\n    Runnable lambda = () -> ;;\r\n    Consumer<TypeHint.Builder> hintBuilder = mock();\r\n    this.reflectionHints.registerType(lambda.getClass());\r\n    this.reflectionHints.registerType(lambda.getClass(), hintBuilder);\r\n    assertThat(this.reflectionHints.typeHints()).isEmpty();\r\n    verifyNoInteractions(hintBuilder);\r\n}\nprivate void assertTestTypeFieldHint(Consumer<FieldHint> fieldHint) {\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(TestType.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).singleElement().satisfies(fieldHint);\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n    });\r\n}\n@Test\r\nvoid registerConstructor() {\r\n    this.reflectionHints.registerConstructor(TestType.class.getDeclaredConstructors()[0], ExecutableMode.INTROSPECT);\r\n    assertTestTypeConstructorHint(constructorHint -> {\r\n        assertThat(constructorHint.getParameterTypes()).isEmpty();\r\n        assertThat(constructorHint.getMode()).isEqualTo(ExecutableMode.INTROSPECT);\r\n    });\r\n}\n@Test\r\nvoid registerConstructorTwiceUpdatesExistingEntry() {\r\n    Constructor<?> constructor = TestType.class.getDeclaredConstructors()[0];\r\n    this.reflectionHints.registerConstructor(constructor, ExecutableMode.INTROSPECT);\r\n    this.reflectionHints.registerConstructor(constructor, ExecutableMode.INVOKE);\r\n    assertTestTypeConstructorHint(constructorHint -> {\r\n        assertThat(constructorHint.getParameterTypes()).isEmpty();\r\n        assertThat(constructorHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\r\n    });\r\n}\nprivate void assertTestTypeConstructorHint(Consumer<ExecutableHint> constructorHint) {\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(TestType.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).singleElement().satisfies(constructorHint);\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n    });\r\n}\n@Test\r\nvoid registerMethod() {\r\n    Method method = ReflectionUtils.findMethod(TestType.class, \"setName\", String.class);\r\n    assertThat(method).isNotNull();\r\n    this.reflectionHints.registerMethod(method, ExecutableMode.INTROSPECT);\r\n    assertTestTypeMethodHints(methodHint -> {\r\n        assertThat(methodHint.getName()).isEqualTo(\"setName\");\r\n        assertThat(methodHint.getParameterTypes()).containsOnly(TypeReference.of(String.class));\r\n        assertThat(methodHint.getMode()).isEqualTo(ExecutableMode.INTROSPECT);\r\n    });\r\n}\n@Test\r\nvoid registerMethodTwiceUpdatesExistingEntry() {\r\n    Method method = ReflectionUtils.findMethod(TestType.class, \"setName\", String.class);\r\n    assertThat(method).isNotNull();\r\n    this.reflectionHints.registerMethod(method, ExecutableMode.INTROSPECT);\r\n    this.reflectionHints.registerMethod(method, ExecutableMode.INVOKE);\r\n    assertTestTypeMethodHints(methodHint -> {\r\n        assertThat(methodHint.getName()).isEqualTo(\"setName\");\r\n        assertThat(methodHint.getParameterTypes()).containsOnly(TypeReference.of(String.class));\r\n        assertThat(methodHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\r\n    });\r\n}\n@Test\r\nvoid registerOnInterfaces() {\r\n    this.reflectionHints.registerForInterfaces(ChildType.class, typeHint -> typeHint.withMembers(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n    assertThat(this.reflectionHints.typeHints()).hasSize(2).noneMatch(typeHint -> typeHint.getType().getCanonicalName().equals(Serializable.class.getCanonicalName())).anyMatch(typeHint -> typeHint.getType().getCanonicalName().equals(SecondInterface.class.getCanonicalName()) && typeHint.getMemberCategories().contains(MemberCategory.INTROSPECT_PUBLIC_METHODS)).anyMatch(typeHint -> typeHint.getType().getCanonicalName().equals(FirstInterface.class.getCanonicalName()) && typeHint.getMemberCategories().contains(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}\nprivate void assertTestTypeMethodHints(Consumer<ExecutableHint> methodHint) {\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(TestType.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).singleElement().satisfies(methodHint);\r\n    });\r\n}\nprivate Consumer<TypeHint> typeWithMemberCategories(Class<?> type, MemberCategory... memberCategories) {\r\n    return typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(type.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).containsExactly(memberCategories);\r\n    };\r\n}\n@SuppressWarnings(\"unused\")\r\nstatic class TestType {\r\n\r\n    @Nullable\r\n    private String field;\r\n\r\n    void setName(String name) {\r\n    }\r\n}\ninterface FirstInterface {\r\n\r\n    void first();\r\n}\ninterface SecondInterface {\r\n\r\n    void second();\r\n}\n@SuppressWarnings(\"serial\")\r\nstatic class ParentType implements Serializable, FirstInterface {\r\n\r\n    @Override\r\n    public void first() {\r\n    }\r\n}\n@SuppressWarnings(\"serial\")\r\nstatic class ChildType extends ParentType implements SecondInterface {\r\n\r\n    @Override\r\n    public void second() {\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link ReflectionHints}.\n *\n * @author Stephane Nicoll\n * @author Sebastien Deleuze\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerType() {\r\n    this.reflectionHints.registerType(TypeReference.of(String.class), hint -> hint.withMembers(MemberCategory.DECLARED_FIELDS));\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerTypeIfPresentRegistersExistingClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeIfPresentRegistersExistingClass() {\r\n    this.reflectionHints.registerTypeIfPresent(null, String.class.getName(), MemberCategory.DECLARED_FIELDS);\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}",
+    "comment": ""
+  }
+]

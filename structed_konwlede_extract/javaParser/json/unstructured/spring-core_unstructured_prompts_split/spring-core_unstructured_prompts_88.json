@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLReader#setProperty(String,Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Throws a {@code SAXNotRecognizedException} exception when the given property does not signify a lexical\r\n * handler. The property name for a lexical handler is {@code http://xml.org/sax/properties/lexical-handler}.\r\n */\r\n@Override\r\npublic void setProperty(String name, Object value) throws SAXNotRecognizedException, SAXNotSupportedException {\r\n    if (\"http://xml.org/sax/properties/lexical-handler\".equals(name)) {\r\n        this.lexicalHandler = (LexicalHandler) value;\r\n    } else {\r\n        throw new SAXNotRecognizedException(name);\r\n    }\r\n}",
+    "comment": "\n\t * Throws a {@code SAXNotRecognizedException} exception when the given property does not signify a lexical\n\t * handler. The property name for a lexical handler is {@code http://xml.org/sax/properties/lexical-handler}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getElementText() throws XMLStreamException {\r\n    if (getEventType() != XMLStreamConstants.START_ELEMENT) {\r\n        throw new XMLStreamException(\"Parser must be on START_ELEMENT to read next text\", getLocation());\r\n    }\r\n    int eventType = next();\r\n    StringBuilder builder = new StringBuilder();\r\n    while (eventType != XMLStreamConstants.END_ELEMENT) {\r\n        if (eventType == XMLStreamConstants.CHARACTERS || eventType == XMLStreamConstants.CDATA || eventType == XMLStreamConstants.SPACE || eventType == XMLStreamConstants.ENTITY_REFERENCE) {\r\n            builder.append(getText());\r\n        } else if (eventType == XMLStreamConstants.PROCESSING_INSTRUCTION || eventType == XMLStreamConstants.COMMENT) {\r\n            // skipping\r\n        } else if (eventType == XMLStreamConstants.END_DOCUMENT) {\r\n            throw new XMLStreamException(\"Unexpected end of document when reading element text content\", getLocation());\r\n        } else if (eventType == XMLStreamConstants.START_ELEMENT) {\r\n            throw new XMLStreamException(\"Element text content may not contain START_ELEMENT\", getLocation());\r\n        } else {\r\n            throw new XMLStreamException(\"Unexpected event type \" + eventType, getLocation());\r\n        }\r\n        eventType = next();\r\n    }\r\n    return builder.toString();\r\n}\n@Override\r\npublic String getAttributeLocalName(int index) {\r\n    return getAttributeName(index).getLocalPart();\r\n}\n@Override\r\npublic String getAttributeNamespace(int index) {\r\n    return getAttributeName(index).getNamespaceURI();\r\n}\n@Override\r\npublic String getAttributePrefix(int index) {\r\n    return getAttributeName(index).getPrefix();\r\n}\n@Override\r\npublic String getNamespaceURI() {\r\n    int eventType = getEventType();\r\n    if (eventType == XMLStreamConstants.START_ELEMENT || eventType == XMLStreamConstants.END_ELEMENT) {\r\n        return getName().getNamespaceURI();\r\n    } else {\r\n        throw new IllegalStateException(\"Parser must be on START_ELEMENT or END_ELEMENT state\");\r\n    }\r\n}\n@Override\r\npublic String getNamespaceURI(String prefix) {\r\n    return getNamespaceContext().getNamespaceURI(prefix);\r\n}\n@Override\r\npublic boolean hasText() {\r\n    int eventType = getEventType();\r\n    return (eventType == XMLStreamConstants.SPACE || eventType == XMLStreamConstants.CHARACTERS || eventType == XMLStreamConstants.COMMENT || eventType == XMLStreamConstants.CDATA || eventType == XMLStreamConstants.ENTITY_REFERENCE);\r\n}\n@Override\r\npublic String getPrefix() {\r\n    int eventType = getEventType();\r\n    if (eventType == XMLStreamConstants.START_ELEMENT || eventType == XMLStreamConstants.END_ELEMENT) {\r\n        return getName().getPrefix();\r\n    } else {\r\n        throw new IllegalStateException(\"Parser must be on START_ELEMENT or END_ELEMENT state\");\r\n    }\r\n}\n@Override\r\npublic boolean hasName() {\r\n    int eventType = getEventType();\r\n    return (eventType == XMLStreamConstants.START_ELEMENT || eventType == XMLStreamConstants.END_ELEMENT);\r\n}\n@Override\r\npublic boolean isWhiteSpace() {\r\n    return getEventType() == XMLStreamConstants.SPACE;\r\n}\n@Override\r\npublic boolean isStartElement() {\r\n    return getEventType() == XMLStreamConstants.START_ELEMENT;\r\n}\n@Override\r\npublic boolean isEndElement() {\r\n    return getEventType() == XMLStreamConstants.END_ELEMENT;\r\n}\n@Override\r\npublic boolean isCharacters() {\r\n    return getEventType() == XMLStreamConstants.CHARACTERS;\r\n}\n@Override\r\npublic int nextTag() throws XMLStreamException {\r\n    int eventType = next();\r\n    while (eventType == XMLStreamConstants.CHARACTERS && isWhiteSpace() || eventType == XMLStreamConstants.CDATA && isWhiteSpace() || eventType == XMLStreamConstants.SPACE || eventType == XMLStreamConstants.PROCESSING_INSTRUCTION || eventType == XMLStreamConstants.COMMENT) {\r\n        eventType = next();\r\n    }\r\n    if (eventType != XMLStreamConstants.START_ELEMENT && eventType != XMLStreamConstants.END_ELEMENT) {\r\n        throw new XMLStreamException(\"expected start or end tag\", getLocation());\r\n    }\r\n    return eventType;\r\n}\n@Override\r\npublic void require(int expectedType, String namespaceURI, String localName) throws XMLStreamException {\r\n    int eventType = getEventType();\r\n    if (eventType != expectedType) {\r\n        throw new XMLStreamException(\"Expected [\" + expectedType + \"] but read [\" + eventType + \"]\");\r\n    }\r\n}\n@Override\r\n@Nullable\r\npublic String getAttributeValue(@Nullable String namespaceURI, String localName) {\r\n    for (int i = 0; i < getAttributeCount(); i++) {\r\n        QName name = getAttributeName(i);\r\n        if (name.getLocalPart().equals(localName) && (namespaceURI == null || name.getNamespaceURI().equals(namespaceURI))) {\r\n            return getAttributeValue(i);\r\n        }\r\n    }\r\n    return null;\r\n}\n@Override\r\npublic boolean hasNext() {\r\n    return getEventType() != END_DOCUMENT;\r\n}\n@Override\r\npublic String getLocalName() {\r\n    return getName().getLocalPart();\r\n}\n@Override\r\npublic char[] getTextCharacters() {\r\n    return getText().toCharArray();\r\n}\n@Override\r\npublic int getTextCharacters(int sourceStart, char[] target, int targetStart, int length) {\r\n    char[] source = getTextCharacters();\r\n    length = Math.min(length, source.length);\r\n    System.arraycopy(source, sourceStart, target, targetStart, length);\r\n    return length;\r\n}\n@Override\r\npublic int getTextLength() {\r\n    return getText().length();\r\n}",
+    "comment": "\n * Abstract base class for {@code XMLStreamReader}s.\n *\n * @author Arjen Poutsma\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getElementText()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getElementText() throws XMLStreamException {\r\n    if (getEventType() != XMLStreamConstants.START_ELEMENT) {\r\n        throw new XMLStreamException(\"Parser must be on START_ELEMENT to read next text\", getLocation());\r\n    }\r\n    int eventType = next();\r\n    StringBuilder builder = new StringBuilder();\r\n    while (eventType != XMLStreamConstants.END_ELEMENT) {\r\n        if (eventType == XMLStreamConstants.CHARACTERS || eventType == XMLStreamConstants.CDATA || eventType == XMLStreamConstants.SPACE || eventType == XMLStreamConstants.ENTITY_REFERENCE) {\r\n            builder.append(getText());\r\n        } else if (eventType == XMLStreamConstants.PROCESSING_INSTRUCTION || eventType == XMLStreamConstants.COMMENT) {\r\n            // skipping\r\n        } else if (eventType == XMLStreamConstants.END_DOCUMENT) {\r\n            throw new XMLStreamException(\"Unexpected end of document when reading element text content\", getLocation());\r\n        } else if (eventType == XMLStreamConstants.START_ELEMENT) {\r\n            throw new XMLStreamException(\"Element text content may not contain START_ELEMENT\", getLocation());\r\n        } else {\r\n            throw new XMLStreamException(\"Unexpected event type \" + eventType, getLocation());\r\n        }\r\n        eventType = next();\r\n    }\r\n    return builder.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getAttributeLocalName(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getAttributeLocalName(int index) {\r\n    return getAttributeName(index).getLocalPart();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getAttributeNamespace(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getAttributeNamespace(int index) {\r\n    return getAttributeName(index).getNamespaceURI();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getAttributePrefix(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getAttributePrefix(int index) {\r\n    return getAttributeName(index).getPrefix();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getNamespaceURI()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getNamespaceURI() {\r\n    int eventType = getEventType();\r\n    if (eventType == XMLStreamConstants.START_ELEMENT || eventType == XMLStreamConstants.END_ELEMENT) {\r\n        return getName().getNamespaceURI();\r\n    } else {\r\n        throw new IllegalStateException(\"Parser must be on START_ELEMENT or END_ELEMENT state\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getNamespaceURI(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getNamespaceURI(String prefix) {\r\n    return getNamespaceContext().getNamespaceURI(prefix);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#hasText()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasText() {\r\n    int eventType = getEventType();\r\n    return (eventType == XMLStreamConstants.SPACE || eventType == XMLStreamConstants.CHARACTERS || eventType == XMLStreamConstants.COMMENT || eventType == XMLStreamConstants.CDATA || eventType == XMLStreamConstants.ENTITY_REFERENCE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getPrefix()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getPrefix() {\r\n    int eventType = getEventType();\r\n    if (eventType == XMLStreamConstants.START_ELEMENT || eventType == XMLStreamConstants.END_ELEMENT) {\r\n        return getName().getPrefix();\r\n    } else {\r\n        throw new IllegalStateException(\"Parser must be on START_ELEMENT or END_ELEMENT state\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#hasName()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasName() {\r\n    int eventType = getEventType();\r\n    return (eventType == XMLStreamConstants.START_ELEMENT || eventType == XMLStreamConstants.END_ELEMENT);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#isWhiteSpace()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isWhiteSpace() {\r\n    return getEventType() == XMLStreamConstants.SPACE;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#isStartElement()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isStartElement() {\r\n    return getEventType() == XMLStreamConstants.START_ELEMENT;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#isEndElement()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isEndElement() {\r\n    return getEventType() == XMLStreamConstants.END_ELEMENT;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#isCharacters()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isCharacters() {\r\n    return getEventType() == XMLStreamConstants.CHARACTERS;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#nextTag()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int nextTag() throws XMLStreamException {\r\n    int eventType = next();\r\n    while (eventType == XMLStreamConstants.CHARACTERS && isWhiteSpace() || eventType == XMLStreamConstants.CDATA && isWhiteSpace() || eventType == XMLStreamConstants.SPACE || eventType == XMLStreamConstants.PROCESSING_INSTRUCTION || eventType == XMLStreamConstants.COMMENT) {\r\n        eventType = next();\r\n    }\r\n    if (eventType != XMLStreamConstants.START_ELEMENT && eventType != XMLStreamConstants.END_ELEMENT) {\r\n        throw new XMLStreamException(\"expected start or end tag\", getLocation());\r\n    }\r\n    return eventType;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#require(int,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void require(int expectedType, String namespaceURI, String localName) throws XMLStreamException {\r\n    int eventType = getEventType();\r\n    if (eventType != expectedType) {\r\n        throw new XMLStreamException(\"Expected [\" + expectedType + \"] but read [\" + eventType + \"]\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getAttributeValue(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic String getAttributeValue(@Nullable String namespaceURI, String localName) {\r\n    for (int i = 0; i < getAttributeCount(); i++) {\r\n        QName name = getAttributeName(i);\r\n        if (name.getLocalPart().equals(localName) && (namespaceURI == null || name.getNamespaceURI().equals(namespaceURI))) {\r\n            return getAttributeValue(i);\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#hasNext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasNext() {\r\n    return getEventType() != END_DOCUMENT;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getLocalName()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getLocalName() {\r\n    return getName().getLocalPart();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getTextCharacters()",
+    "entityType": "method",
+    "code": "@Override\r\npublic char[] getTextCharacters() {\r\n    return getText().toCharArray();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getTextCharacters(int,char[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int getTextCharacters(int sourceStart, char[] target, int targetStart, int length) {\r\n    char[] source = getTextCharacters();\r\n    length = Math.min(length, source.length);\r\n    System.arraycopy(source, sourceStart, target, targetStart, length);\r\n    return length;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.AbstractXMLStreamReader#getTextLength()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int getTextLength() {\r\n    return getText().length();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler",
+    "entityType": "class",
+    "code": "private final Document document;\nprivate final List<Element> elements = new ArrayList<>();\nprivate final Node node;\n/**\r\n * Create a new instance of the {@code DomContentHandler} with the given node.\r\n * @param node the node to publish events to\r\n */\r\nDomContentHandler(Node node) {\r\n    this.node = node;\r\n    // The following pattern variable \"doc\" cannot be named \"document\" due to lacking\r\n    // support in Checkstyle: https://github.com/checkstyle/checkstyle/issues/10969\r\n    if (node instanceof Document doc) {\r\n        this.document = doc;\r\n    } else {\r\n        this.document = node.getOwnerDocument();\r\n    }\r\n}\nprivate Node getParent() {\r\n    if (!this.elements.isEmpty()) {\r\n        return this.elements.get(this.elements.size() - 1);\r\n    } else {\r\n        return this.node;\r\n    }\r\n}\n@Override\r\npublic void startElement(String uri, String localName, String qName, Attributes attributes) {\r\n    Node parent = getParent();\r\n    Element element = this.document.createElementNS(uri, qName);\r\n    for (int i = 0; i < attributes.getLength(); i++) {\r\n        String attrUri = attributes.getURI(i);\r\n        String attrQname = attributes.getQName(i);\r\n        String value = attributes.getValue(i);\r\n        if (!attrQname.startsWith(\"xmlns\")) {\r\n            element.setAttributeNS(attrUri, attrQname, value);\r\n        }\r\n    }\r\n    element = (Element) parent.appendChild(element);\r\n    this.elements.add(element);\r\n}\n@Override\r\npublic void endElement(String uri, String localName, String qName) {\r\n    this.elements.remove(this.elements.size() - 1);\r\n}\n@Override\r\npublic void characters(char[] ch, int start, int length) {\r\n    String data = new String(ch, start, length);\r\n    Node parent = getParent();\r\n    Node lastChild = parent.getLastChild();\r\n    if (lastChild != null && lastChild.getNodeType() == Node.TEXT_NODE) {\r\n        ((Text) lastChild).appendData(data);\r\n    } else {\r\n        Text text = this.document.createTextNode(data);\r\n        parent.appendChild(text);\r\n    }\r\n}\n@Override\r\npublic void processingInstruction(String target, String data) {\r\n    Node parent = getParent();\r\n    ProcessingInstruction pi = this.document.createProcessingInstruction(target, data);\r\n    parent.appendChild(pi);\r\n}\n// Unsupported\r\n@Override\r\npublic void setDocumentLocator(Locator locator) ;\n@Override\r\npublic void startDocument() ;\n@Override\r\npublic void endDocument() ;\n@Override\r\npublic void startPrefixMapping(String prefix, String uri) ;\n@Override\r\npublic void endPrefixMapping(String prefix) ;\n@Override\r\npublic void ignorableWhitespace(char[] ch, int start, int length) ;\n@Override\r\npublic void skippedEntity(String name) ;",
+    "comment": "\n * SAX {@code ContentHandler} that transforms callback calls to DOM {@code Node}s.\n *\n * @author Arjen Poutsma\n * @since 3.0\n * @see org.w3c.dom.Node\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#getParent()",
+    "entityType": "method",
+    "code": "private Node getParent() {\r\n    if (!this.elements.isEmpty()) {\r\n        return this.elements.get(this.elements.size() - 1);\r\n    } else {\r\n        return this.node;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#startElement(String,String,String,Attributes)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void startElement(String uri, String localName, String qName, Attributes attributes) {\r\n    Node parent = getParent();\r\n    Element element = this.document.createElementNS(uri, qName);\r\n    for (int i = 0; i < attributes.getLength(); i++) {\r\n        String attrUri = attributes.getURI(i);\r\n        String attrQname = attributes.getQName(i);\r\n        String value = attributes.getValue(i);\r\n        if (!attrQname.startsWith(\"xmlns\")) {\r\n            element.setAttributeNS(attrUri, attrQname, value);\r\n        }\r\n    }\r\n    element = (Element) parent.appendChild(element);\r\n    this.elements.add(element);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#endElement(String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void endElement(String uri, String localName, String qName) {\r\n    this.elements.remove(this.elements.size() - 1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#characters(char[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void characters(char[] ch, int start, int length) {\r\n    String data = new String(ch, start, length);\r\n    Node parent = getParent();\r\n    Node lastChild = parent.getLastChild();\r\n    if (lastChild != null && lastChild.getNodeType() == Node.TEXT_NODE) {\r\n        ((Text) lastChild).appendData(data);\r\n    } else {\r\n        Text text = this.document.createTextNode(data);\r\n        parent.appendChild(text);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#processingInstruction(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void processingInstruction(String target, String data) {\r\n    Node parent = getParent();\r\n    ProcessingInstruction pi = this.document.createProcessingInstruction(target, data);\r\n    parent.appendChild(pi);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#setDocumentLocator(Locator)",
+    "entityType": "method",
+    "code": "// Unsupported\r\n@Override\r\npublic void setDocumentLocator(Locator locator) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#startDocument()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void startDocument() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#endDocument()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void endDocument() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#startPrefixMapping(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void startPrefixMapping(String prefix, String uri) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#endPrefixMapping(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void endPrefixMapping(String prefix) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#ignorableWhitespace(char[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void ignorableWhitespace(char[] ch, int start, int length) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomContentHandler#skippedEntity(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void skippedEntity(String name) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils",
+    "entityType": "class",
+    "code": "/**\r\n * Retrieves all child elements of the given DOM element that match any of the given element names.\r\n * Only looks at the direct child level of the given element; do not go into further depth\r\n * (in contrast to the DOM API's {@code getElementsByTagName} method).\r\n * @param ele the DOM element to analyze\r\n * @param childEleNames the child element names to look for\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n * @see org.w3c.dom.Element\r\n * @see org.w3c.dom.Element#getElementsByTagName\r\n */\r\npublic static List<Element> getChildElementsByTagName(Element ele, String... childEleNames) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    Assert.notNull(childEleNames, \"Element names collection must not be null\");\r\n    List<String> childEleNameList = Arrays.asList(childEleNames);\r\n    NodeList nl = ele.getChildNodes();\r\n    List<Element> childEles = new ArrayList<>();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element && nodeNameMatch(node, childEleNameList)) {\r\n            childEles.add(element);\r\n        }\r\n    }\r\n    return childEles;\r\n}\n/**\r\n * Retrieves all child elements of the given DOM element that match the given element name.\r\n * Only look at the direct child level of the given element; do not go into further depth\r\n * (in contrast to the DOM API's {@code getElementsByTagName} method).\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n * @see org.w3c.dom.Element\r\n * @see org.w3c.dom.Element#getElementsByTagName\r\n */\r\npublic static List<Element> getChildElementsByTagName(Element ele, String childEleName) {\r\n    return getChildElementsByTagName(ele, new String[] { childEleName });\r\n}\n/**\r\n * Utility method that returns the first child element identified by its name.\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return the {@code org.w3c.dom.Element} instance, or {@code null} if none found\r\n */\r\n@Nullable\r\npublic static Element getChildElementByTagName(Element ele, String childEleName) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    Assert.notNull(childEleName, \"Element name must not be null\");\r\n    NodeList nl = ele.getChildNodes();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element && nodeNameMatch(node, childEleName)) {\r\n            return element;\r\n        }\r\n    }\r\n    return null;\r\n}\n/**\r\n * Utility method that returns the first child element value identified by its name.\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return the extracted text value, or {@code null} if no child element found\r\n */\r\n@Nullable\r\npublic static String getChildElementValueByTagName(Element ele, String childEleName) {\r\n    Element child = getChildElementByTagName(ele, childEleName);\r\n    return (child != null ? getTextValue(child) : null);\r\n}\n/**\r\n * Retrieves all child elements of the given DOM element.\r\n * @param ele the DOM element to analyze\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n */\r\npublic static List<Element> getChildElements(Element ele) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    NodeList nl = ele.getChildNodes();\r\n    List<Element> childEles = new ArrayList<>();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element) {\r\n            childEles.add(element);\r\n        }\r\n    }\r\n    return childEles;\r\n}\n/**\r\n * Extracts the text value from the given DOM element, ignoring XML comments.\r\n * <p>Appends all CharacterData nodes and EntityReference nodes into a single\r\n * String value, excluding Comment nodes. Only exposes actual user-specified\r\n * text, no default values of any kind.\r\n * @see CharacterData\r\n * @see EntityReference\r\n * @see Comment\r\n */\r\npublic static String getTextValue(Element valueEle) {\r\n    Assert.notNull(valueEle, \"Element must not be null\");\r\n    StringBuilder sb = new StringBuilder();\r\n    NodeList nl = valueEle.getChildNodes();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node item = nl.item(i);\r\n        if ((item instanceof CharacterData && !(item instanceof Comment)) || item instanceof EntityReference) {\r\n            sb.append(item.getNodeValue());\r\n        }\r\n    }\r\n    return sb.toString();\r\n}\n/**\r\n * Namespace-aware equals comparison. Returns {@code true} if either\r\n * {@link Node#getLocalName} or {@link Node#getNodeName} equals\r\n * {@code desiredName}, otherwise returns {@code false}.\r\n */\r\npublic static boolean nodeNameEquals(Node node, String desiredName) {\r\n    Assert.notNull(node, \"Node must not be null\");\r\n    Assert.notNull(desiredName, \"Desired name must not be null\");\r\n    return nodeNameMatch(node, desiredName);\r\n}\n/**\r\n * Returns a SAX {@code ContentHandler} that transforms callback calls to DOM {@code Node}s.\r\n * @param node the node to publish events to\r\n * @return the content handler\r\n */\r\npublic static ContentHandler createContentHandler(Node node) {\r\n    return new DomContentHandler(node);\r\n}\n/**\r\n * Matches the given node's name and local name against the given desired name.\r\n */\r\nprivate static boolean nodeNameMatch(Node node, String desiredName) {\r\n    return (desiredName.equals(node.getNodeName()) || desiredName.equals(node.getLocalName()));\r\n}\n/**\r\n * Matches the given node's name and local name against the given desired names.\r\n */\r\nprivate static boolean nodeNameMatch(Node node, Collection<?> desiredNames) {\r\n    return (desiredNames.contains(node.getNodeName()) || desiredNames.contains(node.getLocalName()));\r\n}",
+    "comment": "\n * Convenience methods for working with the DOM API,\n * in particular for working with DOM Nodes and DOM Elements.\n *\n * @author Juergen Hoeller\n * @author Rob Harrop\n * @author Costin Leau\n * @author Arjen Poutsma\n * @author Luke Taylor\n * @since 1.2\n * @see org.w3c.dom.Node\n * @see org.w3c.dom.Element\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#getChildElementsByTagName(Element,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieves all child elements of the given DOM element that match any of the given element names.\r\n * Only looks at the direct child level of the given element; do not go into further depth\r\n * (in contrast to the DOM API's {@code getElementsByTagName} method).\r\n * @param ele the DOM element to analyze\r\n * @param childEleNames the child element names to look for\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n * @see org.w3c.dom.Element\r\n * @see org.w3c.dom.Element#getElementsByTagName\r\n */\r\npublic static List<Element> getChildElementsByTagName(Element ele, String... childEleNames) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    Assert.notNull(childEleNames, \"Element names collection must not be null\");\r\n    List<String> childEleNameList = Arrays.asList(childEleNames);\r\n    NodeList nl = ele.getChildNodes();\r\n    List<Element> childEles = new ArrayList<>();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element && nodeNameMatch(node, childEleNameList)) {\r\n            childEles.add(element);\r\n        }\r\n    }\r\n    return childEles;\r\n}",
+    "comment": "\n\t * Retrieves all child elements of the given DOM element that match any of the given element names.\n\t * Only looks at the direct child level of the given element; do not go into further depth\n\t * (in contrast to the DOM API's {@code getElementsByTagName} method).\n\t * @param ele the DOM element to analyze\n\t * @param childEleNames the child element names to look for\n\t * @return a List of child {@code org.w3c.dom.Element} instances\n\t * @see org.w3c.dom.Element\n\t * @see org.w3c.dom.Element#getElementsByTagName\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#getChildElementsByTagName(Element,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieves all child elements of the given DOM element that match the given element name.\r\n * Only look at the direct child level of the given element; do not go into further depth\r\n * (in contrast to the DOM API's {@code getElementsByTagName} method).\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n * @see org.w3c.dom.Element\r\n * @see org.w3c.dom.Element#getElementsByTagName\r\n */\r\npublic static List<Element> getChildElementsByTagName(Element ele, String childEleName) {\r\n    return getChildElementsByTagName(ele, new String[] { childEleName });\r\n}",
+    "comment": "\n\t * Retrieves all child elements of the given DOM element that match the given element name.\n\t * Only look at the direct child level of the given element; do not go into further depth\n\t * (in contrast to the DOM API's {@code getElementsByTagName} method).\n\t * @param ele the DOM element to analyze\n\t * @param childEleName the child element name to look for\n\t * @return a List of child {@code org.w3c.dom.Element} instances\n\t * @see org.w3c.dom.Element\n\t * @see org.w3c.dom.Element#getElementsByTagName\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#getChildElementByTagName(Element,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Utility method that returns the first child element identified by its name.\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return the {@code org.w3c.dom.Element} instance, or {@code null} if none found\r\n */\r\n@Nullable\r\npublic static Element getChildElementByTagName(Element ele, String childEleName) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    Assert.notNull(childEleName, \"Element name must not be null\");\r\n    NodeList nl = ele.getChildNodes();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element && nodeNameMatch(node, childEleName)) {\r\n            return element;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": "\n\t * Utility method that returns the first child element identified by its name.\n\t * @param ele the DOM element to analyze\n\t * @param childEleName the child element name to look for\n\t * @return the {@code org.w3c.dom.Element} instance, or {@code null} if none found\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#getChildElementValueByTagName(Element,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Utility method that returns the first child element value identified by its name.\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return the extracted text value, or {@code null} if no child element found\r\n */\r\n@Nullable\r\npublic static String getChildElementValueByTagName(Element ele, String childEleName) {\r\n    Element child = getChildElementByTagName(ele, childEleName);\r\n    return (child != null ? getTextValue(child) : null);\r\n}",
+    "comment": "\n\t * Utility method that returns the first child element value identified by its name.\n\t * @param ele the DOM element to analyze\n\t * @param childEleName the child element name to look for\n\t * @return the extracted text value, or {@code null} if no child element found\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#getChildElements(Element)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieves all child elements of the given DOM element.\r\n * @param ele the DOM element to analyze\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n */\r\npublic static List<Element> getChildElements(Element ele) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    NodeList nl = ele.getChildNodes();\r\n    List<Element> childEles = new ArrayList<>();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element) {\r\n            childEles.add(element);\r\n        }\r\n    }\r\n    return childEles;\r\n}",
+    "comment": "\n\t * Retrieves all child elements of the given DOM element.\n\t * @param ele the DOM element to analyze\n\t * @return a List of child {@code org.w3c.dom.Element} instances\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#getTextValue(Element)",
+    "entityType": "method",
+    "code": "/**\r\n * Extracts the text value from the given DOM element, ignoring XML comments.\r\n * <p>Appends all CharacterData nodes and EntityReference nodes into a single\r\n * String value, excluding Comment nodes. Only exposes actual user-specified\r\n * text, no default values of any kind.\r\n * @see CharacterData\r\n * @see EntityReference\r\n * @see Comment\r\n */\r\npublic static String getTextValue(Element valueEle) {\r\n    Assert.notNull(valueEle, \"Element must not be null\");\r\n    StringBuilder sb = new StringBuilder();\r\n    NodeList nl = valueEle.getChildNodes();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node item = nl.item(i);\r\n        if ((item instanceof CharacterData && !(item instanceof Comment)) || item instanceof EntityReference) {\r\n            sb.append(item.getNodeValue());\r\n        }\r\n    }\r\n    return sb.toString();\r\n}",
+    "comment": "\n\t * Extracts the text value from the given DOM element, ignoring XML comments.\n\t * <p>Appends all CharacterData nodes and EntityReference nodes into a single\n\t * String value, excluding Comment nodes. Only exposes actual user-specified\n\t * text, no default values of any kind.\n\t * @see CharacterData\n\t * @see EntityReference\n\t * @see Comment\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#nodeNameEquals(Node,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Namespace-aware equals comparison. Returns {@code true} if either\r\n * {@link Node#getLocalName} or {@link Node#getNodeName} equals\r\n * {@code desiredName}, otherwise returns {@code false}.\r\n */\r\npublic static boolean nodeNameEquals(Node node, String desiredName) {\r\n    Assert.notNull(node, \"Node must not be null\");\r\n    Assert.notNull(desiredName, \"Desired name must not be null\");\r\n    return nodeNameMatch(node, desiredName);\r\n}",
+    "comment": "\n\t * Namespace-aware equals comparison. Returns {@code true} if either\n\t * {@link Node#getLocalName} or {@link Node#getNodeName} equals\n\t * {@code desiredName}, otherwise returns {@code false}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#createContentHandler(Node)",
+    "entityType": "method",
+    "code": "/**\r\n * Returns a SAX {@code ContentHandler} that transforms callback calls to DOM {@code Node}s.\r\n * @param node the node to publish events to\r\n * @return the content handler\r\n */\r\npublic static ContentHandler createContentHandler(Node node) {\r\n    return new DomContentHandler(node);\r\n}",
+    "comment": "\n\t * Returns a SAX {@code ContentHandler} that transforms callback calls to DOM {@code Node}s.\n\t * @param node the node to publish events to\n\t * @return the content handler\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#nodeNameMatch(Node,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Matches the given node's name and local name against the given desired name.\r\n */\r\nprivate static boolean nodeNameMatch(Node node, String desiredName) {\r\n    return (desiredName.equals(node.getNodeName()) || desiredName.equals(node.getLocalName()));\r\n}",
+    "comment": "\n\t * Matches the given node's name and local name against the given desired name.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.DomUtils#nodeNameMatch(Node,Collection<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Matches the given node's name and local name against the given desired names.\r\n */\r\nprivate static boolean nodeNameMatch(Node node, Collection<?> desiredNames) {\r\n    return (desiredNames.contains(node.getNodeName()) || desiredNames.contains(node.getLocalName()));\r\n}",
+    "comment": "\n\t * Matches the given node's name and local name against the given desired names.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "entityType": "class",
+    "code": "private final List<XMLEvent> events;\n@Nullable\r\nprivate XMLEvent currentEvent;\nprivate int cursor = 0;\npublic ListBasedXMLEventReader(List<XMLEvent> events) {\r\n    Assert.notNull(events, \"XMLEvent List must not be null\");\r\n    this.events = new ArrayList<>(events);\r\n}\n@Override\r\npublic boolean hasNext() {\r\n    return (this.cursor < this.events.size());\r\n}\n@Override\r\npublic XMLEvent nextEvent() {\r\n    if (hasNext()) {\r\n        this.currentEvent = this.events.get(this.cursor);\r\n        this.cursor++;\r\n        return this.currentEvent;\r\n    } else {\r\n        throw new NoSuchElementException();\r\n    }\r\n}\n@Override\r\n@Nullable\r\npublic XMLEvent peek() {\r\n    if (hasNext()) {\r\n        return this.events.get(this.cursor);\r\n    } else {\r\n        return null;\r\n    }\r\n}\n@Override\r\npublic String getElementText() throws XMLStreamException {\r\n    checkIfClosed();\r\n    if (this.currentEvent == null || !this.currentEvent.isStartElement()) {\r\n        throw new XMLStreamException(\"Not at START_ELEMENT: \" + this.currentEvent);\r\n    }\r\n    StringBuilder builder = new StringBuilder();\r\n    while (true) {\r\n        XMLEvent event = nextEvent();\r\n        if (event.isEndElement()) {\r\n            break;\r\n        } else if (!event.isCharacters()) {\r\n            throw new XMLStreamException(\"Unexpected non-text event: \" + event);\r\n        }\r\n        Characters characters = event.asCharacters();\r\n        if (!characters.isIgnorableWhiteSpace()) {\r\n            builder.append(event.asCharacters().getData());\r\n        }\r\n    }\r\n    return builder.toString();\r\n}\n@Override\r\n@Nullable\r\npublic XMLEvent nextTag() throws XMLStreamException {\r\n    checkIfClosed();\r\n    while (true) {\r\n        XMLEvent event = nextEvent();\r\n        switch(event.getEventType()) {\r\n            case XMLStreamConstants.START_ELEMENT, XMLStreamConstants.END_ELEMENT ->\r\n                {\r\n                    return event;\r\n                }\r\n            case XMLStreamConstants.END_DOCUMENT ->\r\n                {\r\n                    return null;\r\n                }\r\n            case XMLStreamConstants.SPACE, XMLStreamConstants.COMMENT, XMLStreamConstants.PROCESSING_INSTRUCTION ->\r\n                {\r\n                    continue;\r\n                }\r\n            case XMLStreamConstants.CDATA, XMLStreamConstants.CHARACTERS ->\r\n                {\r\n                    if (!event.asCharacters().isWhiteSpace()) {\r\n                        throw new XMLStreamException(\"Non-ignorable whitespace CDATA or CHARACTERS event: \" + event);\r\n                    }\r\n                }\r\n            default ->\r\n                throw new XMLStreamException(\"Expected START_ELEMENT or END_ELEMENT: \" + event);\r\n        }\r\n    }\r\n}\n@Override\r\npublic void close() {\r\n    super.close();\r\n    this.events.clear();\r\n}",
+    "comment": "\n * Implementation of {@code XMLEventReader} based on a {@link List}\n * of {@link XMLEvent} elements.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader#hasNext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasNext() {\r\n    return (this.cursor < this.events.size());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader#nextEvent()",
+    "entityType": "method",
+    "code": "@Override\r\npublic XMLEvent nextEvent() {\r\n    if (hasNext()) {\r\n        this.currentEvent = this.events.get(this.cursor);\r\n        this.cursor++;\r\n        return this.currentEvent;\r\n    } else {\r\n        throw new NoSuchElementException();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader#peek()",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic XMLEvent peek() {\r\n    if (hasNext()) {\r\n        return this.events.get(this.cursor);\r\n    } else {\r\n        return null;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader#getElementText()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getElementText() throws XMLStreamException {\r\n    checkIfClosed();\r\n    if (this.currentEvent == null || !this.currentEvent.isStartElement()) {\r\n        throw new XMLStreamException(\"Not at START_ELEMENT: \" + this.currentEvent);\r\n    }\r\n    StringBuilder builder = new StringBuilder();\r\n    while (true) {\r\n        XMLEvent event = nextEvent();\r\n        if (event.isEndElement()) {\r\n            break;\r\n        } else if (!event.isCharacters()) {\r\n            throw new XMLStreamException(\"Unexpected non-text event: \" + event);\r\n        }\r\n        Characters characters = event.asCharacters();\r\n        if (!characters.isIgnorableWhiteSpace()) {\r\n            builder.append(event.asCharacters().getData());\r\n        }\r\n    }\r\n    return builder.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader#nextTag()",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic XMLEvent nextTag() throws XMLStreamException {\r\n    checkIfClosed();\r\n    while (true) {\r\n        XMLEvent event = nextEvent();\r\n        switch(event.getEventType()) {\r\n            case XMLStreamConstants.START_ELEMENT, XMLStreamConstants.END_ELEMENT ->\r\n                {\r\n                    return event;\r\n                }\r\n            case XMLStreamConstants.END_DOCUMENT ->\r\n                {\r\n                    return null;\r\n                }\r\n            case XMLStreamConstants.SPACE, XMLStreamConstants.COMMENT, XMLStreamConstants.PROCESSING_INSTRUCTION ->\r\n                {\r\n                    continue;\r\n                }\r\n            case XMLStreamConstants.CDATA, XMLStreamConstants.CHARACTERS ->\r\n                {\r\n                    if (!event.asCharacters().isWhiteSpace()) {\r\n                        throw new XMLStreamException(\"Non-ignorable whitespace CDATA or CHARACTERS event: \" + event);\r\n                    }\r\n                }\r\n            default ->\r\n                throw new XMLStreamException(\"Expected START_ELEMENT or END_ELEMENT: \" + event);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.ListBasedXMLEventReader#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() {\r\n    super.close();\r\n    this.events.clear();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext",
+    "entityType": "class",
+    "code": "private final Map<String, String> prefixToNamespaceUri = new HashMap<>();\nprivate final Map<String, Set<String>> namespaceUriToPrefixes = new HashMap<>();\nprivate String defaultNamespaceUri = \"\";\n@Override\r\npublic String getNamespaceURI(String prefix) {\r\n    Assert.notNull(prefix, \"'prefix' must not be null\");\r\n    if (XMLConstants.XML_NS_PREFIX.equals(prefix)) {\r\n        return XMLConstants.XML_NS_URI;\r\n    } else if (XMLConstants.XMLNS_ATTRIBUTE.equals(prefix)) {\r\n        return XMLConstants.XMLNS_ATTRIBUTE_NS_URI;\r\n    } else if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n        return this.defaultNamespaceUri;\r\n    } else if (this.prefixToNamespaceUri.containsKey(prefix)) {\r\n        return this.prefixToNamespaceUri.get(prefix);\r\n    }\r\n    return \"\";\r\n}\n@Override\r\n@Nullable\r\npublic String getPrefix(String namespaceUri) {\r\n    Set<String> prefixes = getPrefixesSet(namespaceUri);\r\n    return (!prefixes.isEmpty() ? prefixes.iterator().next() : null);\r\n}\n@Override\r\npublic Iterator<String> getPrefixes(String namespaceUri) {\r\n    return getPrefixesSet(namespaceUri).iterator();\r\n}\nprivate Set<String> getPrefixesSet(String namespaceUri) {\r\n    Assert.notNull(namespaceUri, \"'namespaceUri' must not be null\");\r\n    if (this.defaultNamespaceUri.equals(namespaceUri)) {\r\n        return Collections.singleton(XMLConstants.DEFAULT_NS_PREFIX);\r\n    } else if (XMLConstants.XML_NS_URI.equals(namespaceUri)) {\r\n        return Collections.singleton(XMLConstants.XML_NS_PREFIX);\r\n    } else if (XMLConstants.XMLNS_ATTRIBUTE_NS_URI.equals(namespaceUri)) {\r\n        return Collections.singleton(XMLConstants.XMLNS_ATTRIBUTE);\r\n    } else {\r\n        Set<String> prefixes = this.namespaceUriToPrefixes.get(namespaceUri);\r\n        return (prefixes != null ? Collections.unmodifiableSet(prefixes) : Collections.emptySet());\r\n    }\r\n}\n/**\r\n * Set the bindings for this namespace context.\r\n * The supplied map must consist of string key value pairs.\r\n */\r\npublic void setBindings(Map<String, String> bindings) {\r\n    bindings.forEach(this::bindNamespaceUri);\r\n}\n/**\r\n * Bind the given namespace as default namespace.\r\n * @param namespaceUri the namespace uri\r\n */\r\npublic void bindDefaultNamespaceUri(String namespaceUri) {\r\n    bindNamespaceUri(XMLConstants.DEFAULT_NS_PREFIX, namespaceUri);\r\n}\n/**\r\n * Bind the given prefix to the given namespace.\r\n * @param prefix the namespace prefix\r\n * @param namespaceUri the namespace URI\r\n */\r\npublic void bindNamespaceUri(String prefix, String namespaceUri) {\r\n    Assert.notNull(prefix, \"'prefix' must not be null\");\r\n    Assert.notNull(namespaceUri, \"'namespaceUri' must not be null\");\r\n    if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n        this.defaultNamespaceUri = namespaceUri;\r\n    } else {\r\n        this.prefixToNamespaceUri.put(prefix, namespaceUri);\r\n        Set<String> prefixes = this.namespaceUriToPrefixes.computeIfAbsent(namespaceUri, k -> new LinkedHashSet<>());\r\n        prefixes.add(prefix);\r\n    }\r\n}\n/**\r\n * Remove the given prefix from this context.\r\n * @param prefix the prefix to be removed\r\n */\r\npublic void removeBinding(@Nullable String prefix) {\r\n    if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n        this.defaultNamespaceUri = \"\";\r\n    } else if (prefix != null) {\r\n        String namespaceUri = this.prefixToNamespaceUri.remove(prefix);\r\n        if (namespaceUri != null) {\r\n            Set<String> prefixes = this.namespaceUriToPrefixes.get(namespaceUri);\r\n            if (prefixes != null) {\r\n                prefixes.remove(prefix);\r\n                if (prefixes.isEmpty()) {\r\n                    this.namespaceUriToPrefixes.remove(namespaceUri);\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\n/**\r\n * Remove all declared prefixes.\r\n */\r\npublic void clear() {\r\n    this.prefixToNamespaceUri.clear();\r\n    this.namespaceUriToPrefixes.clear();\r\n}\n/**\r\n * Return all declared prefixes.\r\n */\r\npublic Iterator<String> getBoundPrefixes() {\r\n    return this.prefixToNamespaceUri.keySet().iterator();\r\n}",
+    "comment": "\n * Simple {@code javax.xml.namespace.NamespaceContext} implementation.\n * Follows the standard {@code NamespaceContext} contract, and is loadable\n * via a {@code java.util.Map} or {@code java.util.Properties} object\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @since 3.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#getNamespaceURI(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getNamespaceURI(String prefix) {\r\n    Assert.notNull(prefix, \"'prefix' must not be null\");\r\n    if (XMLConstants.XML_NS_PREFIX.equals(prefix)) {\r\n        return XMLConstants.XML_NS_URI;\r\n    } else if (XMLConstants.XMLNS_ATTRIBUTE.equals(prefix)) {\r\n        return XMLConstants.XMLNS_ATTRIBUTE_NS_URI;\r\n    } else if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n        return this.defaultNamespaceUri;\r\n    } else if (this.prefixToNamespaceUri.containsKey(prefix)) {\r\n        return this.prefixToNamespaceUri.get(prefix);\r\n    }\r\n    return \"\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#getPrefix(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic String getPrefix(String namespaceUri) {\r\n    Set<String> prefixes = getPrefixesSet(namespaceUri);\r\n    return (!prefixes.isEmpty() ? prefixes.iterator().next() : null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#getPrefixes(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Iterator<String> getPrefixes(String namespaceUri) {\r\n    return getPrefixesSet(namespaceUri).iterator();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#getPrefixesSet(String)",
+    "entityType": "method",
+    "code": "private Set<String> getPrefixesSet(String namespaceUri) {\r\n    Assert.notNull(namespaceUri, \"'namespaceUri' must not be null\");\r\n    if (this.defaultNamespaceUri.equals(namespaceUri)) {\r\n        return Collections.singleton(XMLConstants.DEFAULT_NS_PREFIX);\r\n    } else if (XMLConstants.XML_NS_URI.equals(namespaceUri)) {\r\n        return Collections.singleton(XMLConstants.XML_NS_PREFIX);\r\n    } else if (XMLConstants.XMLNS_ATTRIBUTE_NS_URI.equals(namespaceUri)) {\r\n        return Collections.singleton(XMLConstants.XMLNS_ATTRIBUTE);\r\n    } else {\r\n        Set<String> prefixes = this.namespaceUriToPrefixes.get(namespaceUri);\r\n        return (prefixes != null ? Collections.unmodifiableSet(prefixes) : Collections.emptySet());\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#setBindings(Map<String,String>)",
+    "entityType": "method",
+    "code": "/**\r\n * Set the bindings for this namespace context.\r\n * The supplied map must consist of string key value pairs.\r\n */\r\npublic void setBindings(Map<String, String> bindings) {\r\n    bindings.forEach(this::bindNamespaceUri);\r\n}",
+    "comment": "\n\t * Set the bindings for this namespace context.\n\t * The supplied map must consist of string key value pairs.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#bindDefaultNamespaceUri(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Bind the given namespace as default namespace.\r\n * @param namespaceUri the namespace uri\r\n */\r\npublic void bindDefaultNamespaceUri(String namespaceUri) {\r\n    bindNamespaceUri(XMLConstants.DEFAULT_NS_PREFIX, namespaceUri);\r\n}",
+    "comment": "\n\t * Bind the given namespace as default namespace.\n\t * @param namespaceUri the namespace uri\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#bindNamespaceUri(String,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Bind the given prefix to the given namespace.\r\n * @param prefix the namespace prefix\r\n * @param namespaceUri the namespace URI\r\n */\r\npublic void bindNamespaceUri(String prefix, String namespaceUri) {\r\n    Assert.notNull(prefix, \"'prefix' must not be null\");\r\n    Assert.notNull(namespaceUri, \"'namespaceUri' must not be null\");\r\n    if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n        this.defaultNamespaceUri = namespaceUri;\r\n    } else {\r\n        this.prefixToNamespaceUri.put(prefix, namespaceUri);\r\n        Set<String> prefixes = this.namespaceUriToPrefixes.computeIfAbsent(namespaceUri, k -> new LinkedHashSet<>());\r\n        prefixes.add(prefix);\r\n    }\r\n}",
+    "comment": "\n\t * Bind the given prefix to the given namespace.\n\t * @param prefix the namespace prefix\n\t * @param namespaceUri the namespace URI\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#removeBinding(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Remove the given prefix from this context.\r\n * @param prefix the prefix to be removed\r\n */\r\npublic void removeBinding(@Nullable String prefix) {\r\n    if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n        this.defaultNamespaceUri = \"\";\r\n    } else if (prefix != null) {\r\n        String namespaceUri = this.prefixToNamespaceUri.remove(prefix);\r\n        if (namespaceUri != null) {\r\n            Set<String> prefixes = this.namespaceUriToPrefixes.get(namespaceUri);\r\n            if (prefixes != null) {\r\n                prefixes.remove(prefix);\r\n                if (prefixes.isEmpty()) {\r\n                    this.namespaceUriToPrefixes.remove(namespaceUri);\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+    "comment": "\n\t * Remove the given prefix from this context.\n\t * @param prefix the prefix to be removed\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#clear()",
+    "entityType": "method",
+    "code": "/**\r\n * Remove all declared prefixes.\r\n */\r\npublic void clear() {\r\n    this.prefixToNamespaceUri.clear();\r\n    this.namespaceUriToPrefixes.clear();\r\n}",
+    "comment": "\n\t * Remove all declared prefixes.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleNamespaceContext#getBoundPrefixes()",
+    "entityType": "method",
+    "code": "/**\r\n * Return all declared prefixes.\r\n */\r\npublic Iterator<String> getBoundPrefixes() {\r\n    return this.prefixToNamespaceUri.keySet().iterator();\r\n}",
+    "comment": "\n\t * Return all declared prefixes.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleSaxErrorHandler",
+    "entityType": "class",
+    "code": "private final Log logger;\n/**\r\n * Create a new SimpleSaxErrorHandler for the given\r\n * Commons Logging logger instance.\r\n */\r\npublic SimpleSaxErrorHandler(Log logger) {\r\n    this.logger = logger;\r\n}\n@Override\r\npublic void warning(SAXParseException ex) throws SAXException {\r\n    logger.warn(\"Ignored XML validation warning\", ex);\r\n}\n@Override\r\npublic void error(SAXParseException ex) throws SAXException {\r\n    throw ex;\r\n}\n@Override\r\npublic void fatalError(SAXParseException ex) throws SAXException {\r\n    throw ex;\r\n}",
+    "comment": "\n * Simple {@code org.xml.sax.ErrorHandler} implementation:\n * logs warnings using the given Commons Logging logger instance,\n * and rethrows errors to discontinue the XML transformation.\n *\n * @author Juergen Hoeller\n * @since 1.2\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleSaxErrorHandler#warning(SAXParseException)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void warning(SAXParseException ex) throws SAXException {\r\n    logger.warn(\"Ignored XML validation warning\", ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleSaxErrorHandler#error(SAXParseException)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void error(SAXParseException ex) throws SAXException {\r\n    throw ex;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleSaxErrorHandler#fatalError(SAXParseException)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void fatalError(SAXParseException ex) throws SAXException {\r\n    throw ex;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleTransformErrorListener",
+    "entityType": "class",
+    "code": "private final Log logger;\n/**\r\n * Create a new SimpleTransformErrorListener for the given\r\n * Commons Logging logger instance.\r\n */\r\npublic SimpleTransformErrorListener(Log logger) {\r\n    this.logger = logger;\r\n}\n@Override\r\npublic void warning(TransformerException ex) throws TransformerException {\r\n    logger.warn(\"XSLT transformation warning\", ex);\r\n}\n@Override\r\npublic void error(TransformerException ex) throws TransformerException {\r\n    logger.error(\"XSLT transformation error\", ex);\r\n}\n@Override\r\npublic void fatalError(TransformerException ex) throws TransformerException {\r\n    throw ex;\r\n}",
+    "comment": "\n * Simple {@code javax.xml.transform.ErrorListener} implementation:\n * logs warnings using the given Commons Logging logger instance,\n * and rethrows errors to discontinue the XML transformation.\n *\n * @author Juergen Hoeller\n * @since 1.2\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleTransformErrorListener#warning(TransformerException)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void warning(TransformerException ex) throws TransformerException {\r\n    logger.warn(\"XSLT transformation warning\", ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleTransformErrorListener#error(TransformerException)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void error(TransformerException ex) throws TransformerException {\r\n    logger.error(\"XSLT transformation error\", ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.SimpleTransformErrorListener#fatalError(TransformerException)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void fatalError(TransformerException ex) throws TransformerException {\r\n    throw ex;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler",
+    "entityType": "class",
+    "code": "private final XMLEventFactory eventFactory;\nprivate final XMLEventWriter eventWriter;\n/**\r\n * Construct a new instance of the {@code StaxEventContentHandler} that writes to the\r\n * given {@code XMLEventWriter}. A default {@code XMLEventFactory} will be created.\r\n * @param eventWriter the writer to write events to\r\n */\r\npublic StaxEventHandler(XMLEventWriter eventWriter) {\r\n    this.eventFactory = XMLEventFactory.newInstance();\r\n    this.eventWriter = eventWriter;\r\n}\n/**\r\n * Construct a new instance of the {@code StaxEventContentHandler} that uses the given\r\n * event factory to create events and writes to the given {@code XMLEventConsumer}.\r\n * @param eventWriter the writer to write events to\r\n * @param factory the factory used to create events\r\n */\r\npublic StaxEventHandler(XMLEventWriter eventWriter, XMLEventFactory factory) {\r\n    this.eventFactory = factory;\r\n    this.eventWriter = eventWriter;\r\n}\n@Override\r\npublic void setDocumentLocator(@Nullable Locator locator) {\r\n    if (locator != null) {\r\n        this.eventFactory.setLocation(new LocatorLocationAdapter(locator));\r\n    }\r\n}\n@Override\r\nprotected void startDocumentInternal() throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createStartDocument());\r\n}\n@Override\r\nprotected void endDocumentInternal() throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createEndDocument());\r\n}\n@Override\r\nprotected void startElementInternal(QName name, Attributes atts, Map<String, String> namespaceMapping) throws XMLStreamException {\r\n    List<Attribute> attributes = getAttributes(atts);\r\n    List<Namespace> namespaces = getNamespaces(namespaceMapping);\r\n    this.eventWriter.add(this.eventFactory.createStartElement(name, attributes.iterator(), namespaces.iterator()));\r\n}\nprivate List<Namespace> getNamespaces(Map<String, String> namespaceMappings) {\r\n    List<Namespace> result = new ArrayList<>(namespaceMappings.size());\r\n    namespaceMappings.forEach((prefix, namespaceUri) -> result.add(this.eventFactory.createNamespace(prefix, namespaceUri)));\r\n    return result;\r\n}\nprivate List<Attribute> getAttributes(Attributes attributes) {\r\n    int attrLength = attributes.getLength();\r\n    List<Attribute> result = new ArrayList<>(attrLength);\r\n    for (int i = 0; i < attrLength; i++) {\r\n        QName attrName = toQName(attributes.getURI(i), attributes.getQName(i));\r\n        if (!isNamespaceDeclaration(attrName)) {\r\n            result.add(this.eventFactory.createAttribute(attrName, attributes.getValue(i)));\r\n        }\r\n    }\r\n    return result;\r\n}\n@Override\r\nprotected void endElementInternal(QName name, Map<String, String> namespaceMapping) throws XMLStreamException {\r\n    List<Namespace> namespaces = getNamespaces(namespaceMapping);\r\n    this.eventWriter.add(this.eventFactory.createEndElement(name, namespaces.iterator()));\r\n}\n@Override\r\nprotected void charactersInternal(String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createCharacters(data));\r\n}\n@Override\r\nprotected void cDataInternal(String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createCData(data));\r\n}\n@Override\r\nprotected void ignorableWhitespaceInternal(String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createIgnorableSpace(data));\r\n}\n@Override\r\nprotected void processingInstructionInternal(String target, String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createProcessingInstruction(target, data));\r\n}\n@Override\r\nprotected void dtdInternal(String dtd) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createDTD(dtd));\r\n}\n@Override\r\nprotected void commentInternal(String comment) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createComment(comment));\r\n}\n// Ignored\r\n@Override\r\nprotected void skippedEntityInternal(String name) ;\nprivate static final class LocatorLocationAdapter implements Location {\r\n\r\n    private final Locator locator;\r\n\r\n    public LocatorLocationAdapter(Locator locator) {\r\n        this.locator = locator;\r\n    }\r\n\r\n    @Override\r\n    public int getLineNumber() {\r\n        return this.locator.getLineNumber();\r\n    }\r\n\r\n    @Override\r\n    public int getColumnNumber() {\r\n        return this.locator.getColumnNumber();\r\n    }\r\n\r\n    @Override\r\n    public int getCharacterOffset() {\r\n        return -1;\r\n    }\r\n\r\n    @Override\r\n    public String getPublicId() {\r\n        return this.locator.getPublicId();\r\n    }\r\n\r\n    @Override\r\n    public String getSystemId() {\r\n        return this.locator.getSystemId();\r\n    }\r\n}",
+    "comment": "\n * SAX {@link org.xml.sax.ContentHandler} and {@link LexicalHandler}\n * that writes to a {@link javax.xml.stream.util.XMLEventConsumer}.\n *\n * @author Arjen Poutsma\n * @since 4.0.3\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#setDocumentLocator(Locator)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setDocumentLocator(@Nullable Locator locator) {\r\n    if (locator != null) {\r\n        this.eventFactory.setLocation(new LocatorLocationAdapter(locator));\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#startDocumentInternal()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void startDocumentInternal() throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createStartDocument());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#endDocumentInternal()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void endDocumentInternal() throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createEndDocument());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#startElementInternal(QName,Attributes,Map<String,String>)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void startElementInternal(QName name, Attributes atts, Map<String, String> namespaceMapping) throws XMLStreamException {\r\n    List<Attribute> attributes = getAttributes(atts);\r\n    List<Namespace> namespaces = getNamespaces(namespaceMapping);\r\n    this.eventWriter.add(this.eventFactory.createStartElement(name, attributes.iterator(), namespaces.iterator()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#getNamespaces(Map<String,String>)",
+    "entityType": "method",
+    "code": "private List<Namespace> getNamespaces(Map<String, String> namespaceMappings) {\r\n    List<Namespace> result = new ArrayList<>(namespaceMappings.size());\r\n    namespaceMappings.forEach((prefix, namespaceUri) -> result.add(this.eventFactory.createNamespace(prefix, namespaceUri)));\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#getAttributes(Attributes)",
+    "entityType": "method",
+    "code": "private List<Attribute> getAttributes(Attributes attributes) {\r\n    int attrLength = attributes.getLength();\r\n    List<Attribute> result = new ArrayList<>(attrLength);\r\n    for (int i = 0; i < attrLength; i++) {\r\n        QName attrName = toQName(attributes.getURI(i), attributes.getQName(i));\r\n        if (!isNamespaceDeclaration(attrName)) {\r\n            result.add(this.eventFactory.createAttribute(attrName, attributes.getValue(i)));\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#endElementInternal(QName,Map<String,String>)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void endElementInternal(QName name, Map<String, String> namespaceMapping) throws XMLStreamException {\r\n    List<Namespace> namespaces = getNamespaces(namespaceMapping);\r\n    this.eventWriter.add(this.eventFactory.createEndElement(name, namespaces.iterator()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#charactersInternal(String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void charactersInternal(String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createCharacters(data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#cDataInternal(String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void cDataInternal(String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createCData(data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#ignorableWhitespaceInternal(String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void ignorableWhitespaceInternal(String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createIgnorableSpace(data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#processingInstructionInternal(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void processingInstructionInternal(String target, String data) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createProcessingInstruction(target, data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#dtdInternal(String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void dtdInternal(String dtd) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createDTD(dtd));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#commentInternal(String)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void commentInternal(String comment) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createComment(comment));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventHandler#skippedEntityInternal(String)",
+    "entityType": "method",
+    "code": "// Ignored\r\n@Override\r\nprotected void skippedEntityInternal(String name) ;",
+    "comment": " Ignored"
+  },
+  {
+    "entityId": "org.springframework.util.xml.LocatorLocationAdapter",
+    "entityType": "class",
+    "code": "private final Locator locator;\npublic LocatorLocationAdapter(Locator locator) {\r\n    this.locator = locator;\r\n}\n@Override\r\npublic int getLineNumber() {\r\n    return this.locator.getLineNumber();\r\n}\n@Override\r\npublic int getColumnNumber() {\r\n    return this.locator.getColumnNumber();\r\n}\n@Override\r\npublic int getCharacterOffset() {\r\n    return -1;\r\n}\n@Override\r\npublic String getPublicId() {\r\n    return this.locator.getPublicId();\r\n}\n@Override\r\npublic String getSystemId() {\r\n    return this.locator.getSystemId();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.LocatorLocationAdapter#getLineNumber()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int getLineNumber() {\r\n    return this.locator.getLineNumber();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.LocatorLocationAdapter#getColumnNumber()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int getColumnNumber() {\r\n    return this.locator.getColumnNumber();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.LocatorLocationAdapter#getCharacterOffset()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int getCharacterOffset() {\r\n    return -1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.LocatorLocationAdapter#getPublicId()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getPublicId() {\r\n    return this.locator.getPublicId();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.LocatorLocationAdapter#getSystemId()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getSystemId() {\r\n    return this.locator.getSystemId();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventXMLReader",
+    "entityType": "class",
+    "code": "private static final String DEFAULT_XML_VERSION = \"1.0\";\nprivate final XMLEventReader reader;\nprivate String xmlVersion = DEFAULT_XML_VERSION;\n@Nullable\r\nprivate String encoding;\n/**\r\n * Constructs a new instance of the {@code StaxEventXmlReader} that reads from\r\n * the given {@code XMLEventReader}. The supplied event reader must be in\r\n * {@code XMLStreamConstants.START_DOCUMENT} or {@code XMLStreamConstants.START_ELEMENT} state.\r\n * @param reader the {@code XMLEventReader} to read from\r\n * @throws IllegalStateException if the reader is not at the start of a document or element\r\n */\r\nStaxEventXMLReader(XMLEventReader reader) {\r\n    try {\r\n        XMLEvent event = reader.peek();\r\n        if (event != null && !(event.isStartDocument() || event.isStartElement())) {\r\n            throw new IllegalStateException(\"XMLEventReader not at start of document or element\");\r\n        }\r\n    } catch (XMLStreamException ex) {\r\n        throw new IllegalStateException(\"Could not read first element: \" + ex.getMessage());\r\n    }\r\n    this.reader = reader;\r\n}\n@Override\r\nprotected void parseInternal() throws SAXException, XMLStreamException {\r\n    boolean documentStarted = false;\r\n    boolean documentEnded = false;\r\n    int elementDepth = 0;\r\n    while (this.reader.hasNext() && elementDepth >= 0) {\r\n        XMLEvent event = this.reader.nextEvent();\r\n        if (!event.isStartDocument() && !event.isEndDocument() && !documentStarted) {\r\n            handleStartDocument(event);\r\n            documentStarted = true;\r\n        }\r\n        switch(event.getEventType()) {\r\n            case XMLStreamConstants.START_DOCUMENT ->\r\n                {\r\n                    handleStartDocument(event);\r\n                    documentStarted = true;\r\n                }\r\n            case XMLStreamConstants.START_ELEMENT ->\r\n                {\r\n                    elementDepth++;\r\n                    handleStartElement(event.asStartElement());\r\n                }\r\n            case XMLStreamConstants.END_ELEMENT ->\r\n                {\r\n                    elementDepth--;\r\n                    if (elementDepth >= 0) {\r\n                        handleEndElement(event.asEndElement());\r\n                    }\r\n                }\r\n            case XMLStreamConstants.PROCESSING_INSTRUCTION ->\r\n                handleProcessingInstruction((ProcessingInstruction) event);\r\n            case XMLStreamConstants.CHARACTERS, XMLStreamConstants.SPACE, XMLStreamConstants.CDATA ->\r\n                handleCharacters(event.asCharacters());\r\n            case XMLStreamConstants.END_DOCUMENT ->\r\n                {\r\n                    handleEndDocument();\r\n                    documentEnded = true;\r\n                }\r\n            case XMLStreamConstants.NOTATION_DECLARATION ->\r\n                handleNotationDeclaration((NotationDeclaration) event);\r\n            case XMLStreamConstants.ENTITY_DECLARATION ->\r\n                handleEntityDeclaration((EntityDeclaration) event);\r\n            case XMLStreamConstants.COMMENT ->\r\n                handleComment((Comment) event);\r\n            case XMLStreamConstants.DTD ->\r\n                handleDtd((DTD) event);\r\n            case XMLStreamConstants.ENTITY_REFERENCE ->\r\n                handleEntityReference((EntityReference) event);\r\n        }\r\n    }\r\n    if (documentStarted && !documentEnded) {\r\n        handleEndDocument();\r\n    }\r\n}\nprivate void handleStartDocument(final XMLEvent event) throws SAXException {\r\n    if (event.isStartDocument()) {\r\n        StartDocument startDocument = (StartDocument) event;\r\n        String xmlVersion = startDocument.getVersion();\r\n        if (StringUtils.hasLength(xmlVersion)) {\r\n            this.xmlVersion = xmlVersion;\r\n        }\r\n        if (startDocument.encodingSet()) {\r\n            this.encoding = startDocument.getCharacterEncodingScheme();\r\n        }\r\n    }\r\n    ContentHandler contentHandler = getContentHandler();\r\n    if (contentHandler != null) {\r\n        final Location location = event.getLocation();\r\n        contentHandler.setDocumentLocator(new Locator2() {\r\n\r\n            @Override\r\n            public int getColumnNumber() {\r\n                return (location != null ? location.getColumnNumber() : -1);\r\n            }\r\n\r\n            @Override\r\n            public int getLineNumber() {\r\n                return (location != null ? location.getLineNumber() : -1);\r\n            }\r\n\r\n            @Override\r\n            @Nullable\r\n            public String getPublicId() {\r\n                return (location != null ? location.getPublicId() : null);\r\n            }\r\n\r\n            @Override\r\n            @Nullable\r\n            public String getSystemId() {\r\n                return (location != null ? location.getSystemId() : null);\r\n            }\r\n\r\n            @Override\r\n            public String getXMLVersion() {\r\n                return xmlVersion;\r\n            }\r\n\r\n            @Override\r\n            @Nullable\r\n            public String getEncoding() {\r\n                return encoding;\r\n            }\r\n        });\r\n        contentHandler.startDocument();\r\n    }\r\n}\nprivate void handleStartElement(StartElement startElement) throws SAXException {\r\n    if (getContentHandler() != null) {\r\n        QName qName = startElement.getName();\r\n        if (hasNamespacesFeature()) {\r\n            for (Iterator i = startElement.getNamespaces(); i.hasNext(); ) {\r\n                Namespace namespace = (Namespace) i.next();\r\n                startPrefixMapping(namespace.getPrefix(), namespace.getNamespaceURI());\r\n            }\r\n            for (Iterator i = startElement.getAttributes(); i.hasNext(); ) {\r\n                Attribute attribute = (Attribute) i.next();\r\n                QName attributeName = attribute.getName();\r\n                startPrefixMapping(attributeName.getPrefix(), attributeName.getNamespaceURI());\r\n            }\r\n            getContentHandler().startElement(qName.getNamespaceURI(), qName.getLocalPart(), toQualifiedName(qName), getAttributes(startElement));\r\n        } else {\r\n            getContentHandler().startElement(\"\", \"\", toQualifiedName(qName), getAttributes(startElement));\r\n        }\r\n    }\r\n}\nprivate void handleCharacters(Characters characters) throws SAXException {\r\n    char[] data = characters.getData().toCharArray();\r\n    if (getContentHandler() != null && characters.isIgnorableWhiteSpace()) {\r\n        getContentHandler().ignorableWhitespace(data, 0, data.length);\r\n        return;\r\n    }\r\n    if (characters.isCData() && getLexicalHandler() != null) {\r\n        getLexicalHandler().startCDATA();\r\n    }\r\n    if (getContentHandler() != null) {\r\n        getContentHandler().characters(data, 0, data.length);\r\n    }\r\n    if (characters.isCData() && getLexicalHandler() != null) {\r\n        getLexicalHandler().endCDATA();\r\n    }\r\n}\nprivate void handleEndElement(EndElement endElement) throws SAXException {\r\n    if (getContentHandler() != null) {\r\n        QName qName = endElement.getName();\r\n        if (hasNamespacesFeature()) {\r\n            getContentHandler().endElement(qName.getNamespaceURI(), qName.getLocalPart(), toQualifiedName(qName));\r\n            for (Iterator i = endElement.getNamespaces(); i.hasNext(); ) {\r\n                Namespace namespace = (Namespace) i.next();\r\n                endPrefixMapping(namespace.getPrefix());\r\n            }\r\n        } else {\r\n            getContentHandler().endElement(\"\", \"\", toQualifiedName(qName));\r\n        }\r\n    }\r\n}\nprivate void handleEndDocument() throws SAXException {\r\n    if (getContentHandler() != null) {\r\n        getContentHandler().endDocument();\r\n    }\r\n}\nprivate void handleNotationDeclaration(NotationDeclaration declaration) throws SAXException {\r\n    if (getDTDHandler() != null) {\r\n        getDTDHandler().notationDecl(declaration.getName(), declaration.getPublicId(), declaration.getSystemId());\r\n    }\r\n}\nprivate void handleEntityDeclaration(EntityDeclaration entityDeclaration) throws SAXException {\r\n    if (getDTDHandler() != null) {\r\n        getDTDHandler().unparsedEntityDecl(entityDeclaration.getName(), entityDeclaration.getPublicId(), entityDeclaration.getSystemId(), entityDeclaration.getNotationName());\r\n    }\r\n}\nprivate void handleProcessingInstruction(ProcessingInstruction pi) throws SAXException {\r\n    if (getContentHandler() != null) {\r\n        getContentHandler().processingInstruction(pi.getTarget(), pi.getData());\r\n    }\r\n}\nprivate void handleComment(Comment comment) throws SAXException {\r\n    if (getLexicalHandler() != null) {\r\n        char[] ch = comment.getText().toCharArray();\r\n        getLexicalHandler().comment(ch, 0, ch.length);\r\n    }\r\n}\nprivate void handleDtd(DTD dtd) throws SAXException {\r\n    if (getLexicalHandler() != null) {\r\n        Location location = dtd.getLocation();\r\n        getLexicalHandler().startDTD(null, location.getPublicId(), location.getSystemId());\r\n    }\r\n    if (getLexicalHandler() != null) {\r\n        getLexicalHandler().endDTD();\r\n    }\r\n}\nprivate void handleEntityReference(EntityReference reference) throws SAXException {\r\n    if (getLexicalHandler() != null) {\r\n        getLexicalHandler().startEntity(reference.getName());\r\n    }\r\n    if (getLexicalHandler() != null) {\r\n        getLexicalHandler().endEntity(reference.getName());\r\n    }\r\n}\nprivate Attributes getAttributes(StartElement event) {\r\n    AttributesImpl attributes = new AttributesImpl();\r\n    for (Iterator i = event.getAttributes(); i.hasNext(); ) {\r\n        Attribute attribute = (Attribute) i.next();\r\n        QName qName = attribute.getName();\r\n        String namespace = qName.getNamespaceURI();\r\n        if (namespace == null || !hasNamespacesFeature()) {\r\n            namespace = \"\";\r\n        }\r\n        String type = attribute.getDTDType();\r\n        if (type == null) {\r\n            type = \"CDATA\";\r\n        }\r\n        attributes.addAttribute(namespace, qName.getLocalPart(), toQualifiedName(qName), type, attribute.getValue());\r\n    }\r\n    if (hasNamespacePrefixesFeature()) {\r\n        for (Iterator i = event.getNamespaces(); i.hasNext(); ) {\r\n            Namespace namespace = (Namespace) i.next();\r\n            String prefix = namespace.getPrefix();\r\n            String namespaceUri = namespace.getNamespaceURI();\r\n            String qName;\r\n            if (StringUtils.hasLength(prefix)) {\r\n                qName = \"xmlns:\" + prefix;\r\n            } else {\r\n                qName = \"xmlns\";\r\n            }\r\n            attributes.addAttribute(\"\", \"\", qName, \"CDATA\", namespaceUri);\r\n        }\r\n    }\r\n    return attributes;\r\n}",
+    "comment": "\n * SAX {@code XMLReader} that reads from a StAX {@code XMLEventReader}. Consumes {@code XMLEvents} from\n * an {@code XMLEventReader}, and calls the corresponding methods on the SAX callback interfaces.\n *\n * @author Arjen Poutsma\n * @since 3.0\n * @see XMLEventReader\n * @see #setContentHandler(org.xml.sax.ContentHandler)\n * @see #setDTDHandler(org.xml.sax.DTDHandler)\n * @see #setEntityResolver(org.xml.sax.EntityResolver)\n * @see #setErrorHandler(org.xml.sax.ErrorHandler)\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventXMLReader#parseInternal()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void parseInternal() throws SAXException, XMLStreamException {\r\n    boolean documentStarted = false;\r\n    boolean documentEnded = false;\r\n    int elementDepth = 0;\r\n    while (this.reader.hasNext() && elementDepth >= 0) {\r\n        XMLEvent event = this.reader.nextEvent();\r\n        if (!event.isStartDocument() && !event.isEndDocument() && !documentStarted) {\r\n            handleStartDocument(event);\r\n            documentStarted = true;\r\n        }\r\n        switch(event.getEventType()) {\r\n            case XMLStreamConstants.START_DOCUMENT ->\r\n                {\r\n                    handleStartDocument(event);\r\n                    documentStarted = true;\r\n                }\r\n            case XMLStreamConstants.START_ELEMENT ->\r\n                {\r\n                    elementDepth++;\r\n                    handleStartElement(event.asStartElement());\r\n                }\r\n            case XMLStreamConstants.END_ELEMENT ->\r\n                {\r\n                    elementDepth--;\r\n                    if (elementDepth >= 0) {\r\n                        handleEndElement(event.asEndElement());\r\n                    }\r\n                }\r\n            case XMLStreamConstants.PROCESSING_INSTRUCTION ->\r\n                handleProcessingInstruction((ProcessingInstruction) event);\r\n            case XMLStreamConstants.CHARACTERS, XMLStreamConstants.SPACE, XMLStreamConstants.CDATA ->\r\n                handleCharacters(event.asCharacters());\r\n            case XMLStreamConstants.END_DOCUMENT ->\r\n                {\r\n                    handleEndDocument();\r\n                    documentEnded = true;\r\n                }\r\n            case XMLStreamConstants.NOTATION_DECLARATION ->\r\n                handleNotationDeclaration((NotationDeclaration) event);\r\n            case XMLStreamConstants.ENTITY_DECLARATION ->\r\n                handleEntityDeclaration((EntityDeclaration) event);\r\n            case XMLStreamConstants.COMMENT ->\r\n                handleComment((Comment) event);\r\n            case XMLStreamConstants.DTD ->\r\n                handleDtd((DTD) event);\r\n            case XMLStreamConstants.ENTITY_REFERENCE ->\r\n                handleEntityReference((EntityReference) event);\r\n        }\r\n    }\r\n    if (documentStarted && !documentEnded) {\r\n        handleEndDocument();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventXMLReader#handleStartDocument(XMLEvent)",
+    "entityType": "method",
+    "code": "private void handleStartDocument(final XMLEvent event) throws SAXException {\r\n    if (event.isStartDocument()) {\r\n        StartDocument startDocument = (StartDocument) event;\r\n        String xmlVersion = startDocument.getVersion();\r\n        if (StringUtils.hasLength(xmlVersion)) {\r\n            this.xmlVersion = xmlVersion;\r\n        }\r\n        if (startDocument.encodingSet()) {\r\n            this.encoding = startDocument.getCharacterEncodingScheme();\r\n        }\r\n    }\r\n    ContentHandler contentHandler = getContentHandler();\r\n    if (contentHandler != null) {\r\n        final Location location = event.getLocation();\r\n        contentHandler.setDocumentLocator(new Locator2() {\r\n\r\n            @Override\r\n            public int getColumnNumber() {\r\n                return (location != null ? location.getColumnNumber() : -1);\r\n            }\r\n\r\n            @Override\r\n            public int getLineNumber() {\r\n                return (location != null ? location.getLineNumber() : -1);\r\n            }\r\n\r\n            @Override\r\n            @Nullable\r\n            public String getPublicId() {\r\n                return (location != null ? location.getPublicId() : null);\r\n            }\r\n\r\n            @Override\r\n            @Nullable\r\n            public String getSystemId() {\r\n                return (location != null ? location.getSystemId() : null);\r\n            }\r\n\r\n            @Override\r\n            public String getXMLVersion() {\r\n                return xmlVersion;\r\n            }\r\n\r\n            @Override\r\n            @Nullable\r\n            public String getEncoding() {\r\n                return encoding;\r\n            }\r\n        });\r\n        contentHandler.startDocument();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventXMLReader#handleStartElement(StartElement)",
+    "entityType": "method",
+    "code": "private void handleStartElement(StartElement startElement) throws SAXException {\r\n    if (getContentHandler() != null) {\r\n        QName qName = startElement.getName();\r\n        if (hasNamespacesFeature()) {\r\n            for (Iterator i = startElement.getNamespaces(); i.hasNext(); ) {\r\n                Namespace namespace = (Namespace) i.next();\r\n                startPrefixMapping(namespace.getPrefix(), namespace.getNamespaceURI());\r\n            }\r\n            for (Iterator i = startElement.getAttributes(); i.hasNext(); ) {\r\n                Attribute attribute = (Attribute) i.next();\r\n                QName attributeName = attribute.getName();\r\n                startPrefixMapping(attributeName.getPrefix(), attributeName.getNamespaceURI());\r\n            }\r\n            getContentHandler().startElement(qName.getNamespaceURI(), qName.getLocalPart(), toQualifiedName(qName), getAttributes(startElement));\r\n        } else {\r\n            getContentHandler().startElement(\"\", \"\", toQualifiedName(qName), getAttributes(startElement));\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventXMLReader#handleCharacters(Characters)",
+    "entityType": "method",
+    "code": "private void handleCharacters(Characters characters) throws SAXException {\r\n    char[] data = characters.getData().toCharArray();\r\n    if (getContentHandler() != null && characters.isIgnorableWhiteSpace()) {\r\n        getContentHandler().ignorableWhitespace(data, 0, data.length);\r\n        return;\r\n    }\r\n    if (characters.isCData() && getLexicalHandler() != null) {\r\n        getLexicalHandler().startCDATA();\r\n    }\r\n    if (getContentHandler() != null) {\r\n        getContentHandler().characters(data, 0, data.length);\r\n    }\r\n    if (characters.isCData() && getLexicalHandler() != null) {\r\n        getLexicalHandler().endCDATA();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.StaxEventXMLReader#handleEndElement(EndElement)",
+    "entityType": "method",
+    "code": "private void handleEndElement(EndElement endElement) throws SAXException {\r\n    if (getContentHandler() != null) {\r\n        QName qName = endElement.getName();\r\n        if (hasNamespacesFeature()) {\r\n            getContentHandler().endElement(qName.getNamespaceURI(), qName.getLocalPart(), toQualifiedName(qName));\r\n            for (Iterator i = endElement.getNamespaces(); i.hasNext(); ) {\r\n                Namespace namespace = (Namespace) i.next();\r\n                endPrefixMapping(namespace.getPrefix());\r\n            }\r\n        } else {\r\n            getContentHandler().endElement(\"\", \"\", toQualifiedName(qName));\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  }
+]

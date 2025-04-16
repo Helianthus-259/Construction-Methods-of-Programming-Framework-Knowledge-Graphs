@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#wrap(Content.Chunk)",
+    "entityType": "method",
+    "code": "public JettyDataBuffer wrap(Content.Chunk chunk) {\r\n    ByteBuffer byteBuffer = chunk.getByteBuffer();\r\n    DefaultDataBuffer delegate = this.delegate.wrap(byteBuffer);\r\n    return new JettyDataBuffer(this, delegate, chunk);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#join(List<? extends DataBuffer>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic JettyDataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    DefaultDataBuffer delegate = this.delegate.join(dataBuffers);\r\n    return new JettyDataBuffer(this, delegate);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#isDirect()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isDirect() {\r\n    return this.delegate.isDirect();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "entityType": "class",
+    "code": "private final int maxByteCount;\nprivate int byteCount;\npublic LimitedDataBufferList(int maxByteCount) {\r\n    this.maxByteCount = maxByteCount;\r\n}\n@Override\r\npublic boolean add(DataBuffer buffer) {\r\n    updateCount(buffer.readableByteCount());\r\n    return super.add(buffer);\r\n}\n@Override\r\npublic void add(int index, DataBuffer buffer) {\r\n    super.add(index, buffer);\r\n    updateCount(buffer.readableByteCount());\r\n}\n@Override\r\npublic boolean addAll(Collection<? extends DataBuffer> collection) {\r\n    boolean result = super.addAll(collection);\r\n    collection.forEach(buffer -> updateCount(buffer.readableByteCount()));\r\n    return result;\r\n}\n@Override\r\npublic boolean addAll(int index, Collection<? extends DataBuffer> collection) {\r\n    boolean result = super.addAll(index, collection);\r\n    collection.forEach(buffer -> updateCount(buffer.readableByteCount()));\r\n    return result;\r\n}\nprivate void updateCount(int bytesToAdd) {\r\n    if (this.maxByteCount < 0) {\r\n        return;\r\n    }\r\n    if (bytesToAdd > Integer.MAX_VALUE - this.byteCount) {\r\n        raiseLimitException();\r\n    } else {\r\n        this.byteCount += bytesToAdd;\r\n        if (this.byteCount > this.maxByteCount) {\r\n            raiseLimitException();\r\n        }\r\n    }\r\n}\nprivate void raiseLimitException() {\r\n    // Do not release here, it's likely done via doOnDiscard\r\n    throw new DataBufferLimitException(\"Exceeded limit on max bytes to buffer : \" + this.maxByteCount);\r\n}\n@Override\r\npublic DataBuffer remove(int index) {\r\n    throw new UnsupportedOperationException();\r\n}\n@Override\r\npublic boolean remove(Object o) {\r\n    throw new UnsupportedOperationException();\r\n}\n@Override\r\nprotected void removeRange(int fromIndex, int toIndex) {\r\n    throw new UnsupportedOperationException();\r\n}\n@Override\r\npublic boolean removeAll(Collection<?> c) {\r\n    throw new UnsupportedOperationException();\r\n}\n@Override\r\npublic boolean removeIf(Predicate<? super DataBuffer> filter) {\r\n    throw new UnsupportedOperationException();\r\n}\n@Override\r\npublic DataBuffer set(int index, DataBuffer element) {\r\n    throw new UnsupportedOperationException();\r\n}\n@Override\r\npublic void clear() {\r\n    this.byteCount = 0;\r\n    super.clear();\r\n}\n/**\r\n * Shortcut to {@link DataBufferUtils#release release} all data buffers and\r\n * then {@link #clear()}.\r\n */\r\npublic void releaseAndClear() {\r\n    forEach(buf -> {\r\n        try {\r\n            DataBufferUtils.release(buf);\r\n        } catch (Throwable ex) {\r\n            // Keep going..\r\n        }\r\n    });\r\n    clear();\r\n}",
+    "comment": "\n * Custom {@link List} to collect data buffers with and enforce a\n * limit on the total number of bytes buffered. For use with \"collect\" or\n * other buffering operators in declarative APIs, for example, {@link Flux}.\n *\n * <p>Adding elements increases the byte count and if the limit is exceeded,\n * {@link DataBufferLimitException} is raised.  {@link #clear()} resets the\n * count. Remove and set are not supported.\n *\n * <p><strong>Note:</strong> This class does not automatically release the\n * buffers it contains. It is usually preferable to use hooks such as\n * {@link Flux#doOnDiscard} that also take care of cancel and error signals,\n * or otherwise {@link #releaseAndClear()} can be used.\n *\n * @author Rossen Stoyanchev\n * @since 5.1.11\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#add(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean add(DataBuffer buffer) {\r\n    updateCount(buffer.readableByteCount());\r\n    return super.add(buffer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#add(int,DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void add(int index, DataBuffer buffer) {\r\n    super.add(index, buffer);\r\n    updateCount(buffer.readableByteCount());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#addAll(Collection<? extends DataBuffer>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean addAll(Collection<? extends DataBuffer> collection) {\r\n    boolean result = super.addAll(collection);\r\n    collection.forEach(buffer -> updateCount(buffer.readableByteCount()));\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#addAll(int,Collection<? extends DataBuffer>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean addAll(int index, Collection<? extends DataBuffer> collection) {\r\n    boolean result = super.addAll(index, collection);\r\n    collection.forEach(buffer -> updateCount(buffer.readableByteCount()));\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#updateCount(int)",
+    "entityType": "method",
+    "code": "private void updateCount(int bytesToAdd) {\r\n    if (this.maxByteCount < 0) {\r\n        return;\r\n    }\r\n    if (bytesToAdd > Integer.MAX_VALUE - this.byteCount) {\r\n        raiseLimitException();\r\n    } else {\r\n        this.byteCount += bytesToAdd;\r\n        if (this.byteCount > this.maxByteCount) {\r\n            raiseLimitException();\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#raiseLimitException()",
+    "entityType": "method",
+    "code": "private void raiseLimitException() {\r\n    // Do not release here, it's likely done via doOnDiscard\r\n    throw new DataBufferLimitException(\"Exceeded limit on max bytes to buffer : \" + this.maxByteCount);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#remove(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer remove(int index) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#remove(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean remove(Object o) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#removeRange(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void removeRange(int fromIndex, int toIndex) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#removeAll(Collection<?>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean removeAll(Collection<?> c) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#removeIf(Predicate<? super DataBuffer>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean removeIf(Predicate<? super DataBuffer> filter) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#set(int,DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer set(int index, DataBuffer element) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#clear()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void clear() {\r\n    this.byteCount = 0;\r\n    super.clear();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferList#releaseAndClear()",
+    "entityType": "method",
+    "code": "/**\r\n * Shortcut to {@link DataBufferUtils#release release} all data buffers and\r\n * then {@link #clear()}.\r\n */\r\npublic void releaseAndClear() {\r\n    forEach(buf -> {\r\n        try {\r\n            DataBufferUtils.release(buf);\r\n        } catch (Throwable ex) {\r\n            // Keep going..\r\n        }\r\n    });\r\n    clear();\r\n}",
+    "comment": "\n\t * Shortcut to {@link DataBufferUtils#release release} all data buffers and\n\t * then {@link #clear()}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer",
+    "entityType": "class",
+    "code": "private final Buffer buffer;\nprivate final Netty5DataBufferFactory dataBufferFactory;\n/**\r\n * Create a new {@code Netty5DataBuffer} based on the given {@code Buffer}.\r\n * @param buffer the buffer to base this buffer on\r\n */\r\nNetty5DataBuffer(Buffer buffer, Netty5DataBufferFactory dataBufferFactory) {\r\n    Assert.notNull(buffer, \"Buffer must not be null\");\r\n    Assert.notNull(dataBufferFactory, \"Netty5DataBufferFactory must not be null\");\r\n    this.buffer = buffer;\r\n    this.dataBufferFactory = dataBufferFactory;\r\n}\n/**\r\n * Directly exposes the native {@code Buffer} that this buffer is based on.\r\n * @return the wrapped buffer\r\n */\r\npublic Buffer getNativeBuffer() {\r\n    return this.buffer;\r\n}\n@Override\r\npublic DataBufferFactory factory() {\r\n    return this.dataBufferFactory;\r\n}\n@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        fromIndex = 0;\r\n    } else if (fromIndex >= this.buffer.writerOffset()) {\r\n        return -1;\r\n    }\r\n    int length = this.buffer.writerOffset() - fromIndex;\r\n    int bytes = this.buffer.openCursor(fromIndex, length).process(predicate.negate()::test);\r\n    return bytes == -1 ? -1 : fromIndex + bytes;\r\n}\n@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        return -1;\r\n    }\r\n    fromIndex = Math.min(fromIndex, this.buffer.writerOffset() - 1);\r\n    return this.buffer.openCursor(0, fromIndex + 1).process(predicate.negate()::test);\r\n}\n@Override\r\npublic int readableByteCount() {\r\n    return this.buffer.readableBytes();\r\n}\n@Override\r\npublic int writableByteCount() {\r\n    return this.buffer.writableBytes();\r\n}\n@Override\r\npublic int readPosition() {\r\n    return this.buffer.readerOffset();\r\n}\n@Override\r\npublic Netty5DataBuffer readPosition(int readPosition) {\r\n    this.buffer.readerOffset(readPosition);\r\n    return this;\r\n}\n@Override\r\npublic int writePosition() {\r\n    return this.buffer.writerOffset();\r\n}\n@Override\r\npublic Netty5DataBuffer writePosition(int writePosition) {\r\n    this.buffer.writerOffset(writePosition);\r\n    return this;\r\n}\n@Override\r\npublic byte getByte(int index) {\r\n    return this.buffer.getByte(index);\r\n}\n@Override\r\npublic int capacity() {\r\n    return this.buffer.capacity();\r\n}\n@Override\r\n@Deprecated\r\npublic Netty5DataBuffer capacity(int capacity) {\r\n    if (capacity <= 0) {\r\n        throw new IllegalArgumentException(String.format(\"'newCapacity' %d must be higher than 0\", capacity));\r\n    }\r\n    int diff = capacity - capacity();\r\n    if (diff > 0) {\r\n        this.buffer.ensureWritable(this.buffer.writableBytes() + diff);\r\n    }\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    Assert.isTrue(capacity >= 0, \"Capacity must be >= 0\");\r\n    this.buffer.ensureWritable(capacity);\r\n    return this;\r\n}\n@Override\r\npublic byte read() {\r\n    return this.buffer.readByte();\r\n}\n@Override\r\npublic Netty5DataBuffer read(byte[] destination) {\r\n    return read(destination, 0, destination.length);\r\n}\n@Override\r\npublic Netty5DataBuffer read(byte[] destination, int offset, int length) {\r\n    this.buffer.readBytes(destination, offset, length);\r\n    return this;\r\n}\n@Override\r\npublic Netty5DataBuffer write(byte b) {\r\n    this.buffer.writeByte(b);\r\n    return this;\r\n}\n@Override\r\npublic Netty5DataBuffer write(byte[] source) {\r\n    this.buffer.writeBytes(source);\r\n    return this;\r\n}\n@Override\r\npublic Netty5DataBuffer write(byte[] source, int offset, int length) {\r\n    this.buffer.writeBytes(source, offset, length);\r\n    return this;\r\n}\n@Override\r\npublic Netty5DataBuffer write(DataBuffer... dataBuffers) {\r\n    if (!ObjectUtils.isEmpty(dataBuffers)) {\r\n        if (hasNetty5DataBuffers(dataBuffers)) {\r\n            Buffer[] nativeBuffers = new Buffer[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                nativeBuffers[i] = ((Netty5DataBuffer) dataBuffers[i]).getNativeBuffer();\r\n            }\r\n            return write(nativeBuffers);\r\n        } else {\r\n            ByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                byteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\r\n                dataBuffers[i].toByteBuffer(byteBuffers[i]);\r\n            }\r\n            return write(byteBuffers);\r\n        }\r\n    }\r\n    return this;\r\n}\nprivate static boolean hasNetty5DataBuffers(DataBuffer[] buffers) {\r\n    for (DataBuffer buffer : buffers) {\r\n        if (!(buffer instanceof Netty5DataBuffer)) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}\n@Override\r\npublic Netty5DataBuffer write(ByteBuffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        for (ByteBuffer buffer : buffers) {\r\n            this.buffer.writeBytes(buffer);\r\n        }\r\n    }\r\n    return this;\r\n}\n/**\r\n * Writes one or more Netty 5 {@link Buffer Buffers} to this buffer,\r\n * starting at the current writing position.\r\n * @param buffers the buffers to write into this buffer\r\n * @return this buffer\r\n */\r\npublic Netty5DataBuffer write(Buffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        for (Buffer buffer : buffers) {\r\n            this.buffer.writeBytes(buffer);\r\n        }\r\n    }\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    Assert.notNull(charSequence, \"CharSequence must not be null\");\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    this.buffer.writeCharSequence(charSequence, charset);\r\n    return this;\r\n}\n/**\r\n * {@inheritDoc}\r\n * <p><strong>Note</strong> that due to the lack of a {@code slice} method\r\n * in Netty 5's {@link Buffer}, this implementation returns a copy that\r\n * does <strong>not</strong> share its contents with this buffer.\r\n */\r\n@Override\r\n@Deprecated\r\npublic DataBuffer slice(int index, int length) {\r\n    Buffer copy = this.buffer.copy(index, length);\r\n    return new Netty5DataBuffer(copy, this.dataBufferFactory);\r\n}\n@Override\r\npublic DataBuffer split(int index) {\r\n    Buffer split = this.buffer.split(index);\r\n    return new Netty5DataBuffer(split, this.dataBufferFactory);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return toByteBuffer();\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return toByteBuffer(index, length);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    ByteBuffer copy = this.buffer.isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);\r\n    this.buffer.copyInto(index, copy, 0, length);\r\n    return copy;\r\n}\n@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    this.buffer.copyInto(srcPos, dest, destPos, length);\r\n}\n@Override\r\npublic ByteBufferIterator readableByteBuffers() {\r\n    return new BufferComponentIterator<>(this.buffer.forEachComponent(), true);\r\n}\n@Override\r\npublic ByteBufferIterator writableByteBuffers() {\r\n    return new BufferComponentIterator<>(this.buffer.forEachComponent(), false);\r\n}\n@Override\r\npublic String toString(Charset charset) {\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    return this.buffer.toString(charset);\r\n}\n@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    byte[] data = new byte[length];\r\n    this.buffer.copyInto(index, data, 0, length);\r\n    return new String(data, 0, length, charset);\r\n}\n@Override\r\npublic Netty5DataBuffer touch(Object hint) {\r\n    this.buffer.touch(hint);\r\n    return this;\r\n}\n@Override\r\npublic void close() {\r\n    this.buffer.close();\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof Netty5DataBuffer that && this.buffer.equals(that.buffer)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return this.buffer.hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    return this.buffer.toString();\r\n}\nprivate static final class BufferComponentIterator<T extends BufferComponent & ComponentIterator.Next> implements ByteBufferIterator {\r\n\r\n    private final ComponentIterator<T> delegate;\r\n\r\n    private final boolean readable;\r\n\r\n    @Nullable\r\n    private T next;\r\n\r\n    public BufferComponentIterator(ComponentIterator<T> delegate, boolean readable) {\r\n        Assert.notNull(delegate, \"Delegate must not be null\");\r\n        this.delegate = delegate;\r\n        this.readable = readable;\r\n        this.next = readable ? this.delegate.firstReadable() : this.delegate.firstWritable();\r\n    }\r\n\r\n    @Override\r\n    public boolean hasNext() {\r\n        return this.next != null;\r\n    }\r\n\r\n    @Override\r\n    public ByteBuffer next() {\r\n        if (this.next != null) {\r\n            ByteBuffer result;\r\n            if (this.readable) {\r\n                result = this.next.readableBuffer();\r\n                this.next = this.next.nextReadable();\r\n            } else {\r\n                result = this.next.writableBuffer();\r\n                this.next = this.next.nextWritable();\r\n            }\r\n            return result;\r\n        } else {\r\n            throw new NoSuchElementException();\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void close() {\r\n        this.delegate.close();\r\n    }\r\n}",
+    "comment": "\n * Implementation of the {@code DataBuffer} interface that wraps a Netty 5\n * {@link Buffer}. Typically constructed with {@link Netty5DataBufferFactory}.\n *\n * @author Violeta Georgieva\n * @author Arjen Poutsma\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#getNativeBuffer()",
+    "entityType": "method",
+    "code": "/**\r\n * Directly exposes the native {@code Buffer} that this buffer is based on.\r\n * @return the wrapped buffer\r\n */\r\npublic Buffer getNativeBuffer() {\r\n    return this.buffer;\r\n}",
+    "comment": "\n\t * Directly exposes the native {@code Buffer} that this buffer is based on.\n\t * @return the wrapped buffer\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#factory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory factory() {\r\n    return this.dataBufferFactory;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#indexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        fromIndex = 0;\r\n    } else if (fromIndex >= this.buffer.writerOffset()) {\r\n        return -1;\r\n    }\r\n    int length = this.buffer.writerOffset() - fromIndex;\r\n    int bytes = this.buffer.openCursor(fromIndex, length).process(predicate.negate()::test);\r\n    return bytes == -1 ? -1 : fromIndex + bytes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#lastIndexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        return -1;\r\n    }\r\n    fromIndex = Math.min(fromIndex, this.buffer.writerOffset() - 1);\r\n    return this.buffer.openCursor(0, fromIndex + 1).process(predicate.negate()::test);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#readableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readableByteCount() {\r\n    return this.buffer.readableBytes();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#writableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writableByteCount() {\r\n    return this.buffer.writableBytes();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#readPosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readPosition() {\r\n    return this.buffer.readerOffset();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#readPosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer readPosition(int readPosition) {\r\n    this.buffer.readerOffset(readPosition);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#writePosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writePosition() {\r\n    return this.buffer.writerOffset();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#writePosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer writePosition(int writePosition) {\r\n    this.buffer.writerOffset(writePosition);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#getByte(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte getByte(int index) {\r\n    return this.buffer.getByte(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#capacity()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int capacity() {\r\n    return this.buffer.capacity();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#capacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic Netty5DataBuffer capacity(int capacity) {\r\n    if (capacity <= 0) {\r\n        throw new IllegalArgumentException(String.format(\"'newCapacity' %d must be higher than 0\", capacity));\r\n    }\r\n    int diff = capacity - capacity();\r\n    if (diff > 0) {\r\n        this.buffer.ensureWritable(this.buffer.writableBytes() + diff);\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#ensureWritable(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    Assert.isTrue(capacity >= 0, \"Capacity must be >= 0\");\r\n    this.buffer.ensureWritable(capacity);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#read()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte read() {\r\n    return this.buffer.readByte();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#read(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer read(byte[] destination) {\r\n    return read(destination, 0, destination.length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#read(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer read(byte[] destination, int offset, int length) {\r\n    this.buffer.readBytes(destination, offset, length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer write(byte b) {\r\n    this.buffer.writeByte(b);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer write(byte[] source) {\r\n    this.buffer.writeBytes(source);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer write(byte[] source, int offset, int length) {\r\n    this.buffer.writeBytes(source, offset, length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer write(DataBuffer... dataBuffers) {\r\n    if (!ObjectUtils.isEmpty(dataBuffers)) {\r\n        if (hasNetty5DataBuffers(dataBuffers)) {\r\n            Buffer[] nativeBuffers = new Buffer[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                nativeBuffers[i] = ((Netty5DataBuffer) dataBuffers[i]).getNativeBuffer();\r\n            }\r\n            return write(nativeBuffers);\r\n        } else {\r\n            ByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                byteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\r\n                dataBuffers[i].toByteBuffer(byteBuffers[i]);\r\n            }\r\n            return write(byteBuffers);\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#hasNetty5DataBuffers(DataBuffer[])",
+    "entityType": "method",
+    "code": "private static boolean hasNetty5DataBuffers(DataBuffer[] buffers) {\r\n    for (DataBuffer buffer : buffers) {\r\n        if (!(buffer instanceof Netty5DataBuffer)) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer write(ByteBuffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        for (ByteBuffer buffer : buffers) {\r\n            this.buffer.writeBytes(buffer);\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(Buffer)",
+    "entityType": "method",
+    "code": "/**\r\n * Writes one or more Netty 5 {@link Buffer Buffers} to this buffer,\r\n * starting at the current writing position.\r\n * @param buffers the buffers to write into this buffer\r\n * @return this buffer\r\n */\r\npublic Netty5DataBuffer write(Buffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        for (Buffer buffer : buffers) {\r\n            this.buffer.writeBytes(buffer);\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "comment": "\n\t * Writes one or more Netty 5 {@link Buffer Buffers} to this buffer,\n\t * starting at the current writing position.\n\t * @param buffers the buffers to write into this buffer\n\t * @return this buffer\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#write(CharSequence,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    Assert.notNull(charSequence, \"CharSequence must not be null\");\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    this.buffer.writeCharSequence(charSequence, charset);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#slice(int,int)",
+    "entityType": "method",
+    "code": "/**\r\n * {@inheritDoc}\r\n * <p><strong>Note</strong> that due to the lack of a {@code slice} method\r\n * in Netty 5's {@link Buffer}, this implementation returns a copy that\r\n * does <strong>not</strong> share its contents with this buffer.\r\n */\r\n@Override\r\n@Deprecated\r\npublic DataBuffer slice(int index, int length) {\r\n    Buffer copy = this.buffer.copy(index, length);\r\n    return new Netty5DataBuffer(copy, this.dataBufferFactory);\r\n}",
+    "comment": "\n\t * {@inheritDoc}\n\t * <p><strong>Note</strong> that due to the lack of a {@code slice} method\n\t * in Netty 5's {@link Buffer}, this implementation returns a copy that\n\t * does <strong>not</strong> share its contents with this buffer.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#split(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer split(int index) {\r\n    Buffer split = this.buffer.split(index);\r\n    return new Netty5DataBuffer(split, this.dataBufferFactory);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#asByteBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return toByteBuffer();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#asByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return toByteBuffer(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#toByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    ByteBuffer copy = this.buffer.isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);\r\n    this.buffer.copyInto(index, copy, 0, length);\r\n    return copy;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#toByteBuffer(int,ByteBuffer,int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    this.buffer.copyInto(srcPos, dest, destPos, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#readableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBufferIterator readableByteBuffers() {\r\n    return new BufferComponentIterator<>(this.buffer.forEachComponent(), true);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#writableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBufferIterator writableByteBuffers() {\r\n    return new BufferComponentIterator<>(this.buffer.forEachComponent(), false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#toString(Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString(Charset charset) {\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    return this.buffer.toString(charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#toString(int,int,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    byte[] data = new byte[length];\r\n    this.buffer.copyInto(index, data, 0, length);\r\n    return new String(data, 0, length, charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#touch(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer touch(Object hint) {\r\n    this.buffer.touch(hint);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() {\r\n    this.buffer.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof Netty5DataBuffer that && this.buffer.equals(that.buffer)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return this.buffer.hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBuffer#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.buffer.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.BufferComponentIterator",
+    "entityType": "class",
+    "code": "private final ComponentIterator<T> delegate;\nprivate final boolean readable;\n@Nullable\r\nprivate T next;\npublic BufferComponentIterator(ComponentIterator<T> delegate, boolean readable) {\r\n    Assert.notNull(delegate, \"Delegate must not be null\");\r\n    this.delegate = delegate;\r\n    this.readable = readable;\r\n    this.next = readable ? this.delegate.firstReadable() : this.delegate.firstWritable();\r\n}\n@Override\r\npublic boolean hasNext() {\r\n    return this.next != null;\r\n}\n@Override\r\npublic ByteBuffer next() {\r\n    if (this.next != null) {\r\n        ByteBuffer result;\r\n        if (this.readable) {\r\n            result = this.next.readableBuffer();\r\n            this.next = this.next.nextReadable();\r\n        } else {\r\n            result = this.next.writableBuffer();\r\n            this.next = this.next.nextWritable();\r\n        }\r\n        return result;\r\n    } else {\r\n        throw new NoSuchElementException();\r\n    }\r\n}\n@Override\r\npublic void close() {\r\n    this.delegate.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.BufferComponentIterator#hasNext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasNext() {\r\n    return this.next != null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.BufferComponentIterator#next()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBuffer next() {\r\n    if (this.next != null) {\r\n        ByteBuffer result;\r\n        if (this.readable) {\r\n            result = this.next.readableBuffer();\r\n            this.next = this.next.nextReadable();\r\n        } else {\r\n            result = this.next.writableBuffer();\r\n            this.next = this.next.nextWritable();\r\n        }\r\n        return result;\r\n    } else {\r\n        throw new NoSuchElementException();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.BufferComponentIterator#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() {\r\n    this.delegate.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory",
+    "entityType": "class",
+    "code": "private final BufferAllocator bufferAllocator;\n/**\r\n * Create a new {@code Netty5DataBufferFactory} based on the given factory.\r\n * @param bufferAllocator the factory to use\r\n */\r\npublic Netty5DataBufferFactory(BufferAllocator bufferAllocator) {\r\n    Assert.notNull(bufferAllocator, \"BufferAllocator must not be null\");\r\n    this.bufferAllocator = bufferAllocator;\r\n}\n/**\r\n * Return the {@code BufferAllocator} used by this factory.\r\n */\r\npublic BufferAllocator getBufferAllocator() {\r\n    return this.bufferAllocator;\r\n}\n@Override\r\n@Deprecated\r\npublic Netty5DataBuffer allocateBuffer() {\r\n    Buffer buffer = this.bufferAllocator.allocate(256);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}\n@Override\r\npublic Netty5DataBuffer allocateBuffer(int initialCapacity) {\r\n    Buffer buffer = this.bufferAllocator.allocate(initialCapacity);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}\n@Override\r\npublic Netty5DataBuffer wrap(ByteBuffer byteBuffer) {\r\n    Buffer buffer = this.bufferAllocator.copyOf(byteBuffer);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}\n@Override\r\npublic Netty5DataBuffer wrap(byte[] bytes) {\r\n    Buffer buffer = this.bufferAllocator.copyOf(bytes);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}\n/**\r\n * Wrap the given Netty {@link Buffer} in a {@code Netty5DataBuffer}.\r\n * @param buffer the Netty buffer to wrap\r\n * @return the wrapped buffer\r\n */\r\npublic Netty5DataBuffer wrap(Buffer buffer) {\r\n    buffer.touch(\"Wrap buffer\");\r\n    return new Netty5DataBuffer(buffer, this);\r\n}\n/**\r\n * {@inheritDoc}\r\n * <p>This implementation uses Netty's {@link CompositeBuffer}.\r\n */\r\n@Override\r\npublic DataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    Assert.notEmpty(dataBuffers, \"DataBuffer List must not be empty\");\r\n    if (dataBuffers.size() == 1) {\r\n        return dataBuffers.get(0);\r\n    }\r\n    CompositeBuffer composite = this.bufferAllocator.compose();\r\n    for (DataBuffer dataBuffer : dataBuffers) {\r\n        Assert.isInstanceOf(Netty5DataBuffer.class, dataBuffer);\r\n        composite.extendWith(((Netty5DataBuffer) dataBuffer).getNativeBuffer().send());\r\n    }\r\n    return new Netty5DataBuffer(composite, this);\r\n}\n@Override\r\npublic boolean isDirect() {\r\n    return this.bufferAllocator.getAllocationType().isDirect();\r\n}\n/**\r\n * Return the given Netty {@link DataBuffer} as a {@link Buffer}.\r\n * <p>Returns the {@linkplain Netty5DataBuffer#getNativeBuffer() native buffer}\r\n * if {@code buffer} is a {@link Netty5DataBuffer}; returns\r\n * {@link BufferAllocator#copyOf(ByteBuffer)} otherwise.\r\n * @param buffer the {@code DataBuffer} to return a {@code Buffer} for\r\n * @return the netty {@code Buffer}\r\n */\r\npublic static Buffer toBuffer(DataBuffer buffer) {\r\n    if (buffer instanceof Netty5DataBuffer netty5DataBuffer) {\r\n        return netty5DataBuffer.getNativeBuffer();\r\n    } else {\r\n        ByteBuffer byteBuffer = ByteBuffer.allocate(buffer.readableByteCount());\r\n        buffer.toByteBuffer(byteBuffer);\r\n        return DefaultBufferAllocators.preferredAllocator().copyOf(byteBuffer);\r\n    }\r\n}\n@Override\r\npublic String toString() {\r\n    return \"Netty5DataBufferFactory (\" + this.bufferAllocator + \")\";\r\n}",
+    "comment": "\n * Implementation of the {@code DataBufferFactory} interface based on a\n * Netty 5 {@link BufferAllocator}.\n *\n * @author Violeta Georgieva\n * @author Arjen Poutsma\n * @since 6.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#getBufferAllocator()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@code BufferAllocator} used by this factory.\r\n */\r\npublic BufferAllocator getBufferAllocator() {\r\n    return this.bufferAllocator;\r\n}",
+    "comment": "\n\t * Return the {@code BufferAllocator} used by this factory.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#allocateBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic Netty5DataBuffer allocateBuffer() {\r\n    Buffer buffer = this.bufferAllocator.allocate(256);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#allocateBuffer(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer allocateBuffer(int initialCapacity) {\r\n    Buffer buffer = this.bufferAllocator.allocate(initialCapacity);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#wrap(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer wrap(ByteBuffer byteBuffer) {\r\n    Buffer buffer = this.bufferAllocator.copyOf(byteBuffer);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#wrap(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic Netty5DataBuffer wrap(byte[] bytes) {\r\n    Buffer buffer = this.bufferAllocator.copyOf(bytes);\r\n    return new Netty5DataBuffer(buffer, this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#wrap(Buffer)",
+    "entityType": "method",
+    "code": "/**\r\n * Wrap the given Netty {@link Buffer} in a {@code Netty5DataBuffer}.\r\n * @param buffer the Netty buffer to wrap\r\n * @return the wrapped buffer\r\n */\r\npublic Netty5DataBuffer wrap(Buffer buffer) {\r\n    buffer.touch(\"Wrap buffer\");\r\n    return new Netty5DataBuffer(buffer, this);\r\n}",
+    "comment": "\n\t * Wrap the given Netty {@link Buffer} in a {@code Netty5DataBuffer}.\n\t * @param buffer the Netty buffer to wrap\n\t * @return the wrapped buffer\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#join(List<? extends DataBuffer>)",
+    "entityType": "method",
+    "code": "/**\r\n * {@inheritDoc}\r\n * <p>This implementation uses Netty's {@link CompositeBuffer}.\r\n */\r\n@Override\r\npublic DataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    Assert.notEmpty(dataBuffers, \"DataBuffer List must not be empty\");\r\n    if (dataBuffers.size() == 1) {\r\n        return dataBuffers.get(0);\r\n    }\r\n    CompositeBuffer composite = this.bufferAllocator.compose();\r\n    for (DataBuffer dataBuffer : dataBuffers) {\r\n        Assert.isInstanceOf(Netty5DataBuffer.class, dataBuffer);\r\n        composite.extendWith(((Netty5DataBuffer) dataBuffer).getNativeBuffer().send());\r\n    }\r\n    return new Netty5DataBuffer(composite, this);\r\n}",
+    "comment": "\n\t * {@inheritDoc}\n\t * <p>This implementation uses Netty's {@link CompositeBuffer}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#isDirect()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isDirect() {\r\n    return this.bufferAllocator.getAllocationType().isDirect();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#toBuffer(DataBuffer)",
+    "entityType": "method",
+    "code": "/**\r\n * Return the given Netty {@link DataBuffer} as a {@link Buffer}.\r\n * <p>Returns the {@linkplain Netty5DataBuffer#getNativeBuffer() native buffer}\r\n * if {@code buffer} is a {@link Netty5DataBuffer}; returns\r\n * {@link BufferAllocator#copyOf(ByteBuffer)} otherwise.\r\n * @param buffer the {@code DataBuffer} to return a {@code Buffer} for\r\n * @return the netty {@code Buffer}\r\n */\r\npublic static Buffer toBuffer(DataBuffer buffer) {\r\n    if (buffer instanceof Netty5DataBuffer netty5DataBuffer) {\r\n        return netty5DataBuffer.getNativeBuffer();\r\n    } else {\r\n        ByteBuffer byteBuffer = ByteBuffer.allocate(buffer.readableByteCount());\r\n        buffer.toByteBuffer(byteBuffer);\r\n        return DefaultBufferAllocators.preferredAllocator().copyOf(byteBuffer);\r\n    }\r\n}",
+    "comment": "\n\t * Return the given Netty {@link DataBuffer} as a {@link Buffer}.\n\t * <p>Returns the {@linkplain Netty5DataBuffer#getNativeBuffer() native buffer}\n\t * if {@code buffer} is a {@link Netty5DataBuffer}; returns\n\t * {@link BufferAllocator#copyOf(ByteBuffer)} otherwise.\n\t * @param buffer the {@code DataBuffer} to return a {@code Buffer} for\n\t * @return the netty {@code Buffer}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Netty5DataBufferFactory#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return \"Netty5DataBufferFactory (\" + this.bufferAllocator + \")\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer",
+    "entityType": "class",
+    "code": "private ByteBuf byteBuf;\nprivate final NettyDataBufferFactory dataBufferFactory;\n/**\r\n * Create a new {@code NettyDataBuffer} based on the given {@code ByteBuff}.\r\n * @param byteBuf the buffer to base this buffer on\r\n */\r\nNettyDataBuffer(ByteBuf byteBuf, NettyDataBufferFactory dataBufferFactory) {\r\n    Assert.notNull(byteBuf, \"ByteBuf must not be null\");\r\n    Assert.notNull(dataBufferFactory, \"NettyDataBufferFactory must not be null\");\r\n    this.byteBuf = byteBuf;\r\n    this.dataBufferFactory = dataBufferFactory;\r\n}\n/**\r\n * Directly exposes the native {@code ByteBuf} that this buffer is based on.\r\n * @return the wrapped byte buffer\r\n */\r\npublic ByteBuf getNativeBuffer() {\r\n    return this.byteBuf;\r\n}\n@Override\r\npublic NettyDataBufferFactory factory() {\r\n    return this.dataBufferFactory;\r\n}\n@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        fromIndex = 0;\r\n    } else if (fromIndex >= this.byteBuf.writerIndex()) {\r\n        return -1;\r\n    }\r\n    int length = this.byteBuf.writerIndex() - fromIndex;\r\n    return this.byteBuf.forEachByte(fromIndex, length, predicate.negate()::test);\r\n}\n@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        return -1;\r\n    }\r\n    fromIndex = Math.min(fromIndex, this.byteBuf.writerIndex() - 1);\r\n    return this.byteBuf.forEachByteDesc(0, fromIndex + 1, predicate.negate()::test);\r\n}\n@Override\r\npublic int readableByteCount() {\r\n    return this.byteBuf.readableBytes();\r\n}\n@Override\r\npublic int writableByteCount() {\r\n    return this.byteBuf.writableBytes();\r\n}\n@Override\r\npublic int readPosition() {\r\n    return this.byteBuf.readerIndex();\r\n}\n@Override\r\npublic NettyDataBuffer readPosition(int readPosition) {\r\n    this.byteBuf.readerIndex(readPosition);\r\n    return this;\r\n}\n@Override\r\npublic int writePosition() {\r\n    return this.byteBuf.writerIndex();\r\n}\n@Override\r\npublic NettyDataBuffer writePosition(int writePosition) {\r\n    this.byteBuf.writerIndex(writePosition);\r\n    return this;\r\n}\n@Override\r\npublic byte getByte(int index) {\r\n    return this.byteBuf.getByte(index);\r\n}\n@Override\r\npublic int capacity() {\r\n    return this.byteBuf.capacity();\r\n}\n@Override\r\n@Deprecated\r\npublic NettyDataBuffer capacity(int capacity) {\r\n    this.byteBuf.capacity(capacity);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    this.byteBuf.ensureWritable(capacity);\r\n    return this;\r\n}\n@Override\r\npublic byte read() {\r\n    return this.byteBuf.readByte();\r\n}\n@Override\r\npublic NettyDataBuffer read(byte[] destination) {\r\n    this.byteBuf.readBytes(destination);\r\n    return this;\r\n}\n@Override\r\npublic NettyDataBuffer read(byte[] destination, int offset, int length) {\r\n    this.byteBuf.readBytes(destination, offset, length);\r\n    return this;\r\n}\n@Override\r\npublic NettyDataBuffer write(byte b) {\r\n    this.byteBuf.writeByte(b);\r\n    return this;\r\n}\n@Override\r\npublic NettyDataBuffer write(byte[] source) {\r\n    this.byteBuf.writeBytes(source);\r\n    return this;\r\n}\n@Override\r\npublic NettyDataBuffer write(byte[] source, int offset, int length) {\r\n    this.byteBuf.writeBytes(source, offset, length);\r\n    return this;\r\n}\n@Override\r\npublic NettyDataBuffer write(DataBuffer... dataBuffers) {\r\n    if (!ObjectUtils.isEmpty(dataBuffers)) {\r\n        if (hasNettyDataBuffers(dataBuffers)) {\r\n            ByteBuf[] nativeBuffers = new ByteBuf[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                nativeBuffers[i] = ((NettyDataBuffer) dataBuffers[i]).getNativeBuffer();\r\n            }\r\n            write(nativeBuffers);\r\n        } else {\r\n            ByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                byteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\r\n                dataBuffers[i].toByteBuffer(byteBuffers[i]);\r\n            }\r\n            write(byteBuffers);\r\n        }\r\n    }\r\n    return this;\r\n}\nprivate static boolean hasNettyDataBuffers(DataBuffer[] buffers) {\r\n    for (DataBuffer buffer : buffers) {\r\n        if (!(buffer instanceof NettyDataBuffer)) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}\n@Override\r\npublic NettyDataBuffer write(ByteBuffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        for (ByteBuffer buffer : buffers) {\r\n            this.byteBuf.writeBytes(buffer);\r\n        }\r\n    }\r\n    return this;\r\n}\n/**\r\n * Writes one or more Netty {@link ByteBuf ByteBufs} to this buffer,\r\n * starting at the current writing position.\r\n * @param byteBufs the buffers to write into this buffer\r\n * @return this buffer\r\n */\r\npublic NettyDataBuffer write(ByteBuf... byteBufs) {\r\n    if (!ObjectUtils.isEmpty(byteBufs)) {\r\n        for (ByteBuf byteBuf : byteBufs) {\r\n            this.byteBuf.writeBytes(byteBuf);\r\n        }\r\n    }\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    Assert.notNull(charSequence, \"CharSequence must not be null\");\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    if (StandardCharsets.UTF_8.equals(charset)) {\r\n        ByteBufUtil.writeUtf8(this.byteBuf, charSequence);\r\n    } else if (StandardCharsets.US_ASCII.equals(charset)) {\r\n        ByteBufUtil.writeAscii(this.byteBuf, charSequence);\r\n    } else {\r\n        return PooledDataBuffer.super.write(charSequence, charset);\r\n    }\r\n    return this;\r\n}\n@Override\r\n@Deprecated\r\npublic NettyDataBuffer slice(int index, int length) {\r\n    ByteBuf slice = this.byteBuf.slice(index, length);\r\n    return new NettyDataBuffer(slice, this.dataBufferFactory);\r\n}\n@Override\r\n@Deprecated\r\npublic NettyDataBuffer retainedSlice(int index, int length) {\r\n    ByteBuf slice = this.byteBuf.retainedSlice(index, length);\r\n    return new NettyDataBuffer(slice, this.dataBufferFactory);\r\n}\n@Override\r\npublic NettyDataBuffer split(int index) {\r\n    ByteBuf split = this.byteBuf.retainedSlice(0, index);\r\n    int writerIndex = this.byteBuf.writerIndex();\r\n    int readerIndex = this.byteBuf.readerIndex();\r\n    split.writerIndex(Math.min(writerIndex, index));\r\n    split.readerIndex(Math.min(readerIndex, index));\r\n    this.byteBuf = this.byteBuf.slice(index, this.byteBuf.capacity() - index);\r\n    this.byteBuf.writerIndex(Math.max(writerIndex, index) - index);\r\n    this.byteBuf.readerIndex(Math.max(readerIndex, index) - index);\r\n    return new NettyDataBuffer(split, this.dataBufferFactory);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return this.byteBuf.nioBuffer();\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return this.byteBuf.nioBuffer(index, length);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    ByteBuffer result = this.byteBuf.isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);\r\n    this.byteBuf.getBytes(index, result);\r\n    return result.flip();\r\n}\n@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    Assert.notNull(dest, \"Dest must not be null\");\r\n    dest = dest.duplicate().clear();\r\n    dest.put(destPos, this.byteBuf.nioBuffer(srcPos, length), 0, length);\r\n}\n@Override\r\npublic DataBuffer.ByteBufferIterator readableByteBuffers() {\r\n    ByteBuffer[] readable = this.byteBuf.nioBuffers(this.byteBuf.readerIndex(), this.byteBuf.readableBytes());\r\n    return new ByteBufferIterator(readable, true);\r\n}\n@Override\r\npublic DataBuffer.ByteBufferIterator writableByteBuffers() {\r\n    ByteBuffer[] writable = this.byteBuf.nioBuffers(this.byteBuf.writerIndex(), this.byteBuf.writableBytes());\r\n    return new ByteBufferIterator(writable, false);\r\n}\n@Override\r\npublic String toString(Charset charset) {\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    return this.byteBuf.toString(charset);\r\n}\n@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    return this.byteBuf.toString(index, length, charset);\r\n}\n@Override\r\npublic boolean isAllocated() {\r\n    return this.byteBuf.refCnt() > 0;\r\n}\n@Override\r\npublic PooledDataBuffer retain() {\r\n    return new NettyDataBuffer(this.byteBuf.retain(), this.dataBufferFactory);\r\n}\n@Override\r\npublic PooledDataBuffer touch(Object hint) {\r\n    this.byteBuf.touch(hint);\r\n    return this;\r\n}\n@Override\r\npublic boolean release() {\r\n    return this.byteBuf.release();\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof NettyDataBuffer that && this.byteBuf.equals(that.byteBuf)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return this.byteBuf.hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    return this.byteBuf.toString();\r\n}\nprivate static final class ByteBufferIterator implements DataBuffer.ByteBufferIterator {\r\n\r\n    private final ByteBuffer[] byteBuffers;\r\n\r\n    private final boolean readOnly;\r\n\r\n    private int cursor = 0;\r\n\r\n    public ByteBufferIterator(ByteBuffer[] byteBuffers, boolean readOnly) {\r\n        this.byteBuffers = byteBuffers;\r\n        this.readOnly = readOnly;\r\n    }\r\n\r\n    @Override\r\n    public boolean hasNext() {\r\n        return this.cursor < this.byteBuffers.length;\r\n    }\r\n\r\n    @Override\r\n    public ByteBuffer next() {\r\n        int index = this.cursor;\r\n        if (index < this.byteBuffers.length) {\r\n            this.cursor = index + 1;\r\n            ByteBuffer next = this.byteBuffers[index];\r\n            return this.readOnly ? next.asReadOnlyBuffer() : next;\r\n        } else {\r\n            throw new NoSuchElementException();\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void close() {\r\n    }\r\n}",
+    "comment": "\n * Implementation of the {@code DataBuffer} interface that wraps a Netty 4\n * {@link ByteBuf}. Typically constructed with {@link NettyDataBufferFactory}.\n *\n * @author Arjen Poutsma\n * @author Brian Clozel\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#getNativeBuffer()",
+    "entityType": "method",
+    "code": "/**\r\n * Directly exposes the native {@code ByteBuf} that this buffer is based on.\r\n * @return the wrapped byte buffer\r\n */\r\npublic ByteBuf getNativeBuffer() {\r\n    return this.byteBuf;\r\n}",
+    "comment": "\n\t * Directly exposes the native {@code ByteBuf} that this buffer is based on.\n\t * @return the wrapped byte buffer\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#factory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBufferFactory factory() {\r\n    return this.dataBufferFactory;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#indexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        fromIndex = 0;\r\n    } else if (fromIndex >= this.byteBuf.writerIndex()) {\r\n        return -1;\r\n    }\r\n    int length = this.byteBuf.writerIndex() - fromIndex;\r\n    return this.byteBuf.forEachByte(fromIndex, length, predicate.negate()::test);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#lastIndexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        return -1;\r\n    }\r\n    fromIndex = Math.min(fromIndex, this.byteBuf.writerIndex() - 1);\r\n    return this.byteBuf.forEachByteDesc(0, fromIndex + 1, predicate.negate()::test);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#readableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readableByteCount() {\r\n    return this.byteBuf.readableBytes();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#writableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writableByteCount() {\r\n    return this.byteBuf.writableBytes();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#readPosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readPosition() {\r\n    return this.byteBuf.readerIndex();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#readPosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer readPosition(int readPosition) {\r\n    this.byteBuf.readerIndex(readPosition);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#writePosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writePosition() {\r\n    return this.byteBuf.writerIndex();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#writePosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer writePosition(int writePosition) {\r\n    this.byteBuf.writerIndex(writePosition);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#getByte(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte getByte(int index) {\r\n    return this.byteBuf.getByte(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#capacity()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int capacity() {\r\n    return this.byteBuf.capacity();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#capacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic NettyDataBuffer capacity(int capacity) {\r\n    this.byteBuf.capacity(capacity);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#ensureWritable(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    this.byteBuf.ensureWritable(capacity);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#read()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte read() {\r\n    return this.byteBuf.readByte();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#read(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer read(byte[] destination) {\r\n    this.byteBuf.readBytes(destination);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#read(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer read(byte[] destination, int offset, int length) {\r\n    this.byteBuf.readBytes(destination, offset, length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer write(byte b) {\r\n    this.byteBuf.writeByte(b);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer write(byte[] source) {\r\n    this.byteBuf.writeBytes(source);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer write(byte[] source, int offset, int length) {\r\n    this.byteBuf.writeBytes(source, offset, length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer write(DataBuffer... dataBuffers) {\r\n    if (!ObjectUtils.isEmpty(dataBuffers)) {\r\n        if (hasNettyDataBuffers(dataBuffers)) {\r\n            ByteBuf[] nativeBuffers = new ByteBuf[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                nativeBuffers[i] = ((NettyDataBuffer) dataBuffers[i]).getNativeBuffer();\r\n            }\r\n            write(nativeBuffers);\r\n        } else {\r\n            ByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\r\n            for (int i = 0; i < dataBuffers.length; i++) {\r\n                byteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\r\n                dataBuffers[i].toByteBuffer(byteBuffers[i]);\r\n            }\r\n            write(byteBuffers);\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#hasNettyDataBuffers(DataBuffer[])",
+    "entityType": "method",
+    "code": "private static boolean hasNettyDataBuffers(DataBuffer[] buffers) {\r\n    for (DataBuffer buffer : buffers) {\r\n        if (!(buffer instanceof NettyDataBuffer)) {\r\n            return false;\r\n        }\r\n    }\r\n    return true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic NettyDataBuffer write(ByteBuffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        for (ByteBuffer buffer : buffers) {\r\n            this.byteBuf.writeBytes(buffer);\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(ByteBuf)",
+    "entityType": "method",
+    "code": "/**\r\n * Writes one or more Netty {@link ByteBuf ByteBufs} to this buffer,\r\n * starting at the current writing position.\r\n * @param byteBufs the buffers to write into this buffer\r\n * @return this buffer\r\n */\r\npublic NettyDataBuffer write(ByteBuf... byteBufs) {\r\n    if (!ObjectUtils.isEmpty(byteBufs)) {\r\n        for (ByteBuf byteBuf : byteBufs) {\r\n            this.byteBuf.writeBytes(byteBuf);\r\n        }\r\n    }\r\n    return this;\r\n}",
+    "comment": "\n\t * Writes one or more Netty {@link ByteBuf ByteBufs} to this buffer,\n\t * starting at the current writing position.\n\t * @param byteBufs the buffers to write into this buffer\n\t * @return this buffer\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NettyDataBuffer#write(CharSequence,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    Assert.notNull(charSequence, \"CharSequence must not be null\");\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    if (StandardCharsets.UTF_8.equals(charset)) {\r\n        ByteBufUtil.writeUtf8(this.byteBuf, charSequence);\r\n    } else if (StandardCharsets.US_ASCII.equals(charset)) {\r\n        ByteBufUtil.writeAscii(this.byteBuf, charSequence);\r\n    } else {\r\n        return PooledDataBuffer.super.write(charSequence, charset);\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  }
+]

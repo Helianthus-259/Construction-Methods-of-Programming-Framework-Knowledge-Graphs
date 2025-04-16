@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.convert.support.OtherTypeToByteArrayConverter#convert(OtherType)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte[] convert(OtherType source) {\r\n    return source.bytes;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests",
+    "entityType": "class",
+    "code": "private final GenericConversionService conversionService = new GenericConversionService();\n@BeforeEach\r\nvoid setup() {\r\n    conversionService.addConverter(new CollectionToCollectionConverter(conversionService));\r\n}\n@Test\r\nvoid scalarList() throws Exception {\r\n    List<String> list = List.of(\"9\", \"37\");\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"scalarListTarget\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(list, sourceType, targetType)).withCauseInstanceOf(ConverterNotFoundException.class);\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    @SuppressWarnings(\"unchecked\")\r\n    List<Integer> result = (List<Integer>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result).isNotEqualTo(list).containsExactly(9, 37);\r\n}\n@Test\r\nvoid emptyListToList() throws Exception {\r\n    conversionService.addConverter(new CollectionToCollectionConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyListTarget\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThat(conversionService.convert(list, sourceType, targetType)).isEqualTo(list);\r\n}\n@Test\r\nvoid emptyListToListDifferentTargetType() throws Exception {\r\n    conversionService.addConverter(new CollectionToCollectionConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyListDifferentTarget\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    @SuppressWarnings(\"unchecked\")\r\n    ArrayList<Integer> result = (ArrayList<Integer>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result.getClass()).isEqualTo(ArrayList.class);\r\n    assertThat(result).isEmpty();\r\n}\n@Test\r\nvoid collectionToObjectInteraction() {\r\n    List<List<String>> list = new ArrayList<>();\r\n    list.add(Arrays.asList(\"9\", \"12\"));\r\n    list.add(Arrays.asList(\"37\", \"23\"));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    assertThat(conversionService.canConvert(List.class, List.class)).isTrue();\r\n    assertThat((Object) conversionService.convert(list, List.class)).isSameAs(list);\r\n}\n@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid arrayCollectionToObjectInteraction() {\r\n    List<String>[] array = new List[2];\r\n    array[0] = Arrays.asList(\"9\", \"12\");\r\n    array[1] = Arrays.asList(\"37\", \"23\");\r\n    conversionService.addConverter(new ArrayToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String[].class, List.class)).isTrue();\r\n    assertThat(conversionService.convert(array, List.class)).isEqualTo(Arrays.asList(array));\r\n}\n@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid objectToCollection() throws Exception {\r\n    List<List<String>> list = new ArrayList<>();\r\n    list.add(Arrays.asList(\"9\", \"12\"));\r\n    list.add(Arrays.asList(\"37\", \"23\"));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    conversionService.addConverter(new ObjectToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"objectToCollection\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    List<List<List<Integer>>> result = (List<List<List<Integer>>>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result).hasSize(2);\r\n    assertThat(result.get(0).get(0)).singleElement().isEqualTo(9);\r\n    assertThat(result.get(0).get(1)).singleElement().isEqualTo(12);\r\n    assertThat(result.get(1).get(0)).singleElement().isEqualTo(37);\r\n    assertThat(result.get(1).get(1)).singleElement().isEqualTo(23);\r\n}\n@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid stringToCollection() throws Exception {\r\n    List<List<String>> list = new ArrayList<>();\r\n    list.add(List.of(\"9,12\"));\r\n    list.add(List.of(\"37,23\"));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    conversionService.addConverter(new StringToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new ObjectToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"objectToCollection\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    List<List<List<Integer>>> result = (List<List<List<Integer>>>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result).satisfiesExactly(zero -> assertThat(zero.get(0)).containsExactly(9, 12), one -> assertThat(one.get(0)).containsExactly(37, 23));\r\n}\n@Test\r\nvoid convertEmptyVector_shouldReturnEmptyArrayList() {\r\n    Vector<String> vector = new Vector<>();\r\n    vector.add(\"Element\");\r\n    testCollectionConversionToArrayList(vector);\r\n}\n@Test\r\nvoid convertNonEmptyVector_shouldReturnNonEmptyArrayList() {\r\n    Vector<String> vector = new Vector<>();\r\n    vector.add(\"Element\");\r\n    testCollectionConversionToArrayList(vector);\r\n}\n@Test\r\nvoid collectionsEmptyList() throws Exception {\r\n    CollectionToCollectionConverter converter = new CollectionToCollectionConverter(new GenericConversionService());\r\n    TypeDescriptor type = new TypeDescriptor(getClass().getField(\"list\"));\r\n    converter.convert(list, type, TypeDescriptor.valueOf(Class.forName(\"java.util.Collections$EmptyList\")));\r\n}\n@SuppressWarnings(\"rawtypes\")\r\nprivate void testCollectionConversionToArrayList(Collection<String> aSource) {\r\n    Object myConverted = (new CollectionToCollectionConverter(new GenericConversionService())).convert(aSource, TypeDescriptor.forObject(aSource), TypeDescriptor.forObject(new ArrayList()));\r\n    boolean condition = myConverted instanceof ArrayList<?>;\r\n    assertThat(condition).isTrue();\r\n    assertThat(((ArrayList<?>) myConverted)).hasSameSizeAs(aSource);\r\n}\n@Test\r\nvoid listToCollectionNoCopyRequired() throws NoSuchFieldException {\r\n    List<?> input = new ArrayList<>(Arrays.asList(\"foo\", \"bar\"));\r\n    assertThat(conversionService.convert(input, new TypeDescriptor(getClass().getField(\"wildcardCollection\")))).isSameAs(input);\r\n}\n@Test\r\nvoid differentImpls() throws Exception {\r\n    List<Resource> resources = new ArrayList<>();\r\n    resources.add(new ClassPathResource(\"test\"));\r\n    resources.add(new FileSystemResource(\"test\"));\r\n    resources.add(new TestResource());\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\r\n}\n@Test\r\nvoid mixedInNulls() throws Exception {\r\n    List<Resource> resources = new ArrayList<>();\r\n    resources.add(new ClassPathResource(\"test\"));\r\n    resources.add(null);\r\n    resources.add(new FileSystemResource(\"test\"));\r\n    resources.add(new TestResource());\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\r\n}\n@Test\r\nvoid allNulls() throws Exception {\r\n    List<Resource> resources = new ArrayList<>();\r\n    resources.add(null);\r\n    resources.add(null);\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\r\n}\n@Test\r\nvoid elementTypesNotConvertible() throws Exception {\r\n    List<String> resources = new ArrayList<>();\r\n    resources.add(null);\r\n    resources.add(null);\r\n    TypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"strings\"));\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\"))));\r\n}\n@Test\r\nvoid nothingInCommon() {\r\n    List<Object> resources = new ArrayList<>();\r\n    resources.add(new ClassPathResource(\"test\"));\r\n    resources.add(3);\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\"))));\r\n}\n@Test\r\nvoid stringToEnumSet() throws Exception {\r\n    conversionService.addConverterFactory(new StringToEnumConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    list.add(\"A\");\r\n    list.add(\"C\");\r\n    assertThat(conversionService.convert(list, new TypeDescriptor(getClass().getField(\"enumSet\")))).isEqualTo(EnumSet.of(MyEnum.A, MyEnum.C));\r\n}\npublic ArrayList<Integer> scalarListTarget;\npublic List<Integer> emptyListTarget;\npublic ArrayList<Integer> emptyListDifferentTarget;\npublic List<List<List<Integer>>> objectToCollection;\npublic List<String> strings;\npublic List<?> list = Collections.emptyList();\npublic Collection<?> wildcardCollection = Collections.emptyList();\npublic List<Resource> resources;\npublic EnumSet<MyEnum> enumSet;\npublic abstract static class BaseResource implements Resource {\r\n\r\n    @Override\r\n    public InputStream getInputStream() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public boolean exists() {\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    public boolean isReadable() {\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    public boolean isOpen() {\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    public boolean isFile() {\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    public URL getURL() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public URI getURI() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public File getFile() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public long contentLength() {\r\n        return 0;\r\n    }\r\n\r\n    @Override\r\n    public long lastModified() {\r\n        return 0;\r\n    }\r\n\r\n    @Override\r\n    public Resource createRelative(String relativePath) {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public String getFilename() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public String getDescription() {\r\n        return null;\r\n    }\r\n}\npublic static class TestResource extends BaseResource {\r\n}\npublic enum MyEnum {\r\n\r\n    A, B, C\r\n}",
+    "comment": "\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#setup()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setup() {\r\n    conversionService.addConverter(new CollectionToCollectionConverter(conversionService));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#scalarList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid scalarList() throws Exception {\r\n    List<String> list = List.of(\"9\", \"37\");\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"scalarListTarget\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(list, sourceType, targetType)).withCauseInstanceOf(ConverterNotFoundException.class);\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    @SuppressWarnings(\"unchecked\")\r\n    List<Integer> result = (List<Integer>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result).isNotEqualTo(list).containsExactly(9, 37);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#emptyListToList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid emptyListToList() throws Exception {\r\n    conversionService.addConverter(new CollectionToCollectionConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyListTarget\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThat(conversionService.convert(list, sourceType, targetType)).isEqualTo(list);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#emptyListToListDifferentTargetType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid emptyListToListDifferentTargetType() throws Exception {\r\n    conversionService.addConverter(new CollectionToCollectionConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyListDifferentTarget\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    @SuppressWarnings(\"unchecked\")\r\n    ArrayList<Integer> result = (ArrayList<Integer>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result.getClass()).isEqualTo(ArrayList.class);\r\n    assertThat(result).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#collectionToObjectInteraction()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid collectionToObjectInteraction() {\r\n    List<List<String>> list = new ArrayList<>();\r\n    list.add(Arrays.asList(\"9\", \"12\"));\r\n    list.add(Arrays.asList(\"37\", \"23\"));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    assertThat(conversionService.canConvert(List.class, List.class)).isTrue();\r\n    assertThat((Object) conversionService.convert(list, List.class)).isSameAs(list);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#arrayCollectionToObjectInteraction()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid arrayCollectionToObjectInteraction() {\r\n    List<String>[] array = new List[2];\r\n    array[0] = Arrays.asList(\"9\", \"12\");\r\n    array[1] = Arrays.asList(\"37\", \"23\");\r\n    conversionService.addConverter(new ArrayToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String[].class, List.class)).isTrue();\r\n    assertThat(conversionService.convert(array, List.class)).isEqualTo(Arrays.asList(array));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#objectToCollection()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid objectToCollection() throws Exception {\r\n    List<List<String>> list = new ArrayList<>();\r\n    list.add(Arrays.asList(\"9\", \"12\"));\r\n    list.add(Arrays.asList(\"37\", \"23\"));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    conversionService.addConverter(new ObjectToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"objectToCollection\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    List<List<List<Integer>>> result = (List<List<List<Integer>>>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result).hasSize(2);\r\n    assertThat(result.get(0).get(0)).singleElement().isEqualTo(9);\r\n    assertThat(result.get(0).get(1)).singleElement().isEqualTo(12);\r\n    assertThat(result.get(1).get(0)).singleElement().isEqualTo(37);\r\n    assertThat(result.get(1).get(1)).singleElement().isEqualTo(23);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#stringToCollection()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid stringToCollection() throws Exception {\r\n    List<List<String>> list = new ArrayList<>();\r\n    list.add(List.of(\"9,12\"));\r\n    list.add(List.of(\"37,23\"));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    conversionService.addConverter(new StringToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new ObjectToCollectionConverter(conversionService));\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"objectToCollection\"));\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    List<List<List<Integer>>> result = (List<List<List<Integer>>>) conversionService.convert(list, sourceType, targetType);\r\n    assertThat(result).satisfiesExactly(zero -> assertThat(zero.get(0)).containsExactly(9, 12), one -> assertThat(one.get(0)).containsExactly(37, 23));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#convertEmptyVector_shouldReturnEmptyArrayList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertEmptyVector_shouldReturnEmptyArrayList() {\r\n    Vector<String> vector = new Vector<>();\r\n    vector.add(\"Element\");\r\n    testCollectionConversionToArrayList(vector);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#convertNonEmptyVector_shouldReturnNonEmptyArrayList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNonEmptyVector_shouldReturnNonEmptyArrayList() {\r\n    Vector<String> vector = new Vector<>();\r\n    vector.add(\"Element\");\r\n    testCollectionConversionToArrayList(vector);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#collectionsEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid collectionsEmptyList() throws Exception {\r\n    CollectionToCollectionConverter converter = new CollectionToCollectionConverter(new GenericConversionService());\r\n    TypeDescriptor type = new TypeDescriptor(getClass().getField(\"list\"));\r\n    converter.convert(list, type, TypeDescriptor.valueOf(Class.forName(\"java.util.Collections$EmptyList\")));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#testCollectionConversionToArrayList(Collection<String>)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"rawtypes\")\r\nprivate void testCollectionConversionToArrayList(Collection<String> aSource) {\r\n    Object myConverted = (new CollectionToCollectionConverter(new GenericConversionService())).convert(aSource, TypeDescriptor.forObject(aSource), TypeDescriptor.forObject(new ArrayList()));\r\n    boolean condition = myConverted instanceof ArrayList<?>;\r\n    assertThat(condition).isTrue();\r\n    assertThat(((ArrayList<?>) myConverted)).hasSameSizeAs(aSource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#listToCollectionNoCopyRequired()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid listToCollectionNoCopyRequired() throws NoSuchFieldException {\r\n    List<?> input = new ArrayList<>(Arrays.asList(\"foo\", \"bar\"));\r\n    assertThat(conversionService.convert(input, new TypeDescriptor(getClass().getField(\"wildcardCollection\")))).isSameAs(input);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#differentImpls()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid differentImpls() throws Exception {\r\n    List<Resource> resources = new ArrayList<>();\r\n    resources.add(new ClassPathResource(\"test\"));\r\n    resources.add(new FileSystemResource(\"test\"));\r\n    resources.add(new TestResource());\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#mixedInNulls()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mixedInNulls() throws Exception {\r\n    List<Resource> resources = new ArrayList<>();\r\n    resources.add(new ClassPathResource(\"test\"));\r\n    resources.add(null);\r\n    resources.add(new FileSystemResource(\"test\"));\r\n    resources.add(new TestResource());\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#allNulls()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid allNulls() throws Exception {\r\n    List<Resource> resources = new ArrayList<>();\r\n    resources.add(null);\r\n    resources.add(null);\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#elementTypesNotConvertible()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid elementTypesNotConvertible() throws Exception {\r\n    List<String> resources = new ArrayList<>();\r\n    resources.add(null);\r\n    resources.add(null);\r\n    TypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"strings\"));\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\"))));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#nothingInCommon()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nothingInCommon() {\r\n    List<Object> resources = new ArrayList<>();\r\n    resources.add(new ClassPathResource(\"test\"));\r\n    resources.add(3);\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(resources);\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\"))));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.CollectionToCollectionConverterTests#stringToEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToEnumSet() throws Exception {\r\n    conversionService.addConverterFactory(new StringToEnumConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    list.add(\"A\");\r\n    list.add(\"C\");\r\n    assertThat(conversionService.convert(list, new TypeDescriptor(getClass().getField(\"enumSet\")))).isEqualTo(EnumSet.of(MyEnum.A, MyEnum.C));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource",
+    "entityType": "class",
+    "code": "@Override\r\npublic InputStream getInputStream() {\r\n    return null;\r\n}\n@Override\r\npublic boolean exists() {\r\n    return false;\r\n}\n@Override\r\npublic boolean isReadable() {\r\n    return false;\r\n}\n@Override\r\npublic boolean isOpen() {\r\n    return false;\r\n}\n@Override\r\npublic boolean isFile() {\r\n    return false;\r\n}\n@Override\r\npublic URL getURL() {\r\n    return null;\r\n}\n@Override\r\npublic URI getURI() {\r\n    return null;\r\n}\n@Override\r\npublic File getFile() {\r\n    return null;\r\n}\n@Override\r\npublic long contentLength() {\r\n    return 0;\r\n}\n@Override\r\npublic long lastModified() {\r\n    return 0;\r\n}\n@Override\r\npublic Resource createRelative(String relativePath) {\r\n    return null;\r\n}\n@Override\r\npublic String getFilename() {\r\n    return null;\r\n}\n@Override\r\npublic String getDescription() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#getInputStream()",
+    "entityType": "method",
+    "code": "@Override\r\npublic InputStream getInputStream() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#exists()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean exists() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#isReadable()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isReadable() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#isOpen()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isOpen() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#isFile()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isFile() {\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#getURL()",
+    "entityType": "method",
+    "code": "@Override\r\npublic URL getURL() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#getURI()",
+    "entityType": "method",
+    "code": "@Override\r\npublic URI getURI() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#getFile()",
+    "entityType": "method",
+    "code": "@Override\r\npublic File getFile() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#contentLength()",
+    "entityType": "method",
+    "code": "@Override\r\npublic long contentLength() {\r\n    return 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#lastModified()",
+    "entityType": "method",
+    "code": "@Override\r\npublic long lastModified() {\r\n    return 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#createRelative(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Resource createRelative(String relativePath) {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#getFilename()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getFilename() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.BaseResource#getDescription()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getDescription() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.TestResource",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests",
+    "entityType": "class",
+    "code": "private final GenericConversionService conversionService = new GenericConversionService();\n@Test\r\nvoid canConvert() {\r\n    assertThat(conversionService.canConvert(String.class, Integer.class)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(String.class, Integer.class)).isTrue();\r\n}\n@Test\r\nvoid canConvertAssignable() {\r\n    assertThat(conversionService.canConvert(String.class, String.class)).isTrue();\r\n    assertThat(conversionService.canConvert(Integer.class, Number.class)).isTrue();\r\n    assertThat(conversionService.canConvert(boolean.class, boolean.class)).isTrue();\r\n    assertThat(conversionService.canConvert(boolean.class, Boolean.class)).isTrue();\r\n}\n@Test\r\nvoid canConvertFromClassSourceTypeToNullTargetType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(String.class, null));\r\n}\n@Test\r\nvoid canConvertFromTypeDescriptorSourceTypeToNullTargetType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(TypeDescriptor.valueOf(String.class), null));\r\n}\n@Test\r\nvoid canConvertNullSourceType() {\r\n    assertThat(conversionService.canConvert(null, Integer.class)).isTrue();\r\n    assertThat(conversionService.canConvert(null, TypeDescriptor.valueOf(Integer.class))).isTrue();\r\n}\n@Test\r\nvoid convert() {\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.convert(\"3\", Integer.class)).isEqualTo(3);\r\n}\n@Test\r\nvoid convertNullSource() {\r\n    assertThat(conversionService.convert(null, Integer.class)).isNull();\r\n}\n@Test\r\nvoid convertNullSourcePrimitiveTarget() {\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(null, int.class));\r\n}\n@Test\r\nvoid convertNullSourcePrimitiveTargetTypeDescriptor() {\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(null, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(int.class)));\r\n}\n@Test\r\nvoid convertNotNullSourceNullSourceTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", null, TypeDescriptor.valueOf(int.class)));\r\n}\n@Test\r\nvoid convertAssignableSource() {\r\n    assertThat(conversionService.convert(false, boolean.class)).isFalse();\r\n    assertThat(conversionService.convert(false, Boolean.class)).isFalse();\r\n}\n@Test\r\nvoid converterNotFound() {\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"3\", Integer.class));\r\n}\n@Test\r\nvoid addConverterNoSourceTargetClassInfoAvailable() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.addConverter(new UntypedConverter()));\r\n}\n@Test\r\nvoid sourceTypeIsVoid() {\r\n    assertThat(conversionService.canConvert(void.class, String.class)).isFalse();\r\n}\n@Test\r\nvoid targetTypeIsVoid() {\r\n    assertThat(conversionService.canConvert(String.class, void.class)).isFalse();\r\n}\n@Test\r\nvoid convertNull() {\r\n    assertThat(conversionService.convert(null, Integer.class)).isNull();\r\n}\n@Test\r\nvoid convertToNullTargetClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", (Class<?>) null));\r\n}\n@Test\r\nvoid convertToNullTargetTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", TypeDescriptor.valueOf(String.class), null));\r\n}\n@Test\r\nvoid convertWrongSourceTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", TypeDescriptor.valueOf(Integer.class), TypeDescriptor.valueOf(Long.class)));\r\n}\n@Test\r\nvoid convertWrongTypeArgument() {\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(\"BOGUS\", Integer.class));\r\n}\n@Test\r\nvoid convertSuperSourceType() {\r\n    conversionService.addConverter(CharSequence.class, Integer.class, source -> Integer.valueOf(source.toString()));\r\n    Integer result = conversionService.convert(\"3\", Integer.class);\r\n    assertThat(result).isEqualTo(3);\r\n}\n// SPR-8718\r\n@Test\r\nvoid convertSuperTarget() {\r\n    conversionService.addConverter(new ColorConverter());\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"#000000\", SystemColor.class));\r\n}\n@Test\r\nvoid convertObjectToPrimitive() {\r\n    assertThat(conversionService.canConvert(String.class, boolean.class)).isFalse();\r\n    conversionService.addConverter(new StringToBooleanConverter());\r\n    assertThat(conversionService.canConvert(String.class, boolean.class)).isTrue();\r\n    Boolean b = conversionService.convert(\"true\", boolean.class);\r\n    assertThat(b).isTrue();\r\n    assertThat(conversionService.canConvert(TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(boolean.class))).isTrue();\r\n    b = (Boolean) conversionService.convert(\"true\", TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(boolean.class));\r\n    assertThat(b).isTrue();\r\n}\n@Test\r\nvoid convertObjectToPrimitiveViaConverterFactory() {\r\n    assertThat(conversionService.canConvert(String.class, int.class)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(String.class, int.class)).isTrue();\r\n    Integer three = conversionService.convert(\"3\", int.class);\r\n    assertThat(three).isEqualTo(3);\r\n}\n@Test\r\nvoid genericConverterDelegatingBackToConversionServiceConverterNotFound() {\r\n    conversionService.addConverter(new ObjectToArrayConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String.class, Integer[].class)).isFalse();\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"3,4,5\", Integer[].class));\r\n}\n@Test\r\nvoid listToIterableConversion() {\r\n    List<Object> raw = List.of(\"one\", \"two\");\r\n    Object converted = conversionService.convert(raw, Iterable.class);\r\n    assertThat(converted).isSameAs(raw);\r\n}\n@Test\r\nvoid listToObjectConversion() {\r\n    List<Object> raw = List.of(\"one\", \"two\");\r\n    Object converted = conversionService.convert(raw, Object.class);\r\n    assertThat(converted).isSameAs(raw);\r\n}\n@Test\r\nvoid mapToObjectConversion() {\r\n    Map<Object, Object> raw = Map.of(\"key\", \"value\");\r\n    Object converted = conversionService.convert(raw, Object.class);\r\n    assertThat(converted).isSameAs(raw);\r\n}\n@Test\r\nvoid interfaceToString() {\r\n    conversionService.addConverter(new MyBaseInterfaceToStringConverter());\r\n    conversionService.addConverter(new ObjectToStringConverter());\r\n    Object converted = conversionService.convert(new MyInterfaceImplementer(), String.class);\r\n    assertThat(converted).isEqualTo(\"RESULT\");\r\n}\n@Test\r\nvoid interfaceArrayToStringArray() {\r\n    conversionService.addConverter(new MyBaseInterfaceToStringConverter());\r\n    conversionService.addConverter(new ArrayToArrayConverter(conversionService));\r\n    String[] converted = conversionService.convert(new MyInterface[] { new MyInterfaceImplementer() }, String[].class);\r\n    assertThat(converted[0]).isEqualTo(\"RESULT\");\r\n}\n@Test\r\nvoid objectArrayToStringArray() {\r\n    conversionService.addConverter(new MyBaseInterfaceToStringConverter());\r\n    conversionService.addConverter(new ArrayToArrayConverter(conversionService));\r\n    String[] converted = conversionService.convert(new MyInterfaceImplementer[] { new MyInterfaceImplementer() }, String[].class);\r\n    assertThat(converted[0]).isEqualTo(\"RESULT\");\r\n}\n@Test\r\nvoid stringArrayToResourceArray() {\r\n    conversionService.addConverter(new MyStringArrayToResourceArrayConverter());\r\n    Resource[] converted = conversionService.convert(new String[] { \"x1\", \"z3\" }, Resource[].class);\r\n    List<String> descriptions = Arrays.stream(converted).map(Resource::getDescription).sorted(naturalOrder()).collect(toList());\r\n    assertThat(descriptions).isEqualTo(Arrays.asList(\"1\", \"3\"));\r\n}\n@Test\r\nvoid stringArrayToIntegerArray() {\r\n    conversionService.addConverter(new MyStringArrayToIntegerArrayConverter());\r\n    Integer[] converted = conversionService.convert(new String[] { \"x1\", \"z3\" }, Integer[].class);\r\n    assertThat(converted).isEqualTo(new Integer[] { 1, 3 });\r\n}\n@Test\r\nvoid stringToIntegerArray() {\r\n    conversionService.addConverter(new MyStringToIntegerArrayConverter());\r\n    Integer[] converted = conversionService.convert(\"x1,z3\", Integer[].class);\r\n    assertThat(converted).isEqualTo(new Integer[] { 1, 3 });\r\n}\n@Test\r\nvoid wildcardMap() throws Exception {\r\n    Map<String, String> input = new LinkedHashMap<>();\r\n    input.put(\"key\", \"value\");\r\n    Object converted = conversionService.convert(input, new TypeDescriptor(getClass().getField(\"wildcardMap\")));\r\n    assertThat(converted).isEqualTo(input);\r\n}\n@Test\r\nvoid stringToString() {\r\n    String value = \"myValue\";\r\n    String result = conversionService.convert(value, String.class);\r\n    assertThat(result).isSameAs(value);\r\n}\n@Test\r\nvoid stringToObject() {\r\n    String value = \"myValue\";\r\n    Object result = conversionService.convert(value, Object.class);\r\n    assertThat(result).isSameAs(value);\r\n}\n@Test\r\nvoid ignoreCopyConstructor() {\r\n    WithCopyConstructor value = new WithCopyConstructor();\r\n    Object result = conversionService.convert(value, WithCopyConstructor.class);\r\n    assertThat(result).isSameAs(value);\r\n}\n@Test\r\nvoid emptyListToArray() {\r\n    conversionService.addConverter(new CollectionToArrayConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = TypeDescriptor.valueOf(String[].class);\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThat(((String[]) conversionService.convert(list, sourceType, targetType))).isEmpty();\r\n}\n@Test\r\nvoid emptyListToObject() {\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = TypeDescriptor.valueOf(Integer.class);\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThat(conversionService.convert(list, sourceType, targetType)).isNull();\r\n}\n@Test\r\nvoid stringToArrayCanConvert() {\r\n    conversionService.addConverter(new StringToArrayConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String.class, Integer[].class)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(String.class, Integer[].class)).isTrue();\r\n}\n@Test\r\nvoid stringToCollectionCanConvert() throws Exception {\r\n    conversionService.addConverter(new StringToCollectionConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String.class, Collection.class)).isTrue();\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"integerCollection\"));\r\n    assertThat(conversionService.canConvert(TypeDescriptor.valueOf(String.class), targetType)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(TypeDescriptor.valueOf(String.class), targetType)).isTrue();\r\n}\n@Test\r\nvoid convertiblePairsInSet() {\r\n    Set<GenericConverter.ConvertiblePair> set = new HashSet<>();\r\n    set.add(new GenericConverter.ConvertiblePair(Number.class, String.class));\r\n    assert set.contains(new GenericConverter.ConvertiblePair(Number.class, String.class));\r\n}\n@Test\r\nvoid convertiblePairEqualsAndHash() {\r\n    GenericConverter.ConvertiblePair pair = new GenericConverter.ConvertiblePair(Number.class, String.class);\r\n    GenericConverter.ConvertiblePair pairEqual = new GenericConverter.ConvertiblePair(Number.class, String.class);\r\n    assertThat(pairEqual).isEqualTo(pair);\r\n    assertThat(pairEqual.hashCode()).isEqualTo(pair.hashCode());\r\n}\n@Test\r\nvoid convertiblePairDifferentEqualsAndHash() {\r\n    GenericConverter.ConvertiblePair pair = new GenericConverter.ConvertiblePair(Number.class, String.class);\r\n    GenericConverter.ConvertiblePair pairOpposite = new GenericConverter.ConvertiblePair(String.class, Number.class);\r\n    assertThat(pair).isNotEqualTo(pairOpposite);\r\n    assertThat(pair.hashCode()).isNotEqualTo(pairOpposite.hashCode());\r\n}\n@Test\r\nvoid canConvertIllegalArgumentNullTargetTypeFromClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(String.class, null));\r\n}\n@Test\r\nvoid canConvertIllegalArgumentNullTargetTypeFromTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(TypeDescriptor.valueOf(String.class), null));\r\n}\n@Test\r\nvoid removeConvertible() {\r\n    conversionService.addConverter(new ColorConverter());\r\n    assertThat(conversionService.canConvert(String.class, Color.class)).isTrue();\r\n    conversionService.removeConvertible(String.class, Color.class);\r\n    assertThat(conversionService.canConvert(String.class, Color.class)).isFalse();\r\n}\n@Test\r\nvoid conditionalConverter() {\r\n    MyConditionalConverter converter = new MyConditionalConverter();\r\n    conversionService.addConverter(new ColorConverter());\r\n    conversionService.addConverter(converter);\r\n    assertThat(conversionService.convert(\"#000000\", Color.class)).isEqualTo(Color.BLACK);\r\n    assertThat(converter.getMatchAttempts()).isGreaterThan(0);\r\n}\n@Test\r\nvoid conditionalConverterFactory() {\r\n    MyConditionalConverterFactory converter = new MyConditionalConverterFactory();\r\n    conversionService.addConverter(new ColorConverter());\r\n    conversionService.addConverterFactory(converter);\r\n    assertThat(conversionService.convert(\"#000000\", Color.class)).isEqualTo(Color.BLACK);\r\n    assertThat(converter.getMatchAttempts()).isGreaterThan(0);\r\n    assertThat(converter.getNestedMatchAttempts()).isGreaterThan(0);\r\n}\n@Test\r\nvoid conditionalConverterCachingForDifferentAnnotationAttributes() throws Exception {\r\n    conversionService.addConverter(new ColorConverter());\r\n    conversionService.addConverter(new MyConditionalColorConverter());\r\n    assertThat(conversionService.convert(\"000000xxxx\", new TypeDescriptor(getClass().getField(\"activeColor\")))).isEqualTo(Color.BLACK);\r\n    assertThat(conversionService.convert(\" #000000 \", new TypeDescriptor(getClass().getField(\"inactiveColor\")))).isEqualTo(Color.BLACK);\r\n    assertThat(conversionService.convert(\"000000yyyy\", new TypeDescriptor(getClass().getField(\"activeColor\")))).isEqualTo(Color.BLACK);\r\n    assertThat(conversionService.convert(\"  #000000  \", new TypeDescriptor(getClass().getField(\"inactiveColor\")))).isEqualTo(Color.BLACK);\r\n}\n@Test\r\nvoid shouldNotSupportNullConvertibleTypesFromNonConditionalGenericConverter() {\r\n    GenericConverter converter = new NonConditionalGenericConverter();\r\n    assertThatIllegalStateException().isThrownBy(() -> conversionService.addConverter(converter)).withMessage(\"Only conditional converters may return null convertible types\");\r\n}\n@Test\r\nvoid conditionalConversionForAllTypes() {\r\n    MyConditionalGenericConverter converter = new MyConditionalGenericConverter();\r\n    conversionService.addConverter(converter);\r\n    assertThat(conversionService.convert(3, Integer.class)).isEqualTo(3);\r\n    assertThat(converter.getSourceTypes()).hasSizeGreaterThan(2);\r\n    assertThat(converter.getSourceTypes().stream().allMatch(td -> Integer.class.equals(td.getType()))).isTrue();\r\n}\n// gh-14200, SPR-9566\r\n@Test\r\nvoid convertOptimizeArray() {\r\n    byte[] byteArray = new byte[] { 1, 2, 3 };\r\n    byte[] converted = conversionService.convert(byteArray, byte[].class);\r\n    assertThat(converted).isSameAs(byteArray);\r\n    assertThat(converted).containsExactly(1, 2, 3);\r\n}\n@Test\r\nvoid enumToStringConversion() {\r\n    conversionService.addConverter(new EnumToStringConverter(conversionService));\r\n    assertThat(conversionService.convert(MyEnum.A, String.class)).isEqualTo(\"A\");\r\n}\n@Test\r\nvoid subclassOfEnumToString() {\r\n    conversionService.addConverter(new EnumToStringConverter(conversionService));\r\n    assertThat(conversionService.convert(EnumWithSubclass.FIRST, String.class)).isEqualTo(\"FIRST\");\r\n}\n@Test\r\nvoid enumWithInterfaceToStringConversion() {\r\n    // SPR-9692\r\n    conversionService.addConverter(new EnumToStringConverter(conversionService));\r\n    conversionService.addConverter(new MyEnumInterfaceToStringConverter<>());\r\n    assertThat(conversionService.convert(MyEnum.A, String.class)).isEqualTo(\"1\");\r\n}\n@Test\r\nvoid stringToEnumWithInterfaceConversion() {\r\n    conversionService.addConverterFactory(new StringToEnumConverterFactory());\r\n    conversionService.addConverterFactory(new StringToMyEnumInterfaceConverterFactory());\r\n    assertThat(conversionService.convert(\"1\", MyEnum.class)).isEqualTo(MyEnum.A);\r\n}\n@Test\r\nvoid stringToEnumWithBaseInterfaceConversion() {\r\n    conversionService.addConverterFactory(new StringToEnumConverterFactory());\r\n    conversionService.addConverterFactory(new StringToMyEnumBaseInterfaceConverterFactory());\r\n    assertThat(conversionService.convert(\"base1\", MyEnum.class)).isEqualTo(MyEnum.A);\r\n}\n@Test\r\nvoid convertNullAnnotatedStringToString() throws Exception {\r\n    String source = null;\r\n    TypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"annotatedString\"));\r\n    TypeDescriptor targetType = TypeDescriptor.valueOf(String.class);\r\n    conversionService.convert(source, sourceType, targetType);\r\n}\n@Test\r\nvoid multipleCollectionTypesFromSameSourceType() throws Exception {\r\n    conversionService.addConverter(new MyStringToRawCollectionConverter());\r\n    conversionService.addConverter(new MyStringToGenericCollectionConverter());\r\n    conversionService.addConverter(new MyStringToStringCollectionConverter());\r\n    conversionService.addConverter(new MyStringToIntegerCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n}\n@Test\r\nvoid adaptedCollectionTypesFromSameSourceType() throws Exception {\r\n    conversionService.addConverter(new MyStringToStringCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\"))));\r\n}\n@Test\r\nvoid genericCollectionAsSource() throws Exception {\r\n    conversionService.addConverter(new MyStringToGenericCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    // The following is unpleasant but a consequence of the generic collection converter above...\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n}\n@Test\r\nvoid rawCollectionAsSource() throws Exception {\r\n    conversionService.addConverter(new MyStringToRawCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    // The following is unpleasant but a consequence of the raw collection converter above...\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n}\n@Test\r\nvoid stringListToListOfSubclassOfUnboundGenericClass() {\r\n    conversionService.addConverter(new StringListToAListConverter());\r\n    conversionService.addConverter(new StringListToBListConverter());\r\n    List<?> aList = (List<?>) conversionService.convert(List.of(\"foo\"), TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(String.class)), TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(ARaw.class)));\r\n    assertThat(aList).allMatch(e -> e instanceof ARaw);\r\n    List<?> bList = (List<?>) conversionService.convert(List.of(\"foo\"), TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(String.class)), TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(BRaw.class)));\r\n    assertThat(bList).allMatch(e -> e instanceof BRaw);\r\n}\n@ExampleAnnotation(active = true)\r\npublic String annotatedString;\n@ExampleAnnotation(active = true)\r\npublic Color activeColor;\n@ExampleAnnotation(active = false)\r\npublic Color inactiveColor;\npublic Map<String, ?> wildcardMap;\n@SuppressWarnings(\"rawtypes\")\r\npublic Collection rawCollection;\npublic Collection<?> genericCollection;\npublic Collection<String> stringCollection;\npublic Collection<Integer> integerCollection;\n@Retention(RetentionPolicy.RUNTIME)\r\nprivate @interface ExampleAnnotation {\r\n\r\n    boolean active();\r\n}\nprivate interface MyBaseInterface {\r\n}\nprivate interface MyInterface extends MyBaseInterface {\r\n}\nprivate static class MyInterfaceImplementer implements MyInterface {\r\n}\nprivate static class MyBaseInterfaceToStringConverter implements Converter<MyBaseInterface, String> {\r\n\r\n    @Override\r\n    public String convert(MyBaseInterface source) {\r\n        return \"RESULT\";\r\n    }\r\n}\nprivate static class MyStringArrayToResourceArrayConverter implements Converter<String[], Resource[]> {\r\n\r\n    @Override\r\n    public Resource[] convert(String[] source) {\r\n        return Arrays.stream(source).map(s -> s.substring(1)).map(DescriptiveResource::new).toArray(Resource[]::new);\r\n    }\r\n}\nprivate static class MyStringArrayToIntegerArrayConverter implements Converter<String[], Integer[]> {\r\n\r\n    @Override\r\n    public Integer[] convert(String[] source) {\r\n        return Arrays.stream(source).map(s -> s.substring(1)).map(Integer::valueOf).toArray(Integer[]::new);\r\n    }\r\n}\nprivate static class MyStringToIntegerArrayConverter implements Converter<String, Integer[]> {\r\n\r\n    @Override\r\n    public Integer[] convert(String source) {\r\n        String[] srcArray = StringUtils.commaDelimitedListToStringArray(source);\r\n        return Arrays.stream(srcArray).map(s -> s.substring(1)).map(Integer::valueOf).toArray(Integer[]::new);\r\n    }\r\n}\nprivate static class WithCopyConstructor {\r\n\r\n    WithCopyConstructor() {\r\n    }\r\n\r\n    @SuppressWarnings(\"unused\")\r\n    WithCopyConstructor(WithCopyConstructor value) {\r\n    }\r\n}\nprivate static class MyConditionalConverter implements Converter<String, Color>, ConditionalConverter {\r\n\r\n    private int matchAttempts = 0;\r\n\r\n    @Override\r\n    public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        matchAttempts++;\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    public Color convert(String source) {\r\n        throw new IllegalStateException();\r\n    }\r\n\r\n    public int getMatchAttempts() {\r\n        return matchAttempts;\r\n    }\r\n}\nprivate static class NonConditionalGenericConverter implements GenericConverter {\r\n\r\n    @Override\r\n    public Set<ConvertiblePair> getConvertibleTypes() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        return null;\r\n    }\r\n}\nprivate static class MyConditionalGenericConverter implements GenericConverter, ConditionalConverter {\r\n\r\n    private final List<TypeDescriptor> sourceTypes = new ArrayList<>();\r\n\r\n    @Override\r\n    public Set<ConvertiblePair> getConvertibleTypes() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        sourceTypes.add(sourceType);\r\n        return false;\r\n    }\r\n\r\n    @Override\r\n    @Nullable\r\n    public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        return null;\r\n    }\r\n\r\n    public List<TypeDescriptor> getSourceTypes() {\r\n        return sourceTypes;\r\n    }\r\n}\nprivate static class MyConditionalConverterFactory implements ConverterFactory<String, Color>, ConditionalConverter {\r\n\r\n    private MyConditionalConverter converter = new MyConditionalConverter();\r\n\r\n    private int matchAttempts = 0;\r\n\r\n    @Override\r\n    public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        matchAttempts++;\r\n        return true;\r\n    }\r\n\r\n    @Override\r\n    @SuppressWarnings(\"unchecked\")\r\n    public <T extends Color> Converter<String, T> getConverter(Class<T> targetType) {\r\n        return (Converter<String, T>) converter;\r\n    }\r\n\r\n    public int getMatchAttempts() {\r\n        return matchAttempts;\r\n    }\r\n\r\n    public int getNestedMatchAttempts() {\r\n        return converter.getMatchAttempts();\r\n    }\r\n}\nprivate interface MyEnumBaseInterface {\r\n\r\n    String getBaseCode();\r\n}\nprivate interface MyEnumInterface extends MyEnumBaseInterface {\r\n\r\n    String getCode();\r\n}\nprivate enum MyEnum implements MyEnumInterface {\r\n\r\n    A(\"1\"), B(\"2\"), C(\"3\");\r\n\r\n    private final String code;\r\n\r\n    MyEnum(String code) {\r\n        this.code = code;\r\n    }\r\n\r\n    @Override\r\n    public String getCode() {\r\n        return code;\r\n    }\r\n\r\n    @Override\r\n    public String getBaseCode() {\r\n        return \"base\" + code;\r\n    }\r\n}\nprivate enum EnumWithSubclass {\r\n\r\n    FIRST {\r\n\r\n        @Override\r\n        public String toString() {\r\n            return \"1st\";\r\n        }\r\n    }\r\n\r\n}\n@SuppressWarnings(\"rawtypes\")\r\nprivate static class MyStringToRawCollectionConverter implements Converter<String, Collection> {\r\n\r\n    @Override\r\n    public Collection convert(String source) {\r\n        return Collections.singleton(source + \"X\");\r\n    }\r\n}\nprivate static class MyStringToGenericCollectionConverter implements Converter<String, Collection<?>> {\r\n\r\n    @Override\r\n    public Collection<?> convert(String source) {\r\n        return Collections.singleton(source + \"X\");\r\n    }\r\n}\nprivate static class MyEnumInterfaceToStringConverter<T extends MyEnumInterface> implements Converter<T, String> {\r\n\r\n    @Override\r\n    public String convert(T source) {\r\n        return source.getCode();\r\n    }\r\n}\nprivate static class StringToMyEnumInterfaceConverterFactory implements ConverterFactory<String, MyEnumInterface> {\r\n\r\n    @Override\r\n    @SuppressWarnings({ \"unchecked\", \"rawtypes\" })\r\n    public <T extends MyEnumInterface> Converter<String, T> getConverter(Class<T> targetType) {\r\n        return new StringToMyEnumInterfaceConverter(targetType);\r\n    }\r\n\r\n    private static class StringToMyEnumInterfaceConverter<T extends Enum<?> & MyEnumInterface> implements Converter<String, T> {\r\n\r\n        private final Class<T> enumType;\r\n\r\n        public StringToMyEnumInterfaceConverter(Class<T> enumType) {\r\n            this.enumType = enumType;\r\n        }\r\n\r\n        @Override\r\n        public T convert(String source) {\r\n            for (T value : enumType.getEnumConstants()) {\r\n                if (value.getCode().equals(source)) {\r\n                    return value;\r\n                }\r\n            }\r\n            return null;\r\n        }\r\n    }\r\n}\nprivate static class StringToMyEnumBaseInterfaceConverterFactory implements ConverterFactory<String, MyEnumBaseInterface> {\r\n\r\n    @Override\r\n    @SuppressWarnings({ \"unchecked\", \"rawtypes\" })\r\n    public <T extends MyEnumBaseInterface> Converter<String, T> getConverter(Class<T> targetType) {\r\n        return new StringToMyEnumBaseInterfaceConverter(targetType);\r\n    }\r\n\r\n    private static class StringToMyEnumBaseInterfaceConverter<T extends Enum<?> & MyEnumBaseInterface> implements Converter<String, T> {\r\n\r\n        private final Class<T> enumType;\r\n\r\n        public StringToMyEnumBaseInterfaceConverter(Class<T> enumType) {\r\n            this.enumType = enumType;\r\n        }\r\n\r\n        @Override\r\n        public T convert(String source) {\r\n            for (T value : enumType.getEnumConstants()) {\r\n                if (value.getBaseCode().equals(source)) {\r\n                    return value;\r\n                }\r\n            }\r\n            return null;\r\n        }\r\n    }\r\n}\nprivate static class MyStringToStringCollectionConverter implements Converter<String, Collection<String>> {\r\n\r\n    @Override\r\n    public Collection<String> convert(String source) {\r\n        return Collections.singleton(source + \"X\");\r\n    }\r\n}\nprivate static class MyStringToIntegerCollectionConverter implements Converter<String, Collection<Integer>> {\r\n\r\n    @Override\r\n    public Collection<Integer> convert(String source) {\r\n        return Collections.singleton(source.length());\r\n    }\r\n}\n@SuppressWarnings(\"rawtypes\")\r\nprivate static class UntypedConverter implements Converter {\r\n\r\n    @Override\r\n    public Object convert(Object source) {\r\n        return source;\r\n    }\r\n}\nprivate static class ColorConverter implements Converter<String, Color> {\r\n\r\n    @Override\r\n    public Color convert(String source) {\r\n        return Color.decode(source.trim());\r\n    }\r\n}\nprivate static class MyConditionalColorConverter implements Converter<String, Color>, ConditionalConverter {\r\n\r\n    @Override\r\n    public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {\r\n        ExampleAnnotation ann = targetType.getAnnotation(ExampleAnnotation.class);\r\n        return (ann != null && ann.active());\r\n    }\r\n\r\n    @Override\r\n    public Color convert(String source) {\r\n        return Color.decode(source.substring(0, 6));\r\n    }\r\n}\nprivate static class GenericBaseClass<T> {\r\n}\n@SuppressWarnings(\"rawtypes\")\r\nprivate static class ARaw extends GenericBaseClass {\r\n}\n@SuppressWarnings(\"rawtypes\")\r\nprivate static class BRaw extends GenericBaseClass {\r\n}\nprivate static class StringListToAListConverter implements Converter<List<String>, List<ARaw>> {\r\n\r\n    @Override\r\n    public List<ARaw> convert(List<String> source) {\r\n        return List.of(new ARaw());\r\n    }\r\n}\nprivate static class StringListToBListConverter implements Converter<List<String>, List<BRaw>> {\r\n\r\n    @Override\r\n    public List<BRaw> convert(List<String> source) {\r\n        return List.of(new BRaw());\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link GenericConversionService}.\n *\n * <p>In this package for access to package-local converter implementations.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Phillip Webb\n * @author David Haraburda\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvert()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvert() {\r\n    assertThat(conversionService.canConvert(String.class, Integer.class)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(String.class, Integer.class)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvertAssignable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvertAssignable() {\r\n    assertThat(conversionService.canConvert(String.class, String.class)).isTrue();\r\n    assertThat(conversionService.canConvert(Integer.class, Number.class)).isTrue();\r\n    assertThat(conversionService.canConvert(boolean.class, boolean.class)).isTrue();\r\n    assertThat(conversionService.canConvert(boolean.class, Boolean.class)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvertFromClassSourceTypeToNullTargetType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvertFromClassSourceTypeToNullTargetType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(String.class, null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvertFromTypeDescriptorSourceTypeToNullTargetType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvertFromTypeDescriptorSourceTypeToNullTargetType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(TypeDescriptor.valueOf(String.class), null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvertNullSourceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvertNullSourceType() {\r\n    assertThat(conversionService.canConvert(null, Integer.class)).isTrue();\r\n    assertThat(conversionService.canConvert(null, TypeDescriptor.valueOf(Integer.class))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convert()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convert() {\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.convert(\"3\", Integer.class)).isEqualTo(3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertNullSource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNullSource() {\r\n    assertThat(conversionService.convert(null, Integer.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertNullSourcePrimitiveTarget()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNullSourcePrimitiveTarget() {\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(null, int.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertNullSourcePrimitiveTargetTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNullSourcePrimitiveTargetTypeDescriptor() {\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(null, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(int.class)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertNotNullSourceNullSourceTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNotNullSourceNullSourceTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", null, TypeDescriptor.valueOf(int.class)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertAssignableSource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertAssignableSource() {\r\n    assertThat(conversionService.convert(false, boolean.class)).isFalse();\r\n    assertThat(conversionService.convert(false, Boolean.class)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#converterNotFound()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid converterNotFound() {\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"3\", Integer.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#addConverterNoSourceTargetClassInfoAvailable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addConverterNoSourceTargetClassInfoAvailable() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.addConverter(new UntypedConverter()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#sourceTypeIsVoid()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sourceTypeIsVoid() {\r\n    assertThat(conversionService.canConvert(void.class, String.class)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#targetTypeIsVoid()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid targetTypeIsVoid() {\r\n    assertThat(conversionService.canConvert(String.class, void.class)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNull() {\r\n    assertThat(conversionService.convert(null, Integer.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertToNullTargetClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertToNullTargetClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", (Class<?>) null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertToNullTargetTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertToNullTargetTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", TypeDescriptor.valueOf(String.class), null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertWrongSourceTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertWrongSourceTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.convert(\"3\", TypeDescriptor.valueOf(Integer.class), TypeDescriptor.valueOf(Long.class)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertWrongTypeArgument()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertWrongTypeArgument() {\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> conversionService.convert(\"BOGUS\", Integer.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertSuperSourceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertSuperSourceType() {\r\n    conversionService.addConverter(CharSequence.class, Integer.class, source -> Integer.valueOf(source.toString()));\r\n    Integer result = conversionService.convert(\"3\", Integer.class);\r\n    assertThat(result).isEqualTo(3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertSuperTarget()",
+    "entityType": "method",
+    "code": "// SPR-8718\r\n@Test\r\nvoid convertSuperTarget() {\r\n    conversionService.addConverter(new ColorConverter());\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"#000000\", SystemColor.class));\r\n}",
+    "comment": " SPR-8718"
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertObjectToPrimitive()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertObjectToPrimitive() {\r\n    assertThat(conversionService.canConvert(String.class, boolean.class)).isFalse();\r\n    conversionService.addConverter(new StringToBooleanConverter());\r\n    assertThat(conversionService.canConvert(String.class, boolean.class)).isTrue();\r\n    Boolean b = conversionService.convert(\"true\", boolean.class);\r\n    assertThat(b).isTrue();\r\n    assertThat(conversionService.canConvert(TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(boolean.class))).isTrue();\r\n    b = (Boolean) conversionService.convert(\"true\", TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(boolean.class));\r\n    assertThat(b).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertObjectToPrimitiveViaConverterFactory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertObjectToPrimitiveViaConverterFactory() {\r\n    assertThat(conversionService.canConvert(String.class, int.class)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(String.class, int.class)).isTrue();\r\n    Integer three = conversionService.convert(\"3\", int.class);\r\n    assertThat(three).isEqualTo(3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#genericConverterDelegatingBackToConversionServiceConverterNotFound()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid genericConverterDelegatingBackToConversionServiceConverterNotFound() {\r\n    conversionService.addConverter(new ObjectToArrayConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String.class, Integer[].class)).isFalse();\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"3,4,5\", Integer[].class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#listToIterableConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid listToIterableConversion() {\r\n    List<Object> raw = List.of(\"one\", \"two\");\r\n    Object converted = conversionService.convert(raw, Iterable.class);\r\n    assertThat(converted).isSameAs(raw);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#listToObjectConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid listToObjectConversion() {\r\n    List<Object> raw = List.of(\"one\", \"two\");\r\n    Object converted = conversionService.convert(raw, Object.class);\r\n    assertThat(converted).isSameAs(raw);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#mapToObjectConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapToObjectConversion() {\r\n    Map<Object, Object> raw = Map.of(\"key\", \"value\");\r\n    Object converted = conversionService.convert(raw, Object.class);\r\n    assertThat(converted).isSameAs(raw);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#interfaceToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid interfaceToString() {\r\n    conversionService.addConverter(new MyBaseInterfaceToStringConverter());\r\n    conversionService.addConverter(new ObjectToStringConverter());\r\n    Object converted = conversionService.convert(new MyInterfaceImplementer(), String.class);\r\n    assertThat(converted).isEqualTo(\"RESULT\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#interfaceArrayToStringArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid interfaceArrayToStringArray() {\r\n    conversionService.addConverter(new MyBaseInterfaceToStringConverter());\r\n    conversionService.addConverter(new ArrayToArrayConverter(conversionService));\r\n    String[] converted = conversionService.convert(new MyInterface[] { new MyInterfaceImplementer() }, String[].class);\r\n    assertThat(converted[0]).isEqualTo(\"RESULT\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#objectArrayToStringArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid objectArrayToStringArray() {\r\n    conversionService.addConverter(new MyBaseInterfaceToStringConverter());\r\n    conversionService.addConverter(new ArrayToArrayConverter(conversionService));\r\n    String[] converted = conversionService.convert(new MyInterfaceImplementer[] { new MyInterfaceImplementer() }, String[].class);\r\n    assertThat(converted[0]).isEqualTo(\"RESULT\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringArrayToResourceArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringArrayToResourceArray() {\r\n    conversionService.addConverter(new MyStringArrayToResourceArrayConverter());\r\n    Resource[] converted = conversionService.convert(new String[] { \"x1\", \"z3\" }, Resource[].class);\r\n    List<String> descriptions = Arrays.stream(converted).map(Resource::getDescription).sorted(naturalOrder()).collect(toList());\r\n    assertThat(descriptions).isEqualTo(Arrays.asList(\"1\", \"3\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringArrayToIntegerArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringArrayToIntegerArray() {\r\n    conversionService.addConverter(new MyStringArrayToIntegerArrayConverter());\r\n    Integer[] converted = conversionService.convert(new String[] { \"x1\", \"z3\" }, Integer[].class);\r\n    assertThat(converted).isEqualTo(new Integer[] { 1, 3 });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToIntegerArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToIntegerArray() {\r\n    conversionService.addConverter(new MyStringToIntegerArrayConverter());\r\n    Integer[] converted = conversionService.convert(\"x1,z3\", Integer[].class);\r\n    assertThat(converted).isEqualTo(new Integer[] { 1, 3 });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#wildcardMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid wildcardMap() throws Exception {\r\n    Map<String, String> input = new LinkedHashMap<>();\r\n    input.put(\"key\", \"value\");\r\n    Object converted = conversionService.convert(input, new TypeDescriptor(getClass().getField(\"wildcardMap\")));\r\n    assertThat(converted).isEqualTo(input);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToString() {\r\n    String value = \"myValue\";\r\n    String result = conversionService.convert(value, String.class);\r\n    assertThat(result).isSameAs(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToObject() {\r\n    String value = \"myValue\";\r\n    Object result = conversionService.convert(value, Object.class);\r\n    assertThat(result).isSameAs(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#ignoreCopyConstructor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ignoreCopyConstructor() {\r\n    WithCopyConstructor value = new WithCopyConstructor();\r\n    Object result = conversionService.convert(value, WithCopyConstructor.class);\r\n    assertThat(result).isSameAs(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#emptyListToArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid emptyListToArray() {\r\n    conversionService.addConverter(new CollectionToArrayConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = TypeDescriptor.valueOf(String[].class);\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThat(((String[]) conversionService.convert(list, sourceType, targetType))).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#emptyListToObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid emptyListToObject() {\r\n    conversionService.addConverter(new CollectionToObjectConverter(conversionService));\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = new ArrayList<>();\r\n    TypeDescriptor sourceType = TypeDescriptor.forObject(list);\r\n    TypeDescriptor targetType = TypeDescriptor.valueOf(Integer.class);\r\n    assertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\r\n    assertThat(conversionService.convert(list, sourceType, targetType)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToArrayCanConvert()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToArrayCanConvert() {\r\n    conversionService.addConverter(new StringToArrayConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String.class, Integer[].class)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(String.class, Integer[].class)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToCollectionCanConvert()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToCollectionCanConvert() throws Exception {\r\n    conversionService.addConverter(new StringToCollectionConverter(conversionService));\r\n    assertThat(conversionService.canConvert(String.class, Collection.class)).isTrue();\r\n    TypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"integerCollection\"));\r\n    assertThat(conversionService.canConvert(TypeDescriptor.valueOf(String.class), targetType)).isFalse();\r\n    conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    assertThat(conversionService.canConvert(TypeDescriptor.valueOf(String.class), targetType)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertiblePairsInSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertiblePairsInSet() {\r\n    Set<GenericConverter.ConvertiblePair> set = new HashSet<>();\r\n    set.add(new GenericConverter.ConvertiblePair(Number.class, String.class));\r\n    assert set.contains(new GenericConverter.ConvertiblePair(Number.class, String.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertiblePairEqualsAndHash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertiblePairEqualsAndHash() {\r\n    GenericConverter.ConvertiblePair pair = new GenericConverter.ConvertiblePair(Number.class, String.class);\r\n    GenericConverter.ConvertiblePair pairEqual = new GenericConverter.ConvertiblePair(Number.class, String.class);\r\n    assertThat(pairEqual).isEqualTo(pair);\r\n    assertThat(pairEqual.hashCode()).isEqualTo(pair.hashCode());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertiblePairDifferentEqualsAndHash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertiblePairDifferentEqualsAndHash() {\r\n    GenericConverter.ConvertiblePair pair = new GenericConverter.ConvertiblePair(Number.class, String.class);\r\n    GenericConverter.ConvertiblePair pairOpposite = new GenericConverter.ConvertiblePair(String.class, Number.class);\r\n    assertThat(pair).isNotEqualTo(pairOpposite);\r\n    assertThat(pair.hashCode()).isNotEqualTo(pairOpposite.hashCode());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvertIllegalArgumentNullTargetTypeFromClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvertIllegalArgumentNullTargetTypeFromClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(String.class, null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#canConvertIllegalArgumentNullTargetTypeFromTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canConvertIllegalArgumentNullTargetTypeFromTypeDescriptor() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> conversionService.canConvert(TypeDescriptor.valueOf(String.class), null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#removeConvertible()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid removeConvertible() {\r\n    conversionService.addConverter(new ColorConverter());\r\n    assertThat(conversionService.canConvert(String.class, Color.class)).isTrue();\r\n    conversionService.removeConvertible(String.class, Color.class);\r\n    assertThat(conversionService.canConvert(String.class, Color.class)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#conditionalConverter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid conditionalConverter() {\r\n    MyConditionalConverter converter = new MyConditionalConverter();\r\n    conversionService.addConverter(new ColorConverter());\r\n    conversionService.addConverter(converter);\r\n    assertThat(conversionService.convert(\"#000000\", Color.class)).isEqualTo(Color.BLACK);\r\n    assertThat(converter.getMatchAttempts()).isGreaterThan(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#conditionalConverterFactory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid conditionalConverterFactory() {\r\n    MyConditionalConverterFactory converter = new MyConditionalConverterFactory();\r\n    conversionService.addConverter(new ColorConverter());\r\n    conversionService.addConverterFactory(converter);\r\n    assertThat(conversionService.convert(\"#000000\", Color.class)).isEqualTo(Color.BLACK);\r\n    assertThat(converter.getMatchAttempts()).isGreaterThan(0);\r\n    assertThat(converter.getNestedMatchAttempts()).isGreaterThan(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#conditionalConverterCachingForDifferentAnnotationAttributes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid conditionalConverterCachingForDifferentAnnotationAttributes() throws Exception {\r\n    conversionService.addConverter(new ColorConverter());\r\n    conversionService.addConverter(new MyConditionalColorConverter());\r\n    assertThat(conversionService.convert(\"000000xxxx\", new TypeDescriptor(getClass().getField(\"activeColor\")))).isEqualTo(Color.BLACK);\r\n    assertThat(conversionService.convert(\" #000000 \", new TypeDescriptor(getClass().getField(\"inactiveColor\")))).isEqualTo(Color.BLACK);\r\n    assertThat(conversionService.convert(\"000000yyyy\", new TypeDescriptor(getClass().getField(\"activeColor\")))).isEqualTo(Color.BLACK);\r\n    assertThat(conversionService.convert(\"  #000000  \", new TypeDescriptor(getClass().getField(\"inactiveColor\")))).isEqualTo(Color.BLACK);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#shouldNotSupportNullConvertibleTypesFromNonConditionalGenericConverter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldNotSupportNullConvertibleTypesFromNonConditionalGenericConverter() {\r\n    GenericConverter converter = new NonConditionalGenericConverter();\r\n    assertThatIllegalStateException().isThrownBy(() -> conversionService.addConverter(converter)).withMessage(\"Only conditional converters may return null convertible types\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#conditionalConversionForAllTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid conditionalConversionForAllTypes() {\r\n    MyConditionalGenericConverter converter = new MyConditionalGenericConverter();\r\n    conversionService.addConverter(converter);\r\n    assertThat(conversionService.convert(3, Integer.class)).isEqualTo(3);\r\n    assertThat(converter.getSourceTypes()).hasSizeGreaterThan(2);\r\n    assertThat(converter.getSourceTypes().stream().allMatch(td -> Integer.class.equals(td.getType()))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertOptimizeArray()",
+    "entityType": "method",
+    "code": "// gh-14200, SPR-9566\r\n@Test\r\nvoid convertOptimizeArray() {\r\n    byte[] byteArray = new byte[] { 1, 2, 3 };\r\n    byte[] converted = conversionService.convert(byteArray, byte[].class);\r\n    assertThat(converted).isSameAs(byteArray);\r\n    assertThat(converted).containsExactly(1, 2, 3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#enumToStringConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid enumToStringConversion() {\r\n    conversionService.addConverter(new EnumToStringConverter(conversionService));\r\n    assertThat(conversionService.convert(MyEnum.A, String.class)).isEqualTo(\"A\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#subclassOfEnumToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid subclassOfEnumToString() {\r\n    conversionService.addConverter(new EnumToStringConverter(conversionService));\r\n    assertThat(conversionService.convert(EnumWithSubclass.FIRST, String.class)).isEqualTo(\"FIRST\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#enumWithInterfaceToStringConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid enumWithInterfaceToStringConversion() {\r\n    // SPR-9692\r\n    conversionService.addConverter(new EnumToStringConverter(conversionService));\r\n    conversionService.addConverter(new MyEnumInterfaceToStringConverter<>());\r\n    assertThat(conversionService.convert(MyEnum.A, String.class)).isEqualTo(\"1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToEnumWithInterfaceConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToEnumWithInterfaceConversion() {\r\n    conversionService.addConverterFactory(new StringToEnumConverterFactory());\r\n    conversionService.addConverterFactory(new StringToMyEnumInterfaceConverterFactory());\r\n    assertThat(conversionService.convert(\"1\", MyEnum.class)).isEqualTo(MyEnum.A);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#stringToEnumWithBaseInterfaceConversion()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid stringToEnumWithBaseInterfaceConversion() {\r\n    conversionService.addConverterFactory(new StringToEnumConverterFactory());\r\n    conversionService.addConverterFactory(new StringToMyEnumBaseInterfaceConverterFactory());\r\n    assertThat(conversionService.convert(\"base1\", MyEnum.class)).isEqualTo(MyEnum.A);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#convertNullAnnotatedStringToString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertNullAnnotatedStringToString() throws Exception {\r\n    String source = null;\r\n    TypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"annotatedString\"));\r\n    TypeDescriptor targetType = TypeDescriptor.valueOf(String.class);\r\n    conversionService.convert(source, sourceType, targetType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#multipleCollectionTypesFromSameSourceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid multipleCollectionTypesFromSameSourceType() throws Exception {\r\n    conversionService.addConverter(new MyStringToRawCollectionConverter());\r\n    conversionService.addConverter(new MyStringToGenericCollectionConverter());\r\n    conversionService.addConverter(new MyStringToStringCollectionConverter());\r\n    conversionService.addConverter(new MyStringToIntegerCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(4));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#adaptedCollectionTypesFromSameSourceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid adaptedCollectionTypesFromSameSourceType() throws Exception {\r\n    conversionService.addConverter(new MyStringToStringCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() -> conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\"))));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.GenericConversionServiceTests#genericCollectionAsSource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid genericCollectionAsSource() throws Exception {\r\n    conversionService.addConverter(new MyStringToGenericCollectionConverter());\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"stringCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"genericCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"rawCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n    // The following is unpleasant but a consequence of the generic collection converter above...\r\n    assertThat(conversionService.convert(\"test\", TypeDescriptor.valueOf(String.class), new TypeDescriptor(getClass().getField(\"integerCollection\")))).isEqualTo(Collections.singleton(\"testX\"));\r\n}",
+    "comment": ""
+  }
+]

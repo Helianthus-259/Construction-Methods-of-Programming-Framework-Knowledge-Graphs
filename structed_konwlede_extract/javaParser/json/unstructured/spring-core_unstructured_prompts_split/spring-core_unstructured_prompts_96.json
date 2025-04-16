@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerTypeIfPresentIgnoresMissingClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeIfPresentIgnoresMissingClass() {\r\n    Consumer<TypeHint.Builder> hintBuilder = mock();\r\n    this.reflectionHints.registerTypeIfPresent(null, \"com.example.DoesNotExist\", hintBuilder);\r\n    assertThat(this.reflectionHints.typeHints()).isEmpty();\r\n    verifyNoInteractions(hintBuilder);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#getTypeUsingType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getTypeUsingType() {\r\n    this.reflectionHints.registerType(TypeReference.of(String.class), hint -> hint.withMembers(MemberCategory.DECLARED_FIELDS));\r\n    assertThat(this.reflectionHints.getTypeHint(String.class)).satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#getTypeUsingTypeReference()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getTypeUsingTypeReference() {\r\n    this.reflectionHints.registerType(String.class, MemberCategory.DECLARED_FIELDS);\r\n    assertThat(this.reflectionHints.getTypeHint(TypeReference.of(String.class))).satisfies(typeWithMemberCategories(String.class, MemberCategory.DECLARED_FIELDS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#getTypeForNonExistingType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getTypeForNonExistingType() {\r\n    assertThat(this.reflectionHints.getTypeHint(String.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerTypeReusesBuilder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeReusesBuilder() {\r\n    this.reflectionHints.registerType(TypeReference.of(String.class), MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    Field field = ReflectionUtils.findField(String.class, \"value\");\r\n    assertThat(field).isNotNull();\r\n    this.reflectionHints.registerField(field);\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(String.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).singleElement().satisfies(fieldHint -> assertThat(fieldHint.getName()).isEqualTo(\"value\"));\r\n        assertThat(typeHint.getMemberCategories()).containsOnly(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerClass() {\r\n    this.reflectionHints.registerType(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerClassWithCustomizer()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerClassWithCustomizer() {\r\n    this.reflectionHints.registerType(Integer.class, typeHint -> typeHint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeWithMemberCategories(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerTypesAppliesTheSameHints()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypesAppliesTheSameHints() {\r\n    this.reflectionHints.registerTypes(TypeReference.listOf(Integer.class, String.class, Double.class), TypeHint.builtWith(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS));\r\n    assertThat(this.reflectionHints.typeHints()).anySatisfy(typeWithMemberCategories(Integer.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).anySatisfy(typeWithMemberCategories(String.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).anySatisfy(typeWithMemberCategories(Double.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).hasSize(3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerField() {\r\n    Field field = ReflectionUtils.findField(TestType.class, \"field\");\r\n    assertThat(field).isNotNull();\r\n    this.reflectionHints.registerField(field);\r\n    assertTestTypeFieldHint(fieldHint -> assertThat(fieldHint.getName()).isEqualTo(\"field\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerTypeIgnoresLambda()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeIgnoresLambda() {\r\n    Runnable lambda = () -> ;;\r\n    Consumer<TypeHint.Builder> hintBuilder = mock();\r\n    this.reflectionHints.registerType(lambda.getClass());\r\n    this.reflectionHints.registerType(lambda.getClass(), hintBuilder);\r\n    assertThat(this.reflectionHints.typeHints()).isEmpty();\r\n    verifyNoInteractions(hintBuilder);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#assertTestTypeFieldHint(Consumer<FieldHint>)",
+    "entityType": "method",
+    "code": "private void assertTestTypeFieldHint(Consumer<FieldHint> fieldHint) {\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(TestType.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).singleElement().satisfies(fieldHint);\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerConstructor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerConstructor() {\r\n    this.reflectionHints.registerConstructor(TestType.class.getDeclaredConstructors()[0], ExecutableMode.INTROSPECT);\r\n    assertTestTypeConstructorHint(constructorHint -> {\r\n        assertThat(constructorHint.getParameterTypes()).isEmpty();\r\n        assertThat(constructorHint.getMode()).isEqualTo(ExecutableMode.INTROSPECT);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerConstructorTwiceUpdatesExistingEntry()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerConstructorTwiceUpdatesExistingEntry() {\r\n    Constructor<?> constructor = TestType.class.getDeclaredConstructors()[0];\r\n    this.reflectionHints.registerConstructor(constructor, ExecutableMode.INTROSPECT);\r\n    this.reflectionHints.registerConstructor(constructor, ExecutableMode.INVOKE);\r\n    assertTestTypeConstructorHint(constructorHint -> {\r\n        assertThat(constructorHint.getParameterTypes()).isEmpty();\r\n        assertThat(constructorHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#assertTestTypeConstructorHint(Consumer<ExecutableHint>)",
+    "entityType": "method",
+    "code": "private void assertTestTypeConstructorHint(Consumer<ExecutableHint> constructorHint) {\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(TestType.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).singleElement().satisfies(constructorHint);\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerMethod() {\r\n    Method method = ReflectionUtils.findMethod(TestType.class, \"setName\", String.class);\r\n    assertThat(method).isNotNull();\r\n    this.reflectionHints.registerMethod(method, ExecutableMode.INTROSPECT);\r\n    assertTestTypeMethodHints(methodHint -> {\r\n        assertThat(methodHint.getName()).isEqualTo(\"setName\");\r\n        assertThat(methodHint.getParameterTypes()).containsOnly(TypeReference.of(String.class));\r\n        assertThat(methodHint.getMode()).isEqualTo(ExecutableMode.INTROSPECT);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerMethodTwiceUpdatesExistingEntry()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerMethodTwiceUpdatesExistingEntry() {\r\n    Method method = ReflectionUtils.findMethod(TestType.class, \"setName\", String.class);\r\n    assertThat(method).isNotNull();\r\n    this.reflectionHints.registerMethod(method, ExecutableMode.INTROSPECT);\r\n    this.reflectionHints.registerMethod(method, ExecutableMode.INVOKE);\r\n    assertTestTypeMethodHints(methodHint -> {\r\n        assertThat(methodHint.getName()).isEqualTo(\"setName\");\r\n        assertThat(methodHint.getParameterTypes()).containsOnly(TypeReference.of(String.class));\r\n        assertThat(methodHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#registerOnInterfaces()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerOnInterfaces() {\r\n    this.reflectionHints.registerForInterfaces(ChildType.class, typeHint -> typeHint.withMembers(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n    assertThat(this.reflectionHints.typeHints()).hasSize(2).noneMatch(typeHint -> typeHint.getType().getCanonicalName().equals(Serializable.class.getCanonicalName())).anyMatch(typeHint -> typeHint.getType().getCanonicalName().equals(SecondInterface.class.getCanonicalName()) && typeHint.getMemberCategories().contains(MemberCategory.INTROSPECT_PUBLIC_METHODS)).anyMatch(typeHint -> typeHint.getType().getCanonicalName().equals(FirstInterface.class.getCanonicalName()) && typeHint.getMemberCategories().contains(MemberCategory.INTROSPECT_PUBLIC_METHODS));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#assertTestTypeMethodHints(Consumer<ExecutableHint>)",
+    "entityType": "method",
+    "code": "private void assertTestTypeMethodHints(Consumer<ExecutableHint> methodHint) {\r\n    assertThat(this.reflectionHints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(TestType.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).singleElement().satisfies(methodHint);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionHintsTests#typeWithMemberCategories(Class<?>,MemberCategory)",
+    "entityType": "method",
+    "code": "private Consumer<TypeHint> typeWithMemberCategories(Class<?> type, MemberCategory... memberCategories) {\r\n    return typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(type.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).containsExactly(memberCategories);\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TestType",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate String field;\nvoid setName(String name) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.TestType#setName(String)",
+    "entityType": "method",
+    "code": "void setName(String name) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.FirstInterface",
+    "entityType": "class",
+    "code": "void first();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.FirstInterface#first()",
+    "entityType": "method",
+    "code": "void first();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SecondInterface",
+    "entityType": "class",
+    "code": "void second();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SecondInterface#second()",
+    "entityType": "method",
+    "code": "void second();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ParentType",
+    "entityType": "class",
+    "code": "@Override\r\npublic void first() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ParentType#first()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void first() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ChildType",
+    "entityType": "class",
+    "code": "@Override\r\npublic void second() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ChildType#second()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void second() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionTypeReferenceTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid typeReferenceWithNullClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionTypeReference.of(null));\r\n}\n@Test\r\nvoid typeReferenceWithLambda() {\r\n    Runnable lambda = () -> ;;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionTypeReference.of(lambda.getClass()));\r\n}\n@ParameterizedTest\r\n@MethodSource(\"reflectionTargetNames\")\r\nvoid typeReferenceFromClassHasSuitableReflectionTargetName(Class<?> clazz, String binaryName) {\r\n    assertThat(ReflectionTypeReference.of(clazz).getName()).isEqualTo(binaryName);\r\n}\nstatic Stream<Arguments> reflectionTargetNames() {\r\n    return Stream.of(arguments(int.class, \"int\"), arguments(int[].class, \"int[]\"), arguments(Integer[].class, \"java.lang.Integer[]\"), arguments(Object[].class, \"java.lang.Object[]\"), arguments(StaticNested.class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$StaticNested\"), arguments(StaticNested[].class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$StaticNested[]\"), arguments(Inner.class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$Inner\"), arguments(Inner[].class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$Inner[]\"));\r\n}\nstatic class StaticNested {\r\n}\nclass Inner {\r\n}",
+    "comment": "\n * Tests for {@link ReflectionTypeReference}.\n *\n * @author Stephane Nicoll\n * @author Moritz Halbritter\n * @author Sebastien Deleuze\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionTypeReferenceTests#typeReferenceWithNullClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeReferenceWithNullClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionTypeReference.of(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionTypeReferenceTests#typeReferenceWithLambda()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeReferenceWithLambda() {\r\n    Runnable lambda = () -> ;;\r\n    assertThatIllegalArgumentException().isThrownBy(() -> ReflectionTypeReference.of(lambda.getClass()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionTypeReferenceTests#typeReferenceFromClassHasSuitableReflectionTargetName(Class<?>,String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@MethodSource(\"reflectionTargetNames\")\r\nvoid typeReferenceFromClassHasSuitableReflectionTargetName(Class<?> clazz, String binaryName) {\r\n    assertThat(ReflectionTypeReference.of(clazz).getName()).isEqualTo(binaryName);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ReflectionTypeReferenceTests#reflectionTargetNames()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> reflectionTargetNames() {\r\n    return Stream.of(arguments(int.class, \"int\"), arguments(int[].class, \"int[]\"), arguments(Integer[].class, \"java.lang.Integer[]\"), arguments(Object[].class, \"java.lang.Object[]\"), arguments(StaticNested.class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$StaticNested\"), arguments(StaticNested[].class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$StaticNested[]\"), arguments(Inner.class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$Inner\"), arguments(Inner[].class, \"org.springframework.aot.hint.ReflectionTypeReferenceTests$Inner[]\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.StaticNested",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Inner",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests",
+    "entityType": "class",
+    "code": "private final ResourceHints resourceHints = new ResourceHints();\n@Test\r\nvoid registerType() {\r\n    this.resourceHints.registerType(String.class);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}\n@Test\r\nvoid registerTypeWithNestedType() {\r\n    this.resourceHints.registerType(TypeReference.of(Nested.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", \"org/springframework/aot/hint/ResourceHintsTests$Nested.class\"));\r\n}\n@Test\r\nvoid registerTypeWithInnerNestedType() {\r\n    this.resourceHints.registerType(TypeReference.of(Inner.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", \"org/springframework/aot/hint/ResourceHintsTests$Nested$Inner.class\"));\r\n}\n@Test\r\nvoid registerTypeSeveralTimesAddsOnlyOneEntry() {\r\n    this.resourceHints.registerType(String.class);\r\n    this.resourceHints.registerType(TypeReference.of(String.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}\n@Test\r\nvoid registerExactMatches() {\r\n    this.resourceHints.registerPattern(\"com/example/test.properties\");\r\n    this.resourceHints.registerPattern(\"com/example/another.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/test.properties\")).anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/another.properties\")).hasSize(2);\r\n}\n@Test\r\nvoid registerExactMatchesInRootDirectory() {\r\n    this.resourceHints.registerPattern(\"test.properties\");\r\n    this.resourceHints.registerPattern(\"another.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).anySatisfy(patternOf(\"/\", \"test.properties\")).anySatisfy(patternOf(\"/\", \"another.properties\")).hasSize(2);\r\n}\n@Test\r\nvoid registerRootDirectory() {\r\n    this.resourceHints.registerPattern(\"/\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\"));\r\n}\n@Test\r\nvoid registerRootPattern() {\r\n    this.resourceHints.registerPattern(\"*.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"*.properties\"));\r\n}\n@Test\r\nvoid registerPattern() {\r\n    this.resourceHints.registerPattern(\"com/example/*.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"));\r\n}\n@Test\r\nvoid registerPatternWithIncludesAndExcludes() {\r\n    this.resourceHints.registerPattern(resourceHint -> resourceHint.includes(\"com/example/*.properties\"));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(List.of(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"), List.of(\"com/example/to-ignore.properties\")));\r\n}\n@Test\r\nvoid registerIfPresentRegisterExistingLocation() {\r\n    this.resourceHints.registerPatternIfPresent(null, \"META-INF/\", resourceHint -> resourceHint.includes(\"com/example/*.properties\"));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"));\r\n}\n@Test\r\nvoid registerIfPresentIgnoreMissingLocation() {\r\n    Consumer<ResourcePatternHints.Builder> hintBuilder = mock();\r\n    this.resourceHints.registerPatternIfPresent(null, \"location/does-not-exist/\", hintBuilder);\r\n    assertThat(this.resourceHints.resourcePatternHints()).isEmpty();\r\n    verifyNoInteractions(hintBuilder);\r\n}\n@Test\r\nvoid registerResourceWithUnsupportedResourceType() {\r\n    DescriptiveResource resource = new DescriptiveResource(\"bogus\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.resourceHints.registerResource(resource)).withMessage(\"Resource must be a ClassPathResource that exists: %s\", resource);\r\n}\n@Test\r\nvoid registerResourceWithNonexistentClassPathResource() {\r\n    ClassPathResource resource = new ClassPathResource(\"bogus\", getClass());\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.resourceHints.registerResource(resource)).withMessage(\"Resource must be a ClassPathResource that exists: %s\", resource);\r\n}\n@Test\r\nvoid registerResourceWithExistingClassPathResource() {\r\n    String path = \"org/springframework/aot/hint/support\";\r\n    ClassPathResource resource = new ClassPathResource(path);\r\n    this.resourceHints.registerResource(resource);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", path));\r\n}\n@Test\r\nvoid registerResourceWithExistingRelativeClassPathResource() {\r\n    String path = \"org/springframework/aot/hint/support\";\r\n    ClassPathResource resource = new ClassPathResource(\"support\", RuntimeHints.class);\r\n    this.resourceHints.registerResource(resource);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", path));\r\n}\n@Test\r\nvoid registerResourceBundle() {\r\n    this.resourceHints.registerResourceBundle(\"com.example.message\");\r\n    assertThat(this.resourceHints.resourceBundleHints()).singleElement().satisfies(resourceBundle(\"com.example.message\"));\r\n}\n@Test\r\nvoid registerResourceBundleSeveralTimesAddsOneEntry() {\r\n    this.resourceHints.registerResourceBundle(\"com.example.message\").registerResourceBundle(\"com.example.message\");\r\n    assertThat(this.resourceHints.resourceBundleHints()).singleElement().satisfies(resourceBundle(\"com.example.message\"));\r\n}\nprivate Consumer<ResourcePatternHints> patternOf(String... includes) {\r\n    return patternOf(Arrays.asList(includes), Collections.emptyList());\r\n}\nprivate Consumer<ResourceBundleHint> resourceBundle(String baseName) {\r\n    return resourceBundleHint -> assertThat(resourceBundleHint.getBaseName()).isEqualTo(baseName);\r\n}\nprivate Consumer<ResourcePatternHints> patternOf(List<String> includes, List<String> excludes) {\r\n    return pattern -> assertThat(pattern.getIncludes()).map(ResourcePatternHint::getPattern).containsExactlyInAnyOrderElementsOf(includes);\r\n}\nstatic class Nested {\r\n\r\n    class Inner {\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link ResourceHints}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerType() {\r\n    this.resourceHints.registerType(String.class);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithNestedType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeWithNestedType() {\r\n    this.resourceHints.registerType(TypeReference.of(Nested.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", \"org/springframework/aot/hint/ResourceHintsTests$Nested.class\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithInnerNestedType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeWithInnerNestedType() {\r\n    this.resourceHints.registerType(TypeReference.of(Inner.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", \"org/springframework/aot/hint/ResourceHintsTests$Nested$Inner.class\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerTypeSeveralTimesAddsOnlyOneEntry()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeSeveralTimesAddsOnlyOneEntry() {\r\n    this.resourceHints.registerType(String.class);\r\n    this.resourceHints.registerType(TypeReference.of(String.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerExactMatches()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerExactMatches() {\r\n    this.resourceHints.registerPattern(\"com/example/test.properties\");\r\n    this.resourceHints.registerPattern(\"com/example/another.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/test.properties\")).anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/another.properties\")).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerExactMatchesInRootDirectory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerExactMatchesInRootDirectory() {\r\n    this.resourceHints.registerPattern(\"test.properties\");\r\n    this.resourceHints.registerPattern(\"another.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).anySatisfy(patternOf(\"/\", \"test.properties\")).anySatisfy(patternOf(\"/\", \"another.properties\")).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerRootDirectory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerRootDirectory() {\r\n    this.resourceHints.registerPattern(\"/\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerRootPattern()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerRootPattern() {\r\n    this.resourceHints.registerPattern(\"*.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"*.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerPattern()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerPattern() {\r\n    this.resourceHints.registerPattern(\"com/example/*.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerPatternWithIncludesAndExcludes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerPatternWithIncludesAndExcludes() {\r\n    this.resourceHints.registerPattern(resourceHint -> resourceHint.includes(\"com/example/*.properties\"));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(List.of(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"), List.of(\"com/example/to-ignore.properties\")));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerIfPresentRegisterExistingLocation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerIfPresentRegisterExistingLocation() {\r\n    this.resourceHints.registerPatternIfPresent(null, \"META-INF/\", resourceHint -> resourceHint.includes(\"com/example/*.properties\"));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerIfPresentIgnoreMissingLocation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerIfPresentIgnoreMissingLocation() {\r\n    Consumer<ResourcePatternHints.Builder> hintBuilder = mock();\r\n    this.resourceHints.registerPatternIfPresent(null, \"location/does-not-exist/\", hintBuilder);\r\n    assertThat(this.resourceHints.resourcePatternHints()).isEmpty();\r\n    verifyNoInteractions(hintBuilder);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerResourceWithUnsupportedResourceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerResourceWithUnsupportedResourceType() {\r\n    DescriptiveResource resource = new DescriptiveResource(\"bogus\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.resourceHints.registerResource(resource)).withMessage(\"Resource must be a ClassPathResource that exists: %s\", resource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerResourceWithNonexistentClassPathResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerResourceWithNonexistentClassPathResource() {\r\n    ClassPathResource resource = new ClassPathResource(\"bogus\", getClass());\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.resourceHints.registerResource(resource)).withMessage(\"Resource must be a ClassPathResource that exists: %s\", resource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerResourceWithExistingClassPathResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerResourceWithExistingClassPathResource() {\r\n    String path = \"org/springframework/aot/hint/support\";\r\n    ClassPathResource resource = new ClassPathResource(path);\r\n    this.resourceHints.registerResource(resource);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", path));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerResourceWithExistingRelativeClassPathResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerResourceWithExistingRelativeClassPathResource() {\r\n    String path = \"org/springframework/aot/hint/support\";\r\n    ClassPathResource resource = new ClassPathResource(\"support\", RuntimeHints.class);\r\n    this.resourceHints.registerResource(resource);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", path));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerResourceBundle()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerResourceBundle() {\r\n    this.resourceHints.registerResourceBundle(\"com.example.message\");\r\n    assertThat(this.resourceHints.resourceBundleHints()).singleElement().satisfies(resourceBundle(\"com.example.message\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#registerResourceBundleSeveralTimesAddsOneEntry()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerResourceBundleSeveralTimesAddsOneEntry() {\r\n    this.resourceHints.registerResourceBundle(\"com.example.message\").registerResourceBundle(\"com.example.message\");\r\n    assertThat(this.resourceHints.resourceBundleHints()).singleElement().satisfies(resourceBundle(\"com.example.message\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#patternOf(String)",
+    "entityType": "method",
+    "code": "private Consumer<ResourcePatternHints> patternOf(String... includes) {\r\n    return patternOf(Arrays.asList(includes), Collections.emptyList());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#resourceBundle(String)",
+    "entityType": "method",
+    "code": "private Consumer<ResourceBundleHint> resourceBundle(String baseName) {\r\n    return resourceBundleHint -> assertThat(resourceBundleHint.getBaseName()).isEqualTo(baseName);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourceHintsTests#patternOf(List<String>,List<String>)",
+    "entityType": "method",
+    "code": "private Consumer<ResourcePatternHints> patternOf(List<String> includes, List<String> excludes) {\r\n    return pattern -> assertThat(pattern.getIncludes()).map(ResourcePatternHint::getPattern).containsExactlyInAnyOrderElementsOf(includes);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Nested",
+    "entityType": "class",
+    "code": "class Inner {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.Inner",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid patternWithLeadingSlashIsRejected() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourcePatternHint(\"/file.properties\", null)).withMessage(\"Resource pattern [/file.properties] must not start with a '/' unless it is the root directory\");\r\n}\n@Test\r\nvoid rootDirectory() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"/\", null);\r\n    assertThat(hint.matches(\"/\")).isTrue();\r\n    assertThat(hint.matches(\"/com/example\")).isFalse();\r\n    assertThat(hint.matches(\"/file.txt\")).isFalse();\r\n}\n@Test\r\nvoid fileAtRoot() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"file.properties\", null);\r\n    assertThat(hint.matches(\"file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"file.prop\")).isFalse();\r\n    assertThat(hint.matches(\"another-file.properties\")).isFalse();\r\n}\n@Test\r\nvoid fileInDirectory() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"com/example/file.properties\", null);\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/example/another-file.properties\")).isFalse();\r\n}\n@Test\r\nvoid extension() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"**/*.properties\", null);\r\n    assertThat(hint.matches(\"file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"file.prop\")).isFalse();\r\n    assertThat(hint.matches(\"com/example/file.prop\")).isFalse();\r\n}\n@Test\r\nvoid extensionInDirectoryAtAnyDepth() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"com/example/*.properties\", null);\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/another/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"file.properties\")).isFalse();\r\n}\n@Test\r\nvoid anyFileInDirectoryAtAnyDepth() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"com/example/**\", null);\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/another/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/another\")).isTrue();\r\n    assertThat(hint.matches(\"file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/file.properties\")).isFalse();\r\n}",
+    "comment": "\n * Tests for {@link ResourcePatternHint}.\n *\n * @author Sebastien Deleuze\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#patternWithLeadingSlashIsRejected()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid patternWithLeadingSlashIsRejected() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourcePatternHint(\"/file.properties\", null)).withMessage(\"Resource pattern [/file.properties] must not start with a '/' unless it is the root directory\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#rootDirectory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rootDirectory() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"/\", null);\r\n    assertThat(hint.matches(\"/\")).isTrue();\r\n    assertThat(hint.matches(\"/com/example\")).isFalse();\r\n    assertThat(hint.matches(\"/file.txt\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#fileAtRoot()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fileAtRoot() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"file.properties\", null);\r\n    assertThat(hint.matches(\"file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"file.prop\")).isFalse();\r\n    assertThat(hint.matches(\"another-file.properties\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#fileInDirectory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fileInDirectory() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"com/example/file.properties\", null);\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/example/another-file.properties\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#extension()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid extension() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"**/*.properties\", null);\r\n    assertThat(hint.matches(\"file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"file.prop\")).isFalse();\r\n    assertThat(hint.matches(\"com/example/file.prop\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#extensionInDirectoryAtAnyDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid extensionInDirectoryAtAnyDepth() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"com/example/*.properties\", null);\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/another/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"file.properties\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.ResourcePatternHintTests#anyFileInDirectoryAtAnyDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid anyFileInDirectoryAtAnyDepth() {\r\n    ResourcePatternHint hint = new ResourcePatternHint(\"com/example/**\", null);\r\n    assertThat(hint.matches(\"com/example/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/another/file.properties\")).isTrue();\r\n    assertThat(hint.matches(\"com/example/another\")).isTrue();\r\n    assertThat(hint.matches(\"file.properties\")).isFalse();\r\n    assertThat(hint.matches(\"com/file.properties\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.RuntimeHintsTests",
+    "entityType": "class",
+    "code": "private final RuntimeHints hints = new RuntimeHints();\n@Test\r\nvoid reflectionHintWithClass() {\r\n    this.hints.reflection().registerType(String.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertThat(this.hints.reflection().typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(String.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).containsOnly(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    });\r\n}\n@Test\r\nvoid resourceHintWithClass() {\r\n    this.hints.resources().registerType(String.class);\r\n    assertThat(this.hints.resources().resourcePatternHints()).singleElement().satisfies(resourceHint -> assertThat(resourceHint.getIncludes()).map(ResourcePatternHint::getPattern).containsExactlyInAnyOrder(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}\n@Test\r\nvoid javaSerializationHintWithClass() {\r\n    this.hints.serialization().registerType(String.class);\r\n    assertThat(this.hints.serialization().javaSerializationHints().map(JavaSerializationHint::getType)).containsExactly(TypeReference.of(String.class));\r\n}\n@Test\r\nvoid jdkProxyWithClass() {\r\n    this.hints.proxies().registerJdkProxy(Function.class);\r\n    assertThat(this.hints.proxies().jdkProxyHints()).singleElement().satisfies(jdkProxyHint -> assertThat(jdkProxyHint.getProxiedInterfaces()).containsExactly(TypeReference.of(Function.class)));\r\n}",
+    "comment": "\n * Tests for {@link RuntimeHints}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.RuntimeHintsTests#reflectionHintWithClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid reflectionHintWithClass() {\r\n    this.hints.reflection().registerType(String.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    assertThat(this.hints.reflection().typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType().getCanonicalName()).isEqualTo(String.class.getCanonicalName());\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n        assertThat(typeHint.getMemberCategories()).containsOnly(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.RuntimeHintsTests#resourceHintWithClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourceHintWithClass() {\r\n    this.hints.resources().registerType(String.class);\r\n    assertThat(this.hints.resources().resourcePatternHints()).singleElement().satisfies(resourceHint -> assertThat(resourceHint.getIncludes()).map(ResourcePatternHint::getPattern).containsExactlyInAnyOrder(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.RuntimeHintsTests#javaSerializationHintWithClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid javaSerializationHintWithClass() {\r\n    this.hints.serialization().registerType(String.class);\r\n    assertThat(this.hints.serialization().javaSerializationHints().map(JavaSerializationHint::getType)).containsExactly(TypeReference.of(String.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.RuntimeHintsTests#jdkProxyWithClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid jdkProxyWithClass() {\r\n    this.hints.proxies().registerJdkProxy(Function.class);\r\n    assertThat(this.hints.proxies().jdkProxyHints()).singleElement().satisfies(jdkProxyHint -> assertThat(jdkProxyHint.getProxiedInterfaces()).containsExactly(TypeReference.of(Function.class)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SerializationHintsTests",
+    "entityType": "class",
+    "code": "private final SerializationHints serializationHints = new SerializationHints();\n@Test\r\nvoid registerTypeTwiceExposesOneHint() {\r\n    this.serializationHints.registerType(URL.class);\r\n    this.serializationHints.registerType(TypeReference.of(URL.class.getName()));\r\n    assertThat(this.serializationHints.javaSerializationHints()).singleElement().extracting(JavaSerializationHint::getType).isEqualTo(TypeReference.of(URL.class));\r\n}",
+    "comment": "\n * Tests for {@link SerializationHints}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SerializationHintsTests#registerTypeTwiceExposesOneHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerTypeTwiceExposesOneHint() {\r\n    this.serializationHints.registerType(URL.class);\r\n    this.serializationHints.registerType(TypeReference.of(URL.class.getName()));\r\n    assertThat(this.serializationHints.javaSerializationHints()).singleElement().extracting(JavaSerializationHint::getType).isEqualTo(TypeReference.of(URL.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests",
+    "entityType": "class",
+    "code": "@ParameterizedTest\r\n@MethodSource(\"primitivesAndPrimitivesArray\")\r\nvoid primitivesAreHandledProperly(TypeReference typeReference, String expectedName) {\r\n    assertThat(typeReference.getName()).isEqualTo(expectedName);\r\n    assertThat(typeReference.getCanonicalName()).isEqualTo(expectedName);\r\n    assertThat(typeReference.getPackageName()).isEqualTo(\"java.lang\");\r\n}\nstatic Stream<Arguments> primitivesAndPrimitivesArray() {\r\n    return Stream.of(Arguments.of(SimpleTypeReference.of(\"boolean\"), \"boolean\"), Arguments.of(SimpleTypeReference.of(\"byte\"), \"byte\"), Arguments.of(SimpleTypeReference.of(\"short\"), \"short\"), Arguments.of(SimpleTypeReference.of(\"int\"), \"int\"), Arguments.of(SimpleTypeReference.of(\"long\"), \"long\"), Arguments.of(SimpleTypeReference.of(\"char\"), \"char\"), Arguments.of(SimpleTypeReference.of(\"float\"), \"float\"), Arguments.of(SimpleTypeReference.of(\"double\"), \"double\"), Arguments.of(SimpleTypeReference.of(\"boolean[]\"), \"boolean[]\"), Arguments.of(SimpleTypeReference.of(\"byte[]\"), \"byte[]\"), Arguments.of(SimpleTypeReference.of(\"short[]\"), \"short[]\"), Arguments.of(SimpleTypeReference.of(\"int[]\"), \"int[]\"), Arguments.of(SimpleTypeReference.of(\"long[]\"), \"long[]\"), Arguments.of(SimpleTypeReference.of(\"char[]\"), \"char[]\"), Arguments.of(SimpleTypeReference.of(\"float[]\"), \"float[]\"), Arguments.of(SimpleTypeReference.of(\"double[]\"), \"double[]\"));\r\n}\n@ParameterizedTest\r\n@MethodSource(\"arrays\")\r\nvoid arraysHaveSuitableReflectionTargetName(TypeReference typeReference, String expectedName) {\r\n    assertThat(typeReference.getName()).isEqualTo(expectedName);\r\n}\nstatic Stream<Arguments> arrays() {\r\n    return Stream.of(Arguments.of(SimpleTypeReference.of(\"java.lang.Object[]\"), \"java.lang.Object[]\"), Arguments.of(SimpleTypeReference.of(\"java.lang.Integer[]\"), \"java.lang.Integer[]\"), Arguments.of(SimpleTypeReference.of(\"com.example.Test[]\"), \"com.example.Test[]\"));\r\n}\n@Test\r\nvoid nameOfCglibProxy() {\r\n    TypeReference reference = TypeReference.of(\"com.example.Test$$SpringCGLIB$$0\");\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Test$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNull();\r\n}\n@Test\r\nvoid nameOfNestedCglibProxy() {\r\n    TypeReference reference = TypeReference.of(\"com.example.Test$Another$$SpringCGLIB$$0\");\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Another$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNotNull();\r\n    assertThat(reference.getEnclosingType().getSimpleName()).isEqualTo(\"Test\");\r\n}\n@Test\r\nvoid typeReferenceInRootPackage() {\r\n    TypeReference type = SimpleTypeReference.of(\"MyRootClass\");\r\n    assertThat(type.getCanonicalName()).isEqualTo(\"MyRootClass\");\r\n    assertThat(type.getPackageName()).isEmpty();\r\n}\n@ParameterizedTest(name = \"{0}\")\r\n@ValueSource(strings = { \"com.example.Tes(t\", \"com.example..Test\" })\r\nvoid typeReferenceWithInvalidClassName(String invalidClassName) {\r\n    assertThatIllegalStateException().isThrownBy(() -> SimpleTypeReference.of(invalidClassName)).withMessageContaining(\"Invalid class name\");\r\n}",
+    "comment": "\n * Tests for {@link SimpleTypeReference}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#primitivesAreHandledProperly(TypeReference,String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@MethodSource(\"primitivesAndPrimitivesArray\")\r\nvoid primitivesAreHandledProperly(TypeReference typeReference, String expectedName) {\r\n    assertThat(typeReference.getName()).isEqualTo(expectedName);\r\n    assertThat(typeReference.getCanonicalName()).isEqualTo(expectedName);\r\n    assertThat(typeReference.getPackageName()).isEqualTo(\"java.lang\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#primitivesAndPrimitivesArray()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> primitivesAndPrimitivesArray() {\r\n    return Stream.of(Arguments.of(SimpleTypeReference.of(\"boolean\"), \"boolean\"), Arguments.of(SimpleTypeReference.of(\"byte\"), \"byte\"), Arguments.of(SimpleTypeReference.of(\"short\"), \"short\"), Arguments.of(SimpleTypeReference.of(\"int\"), \"int\"), Arguments.of(SimpleTypeReference.of(\"long\"), \"long\"), Arguments.of(SimpleTypeReference.of(\"char\"), \"char\"), Arguments.of(SimpleTypeReference.of(\"float\"), \"float\"), Arguments.of(SimpleTypeReference.of(\"double\"), \"double\"), Arguments.of(SimpleTypeReference.of(\"boolean[]\"), \"boolean[]\"), Arguments.of(SimpleTypeReference.of(\"byte[]\"), \"byte[]\"), Arguments.of(SimpleTypeReference.of(\"short[]\"), \"short[]\"), Arguments.of(SimpleTypeReference.of(\"int[]\"), \"int[]\"), Arguments.of(SimpleTypeReference.of(\"long[]\"), \"long[]\"), Arguments.of(SimpleTypeReference.of(\"char[]\"), \"char[]\"), Arguments.of(SimpleTypeReference.of(\"float[]\"), \"float[]\"), Arguments.of(SimpleTypeReference.of(\"double[]\"), \"double[]\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#arraysHaveSuitableReflectionTargetName(TypeReference,String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@MethodSource(\"arrays\")\r\nvoid arraysHaveSuitableReflectionTargetName(TypeReference typeReference, String expectedName) {\r\n    assertThat(typeReference.getName()).isEqualTo(expectedName);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#arrays()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> arrays() {\r\n    return Stream.of(Arguments.of(SimpleTypeReference.of(\"java.lang.Object[]\"), \"java.lang.Object[]\"), Arguments.of(SimpleTypeReference.of(\"java.lang.Integer[]\"), \"java.lang.Integer[]\"), Arguments.of(SimpleTypeReference.of(\"com.example.Test[]\"), \"com.example.Test[]\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#nameOfCglibProxy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nameOfCglibProxy() {\r\n    TypeReference reference = TypeReference.of(\"com.example.Test$$SpringCGLIB$$0\");\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Test$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#nameOfNestedCglibProxy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nameOfNestedCglibProxy() {\r\n    TypeReference reference = TypeReference.of(\"com.example.Test$Another$$SpringCGLIB$$0\");\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Another$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNotNull();\r\n    assertThat(reference.getEnclosingType().getSimpleName()).isEqualTo(\"Test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceInRootPackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeReferenceInRootPackage() {\r\n    TypeReference type = SimpleTypeReference.of(\"MyRootClass\");\r\n    assertThat(type.getCanonicalName()).isEqualTo(\"MyRootClass\");\r\n    assertThat(type.getPackageName()).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceWithInvalidClassName(String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest(name = \"{0}\")\r\n@ValueSource(strings = { \"com.example.Tes(t\", \"com.example..Test\" })\r\nvoid typeReferenceWithInvalidClassName(String invalidClassName) {\r\n    assertThatIllegalStateException().isThrownBy(() -> SimpleTypeReference.of(invalidClassName)).withMessageContaining(\"Invalid class name\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "entityType": "class",
+    "code": "private final ResourceHints hints = new ResourceHints();\n@Test\r\nvoid configureWithNoClasspathLocation() {\r\n    assertThatIllegalArgumentException().isThrownBy(FilePatternResourceHintsRegistrar::forClassPathLocations).withMessageContaining(\"At least one classpath location must be specified\");\r\n}\n@Test\r\nvoid configureWithInvalidFilePrefix() {\r\n    Builder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> builder.withFilePrefixes(\"test*\")).withMessageContaining(\"cannot contain '*'\");\r\n}\n@Test\r\nvoid configureWithInvalidFileExtension() {\r\n    Builder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> builder.withFileExtensions(\"txt\")).withMessageContaining(\"must start with '.'\");\r\n}\n@Test\r\nvoid registerWithSinglePattern() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\"));\r\n}\n@Test\r\nvoid registerWithMultipleFilePrefixes() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFilePrefixes(\"another\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\", \"another*.txt\"));\r\n}\n@Test\r\nvoid registerWithMultipleClasspathLocations() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withClassPathLocations(\"META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}\n@Test\r\nvoid registerWithMultipleFileExtensions() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").withFileExtensions(\".conf\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\", \"test*.conf\"));\r\n}\n@Test\r\nvoid registerWithClasspathLocationWithoutTrailingSlash() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}\n@Test\r\nvoid registerWithClasspathLocationWithLeadingSlash() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"/\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\"));\r\n}\n@Test\r\nvoid registerWithClasspathLocationUsingResourceClasspathPrefix() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"classpath:META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}\n@Test\r\nvoid registerWithClasspathLocationUsingResourceClasspathPrefixAndTrailingSlash() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"classpath:/META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}\n@Test\r\nvoid registerWithNonExistingLocationDoesNotRegisterHint() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"does-not-exist/\").withClassPathLocations(\"another-does-not-exist/\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).isEmpty();\r\n}\nprivate Consumer<ResourcePatternHints> includes(String... patterns) {\r\n    return hint -> assertThat(hint.getIncludes().stream().map(ResourcePatternHint::getPattern)).containsExactlyInAnyOrder(patterns);\r\n}",
+    "comment": "\n * Tests for {@link FilePatternResourceHintsRegistrar}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithNoClasspathLocation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid configureWithNoClasspathLocation() {\r\n    assertThatIllegalArgumentException().isThrownBy(FilePatternResourceHintsRegistrar::forClassPathLocations).withMessageContaining(\"At least one classpath location must be specified\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFilePrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid configureWithInvalidFilePrefix() {\r\n    Builder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> builder.withFilePrefixes(\"test*\")).withMessageContaining(\"cannot contain '*'\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFileExtension()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid configureWithInvalidFileExtension() {\r\n    Builder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> builder.withFileExtensions(\"txt\")).withMessageContaining(\"must start with '.'\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithSinglePattern()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithSinglePattern() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithMultipleFilePrefixes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithMultipleFilePrefixes() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFilePrefixes(\"another\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\", \"another*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithMultipleClasspathLocations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithMultipleClasspathLocations() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withClassPathLocations(\"META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithMultipleFileExtensions()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithMultipleFileExtensions() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").withFileExtensions(\".conf\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\", \"test*.conf\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithClasspathLocationWithoutTrailingSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithClasspathLocationWithoutTrailingSlash() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithClasspathLocationWithLeadingSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithClasspathLocationWithLeadingSlash() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"/\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithClasspathLocationUsingResourceClasspathPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithClasspathLocationUsingResourceClasspathPrefix() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"classpath:META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithClasspathLocationUsingResourceClasspathPrefixAndTrailingSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithClasspathLocationUsingResourceClasspathPrefixAndTrailingSlash() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"classpath:/META-INF\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithNonExistingLocationDoesNotRegisterHint()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid registerWithNonExistingLocationDoesNotRegisterHint() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"does-not-exist/\").withClassPathLocations(\"another-does-not-exist/\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#includes(String)",
+    "entityType": "method",
+    "code": "private Consumer<ResourcePatternHints> includes(String... patterns) {\r\n    return hint -> assertThat(hint.getIncludes().stream().map(ResourcePatternHint::getPattern)).containsExactlyInAnyOrder(patterns);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.KotlinDetectorRuntimeHintsTests",
+    "entityType": "class",
+    "code": "private RuntimeHints hints;\n@BeforeEach\r\nvoid setup() {\r\n    this.hints = new RuntimeHints();\r\n    SpringFactoriesLoader.forResourceLocation(\"META-INF/spring/aot.factories\").load(RuntimeHintsRegistrar.class).forEach(registrar -> registrar.registerHints(this.hints, ClassUtils.getDefaultClassLoader()));\r\n}\n@Test\r\nvoid kotlinMetadataHasHints() {\r\n    assertThat(RuntimeHintsPredicates.reflection().onType(kotlin.Metadata.class)).accepts(this.hints);\r\n}\n@Test\r\nvoid kotlinReflectHasHints() {\r\n    assertThat(RuntimeHintsPredicates.reflection().onType(kotlin.reflect.full.KClasses.class)).accepts(this.hints);\r\n}",
+    "comment": "\n * Tests for {@link KotlinDetectorRuntimeHints}.\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.aot.hint.support.KotlinDetectorRuntimeHintsTests#setup()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setup() {\r\n    this.hints = new RuntimeHints();\r\n    SpringFactoriesLoader.forResourceLocation(\"META-INF/spring/aot.factories\").load(RuntimeHintsRegistrar.class).forEach(registrar -> registrar.registerHints(this.hints, ClassUtils.getDefaultClassLoader()));\r\n}",
+    "comment": ""
+  }
+]

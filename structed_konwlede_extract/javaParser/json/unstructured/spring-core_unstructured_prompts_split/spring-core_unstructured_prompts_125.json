@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#readResourcePosition(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid readResourcePosition(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> flux = DataBufferUtils.read(this.resource, 9, super.bufferFactory, 3);\r\n    StepVerifier.create(flux).consumeNextWith(stringConsumer(\"qux\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#verifyReadData(Flux<DataBuffer>)",
+    "entityType": "method",
+    "code": "private void verifyReadData(Flux<DataBuffer> buffers) {\r\n    StepVerifier.create(buffers).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"baz\")).consumeNextWith(stringConsumer(\"qux\")).expectComplete().verify(Duration.ofSeconds(3));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#readResourcePositionAndTakeUntil(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid readResourcePositionAndTakeUntil(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Resource resource = new ClassPathResource(\"DataBufferUtilsTests.txt\", getClass());\r\n    Flux<DataBuffer> flux = DataBufferUtils.read(resource, 3, super.bufferFactory, 3);\r\n    flux = DataBufferUtils.takeUntilByteCount(flux, 5);\r\n    StepVerifier.create(flux).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"ba\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#readByteArrayResourcePositionAndTakeUntil(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid readByteArrayResourcePositionAndTakeUntil(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Resource resource = new ByteArrayResource(\"foobarbazqux\".getBytes());\r\n    Flux<DataBuffer> flux = DataBufferUtils.read(resource, 3, super.bufferFactory, 3);\r\n    flux = DataBufferUtils.takeUntilByteCount(flux, 5);\r\n    StepVerifier.create(flux).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"ba\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeOutputStream(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeOutputStream(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    DataBuffer qux = stringBuffer(\"qux\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz, qux);\r\n    OutputStream os = Files.newOutputStream(tempFile);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, os);\r\n    verifyWrittenData(writeResult);\r\n    os.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    DataBuffer qux = stringBuffer(\"qux\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz, qux);\r\n    WritableByteChannel channel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    verifyWrittenData(writeResult);\r\n    channel.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInFlux(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannelErrorInFlux(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar).concatWith(Flux.error(new RuntimeException()));\r\n    WritableByteChannel channel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectError().verify(Duration.ofSeconds(5));\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foobar\");\r\n    channel.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInWrite(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannelErrorInWrite(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    WritableByteChannel channel = mock();\r\n    given(channel.write(any())).willAnswer(invocation -> {\r\n        ByteBuffer buffer = invocation.getArgument(0);\r\n        int written = buffer.remaining();\r\n        buffer.position(buffer.limit());\r\n        return written;\r\n    }).willThrow(new IOException());\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectError(IOException.class).verify(Duration.ofSeconds(3));\r\n    channel.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelCancel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannelCancel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    WritableByteChannel channel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult, 1).consumeNextWith(stringConsumer(\"foo\")).thenCancel().verify(Duration.ofSeconds(5));\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foo\");\r\n    channel.close();\r\n    flux.subscribe(DataBufferUtils::release);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeAsynchronousFileChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    DataBuffer qux = stringBuffer(\"qux\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz, qux);\r\n    AsynchronousFileChannel channel = AsynchronousFileChannel.open(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    verifyWrittenData(writeResult);\r\n    channel.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#verifyWrittenData(Flux<DataBuffer>)",
+    "entityType": "method",
+    "code": "private void verifyWrittenData(Flux<DataBuffer> writeResult) throws IOException {\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"baz\")).consumeNextWith(stringConsumer(\"qux\")).expectComplete().verify(Duration.ofSeconds(3));\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foobarbazqux\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannelErrorInFlux(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeAsynchronousFileChannelErrorInFlux(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar).concatWith(Mono.error(new RuntimeException()));\r\n    AsynchronousFileChannel channel = AsynchronousFileChannel.open(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectError(RuntimeException.class).verify();\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foobar\");\r\n    channel.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannelErrorInWrite(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeAsynchronousFileChannelErrorInWrite(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    AsynchronousFileChannel channel = mock();\r\n    willAnswer(invocation -> {\r\n        ByteBuffer buffer = invocation.getArgument(0);\r\n        long pos = invocation.getArgument(1);\r\n        assertThat(pos).isEqualTo(0);\r\n        Object attachment = invocation.getArgument(2);\r\n        CompletionHandler<Integer, Object> completionHandler = invocation.getArgument(3);\r\n        int written = buffer.remaining();\r\n        buffer.position(buffer.limit());\r\n        completionHandler.completed(written, attachment);\r\n        return null;\r\n    }).willAnswer(invocation -> {\r\n        Object attachment = invocation.getArgument(2);\r\n        CompletionHandler<Integer, Object> completionHandler = invocation.getArgument(3);\r\n        completionHandler.failed(new IOException(), attachment);\r\n        return null;\r\n    }).given(channel).write(any(), anyLong(), any(), any());\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectError(IOException.class).verify();\r\n    channel.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannelCanceled(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeAsynchronousFileChannelCanceled(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    AsynchronousFileChannel channel = AsynchronousFileChannel.open(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult, 1).consumeNextWith(stringConsumer(\"foo\")).thenCancel().verify();\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foo\");\r\n    channel.close();\r\n    flux.subscribe(DataBufferUtils::release);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#writePath(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid writePath(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    Mono<Void> result = DataBufferUtils.write(flux, tempFile);\r\n    StepVerifier.create(result).verifyComplete();\r\n    List<String> written = Files.readAllLines(tempFile);\r\n    assertThat(written).contains(\"foobar\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#outputStreamPublisher(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid outputStreamPublisher(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    byte[] foo = \"foo\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] bar = \"bar\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] baz = \"baz\".getBytes(StandardCharsets.UTF_8);\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(outputStream -> {\r\n        try {\r\n            outputStream.write(foo);\r\n            outputStream.write(bar);\r\n            outputStream.write(baz);\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor());\r\n    StepVerifier.create(publisher).consumeNextWith(stringConsumer(\"foobarbaz\")).verifyComplete();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#outputStreamPublisherFlush(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid outputStreamPublisherFlush(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    byte[] foo = \"foo\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] bar = \"bar\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] baz = \"baz\".getBytes(StandardCharsets.UTF_8);\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(outputStream -> {\r\n        try {\r\n            outputStream.write(foo);\r\n            outputStream.flush();\r\n            outputStream.write(bar);\r\n            outputStream.flush();\r\n            outputStream.write(baz);\r\n            outputStream.flush();\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor());\r\n    StepVerifier.create(publisher).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"baz\")).verifyComplete();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#outputStreamPublisherChunkSize(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid outputStreamPublisherChunkSize(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    byte[] foo = \"foo\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] bar = \"bar\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] baz = \"baz\".getBytes(StandardCharsets.UTF_8);\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(outputStream -> {\r\n        try {\r\n            outputStream.write(foo);\r\n            outputStream.write(bar);\r\n            outputStream.write(baz);\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor(), 3);\r\n    StepVerifier.create(publisher).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"baz\")).verifyComplete();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#outputStreamPublisherCancel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid outputStreamPublisherCancel(DataBufferFactory bufferFactory) throws InterruptedException {\r\n    super.bufferFactory = bufferFactory;\r\n    byte[] foo = \"foo\".getBytes(StandardCharsets.UTF_8);\r\n    byte[] bar = \"bar\".getBytes(StandardCharsets.UTF_8);\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(outputStream -> {\r\n        try {\r\n            assertThatIOException().isThrownBy(() -> {\r\n                outputStream.write(foo);\r\n                outputStream.flush();\r\n                outputStream.write(bar);\r\n                outputStream.flush();\r\n            }).withMessage(\"Subscription has been terminated\");\r\n        } finally {\r\n            latch.countDown();\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor());\r\n    StepVerifier.create(publisher, 1).consumeNextWith(stringConsumer(\"foo\")).thenCancel().verify();\r\n    latch.await();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#outputStreamPublisherClosed(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid outputStreamPublisherClosed(DataBufferFactory bufferFactory) throws InterruptedException {\r\n    super.bufferFactory = bufferFactory;\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(outputStream -> {\r\n        try {\r\n            OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);\r\n            writer.write(\"foo\");\r\n            writer.close();\r\n            assertThatIOException().isThrownBy(() -> writer.write(\"bar\")).withMessage(\"Stream closed\");\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        } finally {\r\n            latch.countDown();\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor());\r\n    StepVerifier.create(publisher).consumeNextWith(stringConsumer(\"foo\")).verifyComplete();\r\n    latch.await();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 3, 3, 64, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"foo\", \"bar\", \"baz\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize2(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize2(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 3, 3, 1, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"foo\", \"bar\", \"baz\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize3(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize3(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 3, 12, 1, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"foobarbaz\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize4(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize4(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 3, 1, 1, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"f\", \"o\", \"o\", \"b\", \"a\", \"r\", \"b\", \"a\", \"z\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize5(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize5(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 3, 2, 1, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"fo\", \"ob\", \"ar\", \"ba\", \"z\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize6(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize6(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 1, 3, 1, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"foo\", \"bar\", \"baz\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberChunkSize7(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberChunkSize7(DataBufferFactory factory) {\r\n    genericInputStreamSubscriberTest(factory, 1, 3, 64, List.of(\"foo\", \"bar\", \"baz\"), List.of(\"foo\", \"bar\", \"baz\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#genericInputStreamSubscriberTest(DataBufferFactory,int,int,int,List<String>,List<String>)",
+    "entityType": "method",
+    "code": "void genericInputStreamSubscriberTest(DataBufferFactory factory, int writeChunkSize, int readChunkSize, int bufferSize, List<String> input, List<String> expectedOutput) {\r\n    super.bufferFactory = factory;\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(out -> {\r\n        try {\r\n            for (String word : input) {\r\n                out.write(word.getBytes(StandardCharsets.UTF_8));\r\n            }\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor(), writeChunkSize);\r\n    byte[] chunk = new byte[readChunkSize];\r\n    List<String> words = new ArrayList<>();\r\n    try (InputStream in = DataBufferUtils.subscriberInputStream(publisher, bufferSize)) {\r\n        int read;\r\n        while ((read = in.read(chunk)) > -1) {\r\n            words.add(new String(chunk, 0, read, StandardCharsets.UTF_8));\r\n        }\r\n    } catch (IOException e) {\r\n        throw new RuntimeException(e);\r\n    }\r\n    assertThat(words).containsExactlyElementsOf(expectedOutput);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberError(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberError(DataBufferFactory factory) {\r\n    super.bufferFactory = factory;\r\n    var input = List.of(\"foo \", \"bar \", \"baz\");\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(out -> {\r\n        try {\r\n            for (String word : input) {\r\n                out.write(word.getBytes(StandardCharsets.UTF_8));\r\n            }\r\n            throw new RuntimeException(\"boom\");\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor(), 1);\r\n    RuntimeException error = null;\r\n    byte[] chunk = new byte[4];\r\n    List<String> words = new ArrayList<>();\r\n    try (InputStream in = DataBufferUtils.subscriberInputStream(publisher, 1)) {\r\n        int read;\r\n        while ((read = in.read(chunk)) > -1) {\r\n            words.add(new String(chunk, 0, read, StandardCharsets.UTF_8));\r\n        }\r\n    } catch (IOException e) {\r\n        throw new RuntimeException(e);\r\n    } catch (RuntimeException e) {\r\n        error = e;\r\n    }\r\n    assertThat(words).containsExactlyElementsOf(List.of(\"foo \", \"bar \", \"baz\"));\r\n    assertThat(error).hasMessage(\"boom\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberMixedReadMode(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberMixedReadMode(DataBufferFactory factory) {\r\n    super.bufferFactory = factory;\r\n    var input = List.of(\"foo \", \"bar \", \"baz\");\r\n    Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(out -> {\r\n        try {\r\n            for (String word : input) {\r\n                out.write(word.getBytes(StandardCharsets.UTF_8));\r\n            }\r\n        } catch (IOException ex) {\r\n            fail(ex.getMessage(), ex);\r\n        }\r\n    }, super.bufferFactory, Executors.newSingleThreadExecutor(), 1);\r\n    byte[] chunk = new byte[3];\r\n    ArrayList<String> words = new ArrayList<>();\r\n    try (InputStream inputStream = DataBufferUtils.subscriberInputStream(publisher, 1)) {\r\n        words.add(new String(chunk, 0, inputStream.read(chunk), StandardCharsets.UTF_8));\r\n        assertThat(inputStream.read()).isEqualTo(' ' & 0xFF);\r\n        words.add(new String(chunk, 0, inputStream.read(chunk), StandardCharsets.UTF_8));\r\n        assertThat(inputStream.read()).isEqualTo(' ' & 0xFF);\r\n        words.add(new String(chunk, 0, inputStream.read(chunk), StandardCharsets.UTF_8));\r\n        assertThat(inputStream.read()).isEqualTo(-1);\r\n    } catch (IOException e) {\r\n        throw new RuntimeException(e);\r\n    }\r\n    assertThat(words).containsExactlyElementsOf(List.of(\"foo\", \"bar\", \"baz\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#inputStreamSubscriberClose(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid inputStreamSubscriberClose(DataBufferFactory bufferFactory) throws InterruptedException {\r\n    for (int i = 1; i < 100; i++) {\r\n        CountDownLatch latch = new CountDownLatch(1);\r\n        super.bufferFactory = bufferFactory;\r\n        var input = List.of(\"foo\", \"bar\", \"baz\");\r\n        Publisher<DataBuffer> publisher = DataBufferUtils.outputStreamPublisher(out -> {\r\n            try {\r\n                assertThatIOException().isThrownBy(() -> {\r\n                    for (String word : input) {\r\n                        out.write(word.getBytes(StandardCharsets.UTF_8));\r\n                        out.flush();\r\n                    }\r\n                }).withMessage(\"Subscription has been terminated\");\r\n            } finally {\r\n                latch.countDown();\r\n            }\r\n        }, super.bufferFactory, Executors.newSingleThreadExecutor(), 1);\r\n        byte[] chunk = new byte[3];\r\n        ArrayList<String> words = new ArrayList<>();\r\n        try (InputStream in = DataBufferUtils.subscriberInputStream(publisher, ThreadLocalRandom.current().nextInt(1, 4))) {\r\n            in.read(chunk);\r\n            String word = new String(chunk, StandardCharsets.UTF_8);\r\n            words.add(word);\r\n        } catch (IOException e) {\r\n            throw new RuntimeException(e);\r\n        }\r\n        assertThat(words).containsExactlyElementsOf(List.of(\"foo\"));\r\n        latch.await();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteByteChannel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid readAndWriteByteChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    Path source = Paths.get(DataBufferUtilsTests.class.getResource(\"DataBufferUtilsTests.txt\").toURI());\r\n    Flux<DataBuffer> sourceFlux = DataBufferUtils.readByteChannel(() -> FileChannel.open(source, StandardOpenOption.READ), super.bufferFactory, 3);\r\n    Path destination = Files.createTempFile(\"DataBufferUtilsTests\", null);\r\n    WritableByteChannel channel = Files.newByteChannel(destination, StandardOpenOption.WRITE);\r\n    DataBufferUtils.write(sourceFlux, channel).subscribe(DataBufferUtils.releaseConsumer(), throwable -> {\r\n        throw new AssertionError(throwable.getMessage(), throwable);\r\n    }, () -> {\r\n        try {\r\n            String expected = String.join(\"\", Files.readAllLines(source));\r\n            String result = String.join(\"\", Files.readAllLines(destination));\r\n            assertThat(result).isEqualTo(expected);\r\n        } catch (IOException e) {\r\n            throw new AssertionError(e.getMessage(), e);\r\n        } finally {\r\n            DataBufferUtils.closeChannel(channel);\r\n        }\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteAsynchronousFileChannel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid readAndWriteAsynchronousFileChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    Path source = Paths.get(DataBufferUtilsTests.class.getResource(\"DataBufferUtilsTests.txt\").toURI());\r\n    Flux<DataBuffer> sourceFlux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(source, StandardOpenOption.READ), super.bufferFactory, 3);\r\n    Path destination = Files.createTempFile(\"DataBufferUtilsTests\", null);\r\n    AsynchronousFileChannel channel = AsynchronousFileChannel.open(destination, StandardOpenOption.WRITE);\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    DataBufferUtils.write(sourceFlux, channel).subscribe(DataBufferUtils::release, throwable -> {\r\n        throw new AssertionError(throwable.getMessage(), throwable);\r\n    }, () -> {\r\n        try {\r\n            String expected = String.join(\"\", Files.readAllLines(source));\r\n            String result = String.join(\"\", Files.readAllLines(destination));\r\n            assertThat(result).isEqualTo(expected);\r\n            latch.countDown();\r\n        } catch (IOException e) {\r\n            throw new AssertionError(e.getMessage(), e);\r\n        } finally {\r\n            DataBufferUtils.closeChannel(channel);\r\n        }\r\n    });\r\n    latch.await();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCount(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCount(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(Flux.just(stringBuffer(\"foo\"), stringBuffer(\"bar\")), 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"ba\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountCanceled(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCountCanceled(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).thenCancel().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountError(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCountError(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(Mono.defer(() -> Mono.just(stringBuffer(\"foo\"))), Mono.error(new RuntimeException()));\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).expectError(RuntimeException.class).verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountExact(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCountExact(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"), deferStringBuffer(\"baz\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(source, 6L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#skipUntilByteCount(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid skipUntilByteCount(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"), deferStringBuffer(\"baz\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.skipUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"r\")).consumeNextWith(stringConsumer(\"baz\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#skipUntilByteCountCancelled(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid skipUntilByteCountCancelled(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.skipUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"r\")).thenCancel().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#skipUntilByteCountErrorInFlux(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid skipUntilByteCountErrorInFlux(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    Flux<DataBuffer> flux = Flux.just(foo).concatWith(Mono.error(new RuntimeException()));\r\n    Flux<DataBuffer> result = DataBufferUtils.skipUntilByteCount(flux, 3L);\r\n    StepVerifier.create(result).expectError(RuntimeException.class).verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#skipUntilByteCountShouldSkipAll(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid skipUntilByteCountShouldSkipAll(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz);\r\n    Flux<DataBuffer> result = DataBufferUtils.skipUntilByteCount(flux, 9L);\r\n    StepVerifier.create(result).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#releaseConsumer(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid releaseConsumer(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz);\r\n    flux.subscribe(DataBufferUtils.releaseConsumer());\r\n    assertReleased(foo);\r\n    assertReleased(bar);\r\n    assertReleased(baz);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#assertReleased(DataBuffer)",
+    "entityType": "method",
+    "code": "private static void assertReleased(DataBuffer dataBuffer) {\r\n    if (dataBuffer instanceof NettyDataBuffer nettyDataBuffer) {\r\n        ByteBuf byteBuf = nettyDataBuffer.getNativeBuffer();\r\n        assertThat(byteBuf.refCnt()).isEqualTo(0);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#SPR16070(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid SPR16070(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    ReadableByteChannel channel = mock();\r\n    given(channel.read(any())).willAnswer(putByte('a')).willAnswer(putByte('b')).willAnswer(putByte('c')).willReturn(-1);\r\n    Flux<DataBuffer> read = DataBufferUtils.readByteChannel(() -> channel, super.bufferFactory, 1);\r\n    StepVerifier.create(read).consumeNextWith(stringConsumer(\"a\")).consumeNextWith(stringConsumer(\"b\")).consumeNextWith(stringConsumer(\"c\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#putByte(int)",
+    "entityType": "method",
+    "code": "private Answer<Integer> putByte(int b) {\r\n    return invocation -> {\r\n        ByteBuffer buffer = invocation.getArgument(0);\r\n        buffer.put((byte) b);\r\n        return 1;\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#join(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid join(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz);\r\n    Mono<DataBuffer> result = DataBufferUtils.join(flux);\r\n    StepVerifier.create(result).consumeNextWith(buf -> {\r\n        assertThat(buf.toString(StandardCharsets.UTF_8)).isEqualTo(\"foobarbaz\");\r\n        release(buf);\r\n    }).verifyComplete();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimit(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid joinWithLimit(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz);\r\n    Mono<DataBuffer> result = DataBufferUtils.join(flux, 8);\r\n    StepVerifier.create(result).verifyError(DataBufferLimitException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimitDoesNotOverRelease()",
+    "entityType": "method",
+    "code": "// gh-26060\r\n@Test\r\nvoid joinWithLimitDoesNotOverRelease() {\r\n    NettyDataBufferFactory bufferFactory = new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT);\r\n    byte[] bytes = \"foo-bar-baz\".getBytes(StandardCharsets.UTF_8);\r\n    NettyDataBuffer buffer = bufferFactory.allocateBuffer(bytes.length);\r\n    // should be at 2 now\r\n    buffer.getNativeBuffer().retain();\r\n    buffer.write(bytes);\r\n    Mono<DataBuffer> result = DataBufferUtils.join(Flux.just(buffer), 8);\r\n    StepVerifier.create(result).verifyError(DataBufferLimitException.class);\r\n    assertThat(buffer.getNativeBuffer().refCnt()).isEqualTo(1);\r\n    buffer.release();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinErrors(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid joinErrors(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar).concatWith(Flux.error(new RuntimeException()));\r\n    Mono<DataBuffer> result = DataBufferUtils.join(flux);\r\n    StepVerifier.create(result).expectError(RuntimeException.class).verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinCanceled(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid joinCanceled(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"), deferStringBuffer(\"baz\"));\r\n    Mono<DataBuffer> result = DataBufferUtils.join(source);\r\n    StepVerifier.create(result).thenCancel().verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid matcher(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    byte[] delims = \"ooba\".getBytes(StandardCharsets.UTF_8);\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delims);\r\n    int result = matcher.match(foo);\r\n    assertThat(result).isEqualTo(-1);\r\n    result = matcher.match(bar);\r\n    assertThat(result).isEqualTo(1);\r\n    release(foo, bar);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher2(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid matcher2(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foooobar\");\r\n    byte[] delims = \"oo\".getBytes(StandardCharsets.UTF_8);\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delims);\r\n    int endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(2);\r\n    foo.readPosition(endIndex + 1);\r\n    endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(4);\r\n    foo.readPosition(endIndex + 1);\r\n    endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(-1);\r\n    release(foo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher3(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid matcher3(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foooobar\");\r\n    byte[] delims = \"oo\".getBytes(StandardCharsets.UTF_8);\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delims);\r\n    int endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(2);\r\n    foo.readPosition(endIndex + 1);\r\n    endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(4);\r\n    foo.readPosition(endIndex + 1);\r\n    endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(-1);\r\n    release(foo);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#propagateContextByteChannel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid propagateContextByteChannel(DataBufferFactory bufferFactory) throws IOException {\r\n    Path path = Paths.get(this.resource.getURI());\r\n    try (SeekableByteChannel out = Files.newByteChannel(this.tempFile, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {\r\n        Flux<DataBuffer> result = DataBufferUtils.read(path, bufferFactory, 1024, StandardOpenOption.READ).transformDeferredContextual((f, ctx) -> {\r\n            assertThat(ctx.getOrDefault(\"key\", \"EMPTY\")).isEqualTo(\"TEST\");\r\n            return f;\r\n        }).transform(f -> DataBufferUtils.write(f, out)).transformDeferredContextual((f, ctx) -> {\r\n            assertThat(ctx.getOrDefault(\"key\", \"EMPTY\")).isEqualTo(\"TEST\");\r\n            return f;\r\n        }).contextWrite(Context.of(\"key\", \"TEST\"));\r\n        StepVerifier.create(result).consumeNextWith(DataBufferUtils::release).verifyComplete();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#propagateContextAsynchronousFileChannel(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid propagateContextAsynchronousFileChannel(DataBufferFactory bufferFactory) throws IOException {\r\n    Path path = Paths.get(this.resource.getURI());\r\n    try (AsynchronousFileChannel out = AsynchronousFileChannel.open(this.tempFile, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {\r\n        Flux<DataBuffer> result = DataBufferUtils.read(path, bufferFactory, 1024, StandardOpenOption.READ).transformDeferredContextual((f, ctx) -> {\r\n            assertThat(ctx.getOrDefault(\"key\", \"EMPTY\")).isEqualTo(\"TEST\");\r\n            return f;\r\n        }).transform(f -> DataBufferUtils.write(f, out)).transformDeferredContextual((f, ctx) -> {\r\n            assertThat(ctx.getOrDefault(\"key\", \"EMPTY\")).isEqualTo(\"TEST\");\r\n            return f;\r\n        }).contextWrite(Context.of(\"key\", \"TEST\"));\r\n        StepVerifier.create(result).consumeNextWith(DataBufferUtils::release).verifyComplete();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferUtilsTests#propagateContextPath(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid propagateContextPath(DataBufferFactory bufferFactory) throws IOException {\r\n    Path path = Paths.get(this.resource.getURI());\r\n    Path out = Files.createTempFile(\"data-buffer-utils-tests\", \".tmp\");\r\n    Flux<Void> result = DataBufferUtils.read(path, bufferFactory, 1024, StandardOpenOption.READ).transformDeferredContextual((f, ctx) -> {\r\n        assertThat(ctx.getOrDefault(\"key\", \"EMPTY\")).isEqualTo(\"TEST\");\r\n        return f;\r\n    }).transform(f -> DataBufferUtils.write(f, out)).transformDeferredContextual((f, ctx) -> {\r\n        assertThat(ctx.getOrDefault(\"key\", \"EMPTY\")).isEqualTo(\"TEST\");\r\n        return f;\r\n    }).contextWrite(Context.of(\"key\", \"TEST\"));\r\n    StepVerifier.create(result).verifyComplete();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ZeroDemandSubscriber",
+    "entityType": "class",
+    "code": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    // Just subscribe without requesting\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ZeroDemandSubscriber#hookOnSubscribe(Subscription)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    // Just subscribe without requesting\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferTests",
+    "entityType": "class",
+    "code": "private final DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();\n// gh-30967\r\n@Test\r\nvoid getNativeBuffer() {\r\n    DefaultDataBuffer dataBuffer = this.bufferFactory.allocateBuffer(256);\r\n    dataBuffer.write(\"0123456789\", StandardCharsets.UTF_8);\r\n    byte[] result = new byte[7];\r\n    dataBuffer.read(result);\r\n    assertThat(result).isEqualTo(\"0123456\".getBytes(StandardCharsets.UTF_8));\r\n    ByteBuffer nativeBuffer = dataBuffer.getNativeBuffer();\r\n    assertThat(nativeBuffer.position()).isEqualTo(7);\r\n    assertThat(dataBuffer.readPosition()).isEqualTo(7);\r\n    assertThat(nativeBuffer.limit()).isEqualTo(10);\r\n    assertThat(dataBuffer.writePosition()).isEqualTo(10);\r\n    assertThat(nativeBuffer.capacity()).isEqualTo(256);\r\n    assertThat(dataBuffer.capacity()).isEqualTo(256);\r\n    release(dataBuffer);\r\n}",
+    "comment": "\n * Tests for {@link DefaultDataBuffer}.\n *\n * @author Injae Kim\n * @since 6.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferTests#getNativeBuffer()",
+    "entityType": "method",
+    "code": "// gh-30967\r\n@Test\r\nvoid getNativeBuffer() {\r\n    DefaultDataBuffer dataBuffer = this.bufferFactory.allocateBuffer(256);\r\n    dataBuffer.write(\"0123456789\", StandardCharsets.UTF_8);\r\n    byte[] result = new byte[7];\r\n    dataBuffer.read(result);\r\n    assertThat(result).isEqualTo(\"0123456\".getBytes(StandardCharsets.UTF_8));\r\n    ByteBuffer nativeBuffer = dataBuffer.getNativeBuffer();\r\n    assertThat(nativeBuffer.position()).isEqualTo(7);\r\n    assertThat(dataBuffer.readPosition()).isEqualTo(7);\r\n    assertThat(nativeBuffer.limit()).isEqualTo(10);\r\n    assertThat(dataBuffer.writePosition()).isEqualTo(10);\r\n    assertThat(nativeBuffer.capacity()).isEqualTo(256);\r\n    assertThat(dataBuffer.capacity()).isEqualTo(256);\r\n    release(dataBuffer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferTests",
+    "entityType": "class",
+    "code": "private final JettyDataBufferFactory dataBufferFactory = new JettyDataBufferFactory();\n@Test\r\nvoid releaseRetainChunk() {\r\n    ByteBuffer buffer = ByteBuffer.allocate(3);\r\n    Content.Chunk mockChunk = mock();\r\n    given(mockChunk.getByteBuffer()).willReturn(buffer);\r\n    given(mockChunk.release()).willReturn(false, false, true);\r\n    JettyDataBuffer dataBuffer = this.dataBufferFactory.wrap(mockChunk);\r\n    dataBuffer.retain();\r\n    dataBuffer.retain();\r\n    assertThat(dataBuffer.release()).isFalse();\r\n    assertThat(dataBuffer.release()).isFalse();\r\n    assertThat(dataBuffer.release()).isTrue();\r\n    assertThatIllegalStateException().isThrownBy(dataBuffer::release);\r\n    then(mockChunk).should(times(3)).retain();\r\n    then(mockChunk).should(times(3)).release();\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferTests#releaseRetainChunk()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid releaseRetainChunk() {\r\n    ByteBuffer buffer = ByteBuffer.allocate(3);\r\n    Content.Chunk mockChunk = mock();\r\n    given(mockChunk.getByteBuffer()).willReturn(buffer);\r\n    given(mockChunk.release()).willReturn(false, false, true);\r\n    JettyDataBuffer dataBuffer = this.dataBufferFactory.wrap(mockChunk);\r\n    dataBuffer.retain();\r\n    dataBuffer.retain();\r\n    assertThat(dataBuffer.release()).isFalse();\r\n    assertThat(dataBuffer.release()).isFalse();\r\n    assertThat(dataBuffer.release()).isTrue();\r\n    assertThatIllegalStateException().isThrownBy(dataBuffer::release);\r\n    then(mockChunk).should(times(3)).retain();\r\n    then(mockChunk).should(times(3)).release();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LeakAwareDataBufferFactoryTests",
+    "entityType": "class",
+    "code": "private final LeakAwareDataBufferFactory bufferFactory = new LeakAwareDataBufferFactory();\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid leak() {\r\n    DataBuffer dataBuffer = this.bufferFactory.allocateBuffer();\r\n    try {\r\n        assertThatExceptionOfType(AssertionError.class).isThrownBy(this.bufferFactory::checkForLeaks);\r\n    } finally {\r\n        release(dataBuffer);\r\n    }\r\n}\n@Test\r\nvoid noLeak() {\r\n    DataBuffer dataBuffer = this.bufferFactory.allocateBuffer(256);\r\n    release(dataBuffer);\r\n    this.bufferFactory.checkForLeaks();\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LeakAwareDataBufferFactoryTests#leak()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid leak() {\r\n    DataBuffer dataBuffer = this.bufferFactory.allocateBuffer();\r\n    try {\r\n        assertThatExceptionOfType(AssertionError.class).isThrownBy(this.bufferFactory::checkForLeaks);\r\n    } finally {\r\n        release(dataBuffer);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LeakAwareDataBufferFactoryTests#noLeak()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid noLeak() {\r\n    DataBuffer dataBuffer = this.bufferFactory.allocateBuffer(256);\r\n    release(dataBuffer);\r\n    this.bufferFactory.checkForLeaks();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferListTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid limitEnforced() {\r\n    LimitedDataBufferList list = new LimitedDataBufferList(5);\r\n    assertThatThrownBy(() -> list.add(toDataBuffer(\"123456\"))).isInstanceOf(DataBufferLimitException.class);\r\n    assertThat(list).isEmpty();\r\n}\n@Test\r\nvoid limitIgnored() {\r\n    new LimitedDataBufferList(-1).add(toDataBuffer(\"123456\"));\r\n}\n@Test\r\nvoid clearResetsCount() {\r\n    LimitedDataBufferList list = new LimitedDataBufferList(5);\r\n    list.add(toDataBuffer(\"12345\"));\r\n    list.clear();\r\n    list.add(toDataBuffer(\"12345\"));\r\n}\nprivate static DataBuffer toDataBuffer(String value) {\r\n    byte[] bytes = value.getBytes(StandardCharsets.UTF_8);\r\n    return DefaultDataBufferFactory.sharedInstance.wrap(bytes);\r\n}",
+    "comment": "\n * Tests for {@link LimitedDataBufferList}.\n *\n * @author Rossen Stoyanchev\n * @since 5.1.11\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferListTests#limitEnforced()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid limitEnforced() {\r\n    LimitedDataBufferList list = new LimitedDataBufferList(5);\r\n    assertThatThrownBy(() -> list.add(toDataBuffer(\"123456\"))).isInstanceOf(DataBufferLimitException.class);\r\n    assertThat(list).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferListTests#limitIgnored()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid limitIgnored() {\r\n    new LimitedDataBufferList(-1).add(toDataBuffer(\"123456\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferListTests#clearResetsCount()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid clearResetsCount() {\r\n    LimitedDataBufferList list = new LimitedDataBufferList(5);\r\n    list.add(toDataBuffer(\"12345\"));\r\n    list.clear();\r\n    list.add(toDataBuffer(\"12345\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.LimitedDataBufferListTests#toDataBuffer(String)",
+    "entityType": "method",
+    "code": "private static DataBuffer toDataBuffer(String value) {\r\n    byte[] bytes = value.getBytes(StandardCharsets.UTF_8);\r\n    return DefaultDataBufferFactory.sharedInstance.wrap(bytes);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledDataBufferTests",
+    "entityType": "class",
+    "code": "@Nested\r\nclass UnpooledByteBufAllocatorWithPreferDirectTrueTests implements PooledDataBufferTestingTrait {\r\n\r\n    @Override\r\n    public DataBufferFactory createDataBufferFactory() {\r\n        return new NettyDataBufferFactory(new UnpooledByteBufAllocator(true));\r\n    }\r\n}\n@Nested\r\nclass UnpooledByteBufAllocatorWithPreferDirectFalseTests implements PooledDataBufferTestingTrait {\r\n\r\n    @Override\r\n    public DataBufferFactory createDataBufferFactory() {\r\n        return new NettyDataBufferFactory(new UnpooledByteBufAllocator(true));\r\n    }\r\n}\n@Nested\r\nclass PooledByteBufAllocatorWithPreferDirectTrueTests implements PooledDataBufferTestingTrait {\r\n\r\n    @Override\r\n    public DataBufferFactory createDataBufferFactory() {\r\n        return new NettyDataBufferFactory(new PooledByteBufAllocator(true));\r\n    }\r\n}\n@Nested\r\nclass PooledByteBufAllocatorWithPreferDirectFalseTests implements PooledDataBufferTestingTrait {\r\n\r\n    @Override\r\n    public DataBufferFactory createDataBufferFactory() {\r\n        return new NettyDataBufferFactory(new PooledByteBufAllocator(true));\r\n    }\r\n}\n@Nested\r\nclass Jetty implements PooledDataBufferTestingTrait {\r\n\r\n    @Override\r\n    public DataBufferFactory createDataBufferFactory() {\r\n        return new JettyDataBufferFactory();\r\n    }\r\n}\ninterface PooledDataBufferTestingTrait {\r\n\r\n    DataBufferFactory createDataBufferFactory();\r\n\r\n    default PooledDataBuffer createDataBuffer(int capacity) {\r\n        return (PooledDataBuffer) createDataBufferFactory().allocateBuffer(capacity);\r\n    }\r\n\r\n    @Test\r\n    default void retainAndRelease() {\r\n        PooledDataBuffer buffer = createDataBuffer(1);\r\n        buffer.write((byte) 'a');\r\n        assertThat(buffer.isAllocated()).isTrue();\r\n        buffer.retain();\r\n        assertThat(buffer.isAllocated()).isTrue();\r\n        assertThat(buffer.release()).isFalse();\r\n        assertThat(buffer.isAllocated()).isTrue();\r\n        assertThat(buffer.release()).isTrue();\r\n        assertThat(buffer.isAllocated()).isFalse();\r\n    }\r\n\r\n    @Test\r\n    default void tooManyReleases() {\r\n        PooledDataBuffer buffer = createDataBuffer(1);\r\n        buffer.write((byte) 'a');\r\n        buffer.release();\r\n        assertThatIllegalStateException().isThrownBy(buffer::release);\r\n    }\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.UnpooledByteBufAllocatorWithPreferDirectTrueTests",
+    "entityType": "class",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new UnpooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.UnpooledByteBufAllocatorWithPreferDirectTrueTests#createDataBufferFactory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new UnpooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.UnpooledByteBufAllocatorWithPreferDirectFalseTests",
+    "entityType": "class",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new UnpooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.UnpooledByteBufAllocatorWithPreferDirectFalseTests#createDataBufferFactory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new UnpooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledByteBufAllocatorWithPreferDirectTrueTests",
+    "entityType": "class",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new PooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledByteBufAllocatorWithPreferDirectTrueTests#createDataBufferFactory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new PooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledByteBufAllocatorWithPreferDirectFalseTests",
+    "entityType": "class",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new PooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledByteBufAllocatorWithPreferDirectFalseTests#createDataBufferFactory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new NettyDataBufferFactory(new PooledByteBufAllocator(true));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Jetty",
+    "entityType": "class",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new JettyDataBufferFactory();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Jetty#createDataBufferFactory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory createDataBufferFactory() {\r\n    return new JettyDataBufferFactory();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledDataBufferTestingTrait",
+    "entityType": "class",
+    "code": "DataBufferFactory createDataBufferFactory();\ndefault PooledDataBuffer createDataBuffer(int capacity) {\r\n    return (PooledDataBuffer) createDataBufferFactory().allocateBuffer(capacity);\r\n}\n@Test\r\ndefault void retainAndRelease() {\r\n    PooledDataBuffer buffer = createDataBuffer(1);\r\n    buffer.write((byte) 'a');\r\n    assertThat(buffer.isAllocated()).isTrue();\r\n    buffer.retain();\r\n    assertThat(buffer.isAllocated()).isTrue();\r\n    assertThat(buffer.release()).isFalse();\r\n    assertThat(buffer.isAllocated()).isTrue();\r\n    assertThat(buffer.release()).isTrue();\r\n    assertThat(buffer.isAllocated()).isFalse();\r\n}\n@Test\r\ndefault void tooManyReleases() {\r\n    PooledDataBuffer buffer = createDataBuffer(1);\r\n    buffer.write((byte) 'a');\r\n    buffer.release();\r\n    assertThatIllegalStateException().isThrownBy(buffer::release);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledDataBufferTestingTrait#createDataBufferFactory()",
+    "entityType": "method",
+    "code": "DataBufferFactory createDataBufferFactory();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledDataBufferTestingTrait#createDataBuffer(int)",
+    "entityType": "method",
+    "code": "default PooledDataBuffer createDataBuffer(int capacity) {\r\n    return (PooledDataBuffer) createDataBufferFactory().allocateBuffer(capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledDataBufferTestingTrait#retainAndRelease()",
+    "entityType": "method",
+    "code": "@Test\r\ndefault void retainAndRelease() {\r\n    PooledDataBuffer buffer = createDataBuffer(1);\r\n    buffer.write((byte) 'a');\r\n    assertThat(buffer.isAllocated()).isTrue();\r\n    buffer.retain();\r\n    assertThat(buffer.isAllocated()).isTrue();\r\n    assertThat(buffer.release()).isFalse();\r\n    assertThat(buffer.isAllocated()).isTrue();\r\n    assertThat(buffer.release()).isTrue();\r\n    assertThat(buffer.isAllocated()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.PooledDataBufferTestingTrait#tooManyReleases()",
+    "entityType": "method",
+    "code": "@Test\r\ndefault void tooManyReleases() {\r\n    PooledDataBuffer buffer = createDataBuffer(1);\r\n    buffer.write((byte) 'a');\r\n    buffer.release();\r\n    assertThatIllegalStateException().isThrownBy(buffer::release);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.support.DataBufferTestUtilsTests",
+    "entityType": "class",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid dumpBytes(DataBufferFactory bufferFactory) {\r\n    this.bufferFactory = bufferFactory;\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(4);\r\n    byte[] source = { 'a', 'b', 'c', 'd' };\r\n    buffer.write(source);\r\n    byte[] result = DataBufferTestUtils.dumpBytes(buffer);\r\n    assertThat(result).isEqualTo(source);\r\n    release(buffer);\r\n}\n@ParameterizedDataBufferAllocatingTest\r\nvoid dumpString(DataBufferFactory bufferFactory) {\r\n    this.bufferFactory = bufferFactory;\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(4);\r\n    String source = \"abcd\";\r\n    buffer.write(source.getBytes(StandardCharsets.UTF_8));\r\n    String result = buffer.toString(StandardCharsets.UTF_8);\r\n    release(buffer);\r\n    assertThat(result).isEqualTo(source);\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.support.DataBufferTestUtilsTests#dumpBytes(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid dumpBytes(DataBufferFactory bufferFactory) {\r\n    this.bufferFactory = bufferFactory;\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(4);\r\n    byte[] source = { 'a', 'b', 'c', 'd' };\r\n    buffer.write(source);\r\n    byte[] result = DataBufferTestUtils.dumpBytes(buffer);\r\n    assertThat(result).isEqualTo(source);\r\n    release(buffer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.support.DataBufferTestUtilsTests#dumpString(DataBufferFactory)",
+    "entityType": "method",
+    "code": "@ParameterizedDataBufferAllocatingTest\r\nvoid dumpString(DataBufferFactory bufferFactory) {\r\n    this.bufferFactory = bufferFactory;\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(4);\r\n    String source = \"abcd\";\r\n    buffer.write(source.getBytes(StandardCharsets.UTF_8));\r\n    String result = buffer.toString(StandardCharsets.UTF_8);\r\n    release(buffer);\r\n    assertThat(result).isEqualTo(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.ClassPathResourceTests",
+    "entityType": "class",
+    "code": "private static final String PACKAGE_PATH = \"org/springframework/core/io\";\nprivate static final String NONEXISTENT_RESOURCE_NAME = \"nonexistent.xml\";\nprivate static final String ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE = PACKAGE_PATH + '/' + NONEXISTENT_RESOURCE_NAME;\nprivate static final String ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH = '/' + ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE;\n@Nested\r\nclass EqualsAndHashCode {\r\n\r\n    @Test\r\n    void equalsAndHashCode() {\r\n        Resource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\");\r\n        Resource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\");\r\n        Resource resource3 = new ClassPathResource(\"org/springframework/core/\").createRelative(\"../core/io/./Resource.class\");\r\n        assertThat(resource2).isEqualTo(resource1);\r\n        assertThat(resource3).isEqualTo(resource1);\r\n        assertThat(resource2).hasSameHashCodeAs(resource1);\r\n        assertThat(resource3).hasSameHashCodeAs(resource1);\r\n        // Check whether equal/hashCode works in a HashSet.\r\n        HashSet<Resource> resources = new HashSet<>();\r\n        resources.add(resource1);\r\n        resources.add(resource2);\r\n        assertThat(resources).hasSize(1);\r\n    }\r\n\r\n    @Test\r\n    void resourcesWithDifferentInputPathsAreEqual() {\r\n        Resource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n        ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\", getClass().getClassLoader());\r\n        assertThat(resource2).isEqualTo(resource1);\r\n    }\r\n\r\n    @Test\r\n    void resourcesWithEquivalentAbsolutePathsFromTheSameClassLoaderAreEqual() {\r\n        ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n        ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n        assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n        assertThat(resource1).isEqualTo(resource2);\r\n        assertThat(resource2).isEqualTo(resource1);\r\n    }\r\n\r\n    @Test\r\n    void resourcesWithEquivalentAbsolutePathsHaveSameHashCode() {\r\n        ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n        ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n        assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n        assertThat(resource1).hasSameHashCodeAs(resource2);\r\n    }\r\n\r\n    @Test\r\n    void resourcesWithEquivalentAbsolutePathsFromDifferentClassLoadersAreNotEqual() {\r\n        class SimpleThrowawayClassLoader extends OverridingClassLoader {\r\n\r\n            SimpleThrowawayClassLoader(ClassLoader parent) {\r\n                super(parent);\r\n            }\r\n        }\r\n        ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n        ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", new SimpleThrowawayClassLoader(getClass().getClassLoader()));\r\n        assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n        assertThat(resource1).isNotEqualTo(resource2);\r\n        assertThat(resource2).isNotEqualTo(resource1);\r\n    }\r\n\r\n    @Test\r\n    void relativeResourcesAreEqual() throws Exception {\r\n        Resource resource = new ClassPathResource(\"dir/\");\r\n        Resource relative = resource.createRelative(\"subdir\");\r\n        assertThat(relative).isEqualTo(new ClassPathResource(\"dir/subdir\"));\r\n    }\r\n}\n@Nested\r\nclass GetInputStream {\r\n\r\n    @Test\r\n    void withStringConstructorRaisesExceptionForNonexistentResource() {\r\n        assertExceptionContainsAbsolutePath(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE));\r\n    }\r\n\r\n    @Test\r\n    void withClassLoaderConstructorRaisesExceptionForNonexistentResource() {\r\n        assertExceptionContainsAbsolutePath(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE, getClass().getClassLoader()));\r\n    }\r\n\r\n    @Test\r\n    void withClassLiteralConstructorRaisesExceptionForNonexistentRelativeResource() {\r\n        assertExceptionContainsAbsolutePath(new ClassPathResource(NONEXISTENT_RESOURCE_NAME, getClass()));\r\n    }\r\n\r\n    @Test\r\n    void withClassLiteralConstructorRaisesExceptionForNonexistentAbsoluteResource() {\r\n        assertExceptionContainsAbsolutePath(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE, getClass()));\r\n    }\r\n\r\n    private static void assertExceptionContainsAbsolutePath(ClassPathResource resource) {\r\n        assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getInputStream).withMessageContaining(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE);\r\n    }\r\n}\n@Nested\r\nclass GetDescription {\r\n\r\n    @Test\r\n    void withStringConstructor() {\r\n        assertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE));\r\n    }\r\n\r\n    @Test\r\n    void withStringConstructorAndLeadingSlash() {\r\n        assertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH));\r\n    }\r\n\r\n    @Test\r\n    void withClassLiteralConstructor() {\r\n        assertDescription(new ClassPathResource(NONEXISTENT_RESOURCE_NAME, getClass()));\r\n    }\r\n\r\n    @Test\r\n    void withClassLiteralConstructorAndLeadingSlash() {\r\n        assertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH, getClass()));\r\n    }\r\n\r\n    @Test\r\n    void withClassLoaderConstructor() {\r\n        assertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE, getClass().getClassLoader()));\r\n    }\r\n\r\n    @Test\r\n    void withClassLoaderConstructorAndLeadingSlash() {\r\n        assertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH, getClass().getClassLoader()));\r\n    }\r\n\r\n    private static void assertDescription(ClassPathResource resource) {\r\n        assertThat(resource.getDescription()).isEqualTo(\"class path resource [%s]\", ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE);\r\n    }\r\n}\n@Nested\r\nclass GetPath {\r\n\r\n    @Test\r\n    void dropsLeadingSlashForClassLoaderAccess() {\r\n        assertThat(new ClassPathResource(\"/test.html\").getPath()).isEqualTo(\"test.html\");\r\n        assertThat(((ClassPathResource) new ClassPathResource(\"\").createRelative(\"/test.html\")).getPath()).isEqualTo(\"test.html\");\r\n    }\r\n\r\n    @Test\r\n    void convertsToAbsolutePathForClassRelativeAccess() {\r\n        assertThat(new ClassPathResource(\"/test.html\", getClass()).getPath()).isEqualTo(\"test.html\");\r\n        assertThat(new ClassPathResource(\"\", getClass()).getPath()).isEqualTo(PACKAGE_PATH + \"/\");\r\n        assertThat(((ClassPathResource) new ClassPathResource(\"\", getClass()).createRelative(\"/test.html\")).getPath()).isEqualTo(\"test.html\");\r\n        assertThat(((ClassPathResource) new ClassPathResource(\"\", getClass()).createRelative(\"test.html\")).getPath()).isEqualTo(PACKAGE_PATH + \"/test.html\");\r\n    }\r\n}\n@Test\r\nvoid directoryNotReadable() throws Exception {\r\n    Resource fileDir = new ClassPathResource(\"example/type\");\r\n    assertThat(fileDir.getURL()).asString().startsWith(\"file:\");\r\n    assertThat(fileDir.exists()).isTrue();\r\n    assertThat(fileDir.isReadable()).isFalse();\r\n    Resource jarDir = new ClassPathResource(\"reactor/core\");\r\n    assertThat(jarDir.getURL()).asString().startsWith(\"jar:\");\r\n    assertThat(jarDir.exists()).isTrue();\r\n    assertThat(jarDir.isReadable()).isFalse();\r\n}\n@Test\r\n// Since the JAR file created in this test cannot be deleted on MS windows,\r\n// we use `cleanup = NEVER`.\r\nvoid emptyFileReadable(@TempDir(cleanup = NEVER) File tempDir) throws IOException {\r\n    File file = new File(tempDir, \"empty.txt\");\r\n    assertThat(file.createNewFile()).isTrue();\r\n    assertThat(file.isFile()).isTrue();\r\n    try (URLClassLoader fileClassLoader = new URLClassLoader(new URL[] { tempDir.toURI().toURL() })) {\r\n        Resource emptyFile = new ClassPathResource(\"empty.txt\", fileClassLoader);\r\n        assertThat(emptyFile.exists()).isTrue();\r\n        assertThat(emptyFile.isReadable()).isTrue();\r\n        assertThat(emptyFile.contentLength()).isEqualTo(0);\r\n        file.delete();\r\n    }\r\n    File jarFile = new File(tempDir, \"test.jar\");\r\n    try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(jarFile))) {\r\n        zipOut.putNextEntry(new ZipEntry(\"empty2.txt\"));\r\n        zipOut.closeEntry();\r\n    }\r\n    assertThat(jarFile.isFile()).isTrue();\r\n    try (URLClassLoader jarClassLoader = new URLClassLoader(new URL[] { jarFile.toURI().toURL() })) {\r\n        Resource emptyJarEntry = new ClassPathResource(\"empty2.txt\", jarClassLoader);\r\n        assertThat(emptyJarEntry.exists()).isTrue();\r\n        assertThat(emptyJarEntry.isReadable()).isTrue();\r\n        assertThat(emptyJarEntry.contentLength()).isEqualTo(0);\r\n    }\r\n    jarFile.deleteOnExit();\r\n    tempDir.deleteOnExit();\r\n}",
+    "comment": "\n * Tests for {@link ClassPathResource}.\n *\n * <p>These also originally served as regression tests for the bugs described in\n * SPR-6888 and SPR-9413.\n *\n * @author Chris Beams\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.ClassPathResourceTests#directoryNotReadable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid directoryNotReadable() throws Exception {\r\n    Resource fileDir = new ClassPathResource(\"example/type\");\r\n    assertThat(fileDir.getURL()).asString().startsWith(\"file:\");\r\n    assertThat(fileDir.exists()).isTrue();\r\n    assertThat(fileDir.isReadable()).isFalse();\r\n    Resource jarDir = new ClassPathResource(\"reactor/core\");\r\n    assertThat(jarDir.getURL()).asString().startsWith(\"jar:\");\r\n    assertThat(jarDir.exists()).isTrue();\r\n    assertThat(jarDir.isReadable()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.ClassPathResourceTests#emptyFileReadable(File)",
+    "entityType": "method",
+    "code": "@Test\r\n// Since the JAR file created in this test cannot be deleted on MS windows,\r\n// we use `cleanup = NEVER`.\r\nvoid emptyFileReadable(@TempDir(cleanup = NEVER) File tempDir) throws IOException {\r\n    File file = new File(tempDir, \"empty.txt\");\r\n    assertThat(file.createNewFile()).isTrue();\r\n    assertThat(file.isFile()).isTrue();\r\n    try (URLClassLoader fileClassLoader = new URLClassLoader(new URL[] { tempDir.toURI().toURL() })) {\r\n        Resource emptyFile = new ClassPathResource(\"empty.txt\", fileClassLoader);\r\n        assertThat(emptyFile.exists()).isTrue();\r\n        assertThat(emptyFile.isReadable()).isTrue();\r\n        assertThat(emptyFile.contentLength()).isEqualTo(0);\r\n        file.delete();\r\n    }\r\n    File jarFile = new File(tempDir, \"test.jar\");\r\n    try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(jarFile))) {\r\n        zipOut.putNextEntry(new ZipEntry(\"empty2.txt\"));\r\n        zipOut.closeEntry();\r\n    }\r\n    assertThat(jarFile.isFile()).isTrue();\r\n    try (URLClassLoader jarClassLoader = new URLClassLoader(new URL[] { jarFile.toURI().toURL() })) {\r\n        Resource emptyJarEntry = new ClassPathResource(\"empty2.txt\", jarClassLoader);\r\n        assertThat(emptyJarEntry.exists()).isTrue();\r\n        assertThat(emptyJarEntry.isReadable()).isTrue();\r\n        assertThat(emptyJarEntry.contentLength()).isEqualTo(0);\r\n    }\r\n    jarFile.deleteOnExit();\r\n    tempDir.deleteOnExit();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode",
+    "entityType": "class",
+    "code": "@Test\r\nvoid equalsAndHashCode() {\r\n    Resource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\");\r\n    Resource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\");\r\n    Resource resource3 = new ClassPathResource(\"org/springframework/core/\").createRelative(\"../core/io/./Resource.class\");\r\n    assertThat(resource2).isEqualTo(resource1);\r\n    assertThat(resource3).isEqualTo(resource1);\r\n    assertThat(resource2).hasSameHashCodeAs(resource1);\r\n    assertThat(resource3).hasSameHashCodeAs(resource1);\r\n    // Check whether equal/hashCode works in a HashSet.\r\n    HashSet<Resource> resources = new HashSet<>();\r\n    resources.add(resource1);\r\n    resources.add(resource2);\r\n    assertThat(resources).hasSize(1);\r\n}\n@Test\r\nvoid resourcesWithDifferentInputPathsAreEqual() {\r\n    Resource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\", getClass().getClassLoader());\r\n    assertThat(resource2).isEqualTo(resource1);\r\n}\n@Test\r\nvoid resourcesWithEquivalentAbsolutePathsFromTheSameClassLoaderAreEqual() {\r\n    ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n    assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n    assertThat(resource1).isEqualTo(resource2);\r\n    assertThat(resource2).isEqualTo(resource1);\r\n}\n@Test\r\nvoid resourcesWithEquivalentAbsolutePathsHaveSameHashCode() {\r\n    ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n    assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n    assertThat(resource1).hasSameHashCodeAs(resource2);\r\n}\n@Test\r\nvoid resourcesWithEquivalentAbsolutePathsFromDifferentClassLoadersAreNotEqual() {\r\n    class SimpleThrowawayClassLoader extends OverridingClassLoader {\r\n\r\n        SimpleThrowawayClassLoader(ClassLoader parent) {\r\n            super(parent);\r\n        }\r\n    }\r\n    ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", new SimpleThrowawayClassLoader(getClass().getClassLoader()));\r\n    assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n    assertThat(resource1).isNotEqualTo(resource2);\r\n    assertThat(resource2).isNotEqualTo(resource1);\r\n}\n@Test\r\nvoid relativeResourcesAreEqual() throws Exception {\r\n    Resource resource = new ClassPathResource(\"dir/\");\r\n    Resource relative = resource.createRelative(\"subdir\");\r\n    assertThat(relative).isEqualTo(new ClassPathResource(\"dir/subdir\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode#equalsAndHashCode()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsAndHashCode() {\r\n    Resource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\");\r\n    Resource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\");\r\n    Resource resource3 = new ClassPathResource(\"org/springframework/core/\").createRelative(\"../core/io/./Resource.class\");\r\n    assertThat(resource2).isEqualTo(resource1);\r\n    assertThat(resource3).isEqualTo(resource1);\r\n    assertThat(resource2).hasSameHashCodeAs(resource1);\r\n    assertThat(resource3).hasSameHashCodeAs(resource1);\r\n    // Check whether equal/hashCode works in a HashSet.\r\n    HashSet<Resource> resources = new HashSet<>();\r\n    resources.add(resource1);\r\n    resources.add(resource2);\r\n    assertThat(resources).hasSize(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode#resourcesWithDifferentInputPathsAreEqual()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcesWithDifferentInputPathsAreEqual() {\r\n    Resource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\", getClass().getClassLoader());\r\n    assertThat(resource2).isEqualTo(resource1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode#resourcesWithEquivalentAbsolutePathsFromTheSameClassLoaderAreEqual()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcesWithEquivalentAbsolutePathsFromTheSameClassLoaderAreEqual() {\r\n    ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n    assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n    assertThat(resource1).isEqualTo(resource2);\r\n    assertThat(resource2).isEqualTo(resource1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode#resourcesWithEquivalentAbsolutePathsHaveSameHashCode()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcesWithEquivalentAbsolutePathsHaveSameHashCode() {\r\n    ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\r\n    assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n    assertThat(resource1).hasSameHashCodeAs(resource2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode#resourcesWithEquivalentAbsolutePathsFromDifferentClassLoadersAreNotEqual()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resourcesWithEquivalentAbsolutePathsFromDifferentClassLoadersAreNotEqual() {\r\n    class SimpleThrowawayClassLoader extends OverridingClassLoader {\r\n\r\n        SimpleThrowawayClassLoader(ClassLoader parent) {\r\n            super(parent);\r\n        }\r\n    }\r\n    ClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\r\n    ClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", new SimpleThrowawayClassLoader(getClass().getClassLoader()));\r\n    assertThat(resource1.getPath()).isEqualTo(resource2.getPath());\r\n    assertThat(resource1).isNotEqualTo(resource2);\r\n    assertThat(resource2).isNotEqualTo(resource1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.EqualsAndHashCode#relativeResourcesAreEqual()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid relativeResourcesAreEqual() throws Exception {\r\n    Resource resource = new ClassPathResource(\"dir/\");\r\n    Resource relative = resource.createRelative(\"subdir\");\r\n    assertThat(relative).isEqualTo(new ClassPathResource(\"dir/subdir\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.SimpleThrowawayClassLoader",
+    "entityType": "class",
+    "code": "SimpleThrowawayClassLoader(ClassLoader parent) {\r\n    super(parent);\r\n}",
+    "comment": ""
+  }
+]

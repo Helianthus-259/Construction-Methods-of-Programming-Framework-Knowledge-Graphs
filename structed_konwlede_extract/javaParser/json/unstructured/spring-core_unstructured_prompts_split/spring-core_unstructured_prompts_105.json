@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#firstRunOfAcceptsOnlyFirstRun()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid firstRunOfAcceptsOnlyFirstRun() {\r\n    List<MergedAnnotation<TestAnnotation>> filtered = MergedAnnotations.from(WithMultipleTestAnnotation.class).stream(TestAnnotation.class).filter(MergedAnnotationPredicates.firstRunOf(this::firstCharOfValue)).toList();\r\n    assertThat(filtered.stream().map(annotation -> annotation.getString(\"value\"))).containsExactly(\"a1\", \"a2\", \"a3\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#firstRunOfWhenValueExtractorIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid firstRunOfWhenValueExtractorIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationPredicates.firstRunOf(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#uniqueAcceptsUniquely()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid uniqueAcceptsUniquely() {\r\n    List<MergedAnnotation<TestAnnotation>> filtered = MergedAnnotations.from(WithMultipleTestAnnotation.class).stream(TestAnnotation.class).filter(MergedAnnotationPredicates.unique(this::firstCharOfValue)).toList();\r\n    assertThat(filtered.stream().map(annotation -> annotation.getString(\"value\"))).containsExactly(\"a1\", \"b1\", \"c1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#uniqueWhenKeyExtractorIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid uniqueWhenKeyExtractorIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationPredicates.unique(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#firstCharOfValue(MergedAnnotation<TestAnnotation>)",
+    "entityType": "method",
+    "code": "private char firstCharOfValue(MergedAnnotation<TestAnnotation> annotation) {\r\n    return annotation.getString(\"value\").charAt(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithTestAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithMultipleTestAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid ofWhenDirectAnnotationsIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationsCollection.of(null)).withMessage(\"Annotations must not be null\");\r\n}\n@Test\r\nvoid ofWhenEmptyReturnsSharedNoneInstance() {\r\n    MergedAnnotations annotations = MergedAnnotationsCollection.of(new ArrayList<>());\r\n    assertThat(annotations).isSameAs(TypeMappedAnnotations.NONE);\r\n}\n@Test\r\nvoid createWhenAnnotationIsNotDirectlyPresentThrowsException() {\r\n    MergedAnnotation<?> annotation = mock();\r\n    given(annotation.isDirectlyPresent()).willReturn(false);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationsCollection.of(Collections.singleton(annotation))).withMessage(\"Annotation must be directly present\");\r\n}\n@Test\r\nvoid createWhenAnnotationAggregateIndexIsNotZeroThrowsException() {\r\n    MergedAnnotation<?> annotation = mock();\r\n    given(annotation.isDirectlyPresent()).willReturn(true);\r\n    given(annotation.getAggregateIndex()).willReturn(1);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationsCollection.of(Collections.singleton(annotation))).withMessage(\"Annotation must have aggregate index of zero\");\r\n}\n@Test\r\nvoid iterateIteratesInCorrectOrder() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    List<Class<?>> types = new ArrayList<>();\r\n    for (MergedAnnotation<?> annotation : annotations) {\r\n        types.add(annotation.getType());\r\n    }\r\n    assertThat(types).containsExactly(Direct.class, Simple.class, Meta1.class, Meta2.class, Meta11.class);\r\n}\n@Test\r\nvoid spliteratorIteratesInCorrectOrder() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    Spliterator<MergedAnnotation<Annotation>> spliterator = annotations.spliterator();\r\n    List<Class<?>> types = new ArrayList<>();\r\n    spliterator.forEachRemaining(annotation -> types.add(annotation.getType()));\r\n    assertThat(types).containsExactly(Direct.class, Simple.class, Meta1.class, Meta2.class, Meta11.class);\r\n}\n@Test\r\nvoid spliteratorEstimatesSize() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    Spliterator<MergedAnnotation<Annotation>> spliterator = annotations.spliterator();\r\n    assertThat(spliterator.estimateSize()).isEqualTo(5);\r\n    spliterator.tryAdvance(annotation -> assertThat(annotation.getType()).isEqualTo(Direct.class));\r\n    assertThat(spliterator.estimateSize()).isEqualTo(4);\r\n}\n@Test\r\nvoid isPresentWhenDirectlyPresentReturnsTrue() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isPresent(Direct.class)).isTrue();\r\n    assertThat(annotations.isPresent(Direct.class.getName())).isTrue();\r\n}\n@Test\r\nvoid isPresentWhenMetaPresentReturnsTrue() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isPresent(Meta11.class)).isTrue();\r\n    assertThat(annotations.isPresent(Meta11.class.getName())).isTrue();\r\n}\n@Test\r\nvoid isPresentWhenNotPresentReturnsFalse() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isPresent(Missing.class)).isFalse();\r\n    assertThat(annotations.isPresent(Missing.class.getName())).isFalse();\r\n}\n@Test\r\nvoid isDirectlyPresentWhenDirectlyPresentReturnsTrue() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isDirectlyPresent(Direct.class)).isTrue();\r\n    assertThat(annotations.isDirectlyPresent(Direct.class.getName())).isTrue();\r\n}\n@Test\r\nvoid isDirectlyPresentWhenMetaPresentReturnsFalse() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isDirectlyPresent(Meta11.class)).isFalse();\r\n    assertThat(annotations.isDirectlyPresent(Meta11.class.getName())).isFalse();\r\n}\n@Test\r\nvoid isDirectlyPresentWhenNotPresentReturnsFalse() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isDirectlyPresent(Missing.class)).isFalse();\r\n    assertThat(annotations.isDirectlyPresent(Missing.class.getName())).isFalse();\r\n}\n@Test\r\nvoid getReturnsAppropriateAnnotation() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    assertThat(annotations.get(MultiRouteTarget.class).getString(MergedAnnotation.VALUE)).isEqualTo(\"12\");\r\n    assertThat(annotations.get(MultiRouteTarget.class.getName()).getString(MergedAnnotation.VALUE)).isEqualTo(\"12\");\r\n}\n@Test\r\nvoid getWhenNotPresentReturnsMissing() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.get(Missing.class)).isEqualTo(MergedAnnotation.missing());\r\n}\n@Test\r\nvoid getWithPredicateReturnsOnlyMatching() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    assertThat(annotations.get(MultiRouteTarget.class, annotation -> annotation.getDistance() >= 3).getString(MergedAnnotation.VALUE)).isEqualTo(\"111\");\r\n}\n@Test\r\nvoid getWithSelectorReturnsSelected() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    MergedAnnotationSelector<MultiRouteTarget> deepest = (existing, candidate) -> candidate.getDistance() > existing.getDistance() ? candidate : existing;\r\n    assertThat(annotations.get(MultiRouteTarget.class, null, deepest).getString(MergedAnnotation.VALUE)).isEqualTo(\"111\");\r\n}\n@Test\r\nvoid streamStreamsInCorrectOrder() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    List<Class<?>> types = new ArrayList<>();\r\n    annotations.stream().forEach(annotation -> types.add(annotation.getType()));\r\n    assertThat(types).containsExactly(Direct.class, Simple.class, Meta1.class, Meta2.class, Meta11.class);\r\n}\n@Test\r\nvoid streamWithTypeStreamsInCorrectOrder() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    List<String> values = new ArrayList<>();\r\n    annotations.stream(MultiRouteTarget.class).forEach(annotation -> values.add(annotation.getString(MergedAnnotation.VALUE)));\r\n    assertThat(values).containsExactly(\"12\", \"111\");\r\n}\n@Test\r\nvoid getMetaWhenRootHasAttributeValuesShouldAliasAttributes() {\r\n    MergedAnnotation<Aliased> root = MergedAnnotation.of(null, null, Aliased.class, Collections.singletonMap(\"testAlias\", \"test\"));\r\n    MergedAnnotations annotations = MergedAnnotationsCollection.of(Collections.singleton(root));\r\n    MergedAnnotation<AliasTarget> metaAnnotation = annotations.get(AliasTarget.class);\r\n    assertThat(metaAnnotation.getString(\"test\")).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid getMetaWhenRootHasNoAttributeValuesShouldAliasAttributes() {\r\n    MergedAnnotation<Aliased> root = MergedAnnotation.of(null, null, Aliased.class, Collections.emptyMap());\r\n    MergedAnnotations annotations = MergedAnnotationsCollection.of(Collections.singleton(root));\r\n    MergedAnnotation<AliasTarget> metaAnnotation = annotations.get(AliasTarget.class);\r\n    assertThat(root.getString(\"testAlias\")).isEqualTo(\"newdefault\");\r\n    assertThat(metaAnnotation.getString(\"test\")).isEqualTo(\"newdefault\");\r\n}\nprivate MergedAnnotations getDirectAndSimple() {\r\n    List<MergedAnnotation<?>> list = new ArrayList<>();\r\n    list.add(MergedAnnotation.of(null, null, Direct.class, Collections.emptyMap()));\r\n    list.add(MergedAnnotation.of(null, null, Simple.class, Collections.emptyMap()));\r\n    return MergedAnnotationsCollection.of(list);\r\n}\nprivate MergedAnnotations getMultiRoute1() {\r\n    List<MergedAnnotation<?>> list = new ArrayList<>();\r\n    list.add(MergedAnnotation.of(null, null, MultiRoute1.class, Collections.emptyMap()));\r\n    return MergedAnnotationsCollection.of(list);\r\n}\n@Meta1\r\n@Meta2\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Direct {\r\n}\n@Meta11\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Meta1 {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Meta2 {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Meta11 {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Simple {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Missing {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MultiRouteTarget {\r\n\r\n    String value();\r\n}\n@MultiRoute11\r\n@MultiRoute12\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MultiRoute1 {\r\n}\n@MultiRoute111\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MultiRoute11 {\r\n}\n@MultiRouteTarget(\"12\")\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MultiRoute12 {\r\n}\n@MultiRouteTarget(\"111\")\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MultiRoute111 {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasTarget {\r\n\r\n    String test() default \"default\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AliasTarget\r\n@interface Aliased {\r\n\r\n    @AliasFor(annotation = AliasTarget.class, attribute = \"test\")\r\n    String testAlias() default \"newdefault\";\r\n}",
+    "comment": "\n * Tests for {@link MergedAnnotationsCollection}.\n *\n * @author Phillip Webb\n "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#ofWhenDirectAnnotationsIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofWhenDirectAnnotationsIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationsCollection.of(null)).withMessage(\"Annotations must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#ofWhenEmptyReturnsSharedNoneInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofWhenEmptyReturnsSharedNoneInstance() {\r\n    MergedAnnotations annotations = MergedAnnotationsCollection.of(new ArrayList<>());\r\n    assertThat(annotations).isSameAs(TypeMappedAnnotations.NONE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#createWhenAnnotationIsNotDirectlyPresentThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWhenAnnotationIsNotDirectlyPresentThrowsException() {\r\n    MergedAnnotation<?> annotation = mock();\r\n    given(annotation.isDirectlyPresent()).willReturn(false);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationsCollection.of(Collections.singleton(annotation))).withMessage(\"Annotation must be directly present\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#createWhenAnnotationAggregateIndexIsNotZeroThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWhenAnnotationAggregateIndexIsNotZeroThrowsException() {\r\n    MergedAnnotation<?> annotation = mock();\r\n    given(annotation.isDirectlyPresent()).willReturn(true);\r\n    given(annotation.getAggregateIndex()).willReturn(1);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MergedAnnotationsCollection.of(Collections.singleton(annotation))).withMessage(\"Annotation must have aggregate index of zero\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#iterateIteratesInCorrectOrder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid iterateIteratesInCorrectOrder() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    List<Class<?>> types = new ArrayList<>();\r\n    for (MergedAnnotation<?> annotation : annotations) {\r\n        types.add(annotation.getType());\r\n    }\r\n    assertThat(types).containsExactly(Direct.class, Simple.class, Meta1.class, Meta2.class, Meta11.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#spliteratorIteratesInCorrectOrder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid spliteratorIteratesInCorrectOrder() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    Spliterator<MergedAnnotation<Annotation>> spliterator = annotations.spliterator();\r\n    List<Class<?>> types = new ArrayList<>();\r\n    spliterator.forEachRemaining(annotation -> types.add(annotation.getType()));\r\n    assertThat(types).containsExactly(Direct.class, Simple.class, Meta1.class, Meta2.class, Meta11.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#spliteratorEstimatesSize()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid spliteratorEstimatesSize() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    Spliterator<MergedAnnotation<Annotation>> spliterator = annotations.spliterator();\r\n    assertThat(spliterator.estimateSize()).isEqualTo(5);\r\n    spliterator.tryAdvance(annotation -> assertThat(annotation.getType()).isEqualTo(Direct.class));\r\n    assertThat(spliterator.estimateSize()).isEqualTo(4);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#isPresentWhenDirectlyPresentReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isPresentWhenDirectlyPresentReturnsTrue() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isPresent(Direct.class)).isTrue();\r\n    assertThat(annotations.isPresent(Direct.class.getName())).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#isPresentWhenMetaPresentReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isPresentWhenMetaPresentReturnsTrue() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isPresent(Meta11.class)).isTrue();\r\n    assertThat(annotations.isPresent(Meta11.class.getName())).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#isPresentWhenNotPresentReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isPresentWhenNotPresentReturnsFalse() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isPresent(Missing.class)).isFalse();\r\n    assertThat(annotations.isPresent(Missing.class.getName())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#isDirectlyPresentWhenDirectlyPresentReturnsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isDirectlyPresentWhenDirectlyPresentReturnsTrue() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isDirectlyPresent(Direct.class)).isTrue();\r\n    assertThat(annotations.isDirectlyPresent(Direct.class.getName())).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#isDirectlyPresentWhenMetaPresentReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isDirectlyPresentWhenMetaPresentReturnsFalse() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isDirectlyPresent(Meta11.class)).isFalse();\r\n    assertThat(annotations.isDirectlyPresent(Meta11.class.getName())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#isDirectlyPresentWhenNotPresentReturnsFalse()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isDirectlyPresentWhenNotPresentReturnsFalse() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.isDirectlyPresent(Missing.class)).isFalse();\r\n    assertThat(annotations.isDirectlyPresent(Missing.class.getName())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getReturnsAppropriateAnnotation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getReturnsAppropriateAnnotation() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    assertThat(annotations.get(MultiRouteTarget.class).getString(MergedAnnotation.VALUE)).isEqualTo(\"12\");\r\n    assertThat(annotations.get(MultiRouteTarget.class.getName()).getString(MergedAnnotation.VALUE)).isEqualTo(\"12\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getWhenNotPresentReturnsMissing()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWhenNotPresentReturnsMissing() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    assertThat(annotations.get(Missing.class)).isEqualTo(MergedAnnotation.missing());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getWithPredicateReturnsOnlyMatching()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWithPredicateReturnsOnlyMatching() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    assertThat(annotations.get(MultiRouteTarget.class, annotation -> annotation.getDistance() >= 3).getString(MergedAnnotation.VALUE)).isEqualTo(\"111\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getWithSelectorReturnsSelected()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getWithSelectorReturnsSelected() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    MergedAnnotationSelector<MultiRouteTarget> deepest = (existing, candidate) -> candidate.getDistance() > existing.getDistance() ? candidate : existing;\r\n    assertThat(annotations.get(MultiRouteTarget.class, null, deepest).getString(MergedAnnotation.VALUE)).isEqualTo(\"111\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#streamStreamsInCorrectOrder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid streamStreamsInCorrectOrder() {\r\n    MergedAnnotations annotations = getDirectAndSimple();\r\n    List<Class<?>> types = new ArrayList<>();\r\n    annotations.stream().forEach(annotation -> types.add(annotation.getType()));\r\n    assertThat(types).containsExactly(Direct.class, Simple.class, Meta1.class, Meta2.class, Meta11.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#streamWithTypeStreamsInCorrectOrder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid streamWithTypeStreamsInCorrectOrder() {\r\n    MergedAnnotations annotations = getMultiRoute1();\r\n    List<String> values = new ArrayList<>();\r\n    annotations.stream(MultiRouteTarget.class).forEach(annotation -> values.add(annotation.getString(MergedAnnotation.VALUE)));\r\n    assertThat(values).containsExactly(\"12\", \"111\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getMetaWhenRootHasAttributeValuesShouldAliasAttributes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMetaWhenRootHasAttributeValuesShouldAliasAttributes() {\r\n    MergedAnnotation<Aliased> root = MergedAnnotation.of(null, null, Aliased.class, Collections.singletonMap(\"testAlias\", \"test\"));\r\n    MergedAnnotations annotations = MergedAnnotationsCollection.of(Collections.singleton(root));\r\n    MergedAnnotation<AliasTarget> metaAnnotation = annotations.get(AliasTarget.class);\r\n    assertThat(metaAnnotation.getString(\"test\")).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getMetaWhenRootHasNoAttributeValuesShouldAliasAttributes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMetaWhenRootHasNoAttributeValuesShouldAliasAttributes() {\r\n    MergedAnnotation<Aliased> root = MergedAnnotation.of(null, null, Aliased.class, Collections.emptyMap());\r\n    MergedAnnotations annotations = MergedAnnotationsCollection.of(Collections.singleton(root));\r\n    MergedAnnotation<AliasTarget> metaAnnotation = annotations.get(AliasTarget.class);\r\n    assertThat(root.getString(\"testAlias\")).isEqualTo(\"newdefault\");\r\n    assertThat(metaAnnotation.getString(\"test\")).isEqualTo(\"newdefault\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getDirectAndSimple()",
+    "entityType": "method",
+    "code": "private MergedAnnotations getDirectAndSimple() {\r\n    List<MergedAnnotation<?>> list = new ArrayList<>();\r\n    list.add(MergedAnnotation.of(null, null, Direct.class, Collections.emptyMap()));\r\n    list.add(MergedAnnotation.of(null, null, Simple.class, Collections.emptyMap()));\r\n    return MergedAnnotationsCollection.of(list);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsCollectionTests#getMultiRoute1()",
+    "entityType": "method",
+    "code": "private MergedAnnotations getMultiRoute1() {\r\n    List<MergedAnnotation<?>> list = new ArrayList<>();\r\n    list.add(MergedAnnotation.of(null, null, MultiRoute1.class, Collections.emptyMap()));\r\n    return MergedAnnotationsCollection.of(list);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests",
+    "entityType": "class",
+    "code": "// See SPR-13486\r\n@Test\r\nvoid inheritedStrategyMultipleComposedAnnotationsOnClass() {\r\n    assertInheritedStrategyBehavior(MultipleComposedCachesClass.class);\r\n}\n@Test\r\nvoid inheritedStrategyMultipleInheritedComposedAnnotationsOnSuperclass() {\r\n    assertInheritedStrategyBehavior(SubMultipleComposedCachesClass.class);\r\n}\n@Test\r\nvoid inheritedStrategyMultipleNoninheritedComposedAnnotationsOnClass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(MultipleNoninheritedComposedCachesClass.class, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"noninheritedCache1\", \"noninheritedCache2\");\r\n}\n@Test\r\nvoid inheritedStrategyMultipleNoninheritedComposedAnnotationsOnSuperclass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(SubMultipleNoninheritedComposedCachesClass.class, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(annotations.stream(Cacheable.class)).isEmpty();\r\n}\n@Test\r\nvoid inheritedStrategyComposedPlusLocalAnnotationsOnClass() {\r\n    assertInheritedStrategyBehavior(ComposedPlusLocalCachesClass.class);\r\n}\n@Test\r\nvoid inheritedStrategyMultipleComposedAnnotationsOnInterface() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(MultipleComposedCachesOnInterfaceClass.class, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(annotations.stream(Cacheable.class)).isEmpty();\r\n}\n@Test\r\nvoid inheritedStrategyMultipleComposedAnnotationsOnMethod() throws Exception {\r\n    assertInheritedStrategyBehavior(getClass().getDeclaredMethod(\"multipleComposedCachesMethod\"));\r\n}\n@Test\r\nvoid inheritedStrategyComposedPlusLocalAnnotationsOnMethod() throws Exception {\r\n    assertInheritedStrategyBehavior(getClass().getDeclaredMethod(\"composedPlusLocalCachesMethod\"));\r\n}\nprivate void assertInheritedStrategyBehavior(AnnotatedElement element) {\r\n    MergedAnnotations annotations = MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(stream(annotations, \"key\")).containsExactly(\"fooKey\", \"barKey\");\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"fooCache\", \"barCache\");\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnClass() {\r\n    assertTypeHierarchyStrategyBehavior(MultipleComposedCachesClass.class);\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleInheritedComposedAnnotationsOnSuperclass() {\r\n    assertTypeHierarchyStrategyBehavior(SubMultipleComposedCachesClass.class);\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleNoninheritedComposedAnnotationsOnClass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(MultipleNoninheritedComposedCachesClass.class, SearchStrategy.TYPE_HIERARCHY);\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"noninheritedCache1\", \"noninheritedCache2\");\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleNoninheritedComposedAnnotationsOnSuperclass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(SubMultipleNoninheritedComposedCachesClass.class, SearchStrategy.TYPE_HIERARCHY);\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"noninheritedCache1\", \"noninheritedCache2\");\r\n}\n@Test\r\nvoid typeHierarchyStrategyComposedPlusLocalAnnotationsOnClass() {\r\n    assertTypeHierarchyStrategyBehavior(ComposedPlusLocalCachesClass.class);\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnInterface() {\r\n    assertTypeHierarchyStrategyBehavior(MultipleComposedCachesOnInterfaceClass.class);\r\n}\n@Test\r\nvoid typeHierarchyStrategyComposedCacheOnInterfaceAndLocalCacheOnClass() {\r\n    assertTypeHierarchyStrategyBehavior(ComposedCacheOnInterfaceAndLocalCacheClass.class);\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnMethod() throws Exception {\r\n    assertTypeHierarchyStrategyBehavior(getClass().getDeclaredMethod(\"multipleComposedCachesMethod\"));\r\n}\n@Test\r\nvoid typeHierarchyStrategyComposedPlusLocalAnnotationsOnMethod() throws Exception {\r\n    assertTypeHierarchyStrategyBehavior(getClass().getDeclaredMethod(\"composedPlusLocalCachesMethod\"));\r\n}\n@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnBridgeMethod() {\r\n    assertTypeHierarchyStrategyBehavior(getBridgeMethod());\r\n}\nprivate void assertTypeHierarchyStrategyBehavior(AnnotatedElement element) {\r\n    MergedAnnotations annotations = MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY);\r\n    assertThat(stream(annotations, \"key\")).containsExactly(\"fooKey\", \"barKey\");\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"fooCache\", \"barCache\");\r\n}\nMethod getBridgeMethod() {\r\n    List<Method> methods = new ArrayList<>();\r\n    ReflectionUtils.doWithLocalMethods(StringGenericParameter.class, method -> {\r\n        if (\"getFor\".equals(method.getName())) {\r\n            methods.add(method);\r\n        }\r\n    });\r\n    Method bridgeMethod = methods.get(0).getReturnType() == Object.class ? methods.get(0) : methods.get(1);\r\n    assertThat(bridgeMethod.isBridge()).isTrue();\r\n    return bridgeMethod;\r\n}\nprivate Stream<String> stream(MergedAnnotations annotations, String attributeName) {\r\n    return annotations.stream(Cacheable.class).map(annotation -> annotation.getString(attributeName));\r\n}\n// @formatter:off\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface Cacheable {\r\n\r\n    @AliasFor(\"cacheName\")\r\n    String value() default \"\";\r\n\r\n    @AliasFor(\"value\")\r\n    String cacheName() default \"\";\r\n\r\n    String key() default \"\";\r\n}\n@Cacheable(\"fooCache\")\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface FooCache {\r\n\r\n    @AliasFor(annotation = Cacheable.class)\r\n    String key() default \"\";\r\n}\n@Cacheable(\"barCache\")\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface BarCache {\r\n\r\n    @AliasFor(annotation = Cacheable.class)\r\n    String key();\r\n}\n@Cacheable(\"noninheritedCache1\")\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface NoninheritedCache1 {\r\n\r\n    @AliasFor(annotation = Cacheable.class)\r\n    String key() default \"\";\r\n}\n@Cacheable(\"noninheritedCache2\")\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface NoninheritedCache2 {\r\n\r\n    @AliasFor(annotation = Cacheable.class)\r\n    String key() default \"\";\r\n}\n@FooCache(key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate static class MultipleComposedCachesClass {\r\n}\nprivate static class SubMultipleComposedCachesClass extends MultipleComposedCachesClass {\r\n}\n@NoninheritedCache1\r\n@NoninheritedCache2\r\nprivate static class MultipleNoninheritedComposedCachesClass {\r\n}\nprivate static class SubMultipleNoninheritedComposedCachesClass extends MultipleNoninheritedComposedCachesClass {\r\n}\n@Cacheable(cacheName = \"fooCache\", key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate static class ComposedPlusLocalCachesClass {\r\n}\n@FooCache(key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate interface MultipleComposedCachesInterface {\r\n}\nprivate static class MultipleComposedCachesOnInterfaceClass implements MultipleComposedCachesInterface {\r\n}\n@BarCache(key = \"barKey\")\r\nprivate interface ComposedCacheInterface {\r\n}\n@Cacheable(cacheName = \"fooCache\", key = \"fooKey\")\r\nprivate static class ComposedCacheOnInterfaceAndLocalCacheClass implements ComposedCacheInterface {\r\n}\n@FooCache(key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate void multipleComposedCachesMethod() ;\n@Cacheable(cacheName = \"fooCache\", key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate void composedPlusLocalCachesMethod() ;\npublic interface GenericParameter<T> {\r\n\r\n    T getFor(Class<T> cls);\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate static class StringGenericParameter implements GenericParameter<String> {\r\n\r\n    @FooCache(key = \"fooKey\")\r\n    @BarCache(key = \"barKey\")\r\n    @Override\r\n    public String getFor(Class<String> cls) {\r\n        return \"foo\";\r\n    }\r\n\r\n    public String getFor(Integer integer) {\r\n        return \"foo\";\r\n    }\r\n}",
+    "comment": "\n * Unit tests that verify support for finding multiple composed annotations on a single\n * annotated element.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyMultipleComposedAnnotationsOnClass()",
+    "entityType": "method",
+    "code": "// See SPR-13486\r\n@Test\r\nvoid inheritedStrategyMultipleComposedAnnotationsOnClass() {\r\n    assertInheritedStrategyBehavior(MultipleComposedCachesClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyMultipleInheritedComposedAnnotationsOnSuperclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyMultipleInheritedComposedAnnotationsOnSuperclass() {\r\n    assertInheritedStrategyBehavior(SubMultipleComposedCachesClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyMultipleNoninheritedComposedAnnotationsOnClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyMultipleNoninheritedComposedAnnotationsOnClass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(MultipleNoninheritedComposedCachesClass.class, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"noninheritedCache1\", \"noninheritedCache2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyMultipleNoninheritedComposedAnnotationsOnSuperclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyMultipleNoninheritedComposedAnnotationsOnSuperclass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(SubMultipleNoninheritedComposedCachesClass.class, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(annotations.stream(Cacheable.class)).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyComposedPlusLocalAnnotationsOnClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyComposedPlusLocalAnnotationsOnClass() {\r\n    assertInheritedStrategyBehavior(ComposedPlusLocalCachesClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyMultipleComposedAnnotationsOnInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyMultipleComposedAnnotationsOnInterface() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(MultipleComposedCachesOnInterfaceClass.class, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(annotations.stream(Cacheable.class)).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyMultipleComposedAnnotationsOnMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyMultipleComposedAnnotationsOnMethod() throws Exception {\r\n    assertInheritedStrategyBehavior(getClass().getDeclaredMethod(\"multipleComposedCachesMethod\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#inheritedStrategyComposedPlusLocalAnnotationsOnMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedStrategyComposedPlusLocalAnnotationsOnMethod() throws Exception {\r\n    assertInheritedStrategyBehavior(getClass().getDeclaredMethod(\"composedPlusLocalCachesMethod\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#assertInheritedStrategyBehavior(AnnotatedElement)",
+    "entityType": "method",
+    "code": "private void assertInheritedStrategyBehavior(AnnotatedElement element) {\r\n    MergedAnnotations annotations = MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS);\r\n    assertThat(stream(annotations, \"key\")).containsExactly(\"fooKey\", \"barKey\");\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"fooCache\", \"barCache\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleComposedAnnotationsOnClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnClass() {\r\n    assertTypeHierarchyStrategyBehavior(MultipleComposedCachesClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleInheritedComposedAnnotationsOnSuperclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleInheritedComposedAnnotationsOnSuperclass() {\r\n    assertTypeHierarchyStrategyBehavior(SubMultipleComposedCachesClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleNoninheritedComposedAnnotationsOnClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleNoninheritedComposedAnnotationsOnClass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(MultipleNoninheritedComposedCachesClass.class, SearchStrategy.TYPE_HIERARCHY);\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"noninheritedCache1\", \"noninheritedCache2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleNoninheritedComposedAnnotationsOnSuperclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleNoninheritedComposedAnnotationsOnSuperclass() {\r\n    MergedAnnotations annotations = MergedAnnotations.from(SubMultipleNoninheritedComposedCachesClass.class, SearchStrategy.TYPE_HIERARCHY);\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"noninheritedCache1\", \"noninheritedCache2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyComposedPlusLocalAnnotationsOnClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyComposedPlusLocalAnnotationsOnClass() {\r\n    assertTypeHierarchyStrategyBehavior(ComposedPlusLocalCachesClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleComposedAnnotationsOnInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnInterface() {\r\n    assertTypeHierarchyStrategyBehavior(MultipleComposedCachesOnInterfaceClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyComposedCacheOnInterfaceAndLocalCacheOnClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyComposedCacheOnInterfaceAndLocalCacheOnClass() {\r\n    assertTypeHierarchyStrategyBehavior(ComposedCacheOnInterfaceAndLocalCacheClass.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleComposedAnnotationsOnMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnMethod() throws Exception {\r\n    assertTypeHierarchyStrategyBehavior(getClass().getDeclaredMethod(\"multipleComposedCachesMethod\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyComposedPlusLocalAnnotationsOnMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyComposedPlusLocalAnnotationsOnMethod() throws Exception {\r\n    assertTypeHierarchyStrategyBehavior(getClass().getDeclaredMethod(\"composedPlusLocalCachesMethod\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#typeHierarchyStrategyMultipleComposedAnnotationsOnBridgeMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyMultipleComposedAnnotationsOnBridgeMethod() {\r\n    assertTypeHierarchyStrategyBehavior(getBridgeMethod());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#assertTypeHierarchyStrategyBehavior(AnnotatedElement)",
+    "entityType": "method",
+    "code": "private void assertTypeHierarchyStrategyBehavior(AnnotatedElement element) {\r\n    MergedAnnotations annotations = MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY);\r\n    assertThat(stream(annotations, \"key\")).containsExactly(\"fooKey\", \"barKey\");\r\n    assertThat(stream(annotations, \"value\")).containsExactly(\"fooCache\", \"barCache\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#getBridgeMethod()",
+    "entityType": "method",
+    "code": "Method getBridgeMethod() {\r\n    List<Method> methods = new ArrayList<>();\r\n    ReflectionUtils.doWithLocalMethods(StringGenericParameter.class, method -> {\r\n        if (\"getFor\".equals(method.getName())) {\r\n            methods.add(method);\r\n        }\r\n    });\r\n    Method bridgeMethod = methods.get(0).getReturnType() == Object.class ? methods.get(0) : methods.get(1);\r\n    assertThat(bridgeMethod.isBridge()).isTrue();\r\n    return bridgeMethod;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#stream(MergedAnnotations,String)",
+    "entityType": "method",
+    "code": "private Stream<String> stream(MergedAnnotations annotations, String attributeName) {\r\n    return annotations.stream(Cacheable.class).map(annotation -> annotation.getString(attributeName));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#multipleComposedCachesMethod()",
+    "entityType": "method",
+    "code": "@FooCache(key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate void multipleComposedCachesMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsComposedOnSingleAnnotatedElementTests#composedPlusLocalCachesMethod()",
+    "entityType": "method",
+    "code": "@Cacheable(cacheName = \"fooCache\", key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\nprivate void composedPlusLocalCachesMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleComposedCachesClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubMultipleComposedCachesClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleNoninheritedComposedCachesClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubMultipleNoninheritedComposedCachesClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComposedPlusLocalCachesClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleComposedCachesInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleComposedCachesOnInterfaceClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComposedCacheInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComposedCacheOnInterfaceAndLocalCacheClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericParameter",
+    "entityType": "class",
+    "code": "T getFor(Class<T> cls);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericParameter#getFor(Class<T>)",
+    "entityType": "method",
+    "code": "T getFor(Class<T> cls);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StringGenericParameter",
+    "entityType": "class",
+    "code": "@FooCache(key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\n@Override\r\npublic String getFor(Class<String> cls) {\r\n    return \"foo\";\r\n}\npublic String getFor(Integer integer) {\r\n    return \"foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StringGenericParameter#getFor(Class<String>)",
+    "entityType": "method",
+    "code": "@FooCache(key = \"fooKey\")\r\n@BarCache(key = \"barKey\")\r\n@Override\r\npublic String getFor(Class<String> cls) {\r\n    return \"foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StringGenericParameter#getFor(Integer)",
+    "entityType": "method",
+    "code": "public String getFor(Integer integer) {\r\n    return \"foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests",
+    "entityType": "class",
+    "code": "// See SPR-13973\r\n@Test\r\nvoid inheritedAnnotationsWhenNonRepeatableThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> getAnnotations(null, NonRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::nonRepeatableRequirements);\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenContainerMissingValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerMissingValueAttribute.class, InvalidRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::missingValueAttributeRequirements);\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenWhenNonArrayValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithNonArrayValueAttribute.class, InvalidRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::nonArrayValueAttributeRequirements);\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenWrongComponentTypeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithArrayValueAttributeButWrongComponentType.class, InvalidRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::wrongComponentTypeRequirements);\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, RepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenWhenOnSuperclassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, SubRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenComposedOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, ComposedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenComposedMixedWithContainerOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, ComposedRepeatableMixedWithContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenComposedContainerForRepeatableOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, ComposedContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenNoninheritedComposedRepeatableOnClassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, INHERITED_ANNOTATIONS, NoninheritedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(Noninherited::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid inheritedAnnotationsWhenNoninheritedComposedRepeatableOnSuperclassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, INHERITED_ANNOTATIONS, SubNoninheritedRepeatableClass.class);\r\n    assertThat(annotations).isEmpty();\r\n}\n@Test\r\nvoid typeHierarchyWhenNonRepeatableThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> getAnnotations(null, NonRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::nonRepeatableRequirements);\r\n}\n@Test\r\nvoid typeHierarchyWhenContainerMissingValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerMissingValueAttribute.class, InvalidRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::missingValueAttributeRequirements);\r\n}\n@Test\r\nvoid typeHierarchyWhenWhenNonArrayValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithNonArrayValueAttribute.class, InvalidRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::nonArrayValueAttributeRequirements);\r\n}\n@Test\r\nvoid typeHierarchyWhenWrongComponentTypeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithArrayValueAttributeButWrongComponentType.class, InvalidRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::wrongComponentTypeRequirements);\r\n}\n@Test\r\nvoid typeHierarchyWhenOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, RepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyWhenOnSuperclassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, SubRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyWhenComposedOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, ComposedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyWhenComposedMixedWithContainerOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, ComposedRepeatableMixedWithContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyWhenComposedContainerForRepeatableOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, ComposedContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyAnnotationsWhenNoninheritedComposedRepeatableOnClassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, TYPE_HIERARCHY, NoninheritedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(Noninherited::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyAnnotationsWhenNoninheritedComposedRepeatableOnSuperclassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, TYPE_HIERARCHY, SubNoninheritedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(Noninherited::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\n@Test\r\nvoid typeHierarchyAnnotationsWithLocalComposedAnnotationWhoseRepeatableMetaAnnotationsAreFiltered() {\r\n    Class<WithRepeatedMetaAnnotationsClass> element = WithRepeatedMetaAnnotationsClass.class;\r\n    SearchStrategy searchStrategy = TYPE_HIERARCHY;\r\n    AnnotationFilter annotationFilter = PeteRepeat.class.getName()::equals;\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, searchStrategy, element, annotationFilter);\r\n    assertThat(annotations).isEmpty();\r\n    MergedAnnotations mergedAnnotations = MergedAnnotations.from(element, searchStrategy, RepeatableContainers.standardRepeatables(), annotationFilter);\r\n    Stream<Class<? extends Annotation>> annotationTypes = mergedAnnotations.stream().map(MergedAnnotation::synthesize).map(Annotation::annotationType);\r\n    assertThat(annotationTypes).containsExactly(WithRepeatedMetaAnnotations.class, Noninherited.class, Noninherited.class);\r\n}\n// gh-32731\r\n@Test\r\nvoid searchFindsRepeatableContainerAnnotationAndRepeatedAnnotations() {\r\n    Class<?> clazz = StandardRepeatablesWithContainerWithMultipleAttributesTestCase.class;\r\n    // NO RepeatableContainers\r\n    MergedAnnotations mergedAnnotations = MergedAnnotations.from(clazz, TYPE_HIERARCHY, RepeatableContainers.none());\r\n    ContainerWithMultipleAttributes container = mergedAnnotations.get(ContainerWithMultipleAttributes.class).synthesize(MergedAnnotation::isPresent).orElse(null);\r\n    assertThat(container).as(\"container\").isNotNull();\r\n    assertThat(container.name()).isEqualTo(\"enigma\");\r\n    RepeatableWithContainerWithMultipleAttributes[] repeatedAnnotations = container.value();\r\n    assertThat(Arrays.stream(repeatedAnnotations).map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"A\", \"B\");\r\n    Set<RepeatableWithContainerWithMultipleAttributes> set = mergedAnnotations.stream(RepeatableWithContainerWithMultipleAttributes.class).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n    // Only finds the locally declared repeated annotation.\r\n    assertThat(set.stream().map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"C\");\r\n    // Standard RepeatableContainers\r\n    mergedAnnotations = MergedAnnotations.from(clazz, TYPE_HIERARCHY, RepeatableContainers.standardRepeatables());\r\n    container = mergedAnnotations.get(ContainerWithMultipleAttributes.class).synthesize(MergedAnnotation::isPresent).orElse(null);\r\n    assertThat(container).as(\"container\").isNotNull();\r\n    assertThat(container.name()).isEqualTo(\"enigma\");\r\n    repeatedAnnotations = container.value();\r\n    assertThat(Arrays.stream(repeatedAnnotations).map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"A\", \"B\");\r\n    set = mergedAnnotations.stream(RepeatableWithContainerWithMultipleAttributes.class).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n    // Finds the locally declared repeated annotation plus the 2 in the container.\r\n    assertThat(set.stream().map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}\nprivate <A extends Annotation> Set<A> getAnnotations(Class<? extends Annotation> container, Class<A> repeatable, SearchStrategy searchStrategy, AnnotatedElement element) {\r\n    return getAnnotations(container, repeatable, searchStrategy, element, AnnotationFilter.PLAIN);\r\n}\nprivate <A extends Annotation> Set<A> getAnnotations(Class<? extends Annotation> container, Class<A> repeatable, SearchStrategy searchStrategy, AnnotatedElement element, AnnotationFilter annotationFilter) {\r\n    RepeatableContainers containers = RepeatableContainers.of(repeatable, container);\r\n    MergedAnnotations annotations = MergedAnnotations.from(element, searchStrategy, containers, annotationFilter);\r\n    return annotations.stream(repeatable).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n}\nprivate void nonRepeatableRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Annotation type must be a repeatable annotation\").hasMessageContaining(\"failed to resolve container type for\", NonRepeatable.class.getName());\r\n}\nprivate void missingValueAttributeRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Invalid declaration of container type\").hasMessageContaining(ContainerMissingValueAttribute.class.getName(), \"for repeatable annotation\", InvalidRepeatable.class.getName()).hasCauseInstanceOf(NoSuchMethodException.class);\r\n}\nprivate void nonArrayValueAttributeRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Container type\").hasMessageContaining(ContainerWithNonArrayValueAttribute.class.getName(), \"must declare a 'value' attribute for an array of type\", InvalidRepeatable.class.getName());\r\n}\nprivate void wrongComponentTypeRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Container type\").hasMessageContaining(ContainerWithArrayValueAttributeButWrongComponentType.class.getName(), \"must declare a 'value' attribute for an array of type\", InvalidRepeatable.class.getName());\r\n}\nprivate static ThrowableTypeAssert<AnnotationConfigurationException> assertThatAnnotationConfigurationException() {\r\n    return assertThatExceptionOfType(AnnotationConfigurationException.class);\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface NonRepeatable {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ContainerMissingValueAttribute {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ContainerWithNonArrayValueAttribute {\r\n\r\n    InvalidRepeatable value();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ContainerWithArrayValueAttributeButWrongComponentType {\r\n\r\n    String[] value();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface InvalidRepeatable {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface PeteRepeats {\r\n\r\n    PeteRepeat[] value();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@Repeatable(PeteRepeats.class)\r\n@interface PeteRepeat {\r\n\r\n    String value();\r\n}\n@PeteRepeat(\"shadowed\")\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface ForPetesSake {\r\n\r\n    @AliasFor(annotation = PeteRepeat.class)\r\n    String value();\r\n}\n@PeteRepeat(\"shadowed\")\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface ForTheLoveOfFoo {\r\n\r\n    @AliasFor(annotation = PeteRepeat.class)\r\n    String value();\r\n}\n@PeteRepeats({ @PeteRepeat(\"B\"), @PeteRepeat(\"C\") })\r\n@Target({ ElementType.METHOD, ElementType.TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Inherited\r\n@interface ComposedContainer {\r\n}\n@PeteRepeat(\"A\")\r\n@PeteRepeats({ @PeteRepeat(\"B\"), @PeteRepeat(\"C\") })\r\nstatic class RepeatableClass {\r\n}\nstatic class SubRepeatableClass extends RepeatableClass {\r\n}\n@ForPetesSake(\"B\")\r\n@ForTheLoveOfFoo(\"C\")\r\n@PeteRepeat(\"A\")\r\nstatic class ComposedRepeatableClass {\r\n}\n@ForPetesSake(\"C\")\r\n@PeteRepeats(@PeteRepeat(\"A\"))\r\n@PeteRepeat(\"B\")\r\nstatic class ComposedRepeatableMixedWithContainerClass {\r\n}\n@PeteRepeat(\"A\")\r\n@ComposedContainer\r\nstatic class ComposedContainerClass {\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Noninheriteds {\r\n\r\n    Noninherited[] value();\r\n}\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@Repeatable(Noninheriteds.class)\r\n@interface Noninherited {\r\n\r\n    @AliasFor(\"name\")\r\n    String value() default \"\";\r\n\r\n    @AliasFor(\"value\")\r\n    String name() default \"\";\r\n}\n@Noninherited(name = \"shadowed\")\r\n@Target(ElementType.TYPE)\r\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ComposedNoninherited {\r\n\r\n    @AliasFor(annotation = Noninherited.class)\r\n    String name() default \"\";\r\n}\n@ComposedNoninherited(name = \"C\")\r\n@Noninheriteds({ @Noninherited(value = \"A\"), @Noninherited(name = \"B\") })\r\nstatic class NoninheritedRepeatableClass {\r\n}\nstatic class SubNoninheritedRepeatableClass extends NoninheritedRepeatableClass {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@PeteRepeat(\"A\")\r\n@PeteRepeat(\"B\")\r\n@interface WithRepeatedMetaAnnotations {\r\n}\n@WithRepeatedMetaAnnotations\r\n@PeteRepeat(\"C\")\r\n@Noninherited(\"X\")\r\n@Noninherited(\"Y\")\r\nstatic class WithRepeatedMetaAnnotationsClass {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ContainerWithMultipleAttributes {\r\n\r\n    RepeatableWithContainerWithMultipleAttributes[] value();\r\n\r\n    String name() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Repeatable(ContainerWithMultipleAttributes.class)\r\n@interface RepeatableWithContainerWithMultipleAttributes {\r\n\r\n    String value() default \"\";\r\n}\n@ContainerWithMultipleAttributes(name = \"enigma\", value = { @RepeatableWithContainerWithMultipleAttributes(\"A\"), @RepeatableWithContainerWithMultipleAttributes(\"B\") })\r\n@RepeatableWithContainerWithMultipleAttributes(\"C\")\r\nstatic class StandardRepeatablesWithContainerWithMultipleAttributesTestCase {\r\n}",
+    "comment": "\n * Tests for {@link MergedAnnotations} and {@link RepeatableContainers} that\n * verify support for repeatable annotations.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenNonRepeatableThrowsException()",
+    "entityType": "method",
+    "code": "// See SPR-13973\r\n@Test\r\nvoid inheritedAnnotationsWhenNonRepeatableThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> getAnnotations(null, NonRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::nonRepeatableRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenContainerMissingValueAttributeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenContainerMissingValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerMissingValueAttribute.class, InvalidRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::missingValueAttributeRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenWhenNonArrayValueAttributeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenWhenNonArrayValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithNonArrayValueAttribute.class, InvalidRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::nonArrayValueAttributeRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenWrongComponentTypeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenWrongComponentTypeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithArrayValueAttributeButWrongComponentType.class, InvalidRepeatable.class, INHERITED_ANNOTATIONS, getClass())).satisfies(this::wrongComponentTypeRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, RepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenWhenOnSuperclassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenWhenOnSuperclassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, SubRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenComposedOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenComposedOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, ComposedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenComposedMixedWithContainerOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenComposedMixedWithContainerOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, ComposedRepeatableMixedWithContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenComposedContainerForRepeatableOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenComposedContainerForRepeatableOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, INHERITED_ANNOTATIONS, ComposedContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenNoninheritedComposedRepeatableOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenNoninheritedComposedRepeatableOnClassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, INHERITED_ANNOTATIONS, NoninheritedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(Noninherited::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#inheritedAnnotationsWhenNoninheritedComposedRepeatableOnSuperclassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid inheritedAnnotationsWhenNoninheritedComposedRepeatableOnSuperclassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, INHERITED_ANNOTATIONS, SubNoninheritedRepeatableClass.class);\r\n    assertThat(annotations).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenNonRepeatableThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenNonRepeatableThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> getAnnotations(null, NonRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::nonRepeatableRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenContainerMissingValueAttributeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenContainerMissingValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerMissingValueAttribute.class, InvalidRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::missingValueAttributeRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenWhenNonArrayValueAttributeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenWhenNonArrayValueAttributeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithNonArrayValueAttribute.class, InvalidRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::nonArrayValueAttributeRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenWrongComponentTypeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenWrongComponentTypeThrowsException() {\r\n    assertThatAnnotationConfigurationException().isThrownBy(() -> getAnnotations(ContainerWithArrayValueAttributeButWrongComponentType.class, InvalidRepeatable.class, TYPE_HIERARCHY, getClass())).satisfies(this::wrongComponentTypeRequirements);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, RepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenOnSuperclassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenOnSuperclassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, SubRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenComposedOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenComposedOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, ComposedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenComposedMixedWithContainerOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenComposedMixedWithContainerOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, ComposedRepeatableMixedWithContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyWhenComposedContainerForRepeatableOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyWhenComposedContainerForRepeatableOnClassReturnsAnnotations() {\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, TYPE_HIERARCHY, ComposedContainerClass.class);\r\n    assertThat(annotations.stream().map(PeteRepeat::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyAnnotationsWhenNoninheritedComposedRepeatableOnClassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyAnnotationsWhenNoninheritedComposedRepeatableOnClassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, TYPE_HIERARCHY, NoninheritedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(Noninherited::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyAnnotationsWhenNoninheritedComposedRepeatableOnSuperclassReturnsAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyAnnotationsWhenNoninheritedComposedRepeatableOnSuperclassReturnsAnnotations() {\r\n    Set<Noninherited> annotations = getAnnotations(null, Noninherited.class, TYPE_HIERARCHY, SubNoninheritedRepeatableClass.class);\r\n    assertThat(annotations.stream().map(Noninherited::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#typeHierarchyAnnotationsWithLocalComposedAnnotationWhoseRepeatableMetaAnnotationsAreFiltered()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyAnnotationsWithLocalComposedAnnotationWhoseRepeatableMetaAnnotationsAreFiltered() {\r\n    Class<WithRepeatedMetaAnnotationsClass> element = WithRepeatedMetaAnnotationsClass.class;\r\n    SearchStrategy searchStrategy = TYPE_HIERARCHY;\r\n    AnnotationFilter annotationFilter = PeteRepeat.class.getName()::equals;\r\n    Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, searchStrategy, element, annotationFilter);\r\n    assertThat(annotations).isEmpty();\r\n    MergedAnnotations mergedAnnotations = MergedAnnotations.from(element, searchStrategy, RepeatableContainers.standardRepeatables(), annotationFilter);\r\n    Stream<Class<? extends Annotation>> annotationTypes = mergedAnnotations.stream().map(MergedAnnotation::synthesize).map(Annotation::annotationType);\r\n    assertThat(annotationTypes).containsExactly(WithRepeatedMetaAnnotations.class, Noninherited.class, Noninherited.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#searchFindsRepeatableContainerAnnotationAndRepeatedAnnotations()",
+    "entityType": "method",
+    "code": "// gh-32731\r\n@Test\r\nvoid searchFindsRepeatableContainerAnnotationAndRepeatedAnnotations() {\r\n    Class<?> clazz = StandardRepeatablesWithContainerWithMultipleAttributesTestCase.class;\r\n    // NO RepeatableContainers\r\n    MergedAnnotations mergedAnnotations = MergedAnnotations.from(clazz, TYPE_HIERARCHY, RepeatableContainers.none());\r\n    ContainerWithMultipleAttributes container = mergedAnnotations.get(ContainerWithMultipleAttributes.class).synthesize(MergedAnnotation::isPresent).orElse(null);\r\n    assertThat(container).as(\"container\").isNotNull();\r\n    assertThat(container.name()).isEqualTo(\"enigma\");\r\n    RepeatableWithContainerWithMultipleAttributes[] repeatedAnnotations = container.value();\r\n    assertThat(Arrays.stream(repeatedAnnotations).map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"A\", \"B\");\r\n    Set<RepeatableWithContainerWithMultipleAttributes> set = mergedAnnotations.stream(RepeatableWithContainerWithMultipleAttributes.class).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n    // Only finds the locally declared repeated annotation.\r\n    assertThat(set.stream().map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"C\");\r\n    // Standard RepeatableContainers\r\n    mergedAnnotations = MergedAnnotations.from(clazz, TYPE_HIERARCHY, RepeatableContainers.standardRepeatables());\r\n    container = mergedAnnotations.get(ContainerWithMultipleAttributes.class).synthesize(MergedAnnotation::isPresent).orElse(null);\r\n    assertThat(container).as(\"container\").isNotNull();\r\n    assertThat(container.name()).isEqualTo(\"enigma\");\r\n    repeatedAnnotations = container.value();\r\n    assertThat(Arrays.stream(repeatedAnnotations).map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"A\", \"B\");\r\n    set = mergedAnnotations.stream(RepeatableWithContainerWithMultipleAttributes.class).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n    // Finds the locally declared repeated annotation plus the 2 in the container.\r\n    assertThat(set.stream().map(RepeatableWithContainerWithMultipleAttributes::value)).containsExactly(\"A\", \"B\", \"C\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#getAnnotations(Class<? extends Annotation>,Class<A>,SearchStrategy,AnnotatedElement)",
+    "entityType": "method",
+    "code": "private <A extends Annotation> Set<A> getAnnotations(Class<? extends Annotation> container, Class<A> repeatable, SearchStrategy searchStrategy, AnnotatedElement element) {\r\n    return getAnnotations(container, repeatable, searchStrategy, element, AnnotationFilter.PLAIN);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#getAnnotations(Class<? extends Annotation>,Class<A>,SearchStrategy,AnnotatedElement,AnnotationFilter)",
+    "entityType": "method",
+    "code": "private <A extends Annotation> Set<A> getAnnotations(Class<? extends Annotation> container, Class<A> repeatable, SearchStrategy searchStrategy, AnnotatedElement element, AnnotationFilter annotationFilter) {\r\n    RepeatableContainers containers = RepeatableContainers.of(repeatable, container);\r\n    MergedAnnotations annotations = MergedAnnotations.from(element, searchStrategy, containers, annotationFilter);\r\n    return annotations.stream(repeatable).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#nonRepeatableRequirements(Exception)",
+    "entityType": "method",
+    "code": "private void nonRepeatableRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Annotation type must be a repeatable annotation\").hasMessageContaining(\"failed to resolve container type for\", NonRepeatable.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#missingValueAttributeRequirements(Exception)",
+    "entityType": "method",
+    "code": "private void missingValueAttributeRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Invalid declaration of container type\").hasMessageContaining(ContainerMissingValueAttribute.class.getName(), \"for repeatable annotation\", InvalidRepeatable.class.getName()).hasCauseInstanceOf(NoSuchMethodException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MergedAnnotationsRepeatableAnnotationTests#nonArrayValueAttributeRequirements(Exception)",
+    "entityType": "method",
+    "code": "private void nonArrayValueAttributeRequirements(Exception ex) {\r\n    assertThat(ex).hasMessageStartingWith(\"Container type\").hasMessageContaining(ContainerWithNonArrayValueAttribute.class.getName(), \"must declare a 'value' attribute for an array of type\", InvalidRepeatable.class.getName());\r\n}",
+    "comment": ""
+  }
+]

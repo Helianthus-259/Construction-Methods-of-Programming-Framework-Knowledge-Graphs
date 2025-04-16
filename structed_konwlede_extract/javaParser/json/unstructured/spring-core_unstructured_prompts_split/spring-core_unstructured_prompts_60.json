@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#lastIndexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    int i = Math.min(fromIndex, this.writePosition - 1);\r\n    for (; i >= 0; i--) {\r\n        byte b = this.byteBuffer.get(i);\r\n        if (predicate.test(b)) {\r\n            return i;\r\n        }\r\n    }\r\n    return -1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#readableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readableByteCount() {\r\n    return this.writePosition - this.readPosition;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#writableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writableByteCount() {\r\n    return this.capacity - this.writePosition;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#readPosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readPosition() {\r\n    return this.readPosition;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#readPosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer readPosition(int readPosition) {\r\n    assertIndex(readPosition >= 0, \"'readPosition' %d must be >= 0\", readPosition);\r\n    assertIndex(readPosition <= this.writePosition, \"'readPosition' %d must be <= %d\", readPosition, this.writePosition);\r\n    this.readPosition = readPosition;\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#writePosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writePosition() {\r\n    return this.writePosition;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#writePosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer writePosition(int writePosition) {\r\n    assertIndex(writePosition >= this.readPosition, \"'writePosition' %d must be >= %d\", writePosition, this.readPosition);\r\n    assertIndex(writePosition <= this.capacity, \"'writePosition' %d must be <= %d\", writePosition, this.capacity);\r\n    this.writePosition = writePosition;\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#capacity()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int capacity() {\r\n    return this.capacity;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#capacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer capacity(int capacity) {\r\n    setCapacity(capacity);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#setCapacity(int)",
+    "entityType": "method",
+    "code": "private void setCapacity(int newCapacity) {\r\n    if (newCapacity < 0) {\r\n        throw new IllegalArgumentException(String.format(\"'newCapacity' %d must be 0 or higher\", newCapacity));\r\n    }\r\n    int readPosition = readPosition();\r\n    int writePosition = writePosition();\r\n    int oldCapacity = capacity();\r\n    if (newCapacity > oldCapacity) {\r\n        ByteBuffer oldBuffer = this.byteBuffer;\r\n        ByteBuffer newBuffer = allocate(newCapacity, oldBuffer.isDirect());\r\n        oldBuffer.position(0).limit(oldBuffer.capacity());\r\n        newBuffer.position(0).limit(oldBuffer.capacity());\r\n        newBuffer.put(oldBuffer);\r\n        newBuffer.clear();\r\n        setNativeBuffer(newBuffer);\r\n    } else if (newCapacity < oldCapacity) {\r\n        ByteBuffer oldBuffer = this.byteBuffer;\r\n        ByteBuffer newBuffer = allocate(newCapacity, oldBuffer.isDirect());\r\n        if (readPosition < newCapacity) {\r\n            if (writePosition > newCapacity) {\r\n                writePosition = newCapacity;\r\n                writePosition(writePosition);\r\n            }\r\n            oldBuffer.position(readPosition).limit(writePosition);\r\n            newBuffer.position(readPosition).limit(writePosition);\r\n            newBuffer.put(oldBuffer);\r\n            newBuffer.clear();\r\n        } else {\r\n            readPosition(newCapacity);\r\n            writePosition(newCapacity);\r\n        }\r\n        setNativeBuffer(newBuffer);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#ensureWritable(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer ensureWritable(int length) {\r\n    if (length > writableByteCount()) {\r\n        int newCapacity = calculateCapacity(this.writePosition + length);\r\n        setCapacity(newCapacity);\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#allocate(int,boolean)",
+    "entityType": "method",
+    "code": "private static ByteBuffer allocate(int capacity, boolean direct) {\r\n    return (direct ? ByteBuffer.allocateDirect(capacity) : ByteBuffer.allocate(capacity));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#getByte(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte getByte(int index) {\r\n    assertIndex(index >= 0, \"index %d must be >= 0\", index);\r\n    assertIndex(index <= this.writePosition - 1, \"index %d must be <= %d\", index, this.writePosition - 1);\r\n    return this.byteBuffer.get(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#read()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte read() {\r\n    assertIndex(this.readPosition <= this.writePosition - 1, \"readPosition %d must be <= %d\", this.readPosition, this.writePosition - 1);\r\n    int pos = this.readPosition;\r\n    byte b = this.byteBuffer.get(pos);\r\n    this.readPosition = pos + 1;\r\n    return b;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#read(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer read(byte[] destination) {\r\n    Assert.notNull(destination, \"Byte array must not be null\");\r\n    read(destination, 0, destination.length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#read(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer read(byte[] destination, int offset, int length) {\r\n    Assert.notNull(destination, \"Byte array must not be null\");\r\n    assertIndex(this.readPosition <= this.writePosition - length, \"readPosition %d and length %d should be smaller than writePosition %d\", this.readPosition, length, this.writePosition);\r\n    ByteBuffer tmp = this.byteBuffer.duplicate();\r\n    int limit = this.readPosition + length;\r\n    tmp.clear().position(this.readPosition).limit(limit);\r\n    tmp.get(destination, offset, length);\r\n    this.readPosition += length;\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#write(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer write(byte b) {\r\n    ensureWritable(1);\r\n    int pos = this.writePosition;\r\n    this.byteBuffer.put(pos, b);\r\n    this.writePosition = pos + 1;\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#write(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer write(byte[] source) {\r\n    Assert.notNull(source, \"Byte array must not be null\");\r\n    write(source, 0, source.length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#write(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer write(byte[] source, int offset, int length) {\r\n    Assert.notNull(source, \"Byte array must not be null\");\r\n    ensureWritable(length);\r\n    ByteBuffer tmp = this.byteBuffer.duplicate();\r\n    int limit = this.writePosition + length;\r\n    tmp.clear().position(this.writePosition).limit(limit);\r\n    tmp.put(source, offset, length);\r\n    this.writePosition += length;\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#write(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer write(DataBuffer... dataBuffers) {\r\n    if (!ObjectUtils.isEmpty(dataBuffers)) {\r\n        ByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\r\n        for (int i = 0; i < dataBuffers.length; i++) {\r\n            byteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\r\n            dataBuffers[i].toByteBuffer(byteBuffers[i]);\r\n        }\r\n        write(byteBuffers);\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#write(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer write(ByteBuffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        int capacity = Arrays.stream(buffers).mapToInt(ByteBuffer::remaining).sum();\r\n        ensureWritable(capacity);\r\n        Arrays.stream(buffers).forEach(this::write);\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#write(ByteBuffer)",
+    "entityType": "method",
+    "code": "private void write(ByteBuffer source) {\r\n    int length = source.remaining();\r\n    ByteBuffer tmp = this.byteBuffer.duplicate();\r\n    int limit = this.writePosition + source.remaining();\r\n    tmp.clear().position(this.writePosition).limit(limit);\r\n    tmp.put(source);\r\n    this.writePosition += length;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#slice(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DefaultDataBuffer slice(int index, int length) {\r\n    checkIndex(index, length);\r\n    int oldPosition = this.byteBuffer.position();\r\n    try {\r\n        this.byteBuffer.position(index);\r\n        ByteBuffer slice = this.byteBuffer.slice();\r\n        slice.limit(length);\r\n        return new SlicedDefaultDataBuffer(slice, this.dataBufferFactory, length);\r\n    } finally {\r\n        this.byteBuffer.position(oldPosition);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#split(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer split(int index) {\r\n    checkIndex(index);\r\n    ByteBuffer split = this.byteBuffer.duplicate().clear().position(0).limit(index).slice();\r\n    DefaultDataBuffer result = new DefaultDataBuffer(this.dataBufferFactory, split);\r\n    result.writePosition = Math.min(this.writePosition, index);\r\n    result.readPosition = Math.min(this.readPosition, index);\r\n    this.byteBuffer = this.byteBuffer.duplicate().clear().position(index).limit(this.byteBuffer.capacity()).slice();\r\n    this.writePosition = Math.max(this.writePosition, index) - index;\r\n    this.readPosition = Math.max(this.readPosition, index) - index;\r\n    this.capacity = this.byteBuffer.capacity();\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#asByteBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return asByteBuffer(this.readPosition, readableByteCount());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#asByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    checkIndex(index, length);\r\n    ByteBuffer duplicate = this.byteBuffer.duplicate();\r\n    duplicate.position(index);\r\n    duplicate.limit(index + length);\r\n    return duplicate.slice();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#toByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    checkIndex(index, length);\r\n    ByteBuffer copy = allocate(length, this.byteBuffer.isDirect());\r\n    ByteBuffer readOnly = this.byteBuffer.asReadOnlyBuffer();\r\n    readOnly.clear().position(index).limit(index + length);\r\n    copy.put(readOnly);\r\n    return copy.flip();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#toByteBuffer(int,ByteBuffer,int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    checkIndex(srcPos, length);\r\n    Assert.notNull(dest, \"Dest must not be null\");\r\n    dest = dest.duplicate().clear();\r\n    dest.put(destPos, this.byteBuffer, srcPos, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#readableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer.ByteBufferIterator readableByteBuffers() {\r\n    ByteBuffer readOnly = this.byteBuffer.slice(this.readPosition, readableByteCount()).asReadOnlyBuffer();\r\n    return new ByteBufferIterator(readOnly);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#writableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer.ByteBufferIterator writableByteBuffers() {\r\n    ByteBuffer slice = this.byteBuffer.slice(this.writePosition, writableByteCount());\r\n    return new ByteBufferIterator(slice);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#toString(int,int,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    checkIndex(index, length);\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    byte[] bytes;\r\n    int offset;\r\n    if (this.byteBuffer.hasArray()) {\r\n        bytes = this.byteBuffer.array();\r\n        offset = this.byteBuffer.arrayOffset() + index;\r\n    } else {\r\n        bytes = new byte[length];\r\n        offset = 0;\r\n        ByteBuffer duplicate = this.byteBuffer.duplicate();\r\n        duplicate.clear().position(index).limit(index + length);\r\n        duplicate.get(bytes, 0, length);\r\n    }\r\n    return new String(bytes, offset, length, charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#calculateCapacity(int)",
+    "entityType": "method",
+    "code": "/**\r\n * Calculate the capacity of the buffer.\r\n * @see io.netty.buffer.AbstractByteBufAllocator#calculateNewCapacity(int, int)\r\n */\r\nprivate int calculateCapacity(int neededCapacity) {\r\n    Assert.isTrue(neededCapacity >= 0, \"'neededCapacity' must be >= 0\");\r\n    if (neededCapacity == CAPACITY_THRESHOLD) {\r\n        return CAPACITY_THRESHOLD;\r\n    } else if (neededCapacity > CAPACITY_THRESHOLD) {\r\n        int newCapacity = neededCapacity / CAPACITY_THRESHOLD * CAPACITY_THRESHOLD;\r\n        if (newCapacity > MAX_CAPACITY - CAPACITY_THRESHOLD) {\r\n            newCapacity = MAX_CAPACITY;\r\n        } else {\r\n            newCapacity += CAPACITY_THRESHOLD;\r\n        }\r\n        return newCapacity;\r\n    } else {\r\n        int newCapacity = 64;\r\n        while (newCapacity < neededCapacity) {\r\n            newCapacity <<= 1;\r\n        }\r\n        return Math.min(newCapacity, MAX_CAPACITY);\r\n    }\r\n}",
+    "comment": "\n\t * Calculate the capacity of the buffer.\n\t * @see io.netty.buffer.AbstractByteBufAllocator#calculateNewCapacity(int, int)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof DefaultDataBuffer that && this.readPosition == that.readPosition && this.writePosition == that.writePosition && this.byteBuffer.equals(that.byteBuffer)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return this.byteBuffer.hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return String.format(\"DefaultDataBuffer (r: %d, w: %d, c: %d)\", this.readPosition, this.writePosition, this.capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#checkIndex(int,int)",
+    "entityType": "method",
+    "code": "private void checkIndex(int index, int length) {\r\n    checkIndex(index);\r\n    checkLength(length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#checkIndex(int)",
+    "entityType": "method",
+    "code": "private void checkIndex(int index) {\r\n    assertIndex(index >= 0, \"index %d must be >= 0\", index);\r\n    assertIndex(index <= this.capacity, \"index %d must be <= %d\", index, this.capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#checkLength(int)",
+    "entityType": "method",
+    "code": "private void checkLength(int length) {\r\n    assertIndex(length >= 0, \"length %d must be >= 0\", length);\r\n    assertIndex(length <= this.capacity, \"length %d must be <= %d\", length, this.capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#assertIndex(boolean,String,Object)",
+    "entityType": "method",
+    "code": "private void assertIndex(boolean expression, String format, Object... args) {\r\n    if (!expression) {\r\n        String message = String.format(format, args);\r\n        throw new IndexOutOfBoundsException(message);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SlicedDefaultDataBuffer",
+    "entityType": "class",
+    "code": "SlicedDefaultDataBuffer(ByteBuffer byteBuffer, DefaultDataBufferFactory dataBufferFactory, int length) {\r\n    super(dataBufferFactory, byteBuffer);\r\n    writePosition(length);\r\n}\n@Override\r\n@SuppressWarnings(\"deprecation\")\r\npublic DefaultDataBuffer capacity(int newCapacity) {\r\n    throw new UnsupportedOperationException(\"Changing the capacity of a sliced buffer is not supported\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SlicedDefaultDataBuffer#capacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@SuppressWarnings(\"deprecation\")\r\npublic DefaultDataBuffer capacity(int newCapacity) {\r\n    throw new UnsupportedOperationException(\"Changing the capacity of a sliced buffer is not supported\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ByteBufferIterator",
+    "entityType": "class",
+    "code": "private final ByteBuffer buffer;\nprivate boolean hasNext = true;\npublic ByteBufferIterator(ByteBuffer buffer) {\r\n    this.buffer = buffer;\r\n}\n@Override\r\npublic boolean hasNext() {\r\n    return this.hasNext;\r\n}\n@Override\r\npublic ByteBuffer next() {\r\n    if (!this.hasNext) {\r\n        throw new NoSuchElementException();\r\n    } else {\r\n        this.hasNext = false;\r\n        return this.buffer;\r\n    }\r\n}\n@Override\r\npublic void close() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ByteBufferIterator#hasNext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasNext() {\r\n    return this.hasNext;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ByteBufferIterator#next()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBuffer next() {\r\n    if (!this.hasNext) {\r\n        throw new NoSuchElementException();\r\n    } else {\r\n        this.hasNext = false;\r\n        return this.buffer;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ByteBufferIterator#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory",
+    "entityType": "class",
+    "code": "/**\r\n * The default capacity when none is specified.\r\n * @see #DefaultDataBufferFactory()\r\n * @see #DefaultDataBufferFactory(boolean)\r\n */\r\npublic static final int DEFAULT_INITIAL_CAPACITY = 256;\n/**\r\n * Shared instance based on the default constructor.\r\n * @since 5.3\r\n */\r\npublic static final DefaultDataBufferFactory sharedInstance = new DefaultDataBufferFactory();\nprivate final boolean preferDirect;\nprivate final int defaultInitialCapacity;\n/**\r\n * Creates a new {@code DefaultDataBufferFactory} with default settings.\r\n * @see #sharedInstance\r\n */\r\npublic DefaultDataBufferFactory() {\r\n    this(false);\r\n}\n/**\r\n * Creates a new {@code DefaultDataBufferFactory}, indicating whether direct\r\n * buffers should be created by {@link #allocateBuffer()} and\r\n * {@link #allocateBuffer(int)}.\r\n * @param preferDirect {@code true} if direct buffers are to be preferred;\r\n * {@code false} otherwise\r\n */\r\npublic DefaultDataBufferFactory(boolean preferDirect) {\r\n    this(preferDirect, DEFAULT_INITIAL_CAPACITY);\r\n}\n/**\r\n * Creates a new {@code DefaultDataBufferFactory}, indicating whether direct\r\n * buffers should be created by {@link #allocateBuffer()} and\r\n * {@link #allocateBuffer(int)}, and what the capacity is to be used for\r\n * {@link #allocateBuffer()}.\r\n * @param preferDirect {@code true} if direct buffers are to be preferred;\r\n * {@code false} otherwise\r\n */\r\npublic DefaultDataBufferFactory(boolean preferDirect, int defaultInitialCapacity) {\r\n    Assert.isTrue(defaultInitialCapacity > 0, \"'defaultInitialCapacity' should be larger than 0\");\r\n    this.preferDirect = preferDirect;\r\n    this.defaultInitialCapacity = defaultInitialCapacity;\r\n}\n@Override\r\n@Deprecated\r\npublic DefaultDataBuffer allocateBuffer() {\r\n    return allocateBuffer(this.defaultInitialCapacity);\r\n}\n@Override\r\npublic DefaultDataBuffer allocateBuffer(int initialCapacity) {\r\n    ByteBuffer byteBuffer = (this.preferDirect ? ByteBuffer.allocateDirect(initialCapacity) : ByteBuffer.allocate(initialCapacity));\r\n    return DefaultDataBuffer.fromEmptyByteBuffer(this, byteBuffer);\r\n}\n@Override\r\npublic DefaultDataBuffer wrap(ByteBuffer byteBuffer) {\r\n    return DefaultDataBuffer.fromFilledByteBuffer(this, byteBuffer.slice());\r\n}\n@Override\r\npublic DefaultDataBuffer wrap(byte[] bytes) {\r\n    return DefaultDataBuffer.fromFilledByteBuffer(this, ByteBuffer.wrap(bytes));\r\n}\n/**\r\n * {@inheritDoc}\r\n * <p>This implementation creates a single {@link DefaultDataBuffer}\r\n * to contain the data in {@code dataBuffers}.\r\n */\r\n@Override\r\npublic DefaultDataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    Assert.notEmpty(dataBuffers, \"DataBuffer List must not be empty\");\r\n    int capacity = dataBuffers.stream().mapToInt(DataBuffer::readableByteCount).sum();\r\n    DefaultDataBuffer result = allocateBuffer(capacity);\r\n    dataBuffers.forEach(result::write);\r\n    dataBuffers.forEach(DataBufferUtils::release);\r\n    return result;\r\n}\n@Override\r\npublic boolean isDirect() {\r\n    return this.preferDirect;\r\n}\n@Override\r\npublic String toString() {\r\n    return \"DefaultDataBufferFactory (preferDirect=\" + this.preferDirect + \")\";\r\n}",
+    "comment": "\n * Default implementation of the {@code DataBufferFactory} interface. Allows for\n * specification of the default initial capacity at construction time, as well\n * as whether heap-based or direct buffers are to be preferred.\n *\n * @author Arjen Poutsma\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#allocateBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DefaultDataBuffer allocateBuffer() {\r\n    return allocateBuffer(this.defaultInitialCapacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#allocateBuffer(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer allocateBuffer(int initialCapacity) {\r\n    ByteBuffer byteBuffer = (this.preferDirect ? ByteBuffer.allocateDirect(initialCapacity) : ByteBuffer.allocate(initialCapacity));\r\n    return DefaultDataBuffer.fromEmptyByteBuffer(this, byteBuffer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#wrap(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer wrap(ByteBuffer byteBuffer) {\r\n    return DefaultDataBuffer.fromFilledByteBuffer(this, byteBuffer.slice());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#wrap(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBuffer wrap(byte[] bytes) {\r\n    return DefaultDataBuffer.fromFilledByteBuffer(this, ByteBuffer.wrap(bytes));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#join(List<? extends DataBuffer>)",
+    "entityType": "method",
+    "code": "/**\r\n * {@inheritDoc}\r\n * <p>This implementation creates a single {@link DefaultDataBuffer}\r\n * to contain the data in {@code dataBuffers}.\r\n */\r\n@Override\r\npublic DefaultDataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    Assert.notEmpty(dataBuffers, \"DataBuffer List must not be empty\");\r\n    int capacity = dataBuffers.stream().mapToInt(DataBuffer::readableByteCount).sum();\r\n    DefaultDataBuffer result = allocateBuffer(capacity);\r\n    dataBuffers.forEach(result::write);\r\n    dataBuffers.forEach(DataBufferUtils::release);\r\n    return result;\r\n}",
+    "comment": "\n\t * {@inheritDoc}\n\t * <p>This implementation creates a single {@link DefaultDataBuffer}\n\t * to contain the data in {@code dataBuffers}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#isDirect()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isDirect() {\r\n    return this.preferDirect;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBufferFactory#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return \"DefaultDataBufferFactory (preferDirect=\" + this.preferDirect + \")\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer",
+    "entityType": "class",
+    "code": "private final DefaultDataBuffer delegate;\nprivate final Content.@Nullable Chunk chunk;\nprivate final JettyDataBufferFactory bufferFactory;\nprivate final AtomicInteger refCount = new AtomicInteger(1);\nJettyDataBuffer(JettyDataBufferFactory bufferFactory, DefaultDataBuffer delegate, Content.Chunk chunk) {\r\n    Assert.notNull(bufferFactory, \"BufferFactory must not be null\");\r\n    Assert.notNull(delegate, \"Delegate must not be null\");\r\n    Assert.notNull(chunk, \"Chunk must not be null\");\r\n    this.bufferFactory = bufferFactory;\r\n    this.delegate = delegate;\r\n    this.chunk = chunk;\r\n    this.chunk.retain();\r\n}\nJettyDataBuffer(JettyDataBufferFactory bufferFactory, DefaultDataBuffer delegate) {\r\n    Assert.notNull(bufferFactory, \"BufferFactory must not be null\");\r\n    Assert.notNull(delegate, \"Delegate must not be null\");\r\n    this.bufferFactory = bufferFactory;\r\n    this.delegate = delegate;\r\n    this.chunk = null;\r\n}\n@Override\r\npublic boolean isAllocated() {\r\n    return this.refCount.get() > 0;\r\n}\n@Override\r\npublic PooledDataBuffer retain() {\r\n    int result = this.refCount.updateAndGet(c -> (c != 0 ? c + 1 : 0));\r\n    if (result != 0 && this.chunk != null) {\r\n        this.chunk.retain();\r\n    }\r\n    return this;\r\n}\n@Override\r\npublic PooledDataBuffer touch(Object hint) {\r\n    return this;\r\n}\n@Override\r\npublic boolean release() {\r\n    int result = this.refCount.updateAndGet(c -> {\r\n        if (c != 0) {\r\n            return c - 1;\r\n        } else {\r\n            throw new IllegalStateException(\"JettyDataBuffer already released: \" + this);\r\n        }\r\n    });\r\n    if (this.chunk != null) {\r\n        return this.chunk.release();\r\n    } else {\r\n        return (result == 0);\r\n    }\r\n}\n@Override\r\npublic DataBufferFactory factory() {\r\n    return this.bufferFactory;\r\n}\n// delegation\r\n@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.indexOf(predicate, fromIndex);\r\n}\n@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.lastIndexOf(predicate, fromIndex);\r\n}\n@Override\r\npublic int readableByteCount() {\r\n    return this.delegate.readableByteCount();\r\n}\n@Override\r\npublic int writableByteCount() {\r\n    return this.delegate.writableByteCount();\r\n}\n@Override\r\npublic int capacity() {\r\n    return this.delegate.capacity();\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer capacity(int capacity) {\r\n    this.delegate.capacity(capacity);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    this.delegate.ensureWritable(capacity);\r\n    return this;\r\n}\n@Override\r\npublic int readPosition() {\r\n    return this.delegate.readPosition();\r\n}\n@Override\r\npublic DataBuffer readPosition(int readPosition) {\r\n    this.delegate.readPosition(readPosition);\r\n    return this;\r\n}\n@Override\r\npublic int writePosition() {\r\n    return this.delegate.writePosition();\r\n}\n@Override\r\npublic DataBuffer writePosition(int writePosition) {\r\n    this.delegate.writePosition(writePosition);\r\n    return this;\r\n}\n@Override\r\npublic byte getByte(int index) {\r\n    return this.delegate.getByte(index);\r\n}\n@Override\r\npublic byte read() {\r\n    return this.delegate.read();\r\n}\n@Override\r\npublic DataBuffer read(byte[] destination) {\r\n    this.delegate.read(destination);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer read(byte[] destination, int offset, int length) {\r\n    this.delegate.read(destination, offset, length);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(byte b) {\r\n    this.delegate.write(b);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(byte[] source) {\r\n    this.delegate.write(source);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(byte[] source, int offset, int length) {\r\n    this.delegate.write(source, offset, length);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(DataBuffer... buffers) {\r\n    this.delegate.write(buffers);\r\n    return this;\r\n}\n@Override\r\npublic DataBuffer write(ByteBuffer... buffers) {\r\n    this.delegate.write(buffers);\r\n    return this;\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer slice(int index, int length) {\r\n    DefaultDataBuffer delegateSlice = this.delegate.slice(index, length);\r\n    if (this.chunk != null) {\r\n        this.chunk.retain();\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSlice, this.chunk);\r\n    } else {\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSlice);\r\n    }\r\n}\n@Override\r\npublic DataBuffer split(int index) {\r\n    DefaultDataBuffer delegateSplit = this.delegate.split(index);\r\n    if (this.chunk != null) {\r\n        this.chunk.retain();\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSplit, this.chunk);\r\n    } else {\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSplit);\r\n    }\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return this.delegate.asByteBuffer();\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return this.delegate.asByteBuffer(index, length);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    return this.delegate.toByteBuffer(index, length);\r\n}\n@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    this.delegate.toByteBuffer(srcPos, dest, destPos, length);\r\n}\n@Override\r\npublic ByteBufferIterator readableByteBuffers() {\r\n    ByteBufferIterator delegateIterator = this.delegate.readableByteBuffers();\r\n    if (this.chunk != null) {\r\n        return new JettyByteBufferIterator(delegateIterator, this.chunk);\r\n    } else {\r\n        return delegateIterator;\r\n    }\r\n}\n@Override\r\npublic ByteBufferIterator writableByteBuffers() {\r\n    ByteBufferIterator delegateIterator = this.delegate.writableByteBuffers();\r\n    if (this.chunk != null) {\r\n        return new JettyByteBufferIterator(delegateIterator, this.chunk);\r\n    } else {\r\n        return delegateIterator;\r\n    }\r\n}\n@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    return this.delegate.toString(index, length, charset);\r\n}\n@Override\r\npublic boolean equals(Object other) {\r\n    return (this == other || (other instanceof JettyDataBuffer otherBuffer && this.delegate.equals(otherBuffer.delegate)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return this.delegate.hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    return String.format(\"JettyDataBuffer (r: %d, w: %d, c: %d)\", readPosition(), writePosition(), capacity());\r\n}\nprivate static final class JettyByteBufferIterator implements ByteBufferIterator {\r\n\r\n    private final ByteBufferIterator delegate;\r\n\r\n    private final Content.Chunk chunk;\r\n\r\n    public JettyByteBufferIterator(ByteBufferIterator delegate, Content.Chunk chunk) {\r\n        Assert.notNull(delegate, \"Delegate must not be null\");\r\n        Assert.notNull(chunk, \"Chunk must not be null\");\r\n        this.delegate = delegate;\r\n        this.chunk = chunk;\r\n        this.chunk.retain();\r\n    }\r\n\r\n    @Override\r\n    public void close() {\r\n        this.delegate.close();\r\n        this.chunk.release();\r\n    }\r\n\r\n    @Override\r\n    public boolean hasNext() {\r\n        return this.delegate.hasNext();\r\n    }\r\n\r\n    @Override\r\n    public ByteBuffer next() {\r\n        return this.delegate.next();\r\n    }\r\n}",
+    "comment": "\n * Implementation of the {@code DataBuffer} interface that can wrap a Jetty\n * {@link Content.Chunk}. Typically constructed with {@link JettyDataBufferFactory}.\n *\n * @author Greg Wilkins\n * @author Lachlan Roberts\n * @author Arjen Poutsma\n * @since 6.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#isAllocated()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isAllocated() {\r\n    return this.refCount.get() > 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#retain()",
+    "entityType": "method",
+    "code": "@Override\r\npublic PooledDataBuffer retain() {\r\n    int result = this.refCount.updateAndGet(c -> (c != 0 ? c + 1 : 0));\r\n    if (result != 0 && this.chunk != null) {\r\n        this.chunk.retain();\r\n    }\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#touch(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PooledDataBuffer touch(Object hint) {\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#release()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean release() {\r\n    int result = this.refCount.updateAndGet(c -> {\r\n        if (c != 0) {\r\n            return c - 1;\r\n        } else {\r\n            throw new IllegalStateException(\"JettyDataBuffer already released: \" + this);\r\n        }\r\n    });\r\n    if (this.chunk != null) {\r\n        return this.chunk.release();\r\n    } else {\r\n        return (result == 0);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#factory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory factory() {\r\n    return this.bufferFactory;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#indexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "// delegation\r\n@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.indexOf(predicate, fromIndex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#lastIndexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.lastIndexOf(predicate, fromIndex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#readableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readableByteCount() {\r\n    return this.delegate.readableByteCount();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#writableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writableByteCount() {\r\n    return this.delegate.writableByteCount();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#capacity()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int capacity() {\r\n    return this.delegate.capacity();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#capacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer capacity(int capacity) {\r\n    this.delegate.capacity(capacity);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#ensureWritable(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    this.delegate.ensureWritable(capacity);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#readPosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readPosition() {\r\n    return this.delegate.readPosition();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#readPosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer readPosition(int readPosition) {\r\n    this.delegate.readPosition(readPosition);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#writePosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writePosition() {\r\n    return this.delegate.writePosition();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#writePosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer writePosition(int writePosition) {\r\n    this.delegate.writePosition(writePosition);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#getByte(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte getByte(int index) {\r\n    return this.delegate.getByte(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#read()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte read() {\r\n    return this.delegate.read();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#read(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer read(byte[] destination) {\r\n    this.delegate.read(destination);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#read(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer read(byte[] destination, int offset, int length) {\r\n    this.delegate.read(destination, offset, length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#write(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(byte b) {\r\n    this.delegate.write(b);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#write(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(byte[] source) {\r\n    this.delegate.write(source);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#write(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(byte[] source, int offset, int length) {\r\n    this.delegate.write(source, offset, length);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#write(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(DataBuffer... buffers) {\r\n    this.delegate.write(buffers);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#write(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(ByteBuffer... buffers) {\r\n    this.delegate.write(buffers);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#slice(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer slice(int index, int length) {\r\n    DefaultDataBuffer delegateSlice = this.delegate.slice(index, length);\r\n    if (this.chunk != null) {\r\n        this.chunk.retain();\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSlice, this.chunk);\r\n    } else {\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSlice);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#split(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer split(int index) {\r\n    DefaultDataBuffer delegateSplit = this.delegate.split(index);\r\n    if (this.chunk != null) {\r\n        this.chunk.retain();\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSplit, this.chunk);\r\n    } else {\r\n        return new JettyDataBuffer(this.bufferFactory, delegateSplit);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#asByteBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return this.delegate.asByteBuffer();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#asByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return this.delegate.asByteBuffer(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#toByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    return this.delegate.toByteBuffer(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#toByteBuffer(int,ByteBuffer,int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    this.delegate.toByteBuffer(srcPos, dest, destPos, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#readableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBufferIterator readableByteBuffers() {\r\n    ByteBufferIterator delegateIterator = this.delegate.readableByteBuffers();\r\n    if (this.chunk != null) {\r\n        return new JettyByteBufferIterator(delegateIterator, this.chunk);\r\n    } else {\r\n        return delegateIterator;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#writableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBufferIterator writableByteBuffers() {\r\n    ByteBufferIterator delegateIterator = this.delegate.writableByteBuffers();\r\n    if (this.chunk != null) {\r\n        return new JettyByteBufferIterator(delegateIterator, this.chunk);\r\n    } else {\r\n        return delegateIterator;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#toString(int,int,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    return this.delegate.toString(index, length, charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(Object other) {\r\n    return (this == other || (other instanceof JettyDataBuffer otherBuffer && this.delegate.equals(otherBuffer.delegate)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return this.delegate.hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBuffer#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return String.format(\"JettyDataBuffer (r: %d, w: %d, c: %d)\", readPosition(), writePosition(), capacity());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyByteBufferIterator",
+    "entityType": "class",
+    "code": "private final ByteBufferIterator delegate;\nprivate final Content.Chunk chunk;\npublic JettyByteBufferIterator(ByteBufferIterator delegate, Content.Chunk chunk) {\r\n    Assert.notNull(delegate, \"Delegate must not be null\");\r\n    Assert.notNull(chunk, \"Chunk must not be null\");\r\n    this.delegate = delegate;\r\n    this.chunk = chunk;\r\n    this.chunk.retain();\r\n}\n@Override\r\npublic void close() {\r\n    this.delegate.close();\r\n    this.chunk.release();\r\n}\n@Override\r\npublic boolean hasNext() {\r\n    return this.delegate.hasNext();\r\n}\n@Override\r\npublic ByteBuffer next() {\r\n    return this.delegate.next();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyByteBufferIterator#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() {\r\n    this.delegate.close();\r\n    this.chunk.release();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyByteBufferIterator#hasNext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasNext() {\r\n    return this.delegate.hasNext();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyByteBufferIterator#next()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBuffer next() {\r\n    return this.delegate.next();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory",
+    "entityType": "class",
+    "code": "private final DefaultDataBufferFactory delegate;\n/**\r\n * Creates a new {@code JettyDataBufferFactory} with default settings.\r\n */\r\npublic JettyDataBufferFactory() {\r\n    this(false);\r\n}\n/**\r\n * Creates a new {@code JettyDataBufferFactory}, indicating whether direct\r\n * buffers should be created by {@link #allocateBuffer()} and\r\n * {@link #allocateBuffer(int)}.\r\n * @param preferDirect {@code true} if direct buffers are to be preferred;\r\n * {@code false} otherwise\r\n */\r\npublic JettyDataBufferFactory(boolean preferDirect) {\r\n    this(preferDirect, DefaultDataBufferFactory.DEFAULT_INITIAL_CAPACITY);\r\n}\n/**\r\n * Creates a new {@code JettyDataBufferFactory}, indicating whether direct\r\n * buffers should be created by {@link #allocateBuffer()} and\r\n * {@link #allocateBuffer(int)}, and what the capacity is to be used for\r\n * {@link #allocateBuffer()}.\r\n * @param preferDirect {@code true} if direct buffers are to be preferred;\r\n * {@code false} otherwise\r\n */\r\npublic JettyDataBufferFactory(boolean preferDirect, int defaultInitialCapacity) {\r\n    this.delegate = new DefaultDataBufferFactory(preferDirect, defaultInitialCapacity);\r\n}\n@Override\r\n@Deprecated\r\npublic JettyDataBuffer allocateBuffer() {\r\n    DefaultDataBuffer delegate = this.delegate.allocateBuffer();\r\n    return new JettyDataBuffer(this, delegate);\r\n}\n@Override\r\npublic JettyDataBuffer allocateBuffer(int initialCapacity) {\r\n    DefaultDataBuffer delegate = this.delegate.allocateBuffer(initialCapacity);\r\n    return new JettyDataBuffer(this, delegate);\r\n}\n@Override\r\npublic JettyDataBuffer wrap(ByteBuffer byteBuffer) {\r\n    DefaultDataBuffer delegate = this.delegate.wrap(byteBuffer);\r\n    return new JettyDataBuffer(this, delegate);\r\n}\n@Override\r\npublic JettyDataBuffer wrap(byte[] bytes) {\r\n    DefaultDataBuffer delegate = this.delegate.wrap(bytes);\r\n    return new JettyDataBuffer(this, delegate);\r\n}\npublic JettyDataBuffer wrap(Content.Chunk chunk) {\r\n    ByteBuffer byteBuffer = chunk.getByteBuffer();\r\n    DefaultDataBuffer delegate = this.delegate.wrap(byteBuffer);\r\n    return new JettyDataBuffer(this, delegate, chunk);\r\n}\n@Override\r\npublic JettyDataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    DefaultDataBuffer delegate = this.delegate.join(dataBuffers);\r\n    return new JettyDataBuffer(this, delegate);\r\n}\n@Override\r\npublic boolean isDirect() {\r\n    return this.delegate.isDirect();\r\n}",
+    "comment": "\n * Implementation of the {@code DataBufferFactory} interface that creates\n * {@link JettyDataBuffer} instances.\n *\n * @author Arjen Poutsma\n * @since 6.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#allocateBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic JettyDataBuffer allocateBuffer() {\r\n    DefaultDataBuffer delegate = this.delegate.allocateBuffer();\r\n    return new JettyDataBuffer(this, delegate);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#allocateBuffer(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic JettyDataBuffer allocateBuffer(int initialCapacity) {\r\n    DefaultDataBuffer delegate = this.delegate.allocateBuffer(initialCapacity);\r\n    return new JettyDataBuffer(this, delegate);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#wrap(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic JettyDataBuffer wrap(ByteBuffer byteBuffer) {\r\n    DefaultDataBuffer delegate = this.delegate.wrap(byteBuffer);\r\n    return new JettyDataBuffer(this, delegate);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.JettyDataBufferFactory#wrap(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic JettyDataBuffer wrap(byte[] bytes) {\r\n    DefaultDataBuffer delegate = this.delegate.wrap(bytes);\r\n    return new JettyDataBuffer(this, delegate);\r\n}",
+    "comment": ""
+  }
+]

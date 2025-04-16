@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.buffer.Matcher#match(DataBuffer)",
+    "entityType": "method",
+    "code": "/**\r\n * Find the first matching delimiter and return the index of the last\r\n * byte of the delimiter, or {@code -1} if not found.\r\n */\r\nint match(DataBuffer dataBuffer);",
+    "comment": "\n\t\t * Find the first matching delimiter and return the index of the last\n\t\t * byte of the delimiter, or {@code -1} if not found.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Matcher#delimiter()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the delimiter from the last invocation of {@link #match(DataBuffer)}.\r\n */\r\nbyte[] delimiter();",
+    "comment": "\n\t\t * Return the delimiter from the last invocation of {@link #match(DataBuffer)}.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.Matcher#reset()",
+    "entityType": "method",
+    "code": "/**\r\n * Reset the state of this matcher.\r\n */\r\nvoid reset();",
+    "comment": "\n\t\t * Reset the state of this matcher.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.CompositeMatcher",
+    "entityType": "class",
+    "code": "private static final byte[] NO_DELIMITER = new byte[0];\nprivate final NestedMatcher[] matchers;\nbyte[] longestDelimiter = NO_DELIMITER;\nCompositeMatcher(byte[][] delimiters) {\r\n    this.matchers = initMatchers(delimiters);\r\n}\nprivate static NestedMatcher[] initMatchers(byte[][] delimiters) {\r\n    NestedMatcher[] matchers = new NestedMatcher[delimiters.length];\r\n    for (int i = 0; i < delimiters.length; i++) {\r\n        matchers[i] = createMatcher(delimiters[i]);\r\n    }\r\n    return matchers;\r\n}\n@Override\r\npublic int match(DataBuffer dataBuffer) {\r\n    this.longestDelimiter = NO_DELIMITER;\r\n    for (int pos = dataBuffer.readPosition(); pos < dataBuffer.writePosition(); pos++) {\r\n        byte b = dataBuffer.getByte(pos);\r\n        for (NestedMatcher matcher : this.matchers) {\r\n            if (matcher.match(b) && matcher.delimiter().length > this.longestDelimiter.length) {\r\n                this.longestDelimiter = matcher.delimiter();\r\n            }\r\n        }\r\n        if (this.longestDelimiter != NO_DELIMITER) {\r\n            reset();\r\n            return pos;\r\n        }\r\n    }\r\n    return -1;\r\n}\n@Override\r\npublic byte[] delimiter() {\r\n    Assert.state(this.longestDelimiter != NO_DELIMITER, \"'delimiter' not set\");\r\n    return this.longestDelimiter;\r\n}\n@Override\r\npublic void reset() {\r\n    for (NestedMatcher matcher : this.matchers) {\r\n        matcher.reset();\r\n    }\r\n}",
+    "comment": "\n\t * Matcher that supports searching for multiple delimiters.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.CompositeMatcher#initMatchers(byte[][])",
+    "entityType": "method",
+    "code": "private static NestedMatcher[] initMatchers(byte[][] delimiters) {\r\n    NestedMatcher[] matchers = new NestedMatcher[delimiters.length];\r\n    for (int i = 0; i < delimiters.length; i++) {\r\n        matchers[i] = createMatcher(delimiters[i]);\r\n    }\r\n    return matchers;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.CompositeMatcher#match(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int match(DataBuffer dataBuffer) {\r\n    this.longestDelimiter = NO_DELIMITER;\r\n    for (int pos = dataBuffer.readPosition(); pos < dataBuffer.writePosition(); pos++) {\r\n        byte b = dataBuffer.getByte(pos);\r\n        for (NestedMatcher matcher : this.matchers) {\r\n            if (matcher.match(b) && matcher.delimiter().length > this.longestDelimiter.length) {\r\n                this.longestDelimiter = matcher.delimiter();\r\n            }\r\n        }\r\n        if (this.longestDelimiter != NO_DELIMITER) {\r\n            reset();\r\n            return pos;\r\n        }\r\n    }\r\n    return -1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.CompositeMatcher#delimiter()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte[] delimiter() {\r\n    Assert.state(this.longestDelimiter != NO_DELIMITER, \"'delimiter' not set\");\r\n    return this.longestDelimiter;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.CompositeMatcher#reset()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void reset() {\r\n    for (NestedMatcher matcher : this.matchers) {\r\n        matcher.reset();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NestedMatcher",
+    "entityType": "class",
+    "code": "/**\r\n * Perform a match against the next byte of the stream and return true\r\n * if the delimiter is fully matched.\r\n */\r\nboolean match(byte b);",
+    "comment": "\n\t * Matcher that can be nested within {@link CompositeMatcher} where multiple\n\t * matchers advance together using the same index, one byte at a time.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.NestedMatcher#match(byte)",
+    "entityType": "method",
+    "code": "/**\r\n * Perform a match against the next byte of the stream and return true\r\n * if the delimiter is fully matched.\r\n */\r\nboolean match(byte b);",
+    "comment": "\n\t\t * Perform a match against the next byte of the stream and return true\n\t\t * if the delimiter is fully matched.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SingleByteMatcher",
+    "entityType": "class",
+    "code": "static final SingleByteMatcher NEWLINE_MATCHER = new SingleByteMatcher(new byte[] { 10 });\nprivate final byte[] delimiter;\nSingleByteMatcher(byte[] delimiter) {\r\n    Assert.isTrue(delimiter.length == 1, \"Expected a 1 byte delimiter\");\r\n    this.delimiter = delimiter;\r\n}\n@Override\r\npublic int match(DataBuffer dataBuffer) {\r\n    for (int pos = dataBuffer.readPosition(); pos < dataBuffer.writePosition(); pos++) {\r\n        byte b = dataBuffer.getByte(pos);\r\n        if (match(b)) {\r\n            return pos;\r\n        }\r\n    }\r\n    return -1;\r\n}\n@Override\r\npublic boolean match(byte b) {\r\n    return this.delimiter[0] == b;\r\n}\n@Override\r\npublic byte[] delimiter() {\r\n    return this.delimiter;\r\n}\n@Override\r\npublic void reset() ;",
+    "comment": "\n\t * Matcher for a single byte delimiter.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SingleByteMatcher#match(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int match(DataBuffer dataBuffer) {\r\n    for (int pos = dataBuffer.readPosition(); pos < dataBuffer.writePosition(); pos++) {\r\n        byte b = dataBuffer.getByte(pos);\r\n        if (match(b)) {\r\n            return pos;\r\n        }\r\n    }\r\n    return -1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SingleByteMatcher#match(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean match(byte b) {\r\n    return this.delimiter[0] == b;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SingleByteMatcher#delimiter()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte[] delimiter() {\r\n    return this.delimiter;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.SingleByteMatcher#reset()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void reset() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher",
+    "entityType": "class",
+    "code": "private final byte[] delimiter;\nprivate int matches = 0;\nprotected AbstractNestedMatcher(byte[] delimiter) {\r\n    this.delimiter = delimiter;\r\n}\nprotected void setMatches(int index) {\r\n    this.matches = index;\r\n}\nprotected int getMatches() {\r\n    return this.matches;\r\n}\n@Override\r\npublic int match(DataBuffer dataBuffer) {\r\n    for (int pos = dataBuffer.readPosition(); pos < dataBuffer.writePosition(); pos++) {\r\n        byte b = dataBuffer.getByte(pos);\r\n        if (match(b)) {\r\n            reset();\r\n            return pos;\r\n        }\r\n    }\r\n    return -1;\r\n}\n@Override\r\npublic boolean match(byte b) {\r\n    if (b == this.delimiter[this.matches]) {\r\n        this.matches++;\r\n        return (this.matches == delimiter().length);\r\n    }\r\n    return false;\r\n}\n@Override\r\npublic byte[] delimiter() {\r\n    return this.delimiter;\r\n}\n@Override\r\npublic void reset() {\r\n    this.matches = 0;\r\n}",
+    "comment": "\n\t * Base class for a {@link NestedMatcher}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher#setMatches(int)",
+    "entityType": "method",
+    "code": "protected void setMatches(int index) {\r\n    this.matches = index;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher#getMatches()",
+    "entityType": "method",
+    "code": "protected int getMatches() {\r\n    return this.matches;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher#match(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int match(DataBuffer dataBuffer) {\r\n    for (int pos = dataBuffer.readPosition(); pos < dataBuffer.writePosition(); pos++) {\r\n        byte b = dataBuffer.getByte(pos);\r\n        if (match(b)) {\r\n            reset();\r\n            return pos;\r\n        }\r\n    }\r\n    return -1;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher#match(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean match(byte b) {\r\n    if (b == this.delimiter[this.matches]) {\r\n        this.matches++;\r\n        return (this.matches == delimiter().length);\r\n    }\r\n    return false;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher#delimiter()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte[] delimiter() {\r\n    return this.delimiter;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.AbstractNestedMatcher#reset()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void reset() {\r\n    this.matches = 0;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.TwoByteMatcher",
+    "entityType": "class",
+    "code": "protected TwoByteMatcher(byte[] delimiter) {\r\n    super(delimiter);\r\n    Assert.isTrue(delimiter.length == 2, \"Expected a 2-byte delimiter\");\r\n}",
+    "comment": "\n\t * Matcher with a 2 byte delimiter that does not benefit from a\n\t * Knuth-Morris-Pratt suffix-prefix table.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.KnuthMorrisPrattMatcher",
+    "entityType": "class",
+    "code": "private final int[] table;\npublic KnuthMorrisPrattMatcher(byte[] delimiter) {\r\n    super(delimiter);\r\n    this.table = longestSuffixPrefixTable(delimiter);\r\n}\nprivate static int[] longestSuffixPrefixTable(byte[] delimiter) {\r\n    int[] result = new int[delimiter.length];\r\n    result[0] = 0;\r\n    for (int i = 1; i < delimiter.length; i++) {\r\n        int j = result[i - 1];\r\n        while (j > 0 && delimiter[i] != delimiter[j]) {\r\n            j = result[j - 1];\r\n        }\r\n        if (delimiter[i] == delimiter[j]) {\r\n            j++;\r\n        }\r\n        result[i] = j;\r\n    }\r\n    return result;\r\n}\n@Override\r\npublic boolean match(byte b) {\r\n    while (getMatches() > 0 && b != delimiter()[getMatches()]) {\r\n        setMatches(this.table[getMatches() - 1]);\r\n    }\r\n    return super.match(b);\r\n}",
+    "comment": "\n\t * Implementation of {@link Matcher} that uses the Knuth-Morris-Pratt algorithm.\n\t * @see <a href=\"https://www.nayuki.io/page/knuth-morris-pratt-string-matching\">Knuth-Morris-Pratt string matching</a>\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.KnuthMorrisPrattMatcher#longestSuffixPrefixTable(byte[])",
+    "entityType": "method",
+    "code": "private static int[] longestSuffixPrefixTable(byte[] delimiter) {\r\n    int[] result = new int[delimiter.length];\r\n    result[0] = 0;\r\n    for (int i = 1; i < delimiter.length; i++) {\r\n        int j = result[i - 1];\r\n        while (j > 0 && delimiter[i] != delimiter[j]) {\r\n            j = result[j - 1];\r\n        }\r\n        if (delimiter[i] == delimiter[j]) {\r\n            j++;\r\n        }\r\n        result[i] = j;\r\n    }\r\n    return result;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.KnuthMorrisPrattMatcher#match(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean match(byte b) {\r\n    while (getMatches() > 0 && b != delimiter()[getMatches()]) {\r\n        setMatches(this.table[getMatches() - 1]);\r\n    }\r\n    return super.match(b);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadableByteChannelGenerator",
+    "entityType": "class",
+    "code": "private final ReadableByteChannel channel;\nprivate final DataBufferFactory dataBufferFactory;\nprivate final int bufferSize;\npublic ReadableByteChannelGenerator(ReadableByteChannel channel, DataBufferFactory dataBufferFactory, int bufferSize) {\r\n    this.channel = channel;\r\n    this.dataBufferFactory = dataBufferFactory;\r\n    this.bufferSize = bufferSize;\r\n}\n@Override\r\npublic void accept(SynchronousSink<DataBuffer> sink) {\r\n    int read = -1;\r\n    DataBuffer dataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);\r\n    try {\r\n        try (DataBuffer.ByteBufferIterator iterator = dataBuffer.writableByteBuffers()) {\r\n            Assert.state(iterator.hasNext(), \"No ByteBuffer available\");\r\n            ByteBuffer byteBuffer = iterator.next();\r\n            read = this.channel.read(byteBuffer);\r\n        }\r\n        if (read >= 0) {\r\n            dataBuffer.writePosition(read);\r\n            sink.next(dataBuffer);\r\n        } else {\r\n            sink.complete();\r\n        }\r\n    } catch (IOException ex) {\r\n        sink.error(ex);\r\n    } finally {\r\n        if (read == -1) {\r\n            release(dataBuffer);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadableByteChannelGenerator#accept(SynchronousSink<DataBuffer>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void accept(SynchronousSink<DataBuffer> sink) {\r\n    int read = -1;\r\n    DataBuffer dataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);\r\n    try {\r\n        try (DataBuffer.ByteBufferIterator iterator = dataBuffer.writableByteBuffers()) {\r\n            Assert.state(iterator.hasNext(), \"No ByteBuffer available\");\r\n            ByteBuffer byteBuffer = iterator.next();\r\n            read = this.channel.read(byteBuffer);\r\n        }\r\n        if (read >= 0) {\r\n            dataBuffer.writePosition(read);\r\n            sink.next(dataBuffer);\r\n        } else {\r\n            sink.complete();\r\n        }\r\n    } catch (IOException ex) {\r\n        sink.error(ex);\r\n    } finally {\r\n        if (read == -1) {\r\n            release(dataBuffer);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler",
+    "entityType": "class",
+    "code": "private final AsynchronousFileChannel channel;\nprivate final FluxSink<DataBuffer> sink;\nprivate final DataBufferFactory dataBufferFactory;\nprivate final int bufferSize;\nprivate final AtomicLong position;\nprivate final AtomicReference<State> state = new AtomicReference<>(State.IDLE);\npublic ReadCompletionHandler(AsynchronousFileChannel channel, FluxSink<DataBuffer> sink, long position, DataBufferFactory dataBufferFactory, int bufferSize) {\r\n    this.channel = channel;\r\n    this.sink = sink;\r\n    this.position = new AtomicLong(position);\r\n    this.dataBufferFactory = dataBufferFactory;\r\n    this.bufferSize = bufferSize;\r\n}\n/**\r\n * Invoked when Reactive Streams consumer signals demand.\r\n */\r\npublic void request(long n) {\r\n    tryRead();\r\n}\n/**\r\n * Invoked when Reactive Streams consumer cancels.\r\n */\r\npublic void cancel() {\r\n    this.state.getAndSet(State.DISPOSED);\r\n    // According java.nio.channels.AsynchronousChannel \"if an I/O operation is outstanding\r\n    // on the channel and the channel's close method is invoked, then the I/O operation\r\n    // fails with the exception AsynchronousCloseException\". That should invoke the failed\r\n    // callback below and the current DataBuffer should be released.\r\n    closeChannel(this.channel);\r\n}\nprivate void tryRead() {\r\n    if (this.sink.requestedFromDownstream() > 0 && this.state.compareAndSet(State.IDLE, State.READING)) {\r\n        read();\r\n    }\r\n}\nprivate void read() {\r\n    DataBuffer dataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);\r\n    DataBuffer.ByteBufferIterator iterator = dataBuffer.writableByteBuffers();\r\n    Assert.state(iterator.hasNext(), \"No ByteBuffer available\");\r\n    ByteBuffer byteBuffer = iterator.next();\r\n    Attachment attachment = new Attachment(dataBuffer, iterator);\r\n    this.channel.read(byteBuffer, this.position.get(), attachment, this);\r\n}\n@Override\r\npublic void completed(Integer read, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    DataBuffer dataBuffer = attachment.dataBuffer();\r\n    if (this.state.get() == State.DISPOSED) {\r\n        release(dataBuffer);\r\n        closeChannel(this.channel);\r\n        return;\r\n    }\r\n    if (read == -1) {\r\n        release(dataBuffer);\r\n        closeChannel(this.channel);\r\n        this.state.set(State.DISPOSED);\r\n        this.sink.complete();\r\n        return;\r\n    }\r\n    this.position.addAndGet(read);\r\n    dataBuffer.writePosition(read);\r\n    this.sink.next(dataBuffer);\r\n    // Stay in READING mode if there is demand\r\n    if (this.sink.requestedFromDownstream() > 0) {\r\n        read();\r\n        return;\r\n    }\r\n    // Release READING mode and then try again in case of concurrent \"request\"\r\n    if (this.state.compareAndSet(State.READING, State.IDLE)) {\r\n        tryRead();\r\n    }\r\n}\n@Override\r\npublic void failed(Throwable ex, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    release(attachment.dataBuffer());\r\n    closeChannel(this.channel);\r\n    this.state.set(State.DISPOSED);\r\n    this.sink.error(ex);\r\n}\nprivate enum State {\r\n\r\n    IDLE, READING, DISPOSED\r\n}\nprivate record Attachment(DataBuffer dataBuffer, DataBuffer.ByteBufferIterator iterator) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler#request(long)",
+    "entityType": "method",
+    "code": "/**\r\n * Invoked when Reactive Streams consumer signals demand.\r\n */\r\npublic void request(long n) {\r\n    tryRead();\r\n}",
+    "comment": "\n\t\t * Invoked when Reactive Streams consumer signals demand.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler#cancel()",
+    "entityType": "method",
+    "code": "/**\r\n * Invoked when Reactive Streams consumer cancels.\r\n */\r\npublic void cancel() {\r\n    this.state.getAndSet(State.DISPOSED);\r\n    // According java.nio.channels.AsynchronousChannel \"if an I/O operation is outstanding\r\n    // on the channel and the channel's close method is invoked, then the I/O operation\r\n    // fails with the exception AsynchronousCloseException\". That should invoke the failed\r\n    // callback below and the current DataBuffer should be released.\r\n    closeChannel(this.channel);\r\n}",
+    "comment": "\n\t\t * Invoked when Reactive Streams consumer cancels.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler#tryRead()",
+    "entityType": "method",
+    "code": "private void tryRead() {\r\n    if (this.sink.requestedFromDownstream() > 0 && this.state.compareAndSet(State.IDLE, State.READING)) {\r\n        read();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler#read()",
+    "entityType": "method",
+    "code": "private void read() {\r\n    DataBuffer dataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);\r\n    DataBuffer.ByteBufferIterator iterator = dataBuffer.writableByteBuffers();\r\n    Assert.state(iterator.hasNext(), \"No ByteBuffer available\");\r\n    ByteBuffer byteBuffer = iterator.next();\r\n    Attachment attachment = new Attachment(dataBuffer, iterator);\r\n    this.channel.read(byteBuffer, this.position.get(), attachment, this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler#completed(Integer,Attachment)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void completed(Integer read, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    DataBuffer dataBuffer = attachment.dataBuffer();\r\n    if (this.state.get() == State.DISPOSED) {\r\n        release(dataBuffer);\r\n        closeChannel(this.channel);\r\n        return;\r\n    }\r\n    if (read == -1) {\r\n        release(dataBuffer);\r\n        closeChannel(this.channel);\r\n        this.state.set(State.DISPOSED);\r\n        this.sink.complete();\r\n        return;\r\n    }\r\n    this.position.addAndGet(read);\r\n    dataBuffer.writePosition(read);\r\n    this.sink.next(dataBuffer);\r\n    // Stay in READING mode if there is demand\r\n    if (this.sink.requestedFromDownstream() > 0) {\r\n        read();\r\n        return;\r\n    }\r\n    // Release READING mode and then try again in case of concurrent \"request\"\r\n    if (this.state.compareAndSet(State.READING, State.IDLE)) {\r\n        tryRead();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.ReadCompletionHandler#failed(Throwable,Attachment)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void failed(Throwable ex, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    release(attachment.dataBuffer());\r\n    closeChannel(this.channel);\r\n    this.state.set(State.DISPOSED);\r\n    this.sink.error(ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WritableByteChannelSubscriber",
+    "entityType": "class",
+    "code": "private final FluxSink<DataBuffer> sink;\nprivate final WritableByteChannel channel;\npublic WritableByteChannelSubscriber(FluxSink<DataBuffer> sink, WritableByteChannel channel) {\r\n    this.sink = sink;\r\n    this.channel = channel;\r\n}\n@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    request(1);\r\n}\n@Override\r\nprotected void hookOnNext(DataBuffer dataBuffer) {\r\n    try {\r\n        try (DataBuffer.ByteBufferIterator iterator = dataBuffer.readableByteBuffers()) {\r\n            ByteBuffer byteBuffer = iterator.next();\r\n            while (byteBuffer.hasRemaining()) {\r\n                this.channel.write(byteBuffer);\r\n            }\r\n        }\r\n        this.sink.next(dataBuffer);\r\n        request(1);\r\n    } catch (IOException ex) {\r\n        this.sink.next(dataBuffer);\r\n        this.sink.error(ex);\r\n    }\r\n}\n@Override\r\nprotected void hookOnError(Throwable throwable) {\r\n    this.sink.error(throwable);\r\n}\n@Override\r\nprotected void hookOnComplete() {\r\n    this.sink.complete();\r\n}\n@Override\r\npublic Context currentContext() {\r\n    return Context.of(this.sink.contextView());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WritableByteChannelSubscriber#hookOnSubscribe(Subscription)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    request(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WritableByteChannelSubscriber#hookOnNext(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnNext(DataBuffer dataBuffer) {\r\n    try {\r\n        try (DataBuffer.ByteBufferIterator iterator = dataBuffer.readableByteBuffers()) {\r\n            ByteBuffer byteBuffer = iterator.next();\r\n            while (byteBuffer.hasRemaining()) {\r\n                this.channel.write(byteBuffer);\r\n            }\r\n        }\r\n        this.sink.next(dataBuffer);\r\n        request(1);\r\n    } catch (IOException ex) {\r\n        this.sink.next(dataBuffer);\r\n        this.sink.error(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WritableByteChannelSubscriber#hookOnError(Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnError(Throwable throwable) {\r\n    this.sink.error(throwable);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WritableByteChannelSubscriber#hookOnComplete()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnComplete() {\r\n    this.sink.complete();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WritableByteChannelSubscriber#currentContext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Context currentContext() {\r\n    return Context.of(this.sink.contextView());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler",
+    "entityType": "class",
+    "code": "private final FluxSink<DataBuffer> sink;\nprivate final AsynchronousFileChannel channel;\nprivate final AtomicBoolean writing = new AtomicBoolean();\nprivate final AtomicBoolean completed = new AtomicBoolean();\nprivate final AtomicReference<Throwable> error = new AtomicReference<>();\nprivate final AtomicLong position;\npublic WriteCompletionHandler(FluxSink<DataBuffer> sink, AsynchronousFileChannel channel, long position) {\r\n    this.sink = sink;\r\n    this.channel = channel;\r\n    this.position = new AtomicLong(position);\r\n}\n@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    request(1);\r\n}\n@Override\r\nprotected void hookOnNext(DataBuffer dataBuffer) {\r\n    DataBuffer.ByteBufferIterator iterator = dataBuffer.readableByteBuffers();\r\n    if (iterator.hasNext()) {\r\n        ByteBuffer byteBuffer = iterator.next();\r\n        long pos = this.position.get();\r\n        Attachment attachment = new Attachment(byteBuffer, dataBuffer, iterator);\r\n        this.writing.set(true);\r\n        this.channel.write(byteBuffer, pos, attachment, this);\r\n    }\r\n}\n@Override\r\nprotected void hookOnError(Throwable throwable) {\r\n    this.error.set(throwable);\r\n    if (!this.writing.get()) {\r\n        this.sink.error(throwable);\r\n    }\r\n}\n@Override\r\nprotected void hookOnComplete() {\r\n    this.completed.set(true);\r\n    if (!this.writing.get()) {\r\n        this.sink.complete();\r\n    }\r\n}\n@Override\r\npublic void completed(Integer written, Attachment attachment) {\r\n    DataBuffer.ByteBufferIterator iterator = attachment.iterator();\r\n    iterator.close();\r\n    long pos = this.position.addAndGet(written);\r\n    ByteBuffer byteBuffer = attachment.byteBuffer();\r\n    if (byteBuffer.hasRemaining()) {\r\n        this.channel.write(byteBuffer, pos, attachment, this);\r\n    } else if (iterator.hasNext()) {\r\n        ByteBuffer next = iterator.next();\r\n        this.channel.write(next, pos, attachment, this);\r\n    } else {\r\n        this.sink.next(attachment.dataBuffer());\r\n        this.writing.set(false);\r\n        Throwable throwable = this.error.get();\r\n        if (throwable != null) {\r\n            this.sink.error(throwable);\r\n        } else if (this.completed.get()) {\r\n            this.sink.complete();\r\n        } else {\r\n            request(1);\r\n        }\r\n    }\r\n}\n@Override\r\npublic void failed(Throwable ex, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    this.sink.next(attachment.dataBuffer());\r\n    this.writing.set(false);\r\n    this.sink.error(ex);\r\n}\n@Override\r\npublic Context currentContext() {\r\n    return Context.of(this.sink.contextView());\r\n}\nprivate record Attachment(ByteBuffer byteBuffer, DataBuffer dataBuffer, DataBuffer.ByteBufferIterator iterator) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#hookOnSubscribe(Subscription)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    request(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#hookOnNext(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnNext(DataBuffer dataBuffer) {\r\n    DataBuffer.ByteBufferIterator iterator = dataBuffer.readableByteBuffers();\r\n    if (iterator.hasNext()) {\r\n        ByteBuffer byteBuffer = iterator.next();\r\n        long pos = this.position.get();\r\n        Attachment attachment = new Attachment(byteBuffer, dataBuffer, iterator);\r\n        this.writing.set(true);\r\n        this.channel.write(byteBuffer, pos, attachment, this);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#hookOnError(Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnError(Throwable throwable) {\r\n    this.error.set(throwable);\r\n    if (!this.writing.get()) {\r\n        this.sink.error(throwable);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#hookOnComplete()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnComplete() {\r\n    this.completed.set(true);\r\n    if (!this.writing.get()) {\r\n        this.sink.complete();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#completed(Integer,Attachment)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void completed(Integer written, Attachment attachment) {\r\n    DataBuffer.ByteBufferIterator iterator = attachment.iterator();\r\n    iterator.close();\r\n    long pos = this.position.addAndGet(written);\r\n    ByteBuffer byteBuffer = attachment.byteBuffer();\r\n    if (byteBuffer.hasRemaining()) {\r\n        this.channel.write(byteBuffer, pos, attachment, this);\r\n    } else if (iterator.hasNext()) {\r\n        ByteBuffer next = iterator.next();\r\n        this.channel.write(next, pos, attachment, this);\r\n    } else {\r\n        this.sink.next(attachment.dataBuffer());\r\n        this.writing.set(false);\r\n        Throwable throwable = this.error.get();\r\n        if (throwable != null) {\r\n            this.sink.error(throwable);\r\n        } else if (this.completed.get()) {\r\n            this.sink.complete();\r\n        } else {\r\n            request(1);\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#failed(Throwable,Attachment)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void failed(Throwable ex, Attachment attachment) {\r\n    attachment.iterator().close();\r\n    this.sink.next(attachment.dataBuffer());\r\n    this.writing.set(false);\r\n    this.sink.error(ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.WriteCompletionHandler#currentContext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Context currentContext() {\r\n    return Context.of(this.sink.contextView());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferMapper",
+    "entityType": "class",
+    "code": "private final DataBufferFactory bufferFactory;\nprivate DataBufferMapper(DataBufferFactory bufferFactory) {\r\n    this.bufferFactory = bufferFactory;\r\n}\n@Override\r\npublic DataBuffer map(int b) {\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(1);\r\n    buffer.write((byte) b);\r\n    return buffer;\r\n}\n@Override\r\npublic DataBuffer map(byte[] b, int off, int len) {\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(len);\r\n    buffer.write(b, off, len);\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferMapper#map(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer map(int b) {\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(1);\r\n    buffer.write((byte) b);\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferMapper#map(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer map(byte[] b, int off, int len) {\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(len);\r\n    buffer.write(b, off, len);\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper",
+    "entityType": "class",
+    "code": "private final DataBuffer delegate;\n/**\r\n * Create a new {@code DataBufferWrapper} that wraps the given buffer.\r\n * @param delegate the buffer to wrap\r\n */\r\npublic DataBufferWrapper(DataBuffer delegate) {\r\n    Assert.notNull(delegate, \"Delegate must not be null\");\r\n    this.delegate = delegate;\r\n}\n/**\r\n * Return the wrapped delegate.\r\n */\r\npublic DataBuffer dataBuffer() {\r\n    return this.delegate;\r\n}\n@Override\r\npublic DataBufferFactory factory() {\r\n    return this.delegate.factory();\r\n}\n@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.indexOf(predicate, fromIndex);\r\n}\n@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.lastIndexOf(predicate, fromIndex);\r\n}\n@Override\r\npublic int readableByteCount() {\r\n    return this.delegate.readableByteCount();\r\n}\n@Override\r\npublic int writableByteCount() {\r\n    return this.delegate.writableByteCount();\r\n}\n@Override\r\npublic int capacity() {\r\n    return this.delegate.capacity();\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer capacity(int capacity) {\r\n    return this.delegate.capacity(capacity);\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer ensureCapacity(int capacity) {\r\n    return this.delegate.ensureCapacity(capacity);\r\n}\n@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    return this.delegate.ensureWritable(capacity);\r\n}\n@Override\r\npublic int readPosition() {\r\n    return this.delegate.readPosition();\r\n}\n@Override\r\npublic DataBuffer readPosition(int readPosition) {\r\n    return this.delegate.readPosition(readPosition);\r\n}\n@Override\r\npublic int writePosition() {\r\n    return this.delegate.writePosition();\r\n}\n@Override\r\npublic DataBuffer writePosition(int writePosition) {\r\n    return this.delegate.writePosition(writePosition);\r\n}\n@Override\r\npublic byte getByte(int index) {\r\n    return this.delegate.getByte(index);\r\n}\n@Override\r\npublic byte read() {\r\n    return this.delegate.read();\r\n}\n@Override\r\npublic DataBuffer read(byte[] destination) {\r\n    return this.delegate.read(destination);\r\n}\n@Override\r\npublic DataBuffer read(byte[] destination, int offset, int length) {\r\n    return this.delegate.read(destination, offset, length);\r\n}\n@Override\r\npublic DataBuffer write(byte b) {\r\n    return this.delegate.write(b);\r\n}\n@Override\r\npublic DataBuffer write(byte[] source) {\r\n    return this.delegate.write(source);\r\n}\n@Override\r\npublic DataBuffer write(byte[] source, int offset, int length) {\r\n    return this.delegate.write(source, offset, length);\r\n}\n@Override\r\npublic DataBuffer write(DataBuffer... buffers) {\r\n    return this.delegate.write(buffers);\r\n}\n@Override\r\npublic DataBuffer write(ByteBuffer... buffers) {\r\n    return this.delegate.write(buffers);\r\n}\n@Override\r\npublic DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    return this.delegate.write(charSequence, charset);\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer slice(int index, int length) {\r\n    return this.delegate.slice(index, length);\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer retainedSlice(int index, int length) {\r\n    return this.delegate.retainedSlice(index, length);\r\n}\n@Override\r\npublic DataBuffer split(int index) {\r\n    return this.delegate.split(index);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return this.delegate.asByteBuffer();\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return this.delegate.asByteBuffer(index, length);\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer() {\r\n    return this.delegate.toByteBuffer();\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    return this.delegate.toByteBuffer(index, length);\r\n}\n@Override\r\npublic void toByteBuffer(ByteBuffer dest) {\r\n    this.delegate.toByteBuffer(dest);\r\n}\n@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    this.delegate.toByteBuffer(srcPos, dest, destPos, length);\r\n}\n@Override\r\npublic ByteBufferIterator readableByteBuffers() {\r\n    return this.delegate.readableByteBuffers();\r\n}\n@Override\r\npublic ByteBufferIterator writableByteBuffers() {\r\n    return this.delegate.writableByteBuffers();\r\n}\n@Override\r\npublic InputStream asInputStream() {\r\n    return this.delegate.asInputStream();\r\n}\n@Override\r\npublic InputStream asInputStream(boolean releaseOnClose) {\r\n    return this.delegate.asInputStream(releaseOnClose);\r\n}\n@Override\r\npublic OutputStream asOutputStream() {\r\n    return this.delegate.asOutputStream();\r\n}\n@Override\r\npublic String toString(Charset charset) {\r\n    return this.delegate.toString(charset);\r\n}\n@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    return this.delegate.toString(index, length, charset);\r\n}",
+    "comment": "\n * Provides a convenient implementation of the {@link DataBuffer} interface\n * that can be overridden to adapt the delegate.\n *\n * <p>These methods default to calling through to the wrapped delegate object.\n *\n * @author Arjen Poutsma\n * @since 5.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#dataBuffer()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the wrapped delegate.\r\n */\r\npublic DataBuffer dataBuffer() {\r\n    return this.delegate;\r\n}",
+    "comment": "\n\t * Return the wrapped delegate.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#factory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBufferFactory factory() {\r\n    return this.delegate.factory();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#indexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.indexOf(predicate, fromIndex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#lastIndexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    return this.delegate.lastIndexOf(predicate, fromIndex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#readableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readableByteCount() {\r\n    return this.delegate.readableByteCount();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#writableByteCount()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writableByteCount() {\r\n    return this.delegate.writableByteCount();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#capacity()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int capacity() {\r\n    return this.delegate.capacity();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#capacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer capacity(int capacity) {\r\n    return this.delegate.capacity(capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#ensureCapacity(int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer ensureCapacity(int capacity) {\r\n    return this.delegate.ensureCapacity(capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#ensureWritable(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer ensureWritable(int capacity) {\r\n    return this.delegate.ensureWritable(capacity);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#readPosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int readPosition() {\r\n    return this.delegate.readPosition();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#readPosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer readPosition(int readPosition) {\r\n    return this.delegate.readPosition(readPosition);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#writePosition()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int writePosition() {\r\n    return this.delegate.writePosition();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#writePosition(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer writePosition(int writePosition) {\r\n    return this.delegate.writePosition(writePosition);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#getByte(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte getByte(int index) {\r\n    return this.delegate.getByte(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#read()",
+    "entityType": "method",
+    "code": "@Override\r\npublic byte read() {\r\n    return this.delegate.read();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#read(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer read(byte[] destination) {\r\n    return this.delegate.read(destination);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#read(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer read(byte[] destination, int offset, int length) {\r\n    return this.delegate.read(destination, offset, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#write(byte)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(byte b) {\r\n    return this.delegate.write(b);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#write(byte[])",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(byte[] source) {\r\n    return this.delegate.write(source);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#write(byte[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(byte[] source, int offset, int length) {\r\n    return this.delegate.write(source, offset, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#write(DataBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(DataBuffer... buffers) {\r\n    return this.delegate.write(buffers);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#write(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(ByteBuffer... buffers) {\r\n    return this.delegate.write(buffers);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#write(CharSequence,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer write(CharSequence charSequence, Charset charset) {\r\n    return this.delegate.write(charSequence, charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#slice(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer slice(int index, int length) {\r\n    return this.delegate.slice(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#retainedSlice(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic DataBuffer retainedSlice(int index, int length) {\r\n    return this.delegate.retainedSlice(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#split(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic DataBuffer split(int index) {\r\n    return this.delegate.split(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#asByteBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return this.delegate.asByteBuffer();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#asByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    return this.delegate.asByteBuffer(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#toByteBuffer()",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer() {\r\n    return this.delegate.toByteBuffer();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#toByteBuffer(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    return this.delegate.toByteBuffer(index, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#toByteBuffer(ByteBuffer)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void toByteBuffer(ByteBuffer dest) {\r\n    this.delegate.toByteBuffer(dest);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#toByteBuffer(int,ByteBuffer,int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    this.delegate.toByteBuffer(srcPos, dest, destPos, length);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#readableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBufferIterator readableByteBuffers() {\r\n    return this.delegate.readableByteBuffers();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#writableByteBuffers()",
+    "entityType": "method",
+    "code": "@Override\r\npublic ByteBufferIterator writableByteBuffers() {\r\n    return this.delegate.writableByteBuffers();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#asInputStream()",
+    "entityType": "method",
+    "code": "@Override\r\npublic InputStream asInputStream() {\r\n    return this.delegate.asInputStream();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#asInputStream(boolean)",
+    "entityType": "method",
+    "code": "@Override\r\npublic InputStream asInputStream(boolean releaseOnClose) {\r\n    return this.delegate.asInputStream(releaseOnClose);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#asOutputStream()",
+    "entityType": "method",
+    "code": "@Override\r\npublic OutputStream asOutputStream() {\r\n    return this.delegate.asOutputStream();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#toString(Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString(Charset charset) {\r\n    return this.delegate.toString(charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DataBufferWrapper#toString(int,int,Charset)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    return this.delegate.toString(index, length, charset);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer",
+    "entityType": "class",
+    "code": "private static final int MAX_CAPACITY = Integer.MAX_VALUE;\nprivate static final int CAPACITY_THRESHOLD = 1024 * 1024 * 4;\nprivate final DefaultDataBufferFactory dataBufferFactory;\nprivate ByteBuffer byteBuffer;\nprivate int capacity;\nprivate int readPosition;\nprivate int writePosition;\nprivate DefaultDataBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    Assert.notNull(dataBufferFactory, \"DefaultDataBufferFactory must not be null\");\r\n    Assert.notNull(byteBuffer, \"ByteBuffer must not be null\");\r\n    this.dataBufferFactory = dataBufferFactory;\r\n    ByteBuffer slice = byteBuffer.slice();\r\n    this.byteBuffer = slice;\r\n    this.capacity = slice.remaining();\r\n}\nstatic DefaultDataBuffer fromFilledByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    DefaultDataBuffer dataBuffer = new DefaultDataBuffer(dataBufferFactory, byteBuffer);\r\n    dataBuffer.writePosition(byteBuffer.remaining());\r\n    return dataBuffer;\r\n}\nstatic DefaultDataBuffer fromEmptyByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    return new DefaultDataBuffer(dataBufferFactory, byteBuffer);\r\n}\n/**\r\n * Directly exposes the native {@code ByteBuffer} that this buffer is based\r\n * on. The {@linkplain ByteBuffer#position() position} of the returned\r\n * {@code ByteBuffer} is set to the {@linkplain #readPosition() read\r\n * position}, and the {@linkplain ByteBuffer#limit()} to the\r\n * {@linkplain #writePosition() write position}.\r\n * @return the wrapped byte buffer\r\n */\r\npublic ByteBuffer getNativeBuffer() {\r\n    return this.byteBuffer.duplicate().position(this.readPosition).limit(this.writePosition);\r\n}\nprivate void setNativeBuffer(ByteBuffer byteBuffer) {\r\n    this.byteBuffer = byteBuffer;\r\n    this.capacity = byteBuffer.capacity();\r\n}\n@Override\r\npublic DefaultDataBufferFactory factory() {\r\n    return this.dataBufferFactory;\r\n}\n@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        fromIndex = 0;\r\n    } else if (fromIndex >= this.writePosition) {\r\n        return -1;\r\n    }\r\n    for (int i = fromIndex; i < this.writePosition; i++) {\r\n        byte b = this.byteBuffer.get(i);\r\n        if (predicate.test(b)) {\r\n            return i;\r\n        }\r\n    }\r\n    return -1;\r\n}\n@Override\r\npublic int lastIndexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    int i = Math.min(fromIndex, this.writePosition - 1);\r\n    for (; i >= 0; i--) {\r\n        byte b = this.byteBuffer.get(i);\r\n        if (predicate.test(b)) {\r\n            return i;\r\n        }\r\n    }\r\n    return -1;\r\n}\n@Override\r\npublic int readableByteCount() {\r\n    return this.writePosition - this.readPosition;\r\n}\n@Override\r\npublic int writableByteCount() {\r\n    return this.capacity - this.writePosition;\r\n}\n@Override\r\npublic int readPosition() {\r\n    return this.readPosition;\r\n}\n@Override\r\npublic DefaultDataBuffer readPosition(int readPosition) {\r\n    assertIndex(readPosition >= 0, \"'readPosition' %d must be >= 0\", readPosition);\r\n    assertIndex(readPosition <= this.writePosition, \"'readPosition' %d must be <= %d\", readPosition, this.writePosition);\r\n    this.readPosition = readPosition;\r\n    return this;\r\n}\n@Override\r\npublic int writePosition() {\r\n    return this.writePosition;\r\n}\n@Override\r\npublic DefaultDataBuffer writePosition(int writePosition) {\r\n    assertIndex(writePosition >= this.readPosition, \"'writePosition' %d must be >= %d\", writePosition, this.readPosition);\r\n    assertIndex(writePosition <= this.capacity, \"'writePosition' %d must be <= %d\", writePosition, this.capacity);\r\n    this.writePosition = writePosition;\r\n    return this;\r\n}\n@Override\r\npublic int capacity() {\r\n    return this.capacity;\r\n}\n@Override\r\n@Deprecated\r\npublic DataBuffer capacity(int capacity) {\r\n    setCapacity(capacity);\r\n    return this;\r\n}\nprivate void setCapacity(int newCapacity) {\r\n    if (newCapacity < 0) {\r\n        throw new IllegalArgumentException(String.format(\"'newCapacity' %d must be 0 or higher\", newCapacity));\r\n    }\r\n    int readPosition = readPosition();\r\n    int writePosition = writePosition();\r\n    int oldCapacity = capacity();\r\n    if (newCapacity > oldCapacity) {\r\n        ByteBuffer oldBuffer = this.byteBuffer;\r\n        ByteBuffer newBuffer = allocate(newCapacity, oldBuffer.isDirect());\r\n        oldBuffer.position(0).limit(oldBuffer.capacity());\r\n        newBuffer.position(0).limit(oldBuffer.capacity());\r\n        newBuffer.put(oldBuffer);\r\n        newBuffer.clear();\r\n        setNativeBuffer(newBuffer);\r\n    } else if (newCapacity < oldCapacity) {\r\n        ByteBuffer oldBuffer = this.byteBuffer;\r\n        ByteBuffer newBuffer = allocate(newCapacity, oldBuffer.isDirect());\r\n        if (readPosition < newCapacity) {\r\n            if (writePosition > newCapacity) {\r\n                writePosition = newCapacity;\r\n                writePosition(writePosition);\r\n            }\r\n            oldBuffer.position(readPosition).limit(writePosition);\r\n            newBuffer.position(readPosition).limit(writePosition);\r\n            newBuffer.put(oldBuffer);\r\n            newBuffer.clear();\r\n        } else {\r\n            readPosition(newCapacity);\r\n            writePosition(newCapacity);\r\n        }\r\n        setNativeBuffer(newBuffer);\r\n    }\r\n}\n@Override\r\npublic DataBuffer ensureWritable(int length) {\r\n    if (length > writableByteCount()) {\r\n        int newCapacity = calculateCapacity(this.writePosition + length);\r\n        setCapacity(newCapacity);\r\n    }\r\n    return this;\r\n}\nprivate static ByteBuffer allocate(int capacity, boolean direct) {\r\n    return (direct ? ByteBuffer.allocateDirect(capacity) : ByteBuffer.allocate(capacity));\r\n}\n@Override\r\npublic byte getByte(int index) {\r\n    assertIndex(index >= 0, \"index %d must be >= 0\", index);\r\n    assertIndex(index <= this.writePosition - 1, \"index %d must be <= %d\", index, this.writePosition - 1);\r\n    return this.byteBuffer.get(index);\r\n}\n@Override\r\npublic byte read() {\r\n    assertIndex(this.readPosition <= this.writePosition - 1, \"readPosition %d must be <= %d\", this.readPosition, this.writePosition - 1);\r\n    int pos = this.readPosition;\r\n    byte b = this.byteBuffer.get(pos);\r\n    this.readPosition = pos + 1;\r\n    return b;\r\n}\n@Override\r\npublic DefaultDataBuffer read(byte[] destination) {\r\n    Assert.notNull(destination, \"Byte array must not be null\");\r\n    read(destination, 0, destination.length);\r\n    return this;\r\n}\n@Override\r\npublic DefaultDataBuffer read(byte[] destination, int offset, int length) {\r\n    Assert.notNull(destination, \"Byte array must not be null\");\r\n    assertIndex(this.readPosition <= this.writePosition - length, \"readPosition %d and length %d should be smaller than writePosition %d\", this.readPosition, length, this.writePosition);\r\n    ByteBuffer tmp = this.byteBuffer.duplicate();\r\n    int limit = this.readPosition + length;\r\n    tmp.clear().position(this.readPosition).limit(limit);\r\n    tmp.get(destination, offset, length);\r\n    this.readPosition += length;\r\n    return this;\r\n}\n@Override\r\npublic DefaultDataBuffer write(byte b) {\r\n    ensureWritable(1);\r\n    int pos = this.writePosition;\r\n    this.byteBuffer.put(pos, b);\r\n    this.writePosition = pos + 1;\r\n    return this;\r\n}\n@Override\r\npublic DefaultDataBuffer write(byte[] source) {\r\n    Assert.notNull(source, \"Byte array must not be null\");\r\n    write(source, 0, source.length);\r\n    return this;\r\n}\n@Override\r\npublic DefaultDataBuffer write(byte[] source, int offset, int length) {\r\n    Assert.notNull(source, \"Byte array must not be null\");\r\n    ensureWritable(length);\r\n    ByteBuffer tmp = this.byteBuffer.duplicate();\r\n    int limit = this.writePosition + length;\r\n    tmp.clear().position(this.writePosition).limit(limit);\r\n    tmp.put(source, offset, length);\r\n    this.writePosition += length;\r\n    return this;\r\n}\n@Override\r\npublic DefaultDataBuffer write(DataBuffer... dataBuffers) {\r\n    if (!ObjectUtils.isEmpty(dataBuffers)) {\r\n        ByteBuffer[] byteBuffers = new ByteBuffer[dataBuffers.length];\r\n        for (int i = 0; i < dataBuffers.length; i++) {\r\n            byteBuffers[i] = ByteBuffer.allocate(dataBuffers[i].readableByteCount());\r\n            dataBuffers[i].toByteBuffer(byteBuffers[i]);\r\n        }\r\n        write(byteBuffers);\r\n    }\r\n    return this;\r\n}\n@Override\r\npublic DefaultDataBuffer write(ByteBuffer... buffers) {\r\n    if (!ObjectUtils.isEmpty(buffers)) {\r\n        int capacity = Arrays.stream(buffers).mapToInt(ByteBuffer::remaining).sum();\r\n        ensureWritable(capacity);\r\n        Arrays.stream(buffers).forEach(this::write);\r\n    }\r\n    return this;\r\n}\nprivate void write(ByteBuffer source) {\r\n    int length = source.remaining();\r\n    ByteBuffer tmp = this.byteBuffer.duplicate();\r\n    int limit = this.writePosition + source.remaining();\r\n    tmp.clear().position(this.writePosition).limit(limit);\r\n    tmp.put(source);\r\n    this.writePosition += length;\r\n}\n@Override\r\n@Deprecated\r\npublic DefaultDataBuffer slice(int index, int length) {\r\n    checkIndex(index, length);\r\n    int oldPosition = this.byteBuffer.position();\r\n    try {\r\n        this.byteBuffer.position(index);\r\n        ByteBuffer slice = this.byteBuffer.slice();\r\n        slice.limit(length);\r\n        return new SlicedDefaultDataBuffer(slice, this.dataBufferFactory, length);\r\n    } finally {\r\n        this.byteBuffer.position(oldPosition);\r\n    }\r\n}\n@Override\r\npublic DefaultDataBuffer split(int index) {\r\n    checkIndex(index);\r\n    ByteBuffer split = this.byteBuffer.duplicate().clear().position(0).limit(index).slice();\r\n    DefaultDataBuffer result = new DefaultDataBuffer(this.dataBufferFactory, split);\r\n    result.writePosition = Math.min(this.writePosition, index);\r\n    result.readPosition = Math.min(this.readPosition, index);\r\n    this.byteBuffer = this.byteBuffer.duplicate().clear().position(index).limit(this.byteBuffer.capacity()).slice();\r\n    this.writePosition = Math.max(this.writePosition, index) - index;\r\n    this.readPosition = Math.max(this.readPosition, index) - index;\r\n    this.capacity = this.byteBuffer.capacity();\r\n    return result;\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer() {\r\n    return asByteBuffer(this.readPosition, readableByteCount());\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer asByteBuffer(int index, int length) {\r\n    checkIndex(index, length);\r\n    ByteBuffer duplicate = this.byteBuffer.duplicate();\r\n    duplicate.position(index);\r\n    duplicate.limit(index + length);\r\n    return duplicate.slice();\r\n}\n@Override\r\n@Deprecated\r\npublic ByteBuffer toByteBuffer(int index, int length) {\r\n    checkIndex(index, length);\r\n    ByteBuffer copy = allocate(length, this.byteBuffer.isDirect());\r\n    ByteBuffer readOnly = this.byteBuffer.asReadOnlyBuffer();\r\n    readOnly.clear().position(index).limit(index + length);\r\n    copy.put(readOnly);\r\n    return copy.flip();\r\n}\n@Override\r\npublic void toByteBuffer(int srcPos, ByteBuffer dest, int destPos, int length) {\r\n    checkIndex(srcPos, length);\r\n    Assert.notNull(dest, \"Dest must not be null\");\r\n    dest = dest.duplicate().clear();\r\n    dest.put(destPos, this.byteBuffer, srcPos, length);\r\n}\n@Override\r\npublic DataBuffer.ByteBufferIterator readableByteBuffers() {\r\n    ByteBuffer readOnly = this.byteBuffer.slice(this.readPosition, readableByteCount()).asReadOnlyBuffer();\r\n    return new ByteBufferIterator(readOnly);\r\n}\n@Override\r\npublic DataBuffer.ByteBufferIterator writableByteBuffers() {\r\n    ByteBuffer slice = this.byteBuffer.slice(this.writePosition, writableByteCount());\r\n    return new ByteBufferIterator(slice);\r\n}\n@Override\r\npublic String toString(int index, int length, Charset charset) {\r\n    checkIndex(index, length);\r\n    Assert.notNull(charset, \"Charset must not be null\");\r\n    byte[] bytes;\r\n    int offset;\r\n    if (this.byteBuffer.hasArray()) {\r\n        bytes = this.byteBuffer.array();\r\n        offset = this.byteBuffer.arrayOffset() + index;\r\n    } else {\r\n        bytes = new byte[length];\r\n        offset = 0;\r\n        ByteBuffer duplicate = this.byteBuffer.duplicate();\r\n        duplicate.clear().position(index).limit(index + length);\r\n        duplicate.get(bytes, 0, length);\r\n    }\r\n    return new String(bytes, offset, length, charset);\r\n}\n/**\r\n * Calculate the capacity of the buffer.\r\n * @see io.netty.buffer.AbstractByteBufAllocator#calculateNewCapacity(int, int)\r\n */\r\nprivate int calculateCapacity(int neededCapacity) {\r\n    Assert.isTrue(neededCapacity >= 0, \"'neededCapacity' must be >= 0\");\r\n    if (neededCapacity == CAPACITY_THRESHOLD) {\r\n        return CAPACITY_THRESHOLD;\r\n    } else if (neededCapacity > CAPACITY_THRESHOLD) {\r\n        int newCapacity = neededCapacity / CAPACITY_THRESHOLD * CAPACITY_THRESHOLD;\r\n        if (newCapacity > MAX_CAPACITY - CAPACITY_THRESHOLD) {\r\n            newCapacity = MAX_CAPACITY;\r\n        } else {\r\n            newCapacity += CAPACITY_THRESHOLD;\r\n        }\r\n        return newCapacity;\r\n    } else {\r\n        int newCapacity = 64;\r\n        while (newCapacity < neededCapacity) {\r\n            newCapacity <<= 1;\r\n        }\r\n        return Math.min(newCapacity, MAX_CAPACITY);\r\n    }\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof DefaultDataBuffer that && this.readPosition == that.readPosition && this.writePosition == that.writePosition && this.byteBuffer.equals(that.byteBuffer)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return this.byteBuffer.hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    return String.format(\"DefaultDataBuffer (r: %d, w: %d, c: %d)\", this.readPosition, this.writePosition, this.capacity);\r\n}\nprivate void checkIndex(int index, int length) {\r\n    checkIndex(index);\r\n    checkLength(length);\r\n}\nprivate void checkIndex(int index) {\r\n    assertIndex(index >= 0, \"index %d must be >= 0\", index);\r\n    assertIndex(index <= this.capacity, \"index %d must be <= %d\", index, this.capacity);\r\n}\nprivate void checkLength(int length) {\r\n    assertIndex(length >= 0, \"length %d must be >= 0\", length);\r\n    assertIndex(length <= this.capacity, \"length %d must be <= %d\", length, this.capacity);\r\n}\nprivate void assertIndex(boolean expression, String format, Object... args) {\r\n    if (!expression) {\r\n        String message = String.format(format, args);\r\n        throw new IndexOutOfBoundsException(message);\r\n    }\r\n}\nprivate static class SlicedDefaultDataBuffer extends DefaultDataBuffer {\r\n\r\n    SlicedDefaultDataBuffer(ByteBuffer byteBuffer, DefaultDataBufferFactory dataBufferFactory, int length) {\r\n        super(dataBufferFactory, byteBuffer);\r\n        writePosition(length);\r\n    }\r\n\r\n    @Override\r\n    @SuppressWarnings(\"deprecation\")\r\n    public DefaultDataBuffer capacity(int newCapacity) {\r\n        throw new UnsupportedOperationException(\"Changing the capacity of a sliced buffer is not supported\");\r\n    }\r\n}\nprivate static final class ByteBufferIterator implements DataBuffer.ByteBufferIterator {\r\n\r\n    private final ByteBuffer buffer;\r\n\r\n    private boolean hasNext = true;\r\n\r\n    public ByteBufferIterator(ByteBuffer buffer) {\r\n        this.buffer = buffer;\r\n    }\r\n\r\n    @Override\r\n    public boolean hasNext() {\r\n        return this.hasNext;\r\n    }\r\n\r\n    @Override\r\n    public ByteBuffer next() {\r\n        if (!this.hasNext) {\r\n            throw new NoSuchElementException();\r\n        } else {\r\n            this.hasNext = false;\r\n            return this.buffer;\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void close() {\r\n    }\r\n}",
+    "comment": "\n * Default implementation of the {@link DataBuffer} interface that uses a\n * {@link ByteBuffer} internally. with separate read and write positions.\n * Constructed using the {@link DefaultDataBufferFactory}.\n *\n * <p>Inspired by Netty's {@code ByteBuf}. Introduced so that non-Netty runtimes\n * (i.e. Servlet) do not require Netty on the classpath.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @author Brian Clozel\n * @since 5.0\n * @see DefaultDataBufferFactory\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#fromFilledByteBuffer(DefaultDataBufferFactory,ByteBuffer)",
+    "entityType": "method",
+    "code": "static DefaultDataBuffer fromFilledByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    DefaultDataBuffer dataBuffer = new DefaultDataBuffer(dataBufferFactory, byteBuffer);\r\n    dataBuffer.writePosition(byteBuffer.remaining());\r\n    return dataBuffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#fromEmptyByteBuffer(DefaultDataBufferFactory,ByteBuffer)",
+    "entityType": "method",
+    "code": "static DefaultDataBuffer fromEmptyByteBuffer(DefaultDataBufferFactory dataBufferFactory, ByteBuffer byteBuffer) {\r\n    return new DefaultDataBuffer(dataBufferFactory, byteBuffer);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#getNativeBuffer()",
+    "entityType": "method",
+    "code": "/**\r\n * Directly exposes the native {@code ByteBuffer} that this buffer is based\r\n * on. The {@linkplain ByteBuffer#position() position} of the returned\r\n * {@code ByteBuffer} is set to the {@linkplain #readPosition() read\r\n * position}, and the {@linkplain ByteBuffer#limit()} to the\r\n * {@linkplain #writePosition() write position}.\r\n * @return the wrapped byte buffer\r\n */\r\npublic ByteBuffer getNativeBuffer() {\r\n    return this.byteBuffer.duplicate().position(this.readPosition).limit(this.writePosition);\r\n}",
+    "comment": "\n\t * Directly exposes the native {@code ByteBuffer} that this buffer is based\n\t * on. The {@linkplain ByteBuffer#position() position} of the returned\n\t * {@code ByteBuffer} is set to the {@linkplain #readPosition() read\n\t * position}, and the {@linkplain ByteBuffer#limit()} to the\n\t * {@linkplain #writePosition() write position}.\n\t * @return the wrapped byte buffer\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#setNativeBuffer(ByteBuffer)",
+    "entityType": "method",
+    "code": "private void setNativeBuffer(ByteBuffer byteBuffer) {\r\n    this.byteBuffer = byteBuffer;\r\n    this.capacity = byteBuffer.capacity();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#factory()",
+    "entityType": "method",
+    "code": "@Override\r\npublic DefaultDataBufferFactory factory() {\r\n    return this.dataBufferFactory;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.buffer.DefaultDataBuffer#indexOf(IntPredicate,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int indexOf(IntPredicate predicate, int fromIndex) {\r\n    Assert.notNull(predicate, \"IntPredicate must not be null\");\r\n    if (fromIndex < 0) {\r\n        fromIndex = 0;\r\n    } else if (fromIndex >= this.writePosition) {\r\n        return -1;\r\n    }\r\n    for (int i = fromIndex; i < this.writePosition; i++) {\r\n        byte b = this.byteBuffer.get(i);\r\n        if (predicate.test(b)) {\r\n            return i;\r\n        }\r\n    }\r\n    return -1;\r\n}",
+    "comment": ""
+  }
+]

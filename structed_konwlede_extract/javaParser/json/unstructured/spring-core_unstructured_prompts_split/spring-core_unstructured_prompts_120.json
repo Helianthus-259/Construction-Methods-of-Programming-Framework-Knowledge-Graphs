@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#convertFromStreamToRawList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertFromStreamToRawList() throws NoSuchFieldException {\r\n    Stream<Integer> stream = Stream.of(1, 2, 3);\r\n    TypeDescriptor listOfStrings = new TypeDescriptor(Types.class.getField(\"rawList\"));\r\n    Object result = this.conversionService.convert(stream, listOfStrings);\r\n    assertThat(result).asInstanceOf(list(Object.class)).containsExactly(1, 2, 3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#convertFromStreamToArrayNoConverter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertFromStreamToArrayNoConverter() throws NoSuchFieldException {\r\n    Stream<Integer> stream = Stream.of(1, 2, 3);\r\n    TypeDescriptor arrayOfLongs = new TypeDescriptor(Types.class.getField(\"arrayOfLongs\"));\r\n    assertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() -> this.conversionService.convert(stream, arrayOfLongs)).withCauseInstanceOf(ConverterNotFoundException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#convertFromListToStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertFromListToStream() throws NoSuchFieldException {\r\n    this.conversionService.addConverterFactory(new StringToNumberConverterFactory());\r\n    List<String> list = Arrays.asList(\"1\", \"2\", \"3\");\r\n    TypeDescriptor streamOfInteger = new TypeDescriptor(Types.class.getField(\"streamOfIntegers\"));\r\n    Object result = this.conversionService.convert(list, streamOfInteger);\r\n    assertThat(result).as(\"Converted object must be a stream\").isInstanceOf(Stream.class);\r\n    @SuppressWarnings(\"unchecked\")\r\n    Stream<Integer> content = (Stream<Integer>) result;\r\n    assertThat(content.mapToInt(x -> x).sum()).isEqualTo(6);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#convertFromArrayToStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertFromArrayToStream() throws NoSuchFieldException {\r\n    Integer[] array = new Integer[] { 1, 0, 1 };\r\n    this.conversionService.addConverter(Integer.class, Boolean.class, source -> source == 1);\r\n    TypeDescriptor streamOfBoolean = new TypeDescriptor(Types.class.getField(\"streamOfBooleans\"));\r\n    Object result = this.conversionService.convert(array, streamOfBoolean);\r\n    assertThat(result).asInstanceOf(stream(Boolean.class)).filteredOn(x -> x).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#convertFromListToRawStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid convertFromListToRawStream() throws NoSuchFieldException {\r\n    List<String> list = Arrays.asList(\"1\", \"2\", \"3\");\r\n    TypeDescriptor streamOfInteger = new TypeDescriptor(Types.class.getField(\"rawStream\"));\r\n    Object result = this.conversionService.convert(list, streamOfInteger);\r\n    assertThat(result).as(\"Converted object must be a stream\").isInstanceOf(Stream.class);\r\n    @SuppressWarnings(\"unchecked\")\r\n    Stream<Object> content = (Stream<Object>) result;\r\n    assertThat(content).containsExactly(\"1\", \"2\", \"3\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#doesNotMatchIfNoStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doesNotMatchIfNoStream() throws NoSuchFieldException {\r\n    assertThat(this.streamConverter.matches(new TypeDescriptor(Types.class.getField(\"listOfStrings\")), new TypeDescriptor(Types.class.getField(\"arrayOfLongs\")))).as(\"Should not match non stream type\").isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.StreamConverterTests#shouldFailToConvertIfNoStream()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldFailToConvertIfNoStream() throws NoSuchFieldException {\r\n    TypeDescriptor sourceType = new TypeDescriptor(Types.class.getField(\"listOfStrings\"));\r\n    TypeDescriptor targetType = new TypeDescriptor(Types.class.getField(\"arrayOfLongs\"));\r\n    assertThatIllegalStateException().isThrownBy(() -> this.streamConverter.convert(new Object(), sourceType, targetType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.support.Types",
+    "entityType": "class",
+    "code": "public List<String> listOfStrings;\npublic Long[] arrayOfLongs;\npublic Stream<Integer> streamOfIntegers;\npublic Stream<Boolean> streamOfBooleans;\npublic Stream rawStream;\npublic List rawList;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid parameterPrimitive() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testParameterPrimitive\", int.class), 0));\r\n    assertThat(desc.getType()).isEqualTo(int.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getName()).isEqualTo(\"int\");\r\n    assertThat(desc.toString()).isEqualTo(\"int\");\r\n    assertThat(desc.isPrimitive()).isTrue();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid parameterScalar() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testParameterScalar\", String.class), 0));\r\n    assertThat(desc.getType()).isEqualTo(String.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(String.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.lang.String\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.lang.String\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid parameterList() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterList\", List.class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<java.util.List<java.util.Map<java.lang.Integer, java.lang.Enum<?>>>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 1));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 2));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getMapValueTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 3));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getMapKeyTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getMapValueTypeDescriptor().getType()).isEqualTo(Enum.class);\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid parameterListNoParamTypes() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterListNoParamTypes\", List.class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<?>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat((Object) desc.getElementTypeDescriptor()).isNull();\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid parameterArray() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterArray\", Integer[].class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(Integer[].class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Integer[].class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.lang.Integer[]\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.lang.Integer[]\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isTrue();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getElementTypeDescriptor()).isEqualTo(TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid parameterMap() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterMap\", Map.class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Map.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.Map\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.Map<java.lang.Integer, java.util.List<java.lang.String>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapValueTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 1));\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 2));\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid parameterAnnotated() throws Exception {\r\n    TypeDescriptor t1 = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testAnnotatedMethod\", String.class), 0));\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n    assertThat(t1.getAnnotations()).hasSize(1);\r\n    assertThat(t1.getAnnotation(ParameterAnnotation.class)).isNotNull();\r\n    assertThat(t1.hasAnnotation(ParameterAnnotation.class)).isTrue();\r\n    assertThat(t1.getAnnotation(ParameterAnnotation.class).value()).isEqualTo(123);\r\n}\n@Test\r\nvoid getAnnotationsReturnsClonedArray() throws Exception {\r\n    TypeDescriptor t = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testAnnotatedMethod\", String.class), 0));\r\n    t.getAnnotations()[0] = null;\r\n    assertThat(t.getAnnotations()[0]).isNotNull();\r\n}\n@Test\r\nvoid propertyComplex() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getComplexProperty\"), getClass().getMethod(\"setComplexProperty\", Map.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid propertyGenericType() throws Exception {\r\n    GenericType<Integer> genericBean = new IntegerType();\r\n    Property property = new Property(getClass(), genericBean.getClass().getMethod(\"getProperty\"), genericBean.getClass().getMethod(\"setProperty\", Integer.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid propertyTypeCovariance() throws Exception {\r\n    GenericType<Number> genericBean = new NumberType();\r\n    Property property = new Property(getClass(), genericBean.getClass().getMethod(\"getProperty\"), genericBean.getClass().getMethod(\"setProperty\", Number.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid propertyGenericTypeList() throws Exception {\r\n    GenericType<Integer> genericBean = new IntegerType();\r\n    Property property = new Property(getClass(), genericBean.getClass().getMethod(\"getListProperty\"), genericBean.getClass().getMethod(\"setListProperty\", List.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid propertyGenericClassList() throws Exception {\r\n    IntegerClass genericBean = new IntegerClass();\r\n    Property property = new Property(genericBean.getClass(), genericBean.getClass().getMethod(\"getListProperty\"), genericBean.getClass().getMethod(\"setListProperty\", List.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(MethodAnnotation1.class)).isNotNull();\r\n    assertThat(desc.hasAnnotation(MethodAnnotation1.class)).isTrue();\r\n}\n@Test\r\nvoid property() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getProperty\"), getClass().getMethod(\"setProperty\", Map.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getMapKeyTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Long.class);\r\n    assertThat(desc.getAnnotation(MethodAnnotation1.class)).isNotNull();\r\n    assertThat(desc.getAnnotation(MethodAnnotation2.class)).isNotNull();\r\n    assertThat(desc.getAnnotation(MethodAnnotation3.class)).isNotNull();\r\n}\n@Test\r\nvoid getAnnotationOnMethodThatIsLocallyAnnotated() throws Exception {\r\n    assertAnnotationFoundOnMethod(MethodAnnotation1.class, \"methodWithLocalAnnotation\");\r\n}\n@Test\r\nvoid getAnnotationOnMethodThatIsMetaAnnotated() throws Exception {\r\n    assertAnnotationFoundOnMethod(MethodAnnotation1.class, \"methodWithComposedAnnotation\");\r\n}\n@Test\r\nvoid getAnnotationOnMethodThatIsMetaMetaAnnotated() throws Exception {\r\n    assertAnnotationFoundOnMethod(MethodAnnotation1.class, \"methodWithComposedComposedAnnotation\");\r\n}\nprivate void assertAnnotationFoundOnMethod(Class<? extends Annotation> annotationType, String methodName) throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(new MethodParameter(getClass().getMethod(methodName), -1));\r\n    assertThat(typeDescriptor.getAnnotation(annotationType)).as(\"Should have found @\" + annotationType.getSimpleName() + \" on \" + methodName + \".\").isNotNull();\r\n}\n@Test\r\nvoid fieldScalar() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(getClass().getField(\"fieldScalar\"));\r\n    assertThat(typeDescriptor.isPrimitive()).isFalse();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(Integer.class);\r\n    assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid fieldList() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"listOfString\"));\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\r\n}\n@Test\r\nvoid fieldListOfListOfString() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"listOfListOfString\"));\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.util.List<java.lang.String>>\");\r\n}\n@Test\r\nvoid fieldListOfListUnknown() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"listOfListOfUnknown\"));\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getElementTypeDescriptor()).isNull();\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.util.List<?>>\");\r\n}\n@Test\r\nvoid fieldArray() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"intArray\"));\r\n    assertThat(typeDescriptor.isArray()).isTrue();\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(int.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"int[]\");\r\n}\n@Test\r\nvoid fieldComplexTypeDescriptor() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"arrayOfListOfString\"));\r\n    assertThat(typeDescriptor.isArray()).isTrue();\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.lang.String>[]\");\r\n}\n@Test\r\nvoid fieldComplexTypeDescriptor2() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"nestedMapField\"));\r\n    assertThat(typeDescriptor.isMap()).isTrue();\r\n    assertThat(typeDescriptor.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.getMapValueTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.Map<java.lang.String, java.util.List<java.lang.Integer>>\");\r\n}\n@Test\r\nvoid fieldMap() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(TypeDescriptorTests.class.getField(\"fieldMap\"));\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapKeyTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Long.class);\r\n}\n@Test\r\nvoid fieldAnnotated() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(getClass().getField(\"fieldAnnotated\"));\r\n    assertThat(typeDescriptor.getAnnotations()).hasSize(1);\r\n    assertThat(typeDescriptor.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}\n@Test\r\nvoid valueOfScalar() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(Integer.class);\r\n    assertThat(typeDescriptor.isPrimitive()).isFalse();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(Integer.class);\r\n    assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid valueOfPrimitive() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(int.class);\r\n    assertThat(typeDescriptor.isPrimitive()).isTrue();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(int.class);\r\n    assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid valueOfArray() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(int[].class);\r\n    assertThat(typeDescriptor.isArray()).isTrue();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(int.class);\r\n}\n@Test\r\nvoid valueOfCollection() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(Collection.class);\r\n    assertThat(typeDescriptor.isCollection()).isTrue();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat((Object) typeDescriptor.getElementTypeDescriptor()).isNull();\r\n}\n@Test\r\nvoid forObject() {\r\n    TypeDescriptor desc = TypeDescriptor.forObject(\"3\");\r\n    assertThat(desc.getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid forObjectNullTypeDescriptor() {\r\n    TypeDescriptor desc = TypeDescriptor.forObject(null);\r\n    assertThat((Object) desc).isNull();\r\n}\n@Test\r\nvoid nestedMethodParameterType2Levels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test2\", List.class), 0), 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid nestedMethodParameterTypeMap() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test3\", Map.class), 0), 1);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid nestedMethodParameterTypeMapTwoLevels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test4\", List.class), 0), 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid nestedMethodParameterNot1NestedLevel() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test4\", List.class), 0, 2), 2));\r\n}\n@Test\r\nvoid nestedTooManyLevels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test4\", List.class), 0), 3);\r\n    assertThat((Object) t1).isNull();\r\n}\n@Test\r\nvoid nestedMethodParameterTypeNotNestable() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test5\", String.class), 0), 2);\r\n    assertThat((Object) t1).isNull();\r\n}\n@Test\r\nvoid nestedMethodParameterTypeInvalidNestingLevel() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test5\", String.class), 0, 2), 2));\r\n}\n@Test\r\nvoid nestedNotParameterized() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test6\", List.class), 0), 1);\r\n    assertThat(t1.getType()).isEqualTo(List.class);\r\n    assertThat(t1.toString()).isEqualTo(\"java.util.List<?>\");\r\n    TypeDescriptor t2 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test6\", List.class), 0), 2);\r\n    assertThat((Object) t2).isNull();\r\n}\n@Test\r\nvoid nestedFieldTypeMapTwoLevels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(getClass().getField(\"test4\"), 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid nestedPropertyTypeMapTwoLevels() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getTest4\"), getClass().getMethod(\"setTest4\", List.class));\r\n    TypeDescriptor t1 = TypeDescriptor.nested(property, 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid collection() {\r\n    TypeDescriptor desc = TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<java.lang.Integer>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getElementTypeDescriptor()).isEqualTo(TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid collectionNested() {\r\n    TypeDescriptor desc = TypeDescriptor.collection(List.class, TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(Integer.class)));\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<java.util.List<java.lang.Integer>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor()).isEqualTo(TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.isMap()).isFalse();\r\n}\n@Test\r\nvoid map() {\r\n    TypeDescriptor desc = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Map.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.Map\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.Map<java.lang.String, java.lang.Integer>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid mapNested() {\r\n    TypeDescriptor desc = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class)));\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Map.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.Map\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.Map<java.lang.String, java.util.Map<java.lang.String, java.lang.Integer>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getMapValueTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid narrow() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(Number.class);\r\n    Integer value = 3;\r\n    desc = desc.narrow(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid elementType() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(List.class);\r\n    Integer value = 3;\r\n    desc = desc.elementTypeDescriptor(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid elementTypePreserveContext() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(getClass().getField(\"listPreserveContext\"));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    List<Integer> value = new ArrayList<>(3);\r\n    desc = desc.elementTypeDescriptor(value);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}\n@Test\r\nvoid mapKeyType() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(Map.class);\r\n    Integer value = 3;\r\n    desc = desc.getMapKeyTypeDescriptor(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid mapKeyTypePreserveContext() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(getClass().getField(\"mapPreserveContext\"));\r\n    assertThat(desc.getMapKeyTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    List<Integer> value = new ArrayList<>(3);\r\n    desc = desc.getMapKeyTypeDescriptor(value);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}\n@Test\r\nvoid mapValueType() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(Map.class);\r\n    Integer value = 3;\r\n    desc = desc.getMapValueTypeDescriptor(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid mapValueTypePreserveContext() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(getClass().getField(\"mapPreserveContext\"));\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    List<Integer> value = new ArrayList<>(3);\r\n    desc = desc.getMapValueTypeDescriptor(value);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}\n@Test\r\nvoid equality() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.valueOf(String.class);\r\n    TypeDescriptor t2 = TypeDescriptor.valueOf(String.class);\r\n    TypeDescriptor t3 = TypeDescriptor.valueOf(Date.class);\r\n    TypeDescriptor t4 = TypeDescriptor.valueOf(Date.class);\r\n    TypeDescriptor t5 = TypeDescriptor.valueOf(List.class);\r\n    TypeDescriptor t6 = TypeDescriptor.valueOf(List.class);\r\n    TypeDescriptor t7 = TypeDescriptor.valueOf(Map.class);\r\n    TypeDescriptor t8 = TypeDescriptor.valueOf(Map.class);\r\n    assertThat(t2).isEqualTo(t1);\r\n    assertThat(t4).isEqualTo(t3);\r\n    assertThat(t6).isEqualTo(t5);\r\n    assertThat(t8).isEqualTo(t7);\r\n    TypeDescriptor t9 = new TypeDescriptor(getClass().getField(\"listField\"));\r\n    TypeDescriptor t10 = new TypeDescriptor(getClass().getField(\"listField\"));\r\n    assertThat(t10).isEqualTo(t9);\r\n    TypeDescriptor t11 = new TypeDescriptor(getClass().getField(\"mapField\"));\r\n    TypeDescriptor t12 = new TypeDescriptor(getClass().getField(\"mapField\"));\r\n    assertThat(t12).isEqualTo(t11);\r\n    MethodParameter testAnnotatedMethod = new MethodParameter(getClass().getMethod(\"testAnnotatedMethod\", String.class), 0);\r\n    TypeDescriptor t13 = new TypeDescriptor(testAnnotatedMethod);\r\n    TypeDescriptor t14 = new TypeDescriptor(testAnnotatedMethod);\r\n    assertThat(t14).isEqualTo(t13);\r\n    TypeDescriptor t15 = new TypeDescriptor(testAnnotatedMethod);\r\n    TypeDescriptor t16 = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testAnnotatedMethodDifferentAnnotationValue\", String.class), 0));\r\n    assertThat(t16).isNotEqualTo(t15);\r\n    TypeDescriptor t17 = new TypeDescriptor(testAnnotatedMethod);\r\n    TypeDescriptor t18 = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"test5\", String.class), 0));\r\n    assertThat(t18).isNotEqualTo(t17);\r\n}\n@Test\r\nvoid isAssignableTypes() {\r\n    assertThat(TypeDescriptor.valueOf(Integer.class).isAssignableTo(TypeDescriptor.valueOf(Number.class))).isTrue();\r\n    assertThat(TypeDescriptor.valueOf(Number.class).isAssignableTo(TypeDescriptor.valueOf(Integer.class))).isFalse();\r\n    assertThat(TypeDescriptor.valueOf(String.class).isAssignableTo(TypeDescriptor.valueOf(String[].class))).isFalse();\r\n}\n@Test\r\nvoid isAssignableElementTypes() throws Exception {\r\n    assertThat(new TypeDescriptor(getClass().getField(\"listField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"notGenericList\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"listField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"notGenericList\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"isAssignableElementTypes\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isFalse();\r\n    assertThat(TypeDescriptor.valueOf(List.class).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isTrue();\r\n}\n@Test\r\nvoid isAssignableMapKeyValueTypes() throws Exception {\r\n    assertThat(new TypeDescriptor(getClass().getField(\"mapField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"notGenericMap\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"mapField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"notGenericMap\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"isAssignableMapKeyValueTypes\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isFalse();\r\n    assertThat(TypeDescriptor.valueOf(Map.class).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isTrue();\r\n}\n@Test\r\nvoid multiValueMap() throws Exception {\r\n    TypeDescriptor td = new TypeDescriptor(getClass().getField(\"multiValueMap\"));\r\n    assertThat(td.isMap()).isTrue();\r\n    assertThat(td.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(td.getMapValueTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(td.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid passDownGeneric() throws Exception {\r\n    TypeDescriptor td = new TypeDescriptor(getClass().getField(\"passDownGeneric\"));\r\n    assertThat(td.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(td.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Set.class);\r\n    assertThat(td.getElementTypeDescriptor().getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid upcast() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getProperty\"), getClass().getMethod(\"setProperty\", Map.class));\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(property);\r\n    TypeDescriptor upcast = typeDescriptor.upcast(Object.class);\r\n    assertThat(upcast.getAnnotation(MethodAnnotation1.class)).isNotNull();\r\n}\n@Test\r\nvoid upCastNotSuper() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getProperty\"), getClass().getMethod(\"setProperty\", Map.class));\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(property);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> typeDescriptor.upcast(Collection.class)).withMessage(\"interface java.util.Map is not assignable to interface java.util.Collection\");\r\n}\n@Test\r\nvoid elementTypeForCollectionSubclass() {\r\n    @SuppressWarnings(\"serial\")\r\n    class CustomSet extends HashSet<String> ;\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.valueOf(CustomSet.class).getElementTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.forObject(new CustomSet()).getElementTypeDescriptor());\r\n}\n@Test\r\nvoid elementTypeForMapSubclass() {\r\n    @SuppressWarnings(\"serial\")\r\n    class CustomMap extends HashMap<String, Integer> ;\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.valueOf(CustomMap.class).getMapKeyTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(Integer.class)).isEqualTo(TypeDescriptor.valueOf(CustomMap.class).getMapValueTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.forObject(new CustomMap()).getMapKeyTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(Integer.class)).isEqualTo(TypeDescriptor.forObject(new CustomMap()).getMapValueTypeDescriptor());\r\n}\n@Test\r\nvoid createMapArray() {\r\n    TypeDescriptor mapType = TypeDescriptor.map(LinkedHashMap.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class));\r\n    TypeDescriptor arrayType = TypeDescriptor.array(mapType);\r\n    assertThat(LinkedHashMap[].class).isEqualTo(arrayType.getType());\r\n    assertThat(mapType).isEqualTo(arrayType.getElementTypeDescriptor());\r\n}\n@Test\r\nvoid createStringArray() {\r\n    TypeDescriptor arrayType = TypeDescriptor.array(TypeDescriptor.valueOf(String.class));\r\n    assertThat(TypeDescriptor.valueOf(String[].class)).isEqualTo(arrayType);\r\n}\n@Test\r\nvoid createNullArray() {\r\n    assertThat((Object) TypeDescriptor.array(null)).isNull();\r\n}\n@Test\r\nvoid serializable() throws Exception {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.forObject(\"\");\r\n    ByteArrayOutputStream out = new ByteArrayOutputStream();\r\n    ObjectOutputStream outputStream = new ObjectOutputStream(out);\r\n    outputStream.writeObject(typeDescriptor);\r\n    ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(out.toByteArray()));\r\n    TypeDescriptor readObject = (TypeDescriptor) inputStream.readObject();\r\n    assertThat(readObject).isEqualTo(typeDescriptor);\r\n}\n@Test\r\nvoid createCollectionWithNullElement() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.collection(List.class, null);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor()).isNull();\r\n}\n@Test\r\nvoid createMapWithNullElements() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.map(LinkedHashMap.class, null, null);\r\n    assertThat(typeDescriptor.getMapKeyTypeDescriptor()).isNull();\r\n    assertThat(typeDescriptor.getMapValueTypeDescriptor()).isNull();\r\n}\n@Test\r\nvoid getSource() throws Exception {\r\n    Field field = getClass().getField(\"fieldScalar\");\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterPrimitive\", int.class), 0);\r\n    assertThat(new TypeDescriptor(field).getSource()).isEqualTo(field);\r\n    assertThat(new TypeDescriptor(methodParameter).getSource()).isEqualTo(methodParameter);\r\n    assertThat(TypeDescriptor.valueOf(Integer.class).getSource()).isEqualTo(Integer.class);\r\n}\n// gh-31672\r\n@Test\r\nvoid equalityWithGenerics() {\r\n    ResolvableType rt1 = ResolvableType.forClassWithGenerics(Optional.class, Integer.class);\r\n    ResolvableType rt2 = ResolvableType.forClassWithGenerics(Optional.class, String.class);\r\n    TypeDescriptor td1 = new TypeDescriptor(rt1, null, null);\r\n    TypeDescriptor td2 = new TypeDescriptor(rt2, null, null);\r\n    assertThat(td1).isNotEqualTo(td2);\r\n}\n// gh-33932\r\n@Test\r\nvoid recursiveType() {\r\n    assertThat(TypeDescriptor.valueOf(RecursiveMap.class)).isEqualTo(TypeDescriptor.valueOf(RecursiveMap.class));\r\n    TypeDescriptor typeDescriptor1 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMap.class));\r\n    TypeDescriptor typeDescriptor2 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMap.class));\r\n    assertThat(typeDescriptor1).isEqualTo(typeDescriptor2);\r\n}\n// gh-33932\r\n@Test\r\nvoid recursiveTypeWithInterface() {\r\n    assertThat(TypeDescriptor.valueOf(RecursiveMapWithInterface.class)).isEqualTo(TypeDescriptor.valueOf(RecursiveMapWithInterface.class));\r\n    TypeDescriptor typeDescriptor1 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMapWithInterface.class));\r\n    TypeDescriptor typeDescriptor2 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMapWithInterface.class));\r\n    assertThat(typeDescriptor1).isEqualTo(typeDescriptor2);\r\n}\n// Methods designed for test introspection\r\npublic void testParameterPrimitive(int primitive) ;\npublic void testParameterScalar(String value) ;\npublic void testParameterList(List<List<Map<Integer, Enum<?>>>> list) ;\npublic void testParameterListNoParamTypes(List list) ;\npublic void testParameterArray(Integer[] array) ;\npublic void testParameterMap(Map<Integer, List<String>> map) ;\npublic void test1(List<String> param1) ;\npublic void test2(List<List<String>> param1) ;\npublic void test3(Map<Integer, String> param1) ;\npublic void test4(List<Map<Integer, String>> param1) ;\npublic void test5(String param1) ;\npublic void test6(List<List> param1) ;\npublic List<Map<Integer, String>> getTest4() {\r\n    return null;\r\n}\npublic void setTest4(List<Map<Integer, String>> test4) ;\npublic Map<String, List<List<Integer>>> getComplexProperty() {\r\n    return null;\r\n}\n@MethodAnnotation1\r\npublic Map<List<Integer>, List<Long>> getProperty() {\r\n    return property;\r\n}\n@MethodAnnotation2\r\npublic void setProperty(Map<List<Integer>, List<Long>> property) {\r\n    this.property = property;\r\n}\n@MethodAnnotation1\r\npublic void methodWithLocalAnnotation() ;\n@ComposedMethodAnnotation1\r\npublic void methodWithComposedAnnotation() ;\n@ComposedComposedMethodAnnotation1\r\npublic void methodWithComposedComposedAnnotation() ;\npublic void setComplexProperty(Map<String, List<List<Integer>>> complexProperty) ;\npublic void testAnnotatedMethod(@ParameterAnnotation(123) String parameter) ;\npublic void testAnnotatedMethodDifferentAnnotationValue(@ParameterAnnotation(567) String parameter) ;\n// Fields designed for test introspection\r\npublic Integer fieldScalar;\npublic List<String> listOfString;\npublic List<List<String>> listOfListOfString = new ArrayList<>();\npublic List<List> listOfListOfUnknown = new ArrayList<>();\npublic int[] intArray;\npublic List<String>[] arrayOfListOfString;\npublic List<Integer> listField = new ArrayList<>();\npublic Map<String, Integer> mapField = new HashMap<>();\npublic Map<String, List<Integer>> nestedMapField = new HashMap<>();\npublic Map<List<Integer>, List<Long>> fieldMap;\npublic List<Map<Integer, String>> test4;\n@FieldAnnotation\r\npublic List<String> fieldAnnotated;\n@FieldAnnotation\r\npublic List<List<Integer>> listPreserveContext;\n@FieldAnnotation\r\npublic Map<List<Integer>, List<Integer>> mapPreserveContext;\n@MethodAnnotation3\r\nprivate Map<List<Integer>, List<Long>> property;\npublic List notGenericList;\npublic List<Number> isAssignableElementTypes;\npublic Map notGenericMap;\npublic Map<CharSequence, Number> isAssignableMapKeyValueTypes;\npublic MultiValueMap<String, Integer> multiValueMap = new LinkedMultiValueMap<>();\npublic PassDownGeneric<Integer> passDownGeneric = new PassDownGeneric<>();\n// Classes designed for test introspection\r\n@SuppressWarnings(\"serial\")\r\npublic static class PassDownGeneric<T> extends ArrayList<List<Set<T>>> {\r\n}\npublic static class GenericClass<T> {\r\n\r\n    public T getProperty() {\r\n        return null;\r\n    }\r\n\r\n    public void setProperty(T t) {\r\n    }\r\n\r\n    @MethodAnnotation1\r\n    public List<T> getListProperty() {\r\n        return null;\r\n    }\r\n\r\n    public void setListProperty(List<T> t) {\r\n    }\r\n}\npublic static class IntegerClass extends GenericClass<Integer> {\r\n}\npublic interface GenericType<T> {\r\n\r\n    T getProperty();\r\n\r\n    void setProperty(T t);\r\n\r\n    List<T> getListProperty();\r\n\r\n    void setListProperty(List<T> t);\r\n}\npublic class IntegerType implements GenericType<Integer> {\r\n\r\n    @Override\r\n    public Integer getProperty() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public void setProperty(Integer t) {\r\n    }\r\n\r\n    @Override\r\n    public List<Integer> getListProperty() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public void setListProperty(List<Integer> t) {\r\n    }\r\n}\npublic class NumberType implements GenericType<Number> {\r\n\r\n    @Override\r\n    public Integer getProperty() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public void setProperty(Number t) {\r\n    }\r\n\r\n    @Override\r\n    public List<Number> getListProperty() {\r\n        return null;\r\n    }\r\n\r\n    @Override\r\n    public void setListProperty(List<Number> t) {\r\n    }\r\n}\n@SuppressWarnings(\"serial\")\r\nstatic class RecursiveMap extends HashMap<String, RecursiveMap> {\r\n}\n@SuppressWarnings(\"serial\")\r\nstatic class RecursiveMapWithInterface extends HashMap<String, RecursiveMapWithInterface> implements Map<String, RecursiveMapWithInterface> {\r\n}\n// Annotations used on tested elements\r\n@Target({ ElementType.PARAMETER })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface ParameterAnnotation {\r\n\r\n    int value();\r\n}\n@Target({ ElementType.FIELD })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface FieldAnnotation {\r\n}\n@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface MethodAnnotation1 {\r\n}\n@Target({ ElementType.METHOD })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface MethodAnnotation2 {\r\n}\n@Target({ ElementType.FIELD })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface MethodAnnotation3 {\r\n}\n@MethodAnnotation1\r\n@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface ComposedMethodAnnotation1 {\r\n}\n@ComposedMethodAnnotation1\r\n@Target(ElementType.METHOD)\r\n@Retention(RetentionPolicy.RUNTIME)\r\npublic @interface ComposedComposedMethodAnnotation1 {\r\n}",
+    "comment": "\n * Tests for {@link TypeDescriptor}.\n *\n * @author Keith Donald\n * @author Andy Clement\n * @author Phillip Webb\n * @author Sam Brannen\n * @author Nathan Piper\n "
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterPrimitive()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterPrimitive() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testParameterPrimitive\", int.class), 0));\r\n    assertThat(desc.getType()).isEqualTo(int.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getName()).isEqualTo(\"int\");\r\n    assertThat(desc.toString()).isEqualTo(\"int\");\r\n    assertThat(desc.isPrimitive()).isTrue();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterScalar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterScalar() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testParameterScalar\", String.class), 0));\r\n    assertThat(desc.getType()).isEqualTo(String.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(String.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.lang.String\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.lang.String\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterList() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterList\", List.class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<java.util.List<java.util.Map<java.lang.Integer, java.lang.Enum<?>>>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 1));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 2));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getMapValueTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 3));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getMapKeyTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getMapValueTypeDescriptor().getType()).isEqualTo(Enum.class);\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterListNoParamTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterListNoParamTypes() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterListNoParamTypes\", List.class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<?>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat((Object) desc.getElementTypeDescriptor()).isNull();\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterArray() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterArray\", Integer[].class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(Integer[].class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Integer[].class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.lang.Integer[]\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.lang.Integer[]\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isTrue();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getElementTypeDescriptor()).isEqualTo(TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterMap() throws Exception {\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterMap\", Map.class), 0);\r\n    TypeDescriptor desc = new TypeDescriptor(methodParameter);\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Map.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.Map\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.Map<java.lang.Integer, java.util.List<java.lang.String>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapValueTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 1));\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor()).isEqualTo(TypeDescriptor.nested(methodParameter, 2));\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#parameterAnnotated()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid parameterAnnotated() throws Exception {\r\n    TypeDescriptor t1 = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testAnnotatedMethod\", String.class), 0));\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n    assertThat(t1.getAnnotations()).hasSize(1);\r\n    assertThat(t1.getAnnotation(ParameterAnnotation.class)).isNotNull();\r\n    assertThat(t1.hasAnnotation(ParameterAnnotation.class)).isTrue();\r\n    assertThat(t1.getAnnotation(ParameterAnnotation.class).value()).isEqualTo(123);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getAnnotationsReturnsClonedArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationsReturnsClonedArray() throws Exception {\r\n    TypeDescriptor t = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testAnnotatedMethod\", String.class), 0));\r\n    t.getAnnotations()[0] = null;\r\n    assertThat(t.getAnnotations()[0]).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#propertyComplex()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid propertyComplex() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getComplexProperty\"), getClass().getMethod(\"setComplexProperty\", Map.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#propertyGenericType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid propertyGenericType() throws Exception {\r\n    GenericType<Integer> genericBean = new IntegerType();\r\n    Property property = new Property(getClass(), genericBean.getClass().getMethod(\"getProperty\"), genericBean.getClass().getMethod(\"setProperty\", Integer.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#propertyTypeCovariance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid propertyTypeCovariance() throws Exception {\r\n    GenericType<Number> genericBean = new NumberType();\r\n    Property property = new Property(getClass(), genericBean.getClass().getMethod(\"getProperty\"), genericBean.getClass().getMethod(\"setProperty\", Number.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#propertyGenericTypeList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid propertyGenericTypeList() throws Exception {\r\n    GenericType<Integer> genericBean = new IntegerType();\r\n    Property property = new Property(getClass(), genericBean.getClass().getMethod(\"getListProperty\"), genericBean.getClass().getMethod(\"setListProperty\", List.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#propertyGenericClassList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid propertyGenericClassList() throws Exception {\r\n    IntegerClass genericBean = new IntegerClass();\r\n    Property property = new Property(genericBean.getClass(), genericBean.getClass().getMethod(\"getListProperty\"), genericBean.getClass().getMethod(\"setListProperty\", List.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(MethodAnnotation1.class)).isNotNull();\r\n    assertThat(desc.hasAnnotation(MethodAnnotation1.class)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#property()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid property() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getProperty\"), getClass().getMethod(\"setProperty\", Map.class));\r\n    TypeDescriptor desc = new TypeDescriptor(property);\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getMapKeyTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Long.class);\r\n    assertThat(desc.getAnnotation(MethodAnnotation1.class)).isNotNull();\r\n    assertThat(desc.getAnnotation(MethodAnnotation2.class)).isNotNull();\r\n    assertThat(desc.getAnnotation(MethodAnnotation3.class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getAnnotationOnMethodThatIsLocallyAnnotated()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationOnMethodThatIsLocallyAnnotated() throws Exception {\r\n    assertAnnotationFoundOnMethod(MethodAnnotation1.class, \"methodWithLocalAnnotation\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getAnnotationOnMethodThatIsMetaAnnotated()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationOnMethodThatIsMetaAnnotated() throws Exception {\r\n    assertAnnotationFoundOnMethod(MethodAnnotation1.class, \"methodWithComposedAnnotation\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getAnnotationOnMethodThatIsMetaMetaAnnotated()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationOnMethodThatIsMetaMetaAnnotated() throws Exception {\r\n    assertAnnotationFoundOnMethod(MethodAnnotation1.class, \"methodWithComposedComposedAnnotation\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#assertAnnotationFoundOnMethod(Class<? extends Annotation>,String)",
+    "entityType": "method",
+    "code": "private void assertAnnotationFoundOnMethod(Class<? extends Annotation> annotationType, String methodName) throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(new MethodParameter(getClass().getMethod(methodName), -1));\r\n    assertThat(typeDescriptor.getAnnotation(annotationType)).as(\"Should have found @\" + annotationType.getSimpleName() + \" on \" + methodName + \".\").isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldScalar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldScalar() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(getClass().getField(\"fieldScalar\"));\r\n    assertThat(typeDescriptor.isPrimitive()).isFalse();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(Integer.class);\r\n    assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldList() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"listOfString\"));\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldListOfListOfString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldListOfListOfString() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"listOfListOfString\"));\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.util.List<java.lang.String>>\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldListOfListUnknown()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldListOfListUnknown() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"listOfListOfUnknown\"));\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getElementTypeDescriptor()).isNull();\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.util.List<?>>\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldArray() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"intArray\"));\r\n    assertThat(typeDescriptor.isArray()).isTrue();\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(int.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"int[]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldComplexTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldComplexTypeDescriptor() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"arrayOfListOfString\"));\r\n    assertThat(typeDescriptor.isArray()).isTrue();\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.List<java.lang.String>[]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldComplexTypeDescriptor2()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldComplexTypeDescriptor2() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField(\"nestedMapField\"));\r\n    assertThat(typeDescriptor.isMap()).isTrue();\r\n    assertThat(typeDescriptor.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(typeDescriptor.getMapValueTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(typeDescriptor.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(typeDescriptor.toString()).isEqualTo(\"java.util.Map<java.lang.String, java.util.List<java.lang.Integer>>\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldMap() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(TypeDescriptorTests.class.getField(\"fieldMap\"));\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapKeyTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Long.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#fieldAnnotated()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fieldAnnotated() throws Exception {\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(getClass().getField(\"fieldAnnotated\"));\r\n    assertThat(typeDescriptor.getAnnotations()).hasSize(1);\r\n    assertThat(typeDescriptor.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#valueOfScalar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfScalar() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(Integer.class);\r\n    assertThat(typeDescriptor.isPrimitive()).isFalse();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(Integer.class);\r\n    assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#valueOfPrimitive()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfPrimitive() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(int.class);\r\n    assertThat(typeDescriptor.isPrimitive()).isTrue();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getType()).isEqualTo(int.class);\r\n    assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#valueOfArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfArray() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(int[].class);\r\n    assertThat(typeDescriptor.isArray()).isTrue();\r\n    assertThat(typeDescriptor.isCollection()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(int.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#valueOfCollection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid valueOfCollection() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(Collection.class);\r\n    assertThat(typeDescriptor.isCollection()).isTrue();\r\n    assertThat(typeDescriptor.isArray()).isFalse();\r\n    assertThat(typeDescriptor.isMap()).isFalse();\r\n    assertThat((Object) typeDescriptor.getElementTypeDescriptor()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#forObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forObject() {\r\n    TypeDescriptor desc = TypeDescriptor.forObject(\"3\");\r\n    assertThat(desc.getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#forObjectNullTypeDescriptor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forObjectNullTypeDescriptor() {\r\n    TypeDescriptor desc = TypeDescriptor.forObject(null);\r\n    assertThat((Object) desc).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedMethodParameterType2Levels()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedMethodParameterType2Levels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test2\", List.class), 0), 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedMethodParameterTypeMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedMethodParameterTypeMap() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test3\", Map.class), 0), 1);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedMethodParameterTypeMapTwoLevels()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedMethodParameterTypeMapTwoLevels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test4\", List.class), 0), 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedMethodParameterNot1NestedLevel()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedMethodParameterNot1NestedLevel() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test4\", List.class), 0, 2), 2));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedTooManyLevels()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedTooManyLevels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test4\", List.class), 0), 3);\r\n    assertThat((Object) t1).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedMethodParameterTypeNotNestable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedMethodParameterTypeNotNestable() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test5\", String.class), 0), 2);\r\n    assertThat((Object) t1).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedMethodParameterTypeInvalidNestingLevel()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedMethodParameterTypeInvalidNestingLevel() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test5\", String.class), 0, 2), 2));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedNotParameterized()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedNotParameterized() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test6\", List.class), 0), 1);\r\n    assertThat(t1.getType()).isEqualTo(List.class);\r\n    assertThat(t1.toString()).isEqualTo(\"java.util.List<?>\");\r\n    TypeDescriptor t2 = TypeDescriptor.nested(new MethodParameter(getClass().getMethod(\"test6\", List.class), 0), 2);\r\n    assertThat((Object) t2).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedFieldTypeMapTwoLevels()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedFieldTypeMapTwoLevels() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.nested(getClass().getField(\"test4\"), 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#nestedPropertyTypeMapTwoLevels()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedPropertyTypeMapTwoLevels() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getTest4\"), getClass().getMethod(\"setTest4\", List.class));\r\n    TypeDescriptor t1 = TypeDescriptor.nested(property, 2);\r\n    assertThat(t1.getType()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#collection()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid collection() {\r\n    TypeDescriptor desc = TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<java.lang.Integer>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getElementTypeDescriptor()).isEqualTo(TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#collectionNested()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid collectionNested() {\r\n    TypeDescriptor desc = TypeDescriptor.collection(List.class, TypeDescriptor.collection(List.class, TypeDescriptor.valueOf(Integer.class)));\r\n    assertThat(desc.getType()).isEqualTo(List.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(List.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.List\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.List<java.util.List<java.lang.Integer>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isTrue();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor()).isEqualTo(TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.isMap()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#map()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid map() {\r\n    TypeDescriptor desc = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class));\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Map.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.Map\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.Map<java.lang.String, java.lang.Integer>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#mapNested()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapNested() {\r\n    TypeDescriptor desc = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class)));\r\n    assertThat(desc.getType()).isEqualTo(Map.class);\r\n    assertThat(desc.getObjectType()).isEqualTo(Map.class);\r\n    assertThat(desc.getName()).isEqualTo(\"java.util.Map\");\r\n    assertThat(desc.toString()).isEqualTo(\"java.util.Map<java.lang.String, java.util.Map<java.lang.String, java.lang.Integer>>\");\r\n    assertThat(desc.isPrimitive()).isFalse();\r\n    assertThat(desc.getAnnotations()).isEmpty();\r\n    assertThat(desc.isCollection()).isFalse();\r\n    assertThat(desc.isArray()).isFalse();\r\n    assertThat(desc.isMap()).isTrue();\r\n    assertThat(desc.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(desc.getMapValueTypeDescriptor().getMapValueTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#narrow()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid narrow() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(Number.class);\r\n    Integer value = 3;\r\n    desc = desc.narrow(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#elementType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid elementType() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(List.class);\r\n    Integer value = 3;\r\n    desc = desc.elementTypeDescriptor(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#elementTypePreserveContext()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid elementTypePreserveContext() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(getClass().getField(\"listPreserveContext\"));\r\n    assertThat(desc.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    List<Integer> value = new ArrayList<>(3);\r\n    desc = desc.elementTypeDescriptor(value);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#mapKeyType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapKeyType() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(Map.class);\r\n    Integer value = 3;\r\n    desc = desc.getMapKeyTypeDescriptor(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#mapKeyTypePreserveContext()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapKeyTypePreserveContext() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(getClass().getField(\"mapPreserveContext\"));\r\n    assertThat(desc.getMapKeyTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    List<Integer> value = new ArrayList<>(3);\r\n    desc = desc.getMapKeyTypeDescriptor(value);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#mapValueType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapValueType() {\r\n    TypeDescriptor desc = TypeDescriptor.valueOf(Map.class);\r\n    Integer value = 3;\r\n    desc = desc.getMapValueTypeDescriptor(value);\r\n    assertThat(desc.getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#mapValueTypePreserveContext()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid mapValueTypePreserveContext() throws Exception {\r\n    TypeDescriptor desc = new TypeDescriptor(getClass().getField(\"mapPreserveContext\"));\r\n    assertThat(desc.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    List<Integer> value = new ArrayList<>(3);\r\n    desc = desc.getMapValueTypeDescriptor(value);\r\n    assertThat(desc.getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n    assertThat(desc.getAnnotation(FieldAnnotation.class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#equality()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equality() throws Exception {\r\n    TypeDescriptor t1 = TypeDescriptor.valueOf(String.class);\r\n    TypeDescriptor t2 = TypeDescriptor.valueOf(String.class);\r\n    TypeDescriptor t3 = TypeDescriptor.valueOf(Date.class);\r\n    TypeDescriptor t4 = TypeDescriptor.valueOf(Date.class);\r\n    TypeDescriptor t5 = TypeDescriptor.valueOf(List.class);\r\n    TypeDescriptor t6 = TypeDescriptor.valueOf(List.class);\r\n    TypeDescriptor t7 = TypeDescriptor.valueOf(Map.class);\r\n    TypeDescriptor t8 = TypeDescriptor.valueOf(Map.class);\r\n    assertThat(t2).isEqualTo(t1);\r\n    assertThat(t4).isEqualTo(t3);\r\n    assertThat(t6).isEqualTo(t5);\r\n    assertThat(t8).isEqualTo(t7);\r\n    TypeDescriptor t9 = new TypeDescriptor(getClass().getField(\"listField\"));\r\n    TypeDescriptor t10 = new TypeDescriptor(getClass().getField(\"listField\"));\r\n    assertThat(t10).isEqualTo(t9);\r\n    TypeDescriptor t11 = new TypeDescriptor(getClass().getField(\"mapField\"));\r\n    TypeDescriptor t12 = new TypeDescriptor(getClass().getField(\"mapField\"));\r\n    assertThat(t12).isEqualTo(t11);\r\n    MethodParameter testAnnotatedMethod = new MethodParameter(getClass().getMethod(\"testAnnotatedMethod\", String.class), 0);\r\n    TypeDescriptor t13 = new TypeDescriptor(testAnnotatedMethod);\r\n    TypeDescriptor t14 = new TypeDescriptor(testAnnotatedMethod);\r\n    assertThat(t14).isEqualTo(t13);\r\n    TypeDescriptor t15 = new TypeDescriptor(testAnnotatedMethod);\r\n    TypeDescriptor t16 = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"testAnnotatedMethodDifferentAnnotationValue\", String.class), 0));\r\n    assertThat(t16).isNotEqualTo(t15);\r\n    TypeDescriptor t17 = new TypeDescriptor(testAnnotatedMethod);\r\n    TypeDescriptor t18 = new TypeDescriptor(new MethodParameter(getClass().getMethod(\"test5\", String.class), 0));\r\n    assertThat(t18).isNotEqualTo(t17);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#isAssignableTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAssignableTypes() {\r\n    assertThat(TypeDescriptor.valueOf(Integer.class).isAssignableTo(TypeDescriptor.valueOf(Number.class))).isTrue();\r\n    assertThat(TypeDescriptor.valueOf(Number.class).isAssignableTo(TypeDescriptor.valueOf(Integer.class))).isFalse();\r\n    assertThat(TypeDescriptor.valueOf(String.class).isAssignableTo(TypeDescriptor.valueOf(String[].class))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#isAssignableElementTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAssignableElementTypes() throws Exception {\r\n    assertThat(new TypeDescriptor(getClass().getField(\"listField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"notGenericList\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"listField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"notGenericList\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"isAssignableElementTypes\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isFalse();\r\n    assertThat(TypeDescriptor.valueOf(List.class).isAssignableTo(new TypeDescriptor(getClass().getField(\"listField\")))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#isAssignableMapKeyValueTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAssignableMapKeyValueTypes() throws Exception {\r\n    assertThat(new TypeDescriptor(getClass().getField(\"mapField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"notGenericMap\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"mapField\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"notGenericMap\")))).isTrue();\r\n    assertThat(new TypeDescriptor(getClass().getField(\"isAssignableMapKeyValueTypes\")).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isFalse();\r\n    assertThat(TypeDescriptor.valueOf(Map.class).isAssignableTo(new TypeDescriptor(getClass().getField(\"mapField\")))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#multiValueMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid multiValueMap() throws Exception {\r\n    TypeDescriptor td = new TypeDescriptor(getClass().getField(\"multiValueMap\"));\r\n    assertThat(td.isMap()).isTrue();\r\n    assertThat(td.getMapKeyTypeDescriptor().getType()).isEqualTo(String.class);\r\n    assertThat(td.getMapValueTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(td.getMapValueTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#passDownGeneric()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid passDownGeneric() throws Exception {\r\n    TypeDescriptor td = new TypeDescriptor(getClass().getField(\"passDownGeneric\"));\r\n    assertThat(td.getElementTypeDescriptor().getType()).isEqualTo(List.class);\r\n    assertThat(td.getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Set.class);\r\n    assertThat(td.getElementTypeDescriptor().getElementTypeDescriptor().getElementTypeDescriptor().getType()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#upcast()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid upcast() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getProperty\"), getClass().getMethod(\"setProperty\", Map.class));\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(property);\r\n    TypeDescriptor upcast = typeDescriptor.upcast(Object.class);\r\n    assertThat(upcast.getAnnotation(MethodAnnotation1.class)).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#upCastNotSuper()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid upCastNotSuper() throws Exception {\r\n    Property property = new Property(getClass(), getClass().getMethod(\"getProperty\"), getClass().getMethod(\"setProperty\", Map.class));\r\n    TypeDescriptor typeDescriptor = new TypeDescriptor(property);\r\n    assertThatIllegalArgumentException().isThrownBy(() -> typeDescriptor.upcast(Collection.class)).withMessage(\"interface java.util.Map is not assignable to interface java.util.Collection\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#elementTypeForCollectionSubclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid elementTypeForCollectionSubclass() {\r\n    @SuppressWarnings(\"serial\")\r\n    class CustomSet extends HashSet<String> ;\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.valueOf(CustomSet.class).getElementTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.forObject(new CustomSet()).getElementTypeDescriptor());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#elementTypeForMapSubclass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid elementTypeForMapSubclass() {\r\n    @SuppressWarnings(\"serial\")\r\n    class CustomMap extends HashMap<String, Integer> ;\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.valueOf(CustomMap.class).getMapKeyTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(Integer.class)).isEqualTo(TypeDescriptor.valueOf(CustomMap.class).getMapValueTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(String.class)).isEqualTo(TypeDescriptor.forObject(new CustomMap()).getMapKeyTypeDescriptor());\r\n    assertThat(TypeDescriptor.valueOf(Integer.class)).isEqualTo(TypeDescriptor.forObject(new CustomMap()).getMapValueTypeDescriptor());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#createMapArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createMapArray() {\r\n    TypeDescriptor mapType = TypeDescriptor.map(LinkedHashMap.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class));\r\n    TypeDescriptor arrayType = TypeDescriptor.array(mapType);\r\n    assertThat(LinkedHashMap[].class).isEqualTo(arrayType.getType());\r\n    assertThat(mapType).isEqualTo(arrayType.getElementTypeDescriptor());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#createStringArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createStringArray() {\r\n    TypeDescriptor arrayType = TypeDescriptor.array(TypeDescriptor.valueOf(String.class));\r\n    assertThat(TypeDescriptor.valueOf(String[].class)).isEqualTo(arrayType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#createNullArray()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createNullArray() {\r\n    assertThat((Object) TypeDescriptor.array(null)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#serializable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid serializable() throws Exception {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.forObject(\"\");\r\n    ByteArrayOutputStream out = new ByteArrayOutputStream();\r\n    ObjectOutputStream outputStream = new ObjectOutputStream(out);\r\n    outputStream.writeObject(typeDescriptor);\r\n    ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(out.toByteArray()));\r\n    TypeDescriptor readObject = (TypeDescriptor) inputStream.readObject();\r\n    assertThat(readObject).isEqualTo(typeDescriptor);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#createCollectionWithNullElement()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createCollectionWithNullElement() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.collection(List.class, null);\r\n    assertThat(typeDescriptor.getElementTypeDescriptor()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#createMapWithNullElements()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createMapWithNullElements() {\r\n    TypeDescriptor typeDescriptor = TypeDescriptor.map(LinkedHashMap.class, null, null);\r\n    assertThat(typeDescriptor.getMapKeyTypeDescriptor()).isNull();\r\n    assertThat(typeDescriptor.getMapValueTypeDescriptor()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getSource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getSource() throws Exception {\r\n    Field field = getClass().getField(\"fieldScalar\");\r\n    MethodParameter methodParameter = new MethodParameter(getClass().getMethod(\"testParameterPrimitive\", int.class), 0);\r\n    assertThat(new TypeDescriptor(field).getSource()).isEqualTo(field);\r\n    assertThat(new TypeDescriptor(methodParameter).getSource()).isEqualTo(methodParameter);\r\n    assertThat(TypeDescriptor.valueOf(Integer.class).getSource()).isEqualTo(Integer.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#equalityWithGenerics()",
+    "entityType": "method",
+    "code": "// gh-31672\r\n@Test\r\nvoid equalityWithGenerics() {\r\n    ResolvableType rt1 = ResolvableType.forClassWithGenerics(Optional.class, Integer.class);\r\n    ResolvableType rt2 = ResolvableType.forClassWithGenerics(Optional.class, String.class);\r\n    TypeDescriptor td1 = new TypeDescriptor(rt1, null, null);\r\n    TypeDescriptor td2 = new TypeDescriptor(rt2, null, null);\r\n    assertThat(td1).isNotEqualTo(td2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#recursiveType()",
+    "entityType": "method",
+    "code": "// gh-33932\r\n@Test\r\nvoid recursiveType() {\r\n    assertThat(TypeDescriptor.valueOf(RecursiveMap.class)).isEqualTo(TypeDescriptor.valueOf(RecursiveMap.class));\r\n    TypeDescriptor typeDescriptor1 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMap.class));\r\n    TypeDescriptor typeDescriptor2 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMap.class));\r\n    assertThat(typeDescriptor1).isEqualTo(typeDescriptor2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#recursiveTypeWithInterface()",
+    "entityType": "method",
+    "code": "// gh-33932\r\n@Test\r\nvoid recursiveTypeWithInterface() {\r\n    assertThat(TypeDescriptor.valueOf(RecursiveMapWithInterface.class)).isEqualTo(TypeDescriptor.valueOf(RecursiveMapWithInterface.class));\r\n    TypeDescriptor typeDescriptor1 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMapWithInterface.class));\r\n    TypeDescriptor typeDescriptor2 = TypeDescriptor.map(Map.class, TypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(RecursiveMapWithInterface.class));\r\n    assertThat(typeDescriptor1).isEqualTo(typeDescriptor2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#testParameterPrimitive(int)",
+    "entityType": "method",
+    "code": "// Methods designed for test introspection\r\npublic void testParameterPrimitive(int primitive) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#testParameterScalar(String)",
+    "entityType": "method",
+    "code": "public void testParameterScalar(String value) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#testParameterList(List<List<Map<Integer,Enum<?>>>>)",
+    "entityType": "method",
+    "code": "public void testParameterList(List<List<Map<Integer, Enum<?>>>> list) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#testParameterListNoParamTypes(List)",
+    "entityType": "method",
+    "code": "public void testParameterListNoParamTypes(List list) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#testParameterArray(Integer[])",
+    "entityType": "method",
+    "code": "public void testParameterArray(Integer[] array) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#testParameterMap(Map<Integer,List<String>>)",
+    "entityType": "method",
+    "code": "public void testParameterMap(Map<Integer, List<String>> map) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#test1(List<String>)",
+    "entityType": "method",
+    "code": "public void test1(List<String> param1) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#test2(List<List<String>>)",
+    "entityType": "method",
+    "code": "public void test2(List<List<String>> param1) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#test3(Map<Integer,String>)",
+    "entityType": "method",
+    "code": "public void test3(Map<Integer, String> param1) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#test4(List<Map<Integer,String>>)",
+    "entityType": "method",
+    "code": "public void test4(List<Map<Integer, String>> param1) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#test5(String)",
+    "entityType": "method",
+    "code": "public void test5(String param1) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#test6(List<List>)",
+    "entityType": "method",
+    "code": "public void test6(List<List> param1) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getTest4()",
+    "entityType": "method",
+    "code": "public List<Map<Integer, String>> getTest4() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#setTest4(List<Map<Integer,String>>)",
+    "entityType": "method",
+    "code": "public void setTest4(List<Map<Integer, String>> test4) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getComplexProperty()",
+    "entityType": "method",
+    "code": "public Map<String, List<List<Integer>>> getComplexProperty() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#getProperty()",
+    "entityType": "method",
+    "code": "@MethodAnnotation1\r\npublic Map<List<Integer>, List<Long>> getProperty() {\r\n    return property;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.convert.TypeDescriptorTests#setProperty(Map<List<Integer>,List<Long>>)",
+    "entityType": "method",
+    "code": "@MethodAnnotation2\r\npublic void setProperty(Map<List<Integer>, List<Long>> property) {\r\n    this.property = property;\r\n}",
+    "comment": ""
+  }
+]

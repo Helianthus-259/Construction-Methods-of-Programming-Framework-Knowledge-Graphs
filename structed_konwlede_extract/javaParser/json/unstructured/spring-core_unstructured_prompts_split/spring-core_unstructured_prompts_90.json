@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamReader#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() throws XMLStreamException {\r\n    this.eventReader.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamReader#countIterator(Iterator)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"rawtypes\")\r\nprivate static int countIterator(Iterator iterator) {\r\n    int count = 0;\r\n    while (iterator.hasNext()) {\r\n        iterator.next();\r\n        count++;\r\n    }\r\n    return count;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter",
+    "entityType": "class",
+    "code": "private static final String DEFAULT_ENCODING = \"UTF-8\";\nprivate final XMLEventWriter eventWriter;\nprivate final XMLEventFactory eventFactory;\nprivate final List<EndElement> endElements = new ArrayList<>();\nprivate boolean emptyElement = false;\npublic XMLEventStreamWriter(XMLEventWriter eventWriter, XMLEventFactory eventFactory) {\r\n    this.eventWriter = eventWriter;\r\n    this.eventFactory = eventFactory;\r\n}\n@Override\r\npublic void setNamespaceContext(NamespaceContext context) throws XMLStreamException {\r\n    this.eventWriter.setNamespaceContext(context);\r\n}\n@Override\r\npublic NamespaceContext getNamespaceContext() {\r\n    return this.eventWriter.getNamespaceContext();\r\n}\n@Override\r\npublic void setPrefix(String prefix, String uri) throws XMLStreamException {\r\n    this.eventWriter.setPrefix(prefix, uri);\r\n}\n@Override\r\npublic String getPrefix(String uri) throws XMLStreamException {\r\n    return this.eventWriter.getPrefix(uri);\r\n}\n@Override\r\npublic void setDefaultNamespace(String uri) throws XMLStreamException {\r\n    this.eventWriter.setDefaultNamespace(uri);\r\n}\n@Override\r\npublic Object getProperty(String name) throws IllegalArgumentException {\r\n    throw new IllegalArgumentException();\r\n}\n@Override\r\npublic void writeStartDocument() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createStartDocument());\r\n}\n@Override\r\npublic void writeStartDocument(String version) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createStartDocument(DEFAULT_ENCODING, version));\r\n}\n@Override\r\npublic void writeStartDocument(String encoding, String version) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createStartDocument(encoding, version));\r\n}\n@Override\r\npublic void writeStartElement(String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    doWriteStartElement(this.eventFactory.createStartElement(new QName(localName), null, null));\r\n}\n@Override\r\npublic void writeStartElement(String namespaceURI, String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    doWriteStartElement(this.eventFactory.createStartElement(new QName(namespaceURI, localName), null, null));\r\n}\n@Override\r\npublic void writeStartElement(String prefix, String localName, String namespaceURI) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    doWriteStartElement(this.eventFactory.createStartElement(new QName(namespaceURI, localName, prefix), null, null));\r\n}\nprivate void doWriteStartElement(StartElement startElement) throws XMLStreamException {\r\n    this.eventWriter.add(startElement);\r\n    this.endElements.add(this.eventFactory.createEndElement(startElement.getName(), startElement.getNamespaces()));\r\n}\n@Override\r\npublic void writeEmptyElement(String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    writeStartElement(localName);\r\n    this.emptyElement = true;\r\n}\n@Override\r\npublic void writeEmptyElement(String namespaceURI, String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    writeStartElement(namespaceURI, localName);\r\n    this.emptyElement = true;\r\n}\n@Override\r\npublic void writeEmptyElement(String prefix, String localName, String namespaceURI) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    writeStartElement(prefix, localName, namespaceURI);\r\n    this.emptyElement = true;\r\n}\nprivate void closeEmptyElementIfNecessary() throws XMLStreamException {\r\n    if (this.emptyElement) {\r\n        this.emptyElement = false;\r\n        writeEndElement();\r\n    }\r\n}\n@Override\r\npublic void writeEndElement() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    int last = this.endElements.size() - 1;\r\n    EndElement lastEndElement = this.endElements.remove(last);\r\n    this.eventWriter.add(lastEndElement);\r\n}\n@Override\r\npublic void writeAttribute(String localName, String value) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createAttribute(localName, value));\r\n}\n@Override\r\npublic void writeAttribute(String namespaceURI, String localName, String value) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createAttribute(new QName(namespaceURI, localName), value));\r\n}\n@Override\r\npublic void writeAttribute(String prefix, String namespaceURI, String localName, String value) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createAttribute(prefix, namespaceURI, localName, value));\r\n}\n@Override\r\npublic void writeNamespace(String prefix, String namespaceURI) throws XMLStreamException {\r\n    doWriteNamespace(this.eventFactory.createNamespace(prefix, namespaceURI));\r\n}\n@Override\r\npublic void writeDefaultNamespace(String namespaceURI) throws XMLStreamException {\r\n    doWriteNamespace(this.eventFactory.createNamespace(namespaceURI));\r\n}\n@SuppressWarnings(\"rawtypes\")\r\nprivate void doWriteNamespace(Namespace namespace) throws XMLStreamException {\r\n    int last = this.endElements.size() - 1;\r\n    EndElement oldEndElement = this.endElements.get(last);\r\n    Iterator oldNamespaces = oldEndElement.getNamespaces();\r\n    List<Namespace> newNamespaces = new ArrayList<>();\r\n    while (oldNamespaces.hasNext()) {\r\n        Namespace oldNamespace = (Namespace) oldNamespaces.next();\r\n        newNamespaces.add(oldNamespace);\r\n    }\r\n    newNamespaces.add(namespace);\r\n    EndElement newEndElement = this.eventFactory.createEndElement(oldEndElement.getName(), newNamespaces.iterator());\r\n    this.eventWriter.add(namespace);\r\n    this.endElements.set(last, newEndElement);\r\n}\n@Override\r\npublic void writeCharacters(String text) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createCharacters(text));\r\n}\n@Override\r\npublic void writeCharacters(char[] text, int start, int len) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createCharacters(new String(text, start, len)));\r\n}\n@Override\r\npublic void writeCData(String data) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createCData(data));\r\n}\n@Override\r\npublic void writeComment(String data) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createComment(data));\r\n}\n@Override\r\npublic void writeProcessingInstruction(String target) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createProcessingInstruction(target, \"\"));\r\n}\n@Override\r\npublic void writeProcessingInstruction(String target, String data) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createProcessingInstruction(target, data));\r\n}\n@Override\r\npublic void writeDTD(String dtd) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createDTD(dtd));\r\n}\n@Override\r\npublic void writeEntityRef(String name) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createEntityReference(name, null));\r\n}\n@Override\r\npublic void writeEndDocument() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createEndDocument());\r\n}\n@Override\r\npublic void flush() throws XMLStreamException {\r\n    this.eventWriter.flush();\r\n}\n@Override\r\npublic void close() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.close();\r\n}",
+    "comment": "\n * Implementation of the {@link javax.xml.stream.XMLStreamWriter} interface\n * that wraps an {@link XMLEventWriter}.\n *\n * @author Arjen Poutsma\n * @since 3.0.5\n * @see StaxUtils#createEventStreamWriter(javax.xml.stream.XMLEventWriter, javax.xml.stream.XMLEventFactory)\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#setNamespaceContext(NamespaceContext)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setNamespaceContext(NamespaceContext context) throws XMLStreamException {\r\n    this.eventWriter.setNamespaceContext(context);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#getNamespaceContext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic NamespaceContext getNamespaceContext() {\r\n    return this.eventWriter.getNamespaceContext();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#setPrefix(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setPrefix(String prefix, String uri) throws XMLStreamException {\r\n    this.eventWriter.setPrefix(prefix, uri);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#getPrefix(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getPrefix(String uri) throws XMLStreamException {\r\n    return this.eventWriter.getPrefix(uri);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#setDefaultNamespace(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void setDefaultNamespace(String uri) throws XMLStreamException {\r\n    this.eventWriter.setDefaultNamespace(uri);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#getProperty(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Object getProperty(String name) throws IllegalArgumentException {\r\n    throw new IllegalArgumentException();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeStartDocument()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeStartDocument() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createStartDocument());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeStartDocument(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeStartDocument(String version) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createStartDocument(DEFAULT_ENCODING, version));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeStartDocument(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeStartDocument(String encoding, String version) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createStartDocument(encoding, version));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeStartElement(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeStartElement(String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    doWriteStartElement(this.eventFactory.createStartElement(new QName(localName), null, null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeStartElement(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeStartElement(String namespaceURI, String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    doWriteStartElement(this.eventFactory.createStartElement(new QName(namespaceURI, localName), null, null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeStartElement(String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeStartElement(String prefix, String localName, String namespaceURI) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    doWriteStartElement(this.eventFactory.createStartElement(new QName(namespaceURI, localName, prefix), null, null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#doWriteStartElement(StartElement)",
+    "entityType": "method",
+    "code": "private void doWriteStartElement(StartElement startElement) throws XMLStreamException {\r\n    this.eventWriter.add(startElement);\r\n    this.endElements.add(this.eventFactory.createEndElement(startElement.getName(), startElement.getNamespaces()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeEmptyElement(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeEmptyElement(String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    writeStartElement(localName);\r\n    this.emptyElement = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeEmptyElement(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeEmptyElement(String namespaceURI, String localName) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    writeStartElement(namespaceURI, localName);\r\n    this.emptyElement = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeEmptyElement(String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeEmptyElement(String prefix, String localName, String namespaceURI) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    writeStartElement(prefix, localName, namespaceURI);\r\n    this.emptyElement = true;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#closeEmptyElementIfNecessary()",
+    "entityType": "method",
+    "code": "private void closeEmptyElementIfNecessary() throws XMLStreamException {\r\n    if (this.emptyElement) {\r\n        this.emptyElement = false;\r\n        writeEndElement();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeEndElement()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeEndElement() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    int last = this.endElements.size() - 1;\r\n    EndElement lastEndElement = this.endElements.remove(last);\r\n    this.eventWriter.add(lastEndElement);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeAttribute(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeAttribute(String localName, String value) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createAttribute(localName, value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeAttribute(String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeAttribute(String namespaceURI, String localName, String value) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createAttribute(new QName(namespaceURI, localName), value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeAttribute(String,String,String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeAttribute(String prefix, String namespaceURI, String localName, String value) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createAttribute(prefix, namespaceURI, localName, value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeNamespace(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeNamespace(String prefix, String namespaceURI) throws XMLStreamException {\r\n    doWriteNamespace(this.eventFactory.createNamespace(prefix, namespaceURI));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeDefaultNamespace(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeDefaultNamespace(String namespaceURI) throws XMLStreamException {\r\n    doWriteNamespace(this.eventFactory.createNamespace(namespaceURI));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#doWriteNamespace(Namespace)",
+    "entityType": "method",
+    "code": "@SuppressWarnings(\"rawtypes\")\r\nprivate void doWriteNamespace(Namespace namespace) throws XMLStreamException {\r\n    int last = this.endElements.size() - 1;\r\n    EndElement oldEndElement = this.endElements.get(last);\r\n    Iterator oldNamespaces = oldEndElement.getNamespaces();\r\n    List<Namespace> newNamespaces = new ArrayList<>();\r\n    while (oldNamespaces.hasNext()) {\r\n        Namespace oldNamespace = (Namespace) oldNamespaces.next();\r\n        newNamespaces.add(oldNamespace);\r\n    }\r\n    newNamespaces.add(namespace);\r\n    EndElement newEndElement = this.eventFactory.createEndElement(oldEndElement.getName(), newNamespaces.iterator());\r\n    this.eventWriter.add(namespace);\r\n    this.endElements.set(last, newEndElement);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeCharacters(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeCharacters(String text) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createCharacters(text));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeCharacters(char[],int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeCharacters(char[] text, int start, int len) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createCharacters(new String(text, start, len)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeCData(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeCData(String data) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createCData(data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeComment(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeComment(String data) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createComment(data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeProcessingInstruction(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeProcessingInstruction(String target) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createProcessingInstruction(target, \"\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeProcessingInstruction(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeProcessingInstruction(String target, String data) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createProcessingInstruction(target, data));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeDTD(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeDTD(String dtd) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createDTD(dtd));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeEntityRef(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeEntityRef(String name) throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createEntityReference(name, null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#writeEndDocument()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void writeEndDocument() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.add(this.eventFactory.createEndDocument());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#flush()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void flush() throws XMLStreamException {\r\n    this.eventWriter.flush();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XMLEventStreamWriter#close()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void close() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.close();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector",
+    "entityType": "class",
+    "code": "/**\r\n * Indicates that the validation should be disabled.\r\n */\r\npublic static final int VALIDATION_NONE = 0;\n/**\r\n * Indicates that the validation mode should be auto-guessed, since we cannot find\r\n * a clear indication (probably choked on some special characters, or the like).\r\n */\r\npublic static final int VALIDATION_AUTO = 1;\n/**\r\n * Indicates that DTD validation should be used (we found a \"DOCTYPE\" declaration).\r\n */\r\npublic static final int VALIDATION_DTD = 2;\n/**\r\n * Indicates that XSD validation should be used (found no \"DOCTYPE\" declaration).\r\n */\r\npublic static final int VALIDATION_XSD = 3;\n/**\r\n * The token in an XML document that declares the DTD to use for validation\r\n * and thus that DTD validation is being used.\r\n */\r\nprivate static final String DOCTYPE = \"DOCTYPE\";\n/**\r\n * The token that indicates the start of an XML comment.\r\n */\r\nprivate static final String START_COMMENT = \"<!--\";\n/**\r\n * The token that indicates the end of an XML comment.\r\n */\r\nprivate static final String END_COMMENT = \"-->\";\n/**\r\n * Indicates whether the current parse position is inside an XML comment.\r\n */\r\nprivate boolean inComment;\n/**\r\n * Detect the validation mode for the XML document in the supplied {@link InputStream}.\r\n * <p>Note that the supplied {@link InputStream} is closed by this method before returning.\r\n * @param inputStream the InputStream to parse\r\n * @throws IOException in case of I/O failure\r\n * @see #VALIDATION_DTD\r\n * @see #VALIDATION_XSD\r\n */\r\npublic int detectValidationMode(InputStream inputStream) throws IOException {\r\n    this.inComment = false;\r\n    // Peek into the file to look for DOCTYPE.\r\n    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {\r\n        boolean isDtdValidated = false;\r\n        String content;\r\n        while ((content = reader.readLine()) != null) {\r\n            content = consumeCommentTokens(content);\r\n            if (!StringUtils.hasText(content)) {\r\n                continue;\r\n            }\r\n            if (hasDoctype(content)) {\r\n                isDtdValidated = true;\r\n                break;\r\n            }\r\n            if (hasOpeningTag(content)) {\r\n                // End of meaningful data...\r\n                break;\r\n            }\r\n        }\r\n        return (isDtdValidated ? VALIDATION_DTD : VALIDATION_XSD);\r\n    } catch (CharConversionException ex) {\r\n        // Choked on some character encoding...\r\n        // Leave the decision up to the caller.\r\n        return VALIDATION_AUTO;\r\n    }\r\n}\n/**\r\n * Does the content contain the DTD DOCTYPE declaration?\r\n */\r\nprivate boolean hasDoctype(String content) {\r\n    return content.contains(DOCTYPE);\r\n}\n/**\r\n * Determine if the supplied content contains an XML opening tag.\r\n * <p>It is expected that all comment tokens will have been consumed for the\r\n * supplied content before passing the remainder to this method. However, as\r\n * a sanity check, if the parse state is currently in an XML comment this\r\n * method always returns {@code false}.\r\n */\r\nprivate boolean hasOpeningTag(String content) {\r\n    if (this.inComment) {\r\n        return false;\r\n    }\r\n    int openTagIndex = content.indexOf('<');\r\n    return (openTagIndex > -1 && (content.length() > openTagIndex + 1) && Character.isLetter(content.charAt(openTagIndex + 1)));\r\n}\n/**\r\n * Consume all comments in the given String and return the remaining content,\r\n * which may be empty since the supplied content might be all comment data.\r\n * <p>This method takes the current \"in comment\" parsing state into account.\r\n */\r\nprivate String consumeCommentTokens(String line) {\r\n    int indexOfStartComment = line.indexOf(START_COMMENT);\r\n    if (indexOfStartComment == -1 && !line.contains(END_COMMENT)) {\r\n        return line;\r\n    }\r\n    String result = \"\";\r\n    String currLine = line;\r\n    if (!this.inComment && (indexOfStartComment >= 0)) {\r\n        result = line.substring(0, indexOfStartComment);\r\n        currLine = line.substring(indexOfStartComment);\r\n    }\r\n    if ((currLine = consume(currLine)) != null) {\r\n        result += consumeCommentTokens(currLine);\r\n    }\r\n    return result;\r\n}\n/**\r\n * Consume the next comment token, update the \"inComment\" flag,\r\n * and return the remaining content.\r\n */\r\n@Nullable\r\nprivate String consume(String line) {\r\n    int index = (this.inComment ? endComment(line) : startComment(line));\r\n    return (index == -1 ? null : line.substring(index));\r\n}\n/**\r\n * Try to consume the {@link #START_COMMENT} token.\r\n * @see #commentToken(String, String, boolean)\r\n */\r\nprivate int startComment(String line) {\r\n    return commentToken(line, START_COMMENT, true);\r\n}\n/**\r\n * Try to consume the {@link #END_COMMENT} token.\r\n * @see #commentToken(String, String, boolean)\r\n */\r\nprivate int endComment(String line) {\r\n    return commentToken(line, END_COMMENT, false);\r\n}\n/**\r\n * Try to consume the supplied token against the supplied content and update the\r\n * \"in comment\" parse state to the supplied value.\r\n * <p>Returns the index into the content which is after the token or -1 if the\r\n * token is not found.\r\n */\r\nprivate int commentToken(String line, String token, boolean inCommentIfPresent) {\r\n    int index = line.indexOf(token);\r\n    if (index > -1) {\r\n        this.inComment = inCommentIfPresent;\r\n    }\r\n    return (index == -1 ? index : index + token.length());\r\n}",
+    "comment": "\n * Detects whether an XML stream is using DTD- or XSD-based validation.\n *\n * @author Rob Harrop\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 2.0\n "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#detectValidationMode(InputStream)",
+    "entityType": "method",
+    "code": "/**\r\n * Detect the validation mode for the XML document in the supplied {@link InputStream}.\r\n * <p>Note that the supplied {@link InputStream} is closed by this method before returning.\r\n * @param inputStream the InputStream to parse\r\n * @throws IOException in case of I/O failure\r\n * @see #VALIDATION_DTD\r\n * @see #VALIDATION_XSD\r\n */\r\npublic int detectValidationMode(InputStream inputStream) throws IOException {\r\n    this.inComment = false;\r\n    // Peek into the file to look for DOCTYPE.\r\n    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {\r\n        boolean isDtdValidated = false;\r\n        String content;\r\n        while ((content = reader.readLine()) != null) {\r\n            content = consumeCommentTokens(content);\r\n            if (!StringUtils.hasText(content)) {\r\n                continue;\r\n            }\r\n            if (hasDoctype(content)) {\r\n                isDtdValidated = true;\r\n                break;\r\n            }\r\n            if (hasOpeningTag(content)) {\r\n                // End of meaningful data...\r\n                break;\r\n            }\r\n        }\r\n        return (isDtdValidated ? VALIDATION_DTD : VALIDATION_XSD);\r\n    } catch (CharConversionException ex) {\r\n        // Choked on some character encoding...\r\n        // Leave the decision up to the caller.\r\n        return VALIDATION_AUTO;\r\n    }\r\n}",
+    "comment": "\n\t * Detect the validation mode for the XML document in the supplied {@link InputStream}.\n\t * <p>Note that the supplied {@link InputStream} is closed by this method before returning.\n\t * @param inputStream the InputStream to parse\n\t * @throws IOException in case of I/O failure\n\t * @see #VALIDATION_DTD\n\t * @see #VALIDATION_XSD\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#hasDoctype(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Does the content contain the DTD DOCTYPE declaration?\r\n */\r\nprivate boolean hasDoctype(String content) {\r\n    return content.contains(DOCTYPE);\r\n}",
+    "comment": "\n\t * Does the content contain the DTD DOCTYPE declaration?\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#hasOpeningTag(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine if the supplied content contains an XML opening tag.\r\n * <p>It is expected that all comment tokens will have been consumed for the\r\n * supplied content before passing the remainder to this method. However, as\r\n * a sanity check, if the parse state is currently in an XML comment this\r\n * method always returns {@code false}.\r\n */\r\nprivate boolean hasOpeningTag(String content) {\r\n    if (this.inComment) {\r\n        return false;\r\n    }\r\n    int openTagIndex = content.indexOf('<');\r\n    return (openTagIndex > -1 && (content.length() > openTagIndex + 1) && Character.isLetter(content.charAt(openTagIndex + 1)));\r\n}",
+    "comment": "\n\t * Determine if the supplied content contains an XML opening tag.\n\t * <p>It is expected that all comment tokens will have been consumed for the\n\t * supplied content before passing the remainder to this method. However, as\n\t * a sanity check, if the parse state is currently in an XML comment this\n\t * method always returns {@code false}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#consumeCommentTokens(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Consume all comments in the given String and return the remaining content,\r\n * which may be empty since the supplied content might be all comment data.\r\n * <p>This method takes the current \"in comment\" parsing state into account.\r\n */\r\nprivate String consumeCommentTokens(String line) {\r\n    int indexOfStartComment = line.indexOf(START_COMMENT);\r\n    if (indexOfStartComment == -1 && !line.contains(END_COMMENT)) {\r\n        return line;\r\n    }\r\n    String result = \"\";\r\n    String currLine = line;\r\n    if (!this.inComment && (indexOfStartComment >= 0)) {\r\n        result = line.substring(0, indexOfStartComment);\r\n        currLine = line.substring(indexOfStartComment);\r\n    }\r\n    if ((currLine = consume(currLine)) != null) {\r\n        result += consumeCommentTokens(currLine);\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n\t * Consume all comments in the given String and return the remaining content,\n\t * which may be empty since the supplied content might be all comment data.\n\t * <p>This method takes the current \"in comment\" parsing state into account.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#consume(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Consume the next comment token, update the \"inComment\" flag,\r\n * and return the remaining content.\r\n */\r\n@Nullable\r\nprivate String consume(String line) {\r\n    int index = (this.inComment ? endComment(line) : startComment(line));\r\n    return (index == -1 ? null : line.substring(index));\r\n}",
+    "comment": "\n\t * Consume the next comment token, update the \"inComment\" flag,\n\t * and return the remaining content.\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#startComment(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Try to consume the {@link #START_COMMENT} token.\r\n * @see #commentToken(String, String, boolean)\r\n */\r\nprivate int startComment(String line) {\r\n    return commentToken(line, START_COMMENT, true);\r\n}",
+    "comment": "\n\t * Try to consume the {@link #START_COMMENT} token.\n\t * @see #commentToken(String, String, boolean)\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#endComment(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Try to consume the {@link #END_COMMENT} token.\r\n * @see #commentToken(String, String, boolean)\r\n */\r\nprivate int endComment(String line) {\r\n    return commentToken(line, END_COMMENT, false);\r\n}",
+    "comment": "\n\t * Try to consume the {@link #END_COMMENT} token.\n\t * @see #commentToken(String, String, boolean)\n\t "
+  },
+  {
+    "entityId": "org.springframework.util.xml.XmlValidationModeDetector#commentToken(String,String,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Try to consume the supplied token against the supplied content and update the\r\n * \"in comment\" parse state to the supplied value.\r\n * <p>Returns the index into the content which is after the token or -1 if the\r\n * token is not found.\r\n */\r\nprivate int commentToken(String line, String token, boolean inCommentIfPresent) {\r\n    int index = line.indexOf(token);\r\n    if (index > -1) {\r\n        this.inComment = inCommentIfPresent;\r\n    }\r\n    return (index == -1 ? index : index + token.length());\r\n}",
+    "comment": "\n\t * Try to consume the supplied token against the supplied content and update the\n\t * \"in comment\" parse state to the supplied value.\n\t * <p>Returns the index into the content which is after the token or -1 if the\n\t * token is not found.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate",
+    "entityType": "class",
+    "code": "private final Thread.Builder threadBuilder = Thread.ofVirtual();\npublic ThreadFactory virtualThreadFactory() {\r\n    return this.threadBuilder.factory();\r\n}\npublic ThreadFactory virtualThreadFactory(String threadNamePrefix) {\r\n    return this.threadBuilder.name(threadNamePrefix, 0).factory();\r\n}\npublic Thread newVirtualThread(String name, Runnable task) {\r\n    return this.threadBuilder.name(name).unstarted(task);\r\n}",
+    "comment": "\n * Internal delegate for virtual thread handling on JDK 21.\n * This is the actual version compiled against JDK 21.\n *\n * @author Juergen Hoeller\n * @since 6.1\n * @see VirtualThreadTaskExecutor\n "
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate#virtualThreadFactory()",
+    "entityType": "method",
+    "code": "public ThreadFactory virtualThreadFactory() {\r\n    return this.threadBuilder.factory();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate#virtualThreadFactory(String)",
+    "entityType": "method",
+    "code": "public ThreadFactory virtualThreadFactory(String threadNamePrefix) {\r\n    return this.threadBuilder.name(threadNamePrefix, 0).factory();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.task.VirtualThreadDelegate#newVirtualThread(String,Runnable)",
+    "entityType": "method",
+    "code": "public Thread newVirtualThread(String name, Runnable task) {\r\n    return this.threadBuilder.name(name).unstarted(task);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "a.ClassHavingNestedClass",
+    "entityType": "class",
+    "code": "public static class NestedClass {\r\n}",
+    "comment": "\n * Test class for {@code org.springframework.util.ClassUtilsTests}.\n *\n * <p>The use case for this test class requires that the package name is a single\n * character (i.e., length of 1).\n *\n * @author Johnny Lim\n "
+  },
+  {
+    "entityId": "a.NestedClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.AnnotatedComponent",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.AnnotationTypeFilterTestsTypes",
+    "entityType": "class",
+    "code": "@InheritedAnnotation\r\npublic static class SomeComponent {\r\n}\n@InheritedAnnotation\r\npublic interface SomeComponentInterface {\r\n}\n@SuppressWarnings(\"unused\")\r\npublic static class SomeClassWithSomeComponentInterface implements Cloneable, SomeComponentInterface {\r\n}\n@SuppressWarnings(\"unused\")\r\npublic static class SomeSubclassOfSomeComponent extends SomeComponent {\r\n}\n@NonInheritedAnnotation\r\npublic static class SomeClassMarkedWithNonInheritedAnnotation {\r\n}\n@SuppressWarnings(\"unused\")\r\npublic static class SomeSubclassOfSomeClassMarkedWithNonInheritedAnnotation extends SomeClassMarkedWithNonInheritedAnnotation {\r\n}\n@SuppressWarnings(\"unused\")\r\npublic static class SomeNonCandidateClass {\r\n}",
+    "comment": "\n * We must use a standalone set of types to ensure that no one else is loading\n * them and interfering with\n * {@link org.springframework.core.type.ClassloadingAssertions#assertClassNotLoaded(String)}.\n *\n * @author Ramnivas Laddad\n * @author Juergen Hoeller\n * @author Oliver Gierke\n * @author Sam Brannen\n * @see org.springframework.core.type.AnnotationTypeFilterTests\n "
+  },
+  {
+    "entityId": "example.type.SomeComponent",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeComponentInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClassWithSomeComponentInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeSubclassOfSomeComponent",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClassMarkedWithNonInheritedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeSubclassOfSomeClassMarkedWithNonInheritedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeNonCandidateClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.AspectJTypeFilterTestsTypes",
+    "entityType": "class",
+    "code": "public interface SomeInterface {\r\n}\npublic static class SomeClass {\r\n}\npublic static class SomeClassExtendingSomeClass extends SomeClass {\r\n}\npublic static class SomeClassImplementingSomeInterface implements SomeInterface {\r\n}\npublic static class SomeClassExtendingSomeClassExtendingSomeClassAndImplementingSomeInterface extends SomeClassExtendingSomeClass implements SomeInterface {\r\n}\n@Component\r\npublic static class SomeClassAnnotatedWithComponent {\r\n}",
+    "comment": "\n * We must use a standalone set of types to ensure that no one else is loading\n * them and interfering with\n * {@link org.springframework.core.type.ClassloadingAssertions#assertClassNotLoaded(String)}.\n *\n * @author Ramnivas Laddad\n * @author Sam Brannen\n * @see org.springframework.core.type.AspectJTypeFilterTests\n "
+  },
+  {
+    "entityId": "example.type.SomeInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClassExtendingSomeClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClassImplementingSomeInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClassExtendingSomeClassExtendingSomeClassAndImplementingSomeInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeClassAnnotatedWithComponent",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.AssignableTypeFilterTestsTypes",
+    "entityType": "class",
+    "code": "public static class TestNonInheritingClass {\r\n}\npublic interface TestInterface {\r\n}\npublic static class TestInterfaceImpl implements TestInterface {\r\n}\npublic interface SomeDaoLikeInterface {\r\n}\npublic static class SomeDaoLikeImpl extends SimpleJdbcDaoSupport implements SomeDaoLikeInterface {\r\n}\npublic interface JdbcDaoSupport {\r\n}\npublic static class SimpleJdbcDaoSupport implements JdbcDaoSupport {\r\n}",
+    "comment": "\n * We must use a standalone set of types to ensure that no one else is loading\n * them and interfering with\n * {@link org.springframework.core.type.ClassloadingAssertions#assertClassNotLoaded(String)}.\n *\n * @author Ramnivas Laddad\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @see org.springframework.core.type.AssignableTypeFilterTests\n "
+  },
+  {
+    "entityId": "example.type.TestNonInheritingClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.TestInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.TestInterfaceImpl",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeDaoLikeInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SomeDaoLikeImpl",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.JdbcDaoSupport",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "example.type.SimpleJdbcDaoSupport",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid isAccessibleWhenPublicVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PUBLIC);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isTrue();\r\n}\n@Test\r\nvoid isAccessibleWhenPublicVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PUBLIC);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isTrue();\r\n}\n@Test\r\nvoid isAccessibleWhenProtectedVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PROTECTED);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isTrue();\r\n}\n@Test\r\nvoid isAccessibleWhenProtectedVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PROTECTED);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isFalse();\r\n}\n@Test\r\nvoid isAccessibleWhenPackagePrivateVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PACKAGE_PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isTrue();\r\n}\n@Test\r\nvoid isAccessibleWhenPackagePrivateVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PACKAGE_PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isFalse();\r\n}\n@Test\r\nvoid isAccessibleWhenPrivateVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isFalse();\r\n}\n@Test\r\nvoid isAccessibleWhenPrivateVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isFalse();\r\n}\n@Test\r\nvoid forMemberWhenPublicConstructor() throws NoSuchMethodException {\r\n    Member member = PublicClass.class.getConstructor();\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PUBLIC);\r\n}\n@Test\r\nvoid forMemberWhenPackagePrivateConstructor() {\r\n    Member member = ProtectedAccessor.class.getDeclaredConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPackagePrivateClassWithPublicConstructor() {\r\n    Member member = PackagePrivateClass.class.getDeclaredConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPackagePrivateClassWithPublicMethod() {\r\n    Member member = method(PackagePrivateClass.class, \"stringBean\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateConstructorParameter() {\r\n    Member member = ProtectedParameter.class.getConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateGenericOnConstructorParameter() {\r\n    Member member = ProtectedGenericParameter.class.getConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateMethod() {\r\n    Member member = method(PublicClass.class, \"getProtectedMethod\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateMethodReturnType() {\r\n    Member member = method(ProtectedAccessor.class, \"methodWithProtectedReturnType\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateMethodParameter() {\r\n    Member member = method(ProtectedAccessor.class, \"methodWithProtectedParameter\", PackagePrivateClass.class);\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateField() {\r\n    Field member = field(PublicClass.class, \"protectedField\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPublicFieldAndPackagePrivateFieldType() {\r\n    Member member = field(PublicClass.class, \"protectedClassField\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPrivateField() {\r\n    Member member = field(PublicClass.class, \"privateField\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPublicMethodAndPackagePrivateGenericOnReturnType() {\r\n    Member member = method(PublicFactoryBean.class, \"protectedTypeFactoryBean\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateArrayComponent() {\r\n    Member member = field(PublicClass.class, \"packagePrivateClasses\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forResolvableTypeWhenPackagePrivateGeneric() {\r\n    ResolvableType resolvableType = PublicFactoryBean.resolveToProtectedGenericParameter();\r\n    AccessControl accessControl = AccessControl.forResolvableType(resolvableType);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\n@Test\r\nvoid forResolvableTypeWhenRecursiveType() {\r\n    ResolvableType resolvableType = ResolvableType.forClassWithGenerics(SelfReference.class, SelfReference.class);\r\n    AccessControl accessControl = AccessControl.forResolvableType(resolvableType);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}\nprivate static Method method(Class<?> type, String name, Class<?>... parameterTypes) {\r\n    Method method = ReflectionUtils.findMethod(type, name, parameterTypes);\r\n    assertThat(method).isNotNull();\r\n    return method;\r\n}\nprivate static Field field(Class<?> type, String name) {\r\n    Field field = ReflectionUtils.findField(type, name);\r\n    assertThat(field).isNotNull();\r\n    return field;\r\n}\nstatic class SelfReference<T extends SelfReference<T>> {\r\n\r\n    @SuppressWarnings({ \"unchecked\", \"unused\" })\r\n    T getThis() {\r\n        return (T) this;\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link AccessControl}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenPublicVisibilityInSamePackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenPublicVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PUBLIC);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenPublicVisibilityInDifferentPackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenPublicVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PUBLIC);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenProtectedVisibilityInSamePackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenProtectedVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PROTECTED);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenProtectedVisibilityInDifferentPackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenProtectedVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PROTECTED);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenPackagePrivateVisibilityInSamePackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenPackagePrivateVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PACKAGE_PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenPackagePrivateVisibilityInDifferentPackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenPackagePrivateVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PACKAGE_PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenPrivateVisibilityInSamePackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenPrivateVisibilityInSamePackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(PublicClass.class))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#isAccessibleWhenPrivateVisibilityInDifferentPackage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid isAccessibleWhenPrivateVisibilityInDifferentPackage() {\r\n    AccessControl accessControl = new AccessControl(PublicClass.class, Visibility.PRIVATE);\r\n    assertThat(accessControl.isAccessibleFrom(ClassName.get(String.class))).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicConstructor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicConstructor() throws NoSuchMethodException {\r\n    Member member = PublicClass.class.getConstructor();\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PUBLIC);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPackagePrivateConstructor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPackagePrivateConstructor() {\r\n    Member member = ProtectedAccessor.class.getDeclaredConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPackagePrivateClassWithPublicConstructor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPackagePrivateClassWithPublicConstructor() {\r\n    Member member = PackagePrivateClass.class.getDeclaredConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPackagePrivateClassWithPublicMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPackagePrivateClassWithPublicMethod() {\r\n    Member member = method(PackagePrivateClass.class, \"stringBean\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateConstructorParameter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateConstructorParameter() {\r\n    Member member = ProtectedParameter.class.getConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateGenericOnConstructorParameter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateGenericOnConstructorParameter() {\r\n    Member member = ProtectedGenericParameter.class.getConstructors()[0];\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateMethod() {\r\n    Member member = method(PublicClass.class, \"getProtectedMethod\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateMethodReturnType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateMethodReturnType() {\r\n    Member member = method(ProtectedAccessor.class, \"methodWithProtectedReturnType\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateMethodParameter()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateMethodParameter() {\r\n    Member member = method(ProtectedAccessor.class, \"methodWithProtectedParameter\", PackagePrivateClass.class);\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateField() {\r\n    Field member = field(PublicClass.class, \"protectedField\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPublicFieldAndPackagePrivateFieldType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPublicFieldAndPackagePrivateFieldType() {\r\n    Member member = field(PublicClass.class, \"protectedClassField\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPrivateField()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPrivateField() {\r\n    Member member = field(PublicClass.class, \"privateField\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPublicMethodAndPackagePrivateGenericOnReturnType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPublicMethodAndPackagePrivateGenericOnReturnType() {\r\n    Member member = method(PublicFactoryBean.class, \"protectedTypeFactoryBean\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.AccessControlTests#forMemberWhenPublicClassWithPackagePrivateArrayComponent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forMemberWhenPublicClassWithPackagePrivateArrayComponent() {\r\n    Member member = field(PublicClass.class, \"packagePrivateClasses\");\r\n    AccessControl accessControl = AccessControl.forMember(member);\r\n    assertThat(accessControl.getVisibility()).isEqualTo(Visibility.PACKAGE_PRIVATE);\r\n}",
+    "comment": ""
+  }
+]

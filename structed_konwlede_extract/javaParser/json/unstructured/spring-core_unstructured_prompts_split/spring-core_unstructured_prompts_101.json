@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyOnMethodWithIgnorablesScansAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyOnMethodWithIgnorablesScansAnnotations() {\r\n    Method source = methodFrom(Ignorable.class);\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY)).containsExactly(\"0:TestAnnotation1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyOnMethodWithMultipleCandidatesScansAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyOnMethodWithMultipleCandidatesScansAnnotations() {\r\n    Method source = methodFrom(MultipleMethods.class);\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY)).containsExactly(\"0:TestAnnotation1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyOnMethodWithGenericParameterOverrideScansAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyOnMethodWithGenericParameterOverrideScansAnnotations() {\r\n    Method source = ReflectionUtils.findMethod(GenericOverride.class, \"method\", String.class);\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY)).containsExactly(\"0:TestAnnotation1\", \"1:TestAnnotation2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyOnMethodWithGenericParameterNonOverrideScansAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyOnMethodWithGenericParameterNonOverrideScansAnnotations() {\r\n    Method source = ReflectionUtils.findMethod(GenericNonOverride.class, \"method\", StringBuilder.class);\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY)).containsExactly(\"0:TestAnnotation1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyWithEnclosingClassPredicatesOnEnclosedStaticClassScansAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyWithEnclosingClassPredicatesOnEnclosedStaticClassScansAnnotations() {\r\n    Class<?> source = AnnotationEnclosingClassSample.EnclosedStatic.EnclosedStaticStatic.class;\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY, ClassUtils::isInnerClass)).containsExactly(\"0:EnclosedThree\");\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY, Search.always).toList()).isEqualTo(scan(source, SearchStrategy.TYPE_HIERARCHY, ClassUtils::isStaticClass).toList()).containsExactly(\"0:EnclosedThree\", \"1:EnclosedTwo\", \"2:EnclosedOne\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyWithEnclosingClassPredicatesOnEnclosedInnerClassScansAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyWithEnclosingClassPredicatesOnEnclosedInnerClassScansAnnotations() {\r\n    Class<?> source = AnnotationEnclosingClassSample.EnclosedInner.EnclosedInnerInner.class;\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY, ClassUtils::isStaticClass)).containsExactly(\"0:EnclosedThree\");\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY, Search.always).toList()).isEqualTo(scan(source, SearchStrategy.TYPE_HIERARCHY, ClassUtils::isInnerClass).toList()).containsExactly(\"0:EnclosedThree\", \"1:EnclosedTwo\", \"2:EnclosedOne\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#typeHierarchyStrategyWithEnclosingClassPredicatesOnMethodHierarchyUsesTypeHierarchyScan()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeHierarchyStrategyWithEnclosingClassPredicatesOnMethodHierarchyUsesTypeHierarchyScan() {\r\n    Method source = methodFrom(WithHierarchy.class);\r\n    assertThat(scan(source, SearchStrategy.TYPE_HIERARCHY, Search.always).toList()).isEqualTo(scan(source, SearchStrategy.TYPE_HIERARCHY, ClassUtils::isInnerClass).toList()).containsExactly(\"0:TestAnnotation1\", \"1:TestAnnotation5\", \"1:TestInheritedAnnotation5\", \"2:TestAnnotation6\", \"3:TestAnnotation2\", \"3:TestInheritedAnnotation2\", \"4:TestAnnotation3\", \"5:TestAnnotation4\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scanWhenProcessorReturnsFromDoWithAggregateExitsEarly()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid scanWhenProcessorReturnsFromDoWithAggregateExitsEarly() {\r\n    String result = scan(this, WithSingleSuperclass.class, SearchStrategy.TYPE_HIERARCHY, new AnnotationsProcessor<Object, String>() {\r\n\r\n        @Override\r\n        @NonNull\r\n        public String doWithAggregate(Object context, int aggregateIndex) {\r\n            return \"\";\r\n        }\r\n\r\n        @Override\r\n        @NonNull\r\n        public String doWithAnnotations(Object context, int aggregateIndex, @Nullable Object source, @Nullable Annotation @Nullable [] annotations) {\r\n            throw new IllegalStateException(\"Should not call\");\r\n        }\r\n    });\r\n    assertThat(result).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scanWhenProcessorReturnsFromDoWithAnnotationsExitsEarly()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid scanWhenProcessorReturnsFromDoWithAnnotationsExitsEarly() {\r\n    List<Integer> indexes = new ArrayList<>();\r\n    String result = scan(this, WithSingleSuperclass.class, SearchStrategy.TYPE_HIERARCHY, (context, aggregateIndex, source, annotations) -> {\r\n        indexes.add(aggregateIndex);\r\n        return \"\";\r\n    });\r\n    assertThat(result).isEmpty();\r\n    assertThat(indexes).containsExactly(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scanWhenProcessorHasFinishMethodUsesFinishResult()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid scanWhenProcessorHasFinishMethodUsesFinishResult() {\r\n    String result = scan(this, WithSingleSuperclass.class, SearchStrategy.TYPE_HIERARCHY, new AnnotationsProcessor<Object, String>() {\r\n\r\n        @Override\r\n        @NonNull\r\n        public String doWithAnnotations(Object context, int aggregateIndex, @Nullable Object source, @Nullable Annotation @Nullable [] annotations) {\r\n            return \"K\";\r\n        }\r\n\r\n        @Override\r\n        @NonNull\r\n        public String finish(@Nullable String result) {\r\n            return \"O\" + result;\r\n        }\r\n    });\r\n    assertThat(result).isEqualTo(\"OK\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#methodFrom(Class<?>)",
+    "entityType": "method",
+    "code": "private Method methodFrom(Class<?> type) {\r\n    return ReflectionUtils.findMethod(type, \"method\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scan(AnnotatedElement,SearchStrategy)",
+    "entityType": "method",
+    "code": "private Stream<String> scan(AnnotatedElement element, SearchStrategy searchStrategy) {\r\n    return scan(element, searchStrategy, Search.never);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scan(AnnotatedElement,SearchStrategy,Predicate<Class<?>>)",
+    "entityType": "method",
+    "code": "private Stream<String> scan(AnnotatedElement element, SearchStrategy searchStrategy, Predicate<Class<?>> searchEnclosingClass) {\r\n    List<String> results = new ArrayList<>();\r\n    scan(this, element, searchStrategy, searchEnclosingClass, (criteria, aggregateIndex, source, annotations) -> {\r\n        trackIndexedAnnotations(aggregateIndex, annotations, results);\r\n        // continue searching\r\n        return null;\r\n    });\r\n    return results.stream();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scan(C,AnnotatedElement,SearchStrategy,AnnotationsProcessor<C,R>)",
+    "entityType": "method",
+    "code": "private static <C, R> R scan(C context, AnnotatedElement source, SearchStrategy searchStrategy, AnnotationsProcessor<C, R> processor) {\r\n    return scan(context, source, searchStrategy, Search.never, processor);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#scan(C,AnnotatedElement,SearchStrategy,Predicate<Class<?>>,AnnotationsProcessor<C,R>)",
+    "entityType": "method",
+    "code": "private static <C, R> R scan(C context, AnnotatedElement source, SearchStrategy searchStrategy, Predicate<Class<?>> searchEnclosingClass, AnnotationsProcessor<C, R> processor) {\r\n    return AnnotationsScanner.scan(context, source, searchStrategy, searchEnclosingClass, processor);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#trackIndexedAnnotations(int,Annotation[],List<String>)",
+    "entityType": "method",
+    "code": "private void trackIndexedAnnotations(int aggregateIndex, Annotation[] annotations, List<String> results) {\r\n    Arrays.stream(annotations).filter(Objects::nonNull).map(annotation -> indexedName(aggregateIndex, annotation)).forEach(results::add);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationsScannerTests#indexedName(int,Annotation)",
+    "entityType": "method",
+    "code": "private String indexedName(int aggregateIndex, Annotation annotation) {\r\n    return aggregateIndex + \":\" + annotation.annotationType().getSimpleName();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithNoAnnotations",
+    "entityType": "class",
+    "code": "public void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithNoAnnotations#method()",
+    "entityType": "method",
+    "code": "public void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleAnnotation",
+    "entityType": "class",
+    "code": "@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleAnnotation#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithMultipleAnnotations",
+    "entityType": "class",
+    "code": "@TestAnnotation1\r\n@TestAnnotation2\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithMultipleAnnotations#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation1\r\n@TestAnnotation2\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SingleSuperclass",
+    "entityType": "class",
+    "code": "@TestAnnotation2\r\n@TestInheritedAnnotation2\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SingleSuperclass#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\n@TestInheritedAnnotation2\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleSuperclass",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleSuperclass#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleSuperclassAndDoubleInherited",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleSuperclassAndDoubleInherited#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleInterface",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithSingleInterface#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SingleInterface",
+    "entityType": "class",
+    "code": "@TestAnnotation2\r\n@TestInheritedAnnotation2\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SingleInterface#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\n@TestInheritedAnnotation2\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithHierarchy",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.WithHierarchy#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello1",
+    "entityType": "class",
+    "code": "@TestAnnotation1\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello1#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation1\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello2",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello1Impl",
+    "entityType": "class",
+    "code": "@Override\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello1Impl#method()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello2Impl",
+    "entityType": "class",
+    "code": "@Override\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Hello2Impl#method()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchySuperclass",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation2\r\n@TestInheritedAnnotation2\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchySuperclass#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation2\r\n@TestInheritedAnnotation2\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchySuperSuperclass",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation3\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchySuperSuperclass#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation3\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchySuperSuperclassInterface",
+    "entityType": "class",
+    "code": "@TestAnnotation4\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchySuperSuperclassInterface#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation4\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchyInterface",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation5\r\n@TestInheritedAnnotation5\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchyInterface#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation5\r\n@TestInheritedAnnotation5\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchyInterfaceInterface",
+    "entityType": "class",
+    "code": "@TestAnnotation6\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HierarchyInterfaceInterface#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation6\r\nvoid method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.BridgedMethod",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method(String arg) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.BridgedMethod#method(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method(String arg) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.BridgeMethod",
+    "entityType": "class",
+    "code": "@TestAnnotation2\r\nvoid method(T arg);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.BridgeMethod#method(T)",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\nvoid method(T arg);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Ignorable",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.Ignorable#method()",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.IgnorableOverrideInterface1",
+    "entityType": "class",
+    "code": "void method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.IgnorableOverrideInterface1#method()",
+    "entityType": "method",
+    "code": "void method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.IgnorableOverrideInterface2",
+    "entityType": "class",
+    "code": "void method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.IgnorableOverrideInterface2#method()",
+    "entityType": "method",
+    "code": "void method();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleMethods",
+    "entityType": "class",
+    "code": "@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleMethods#method()",
+    "entityType": "method",
+    "code": "@TestAnnotation1\r\npublic void method() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleMethodsInterface",
+    "entityType": "class",
+    "code": "@TestAnnotation2\r\nvoid method(String arg);\n@TestAnnotation2\r\nvoid method1();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleMethodsInterface#method(String)",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\nvoid method(String arg);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MultipleMethodsInterface#method1()",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\nvoid method1();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericOverride",
+    "entityType": "class",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method(String argument) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericOverride#method(String)",
+    "entityType": "method",
+    "code": "@Override\r\n@TestAnnotation1\r\npublic void method(String argument) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericOverrideInterface",
+    "entityType": "class",
+    "code": "@TestAnnotation2\r\nvoid method(T argument);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericOverrideInterface#method(T)",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\nvoid method(T argument);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericNonOverride",
+    "entityType": "class",
+    "code": "@TestAnnotation1\r\npublic void method(StringBuilder argument) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericNonOverride#method(StringBuilder)",
+    "entityType": "method",
+    "code": "@TestAnnotation1\r\npublic void method(StringBuilder argument) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericNonOverrideInterface",
+    "entityType": "class",
+    "code": "@TestAnnotation2\r\nvoid method(T argument);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericNonOverrideInterface#method(T)",
+    "entityType": "method",
+    "code": "@TestAnnotation2\r\nvoid method(T argument);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenNoMetaAnnotationsReturnsMappings() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(SimpleAnnotation.class);\r\n    assertThat(mappings.size()).isEqualTo(1);\r\n    assertThat(mappings.get(0).getAnnotationType()).isEqualTo(SimpleAnnotation.class);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(SimpleAnnotation.class);\r\n}\n@Test\r\nvoid forAnnotationTypeWhenMetaAnnotationsReturnsMappings() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(MetaAnnotated.class);\r\n    assertThat(mappings.size()).isEqualTo(6);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(MetaAnnotated.class, A.class, B.class, AA.class, AB.class, ABC.class);\r\n}\n@Test\r\nvoid forAnnotationTypeWhenHasRepeatingMetaAnnotationReturnsMapping() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(WithRepeatedMetaAnnotations.class);\r\n    assertThat(mappings.size()).isEqualTo(3);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(WithRepeatedMetaAnnotations.class, Repeating.class, Repeating.class);\r\n}\n@Test\r\nvoid forAnnotationTypeWhenRepeatableMetaAnnotationIsFiltered() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(WithRepeatedMetaAnnotations.class, RepeatableContainers.standardRepeatables(), Repeating.class.getName()::equals);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(WithRepeatedMetaAnnotations.class);\r\n}\n@Test\r\nvoid forAnnotationTypeWhenSelfAnnotatedReturnsMapping() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(SelfAnnotated.class);\r\n    assertThat(mappings.size()).isEqualTo(1);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(SelfAnnotated.class);\r\n}\n@Test\r\nvoid forAnnotationTypeWhenFormsLoopReturnsMapping() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(LoopA.class);\r\n    assertThat(mappings.size()).isEqualTo(2);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(LoopA.class, LoopB.class);\r\n}\n@Test\r\nvoid forAnnotationTypeWhenHasAliasForWithBothValueAndAttributeThrowsException() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForWithBothValueAndAttribute.class)).withMessage(\"In @AliasFor declared on attribute 'test' in annotation [\" + AliasForWithBothValueAndAttribute.class.getName() + \"], attribute 'attribute' and its alias 'value' are present with values of 'foo' and 'bar', but only one is permitted.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForToSelfNonExistingAttribute() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToSelfNonExistingAttribute.class)).withMessage(\"@AliasFor declaration on attribute 'test' in annotation [\" + AliasForToSelfNonExistingAttribute.class.getName() + \"] declares an alias for 'missing' which is not present.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForToOtherNonExistingAttribute() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToOtherNonExistingAttribute.class)).withMessage(\"Attribute 'test' in annotation [\" + AliasForToOtherNonExistingAttribute.class.getName() + \"] is declared as an @AliasFor nonexistent \" + \"attribute 'missing' in annotation [\" + AliasForToOtherNonExistingAttributeTarget.class.getName() + \"].\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForToSelf() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToSelf.class)).withMessage(\"@AliasFor declaration on attribute 'test' in annotation [\" + AliasForToSelf.class.getName() + \"] points to itself. Specify 'annotation' to point to \" + \"a same-named attribute on a meta-annotation.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForWithArrayCompatibleReturnTypes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(AliasForWithArrayCompatibleReturnTypes.class);\r\n    AnnotationTypeMapping mapping = getMapping(mappings, AliasForWithArrayCompatibleReturnTypesTarget.class);\r\n    assertThat(getAliasMapping(mapping, 0).getName()).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForWithIncompatibleReturnTypes() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForWithIncompatibleReturnTypes.class)).withMessage(\"Misconfigured aliases: attribute 'test' in annotation [\" + AliasForWithIncompatibleReturnTypes.class.getName() + \"] and attribute 'test' in annotation [\" + AliasForWithIncompatibleReturnTypesTarget.class.getName() + \"] must declare the same return type.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForToSelfAnnotatedToOtherAttribute() {\r\n    String annotationType = AliasForToSelfAnnotatedToOtherAttribute.class.getName();\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToSelfAnnotatedToOtherAttribute.class)).withMessage(\"Attribute 'b' in annotation [\" + annotationType + \"] must be declared as an @AliasFor attribute 'a' in annotation [\" + annotationType + \"], not attribute 'c' in annotation [\" + annotationType + \"].\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForHasMixedImplicitAndExplicitAliases() {\r\n    assertMixedImplicitAndExplicitAliases(AliasForWithMixedImplicitAndExplicitAliasesV1.class, \"b\");\r\n    assertMixedImplicitAndExplicitAliases(AliasForWithMixedImplicitAndExplicitAliasesV2.class, \"a\");\r\n}\nprivate void assertMixedImplicitAndExplicitAliases(Class<? extends Annotation> annotationType, String overriddenAttribute) {\r\n    String annotationName = annotationType.getName();\r\n    String metaAnnotationName = AliasPair.class.getName();\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(annotationType)).withMessage(\"Attribute 'b' in annotation [\" + annotationName + \"] must be declared as an @AliasFor attribute 'a' in annotation [\" + annotationName + \"], not attribute '\" + overriddenAttribute + \"' in annotation [\" + metaAnnotationName + \"].\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForNonMetaAnnotated() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForNonMetaAnnotated.class)).withMessage(\"@AliasFor declaration on attribute 'test' in annotation [\" + AliasForNonMetaAnnotated.class.getName() + \"] declares an alias for attribute 'test' in annotation [\" + AliasForNonMetaAnnotatedTarget.class.getName() + \"] which is not meta-present.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForSelfWithDifferentDefaults() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForSelfWithDifferentDefaults.class)).withMessage(\"Misconfigured aliases: attribute 'a' in annotation [\" + AliasForSelfWithDifferentDefaults.class.getName() + \"] and attribute 'b' in annotation [\" + AliasForSelfWithDifferentDefaults.class.getName() + \"] must declare the same default value.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasForSelfWithMissingDefault() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForSelfWithMissingDefault.class)).withMessage(\"Misconfigured aliases: attribute 'a' in annotation [\" + AliasForSelfWithMissingDefault.class.getName() + \"] and attribute 'b' in annotation [\" + AliasForSelfWithMissingDefault.class.getName() + \"] must declare default values.\");\r\n}\n@Test\r\nvoid forAnnotationTypeWhenAliasWithExplicitMirrorAndDifferentDefaults() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasWithExplicitMirrorAndDifferentDefaults.class)).withMessage(\"Misconfigured aliases: attribute 'a' in annotation [\" + AliasWithExplicitMirrorAndDifferentDefaults.class.getName() + \"] and attribute 'c' in annotation [\" + AliasWithExplicitMirrorAndDifferentDefaults.class.getName() + \"] must declare the same default value.\");\r\n}\n@Test\r\nvoid getDistanceReturnsDistance() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(0).getDistance()).isEqualTo(0);\r\n    assertThat(mappings.get(1).getDistance()).isEqualTo(1);\r\n}\n@Test\r\nvoid getAnnotationTypeReturnsAnnotationType() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(0).getAnnotationType()).isEqualTo(Mapped.class);\r\n    assertThat(mappings.get(1).getAnnotationType()).isEqualTo(MappedTarget.class);\r\n}\n@Test\r\nvoid getMetaTypeReturnsTypes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(ThreeDeepA.class);\r\n    AnnotationTypeMapping mappingC = mappings.get(2);\r\n    assertThat(mappingC.getMetaTypes()).containsExactly(ThreeDeepA.class, ThreeDeepB.class, ThreeDeepC.class);\r\n}\n@Test\r\nvoid getAnnotationWhenRootReturnsNull() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(0).getAnnotation()).isNull();\r\n}\n@Test\r\nvoid getAnnotationWhenMetaAnnotationReturnsAnnotation() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(1).getAnnotation()).isEqualTo(Mapped.class.getAnnotation(MappedTarget.class));\r\n}\n@Test\r\nvoid getAttributesReturnsAttributes() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(Mapped.class).get(0);\r\n    AttributeMethods attributes = mapping.getAttributes();\r\n    assertThat(attributes.size()).isEqualTo(2);\r\n    assertThat(attributes.get(0).getName()).isEqualTo(\"alias\");\r\n    assertThat(attributes.get(1).getName()).isEqualTo(\"convention\");\r\n}\n@Test\r\nvoid getAliasMappingReturnsAttributes() throws Exception {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(Mapped.class).get(1);\r\n    assertThat(getAliasMapping(mapping, 0)).isEqualTo(Mapped.class.getDeclaredMethod(\"alias\"));\r\n}\n@Test\r\nvoid getConventionMappingReturnsAttributes() throws Exception {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(Mapped.class).get(1);\r\n    assertThat(getConventionMapping(mapping, 1)).isEqualTo(Mapped.class.getDeclaredMethod(\"convention\"));\r\n}\n@Test\r\nvoid getMirrorSetWhenAliasPairReturnsMirrors() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(AliasPair.class).get(0);\r\n    MirrorSets mirrorSets = mapping.getMirrorSets();\r\n    assertThat(mirrorSets.size()).isEqualTo(1);\r\n    assertThat(mirrorSets.get(0).size()).isEqualTo(2);\r\n    assertThat(mirrorSets.get(0).get(0).getName()).isEqualTo(\"a\");\r\n    assertThat(mirrorSets.get(0).get(1).getName()).isEqualTo(\"b\");\r\n}\n@Test\r\nvoid getMirrorSetWhenImplicitMirrorsReturnsMirrors() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(ImplicitMirrors.class).get(0);\r\n    MirrorSets mirrorSets = mapping.getMirrorSets();\r\n    assertThat(mirrorSets.size()).isEqualTo(1);\r\n    assertThat(mirrorSets.get(0).size()).isEqualTo(2);\r\n    assertThat(mirrorSets.get(0).get(0).getName()).isEqualTo(\"a\");\r\n    assertThat(mirrorSets.get(0).get(1).getName()).isEqualTo(\"b\");\r\n}\n@Test\r\nvoid getMirrorSetWhenThreeDeepReturnsMirrors() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(ThreeDeepA.class);\r\n    AnnotationTypeMapping mappingA = mappings.get(0);\r\n    MirrorSets mirrorSetsA = mappingA.getMirrorSets();\r\n    assertThat(mirrorSetsA.size()).isEqualTo(2);\r\n    assertThat(getNames(mirrorSetsA.get(0))).containsExactly(\"a1\", \"a2\", \"a3\");\r\n    AnnotationTypeMapping mappingB = mappings.get(1);\r\n    MirrorSets mirrorSetsB = mappingB.getMirrorSets();\r\n    assertThat(mirrorSetsB.size()).isEqualTo(1);\r\n    assertThat(getNames(mirrorSetsB.get(0))).containsExactly(\"b1\", \"b2\");\r\n    AnnotationTypeMapping mappingC = mappings.get(2);\r\n    MirrorSets mirrorSetsC = mappingC.getMirrorSets();\r\n    assertThat(mirrorSetsC.size()).isEqualTo(0);\r\n}\n@Test\r\nvoid getAliasMappingWhenThreeDeepReturnsMappedAttributes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(ThreeDeepA.class);\r\n    AnnotationTypeMapping mappingA = mappings.get(0);\r\n    assertThat(getAliasMapping(mappingA, 0)).isNull();\r\n    assertThat(getAliasMapping(mappingA, 1)).isNull();\r\n    assertThat(getAliasMapping(mappingA, 2)).isNull();\r\n    assertThat(getAliasMapping(mappingA, 3)).isNull();\r\n    assertThat(getAliasMapping(mappingA, 4)).isNull();\r\n    AnnotationTypeMapping mappingB = mappings.get(1);\r\n    assertThat(getAliasMapping(mappingB, 0).getName()).isEqualTo(\"a1\");\r\n    assertThat(getAliasMapping(mappingB, 1).getName()).isEqualTo(\"a1\");\r\n    AnnotationTypeMapping mappingC = mappings.get(2);\r\n    assertThat(getAliasMapping(mappingC, 0).getName()).isEqualTo(\"a1\");\r\n    assertThat(getAliasMapping(mappingC, 1).getName()).isEqualTo(\"a4\");\r\n}\n@Test\r\nvoid getAliasMappingsWhenHasDefinedAttributesReturnsMappedAttributes() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(DefinedAttributes.class).get(1);\r\n    assertThat(getAliasMapping(mapping, 0)).isNull();\r\n    assertThat(getAliasMapping(mapping, 1).getName()).isEqualTo(\"value\");\r\n}\n@Test\r\nvoid resolveMirrorsWhenAliasPairResolves() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(AliasPair.class).get(0);\r\n    Method[] resolvedA = resolveMirrorSets(mapping, WithAliasPairA.class, AliasPair.class);\r\n    assertThat(resolvedA[0].getName()).isEqualTo(\"a\");\r\n    assertThat(resolvedA[1].getName()).isEqualTo(\"a\");\r\n    Method[] resolvedB = resolveMirrorSets(mapping, WithAliasPairB.class, AliasPair.class);\r\n    assertThat(resolvedB[0].getName()).isEqualTo(\"b\");\r\n    assertThat(resolvedB[1].getName()).isEqualTo(\"b\");\r\n}\n@Test\r\nvoid resolveMirrorsWhenHasSameValuesUsesFirst() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(AliasPair.class).get(0);\r\n    Method[] resolved = resolveMirrorSets(mapping, WithSameValueAliasPair.class, AliasPair.class);\r\n    assertThat(resolved[0].getName()).isEqualTo(\"a\");\r\n    assertThat(resolved[1].getName()).isEqualTo(\"a\");\r\n}\n@Test\r\nvoid resolveMirrorsWhenOnlyHasDefaultValuesUsesFirst() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(AliasPair.class).get(0);\r\n    Method[] resolved = resolveMirrorSets(mapping, WithDefaultValueAliasPair.class, AliasPair.class);\r\n    assertThat(resolved[0].getName()).isEqualTo(\"a\");\r\n    assertThat(resolved[1].getName()).isEqualTo(\"a\");\r\n}\n@Test\r\nvoid resolveMirrorsWhenHasDifferentValuesThrowsException() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(AliasPair.class).get(0);\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> resolveMirrorSets(mapping, WithDifferentValueAliasPair.class, AliasPair.class)).withMessage(\"Different @AliasFor mirror values for annotation [\" + AliasPair.class.getName() + \"] declared on \" + WithDifferentValueAliasPair.class.getName() + \"; attribute 'a' and its alias 'b' are declared with values of [test1] and [test2].\");\r\n}\n@Test\r\nvoid resolveMirrorsWhenHasWithMultipleRoutesToAliasReturnsMirrors() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(MultipleRoutesToAliasA.class);\r\n    AnnotationTypeMapping mappingsA = getMapping(mappings, MultipleRoutesToAliasA.class);\r\n    assertThat(mappingsA.getMirrorSets().size()).isZero();\r\n    AnnotationTypeMapping mappingsB = getMapping(mappings, MultipleRoutesToAliasB.class);\r\n    assertThat(getNames(mappingsB.getMirrorSets().get(0))).containsExactly(\"b1\", \"b2\", \"b3\");\r\n    AnnotationTypeMapping mappingsC = getMapping(mappings, MultipleRoutesToAliasC.class);\r\n    assertThat(getNames(mappingsC.getMirrorSets().get(0))).containsExactly(\"c1\", \"c2\");\r\n}\n@Test\r\nvoid getAliasMappingWhenHasWithMultipleRoutesToAliasReturnsMappedAttributes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(MultipleRoutesToAliasA.class);\r\n    AnnotationTypeMapping mappingsA = getMapping(mappings, MultipleRoutesToAliasA.class);\r\n    assertThat(getAliasMapping(mappingsA, 0)).isNull();\r\n    AnnotationTypeMapping mappingsB = getMapping(mappings, MultipleRoutesToAliasB.class);\r\n    assertThat(getAliasMapping(mappingsB, 0).getName()).isEqualTo(\"a1\");\r\n    assertThat(getAliasMapping(mappingsB, 1).getName()).isEqualTo(\"a1\");\r\n    assertThat(getAliasMapping(mappingsB, 2).getName()).isEqualTo(\"a1\");\r\n    AnnotationTypeMapping mappingsC = getMapping(mappings, MultipleRoutesToAliasC.class);\r\n    assertThat(getAliasMapping(mappingsC, 0).getName()).isEqualTo(\"a1\");\r\n    assertThat(getAliasMapping(mappingsC, 1).getName()).isEqualTo(\"a1\");\r\n}\n@Test\r\nvoid getConventionMappingWhenConventionToExplicitAliasesReturnsMappedAttributes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(ConventionToExplicitAliases.class);\r\n    AnnotationTypeMapping mapping = getMapping(mappings, ConventionToExplicitAliasesTarget.class);\r\n    assertThat(mapping.getConventionMapping(0)).isEqualTo(0);\r\n    assertThat(mapping.getConventionMapping(1)).isEqualTo(0);\r\n}\n@Test\r\nvoid isEquivalentToDefaultValueWhenValueAndDefaultAreNullReturnsTrue() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(ClassValue.class).get(0);\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, null, ReflectionUtils::invokeMethod)).isTrue();\r\n}\n@Test\r\nvoid isEquivalentToDefaultValueWhenValueAndDefaultMatchReturnsTrue() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(ClassValueWithDefault.class).get(0);\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, InputStream.class, ReflectionUtils::invokeMethod)).isTrue();\r\n}\n@Test\r\nvoid isEquivalentToDefaultValueWhenClassAndStringNamesMatchReturnsTrue() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(ClassValueWithDefault.class).get(0);\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, \"java.io.InputStream\", ReflectionUtils::invokeMethod)).isTrue();\r\n}\n@Test\r\nvoid isEquivalentToDefaultValueWhenClassArrayAndStringArrayNamesMatchReturnsTrue() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(ClassArrayValueWithDefault.class).get(0);\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, new String[] { \"java.io.InputStream\", \"java.io.OutputStream\" }, ReflectionUtils::invokeMethod)).isTrue();\r\n}\n@Test\r\nvoid isEquivalentToDefaultValueWhenNestedAnnotationAndExtractedValuesMatchReturnsTrueAndValueSuppliedAsMap() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(NestedValue.class).get(0);\r\n    Map<String, Object> value = Collections.singletonMap(\"value\", \"java.io.InputStream\");\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, value, TypeMappedAnnotation::extractFromMap)).isTrue();\r\n}\n// gh-24375\r\n@Test\r\nvoid isEquivalentToDefaultValueWhenNestedAnnotationAndExtractedValuesMatchReturnsTrueAndValueSuppliedAsTypeMappedAnnotation() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(NestedValue.class).get(0);\r\n    Map<String, String> attributes = Collections.singletonMap(\"value\", \"java.io.InputStream\");\r\n    MergedAnnotation<ClassValue> value = TypeMappedAnnotation.of(getClass().getClassLoader(), null, ClassValue.class, attributes);\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, value, TypeMappedAnnotation::extractFromMap)).isTrue();\r\n}\n@Test\r\nvoid isEquivalentToDefaultValueWhenNotMatchingReturnsFalse() {\r\n    AnnotationTypeMapping mapping = AnnotationTypeMappings.forAnnotationType(ClassValueWithDefault.class).get(0);\r\n    assertThat(mapping.isEquivalentToDefaultValue(0, OutputStream.class, ReflectionUtils::invokeMethod)).isFalse();\r\n}\nprivate Method[] resolveMirrorSets(AnnotationTypeMapping mapping, Class<?> element, Class<? extends Annotation> annotationClass) {\r\n    Annotation annotation = element.getAnnotation(annotationClass);\r\n    int[] resolved = mapping.getMirrorSets().resolve(element.getName(), annotation, ReflectionUtils::invokeMethod);\r\n    Method[] result = new Method[resolved.length];\r\n    for (int i = 0; i < resolved.length; i++) {\r\n        result[i] = resolved[i] != -1 ? mapping.getAttributes().get(resolved[i]) : null;\r\n    }\r\n    return result;\r\n}\n@Nullable\r\nprivate Method getAliasMapping(AnnotationTypeMapping mapping, int attributeIndex) {\r\n    int mapped = mapping.getAliasMapping(attributeIndex);\r\n    return mapped != -1 ? mapping.getRoot().getAttributes().get(mapped) : null;\r\n}\n@Nullable\r\nprivate Method getConventionMapping(AnnotationTypeMapping mapping, int attributeIndex) {\r\n    int mapped = mapping.getConventionMapping(attributeIndex);\r\n    return mapped != -1 ? mapping.getRoot().getAttributes().get(mapped) : null;\r\n}\nprivate AnnotationTypeMapping getMapping(AnnotationTypeMappings mappings, Class<? extends Annotation> annotationType) {\r\n    for (AnnotationTypeMapping candidate : getAll(mappings)) {\r\n        if (candidate.getAnnotationType() == annotationType) {\r\n            return candidate;\r\n        }\r\n    }\r\n    return null;\r\n}\nprivate List<AnnotationTypeMapping> getAll(AnnotationTypeMappings mappings) {\r\n    // AnnotationTypeMappings does not implement Iterable so we don't create\r\n    // too many garbage Iterators\r\n    return IntStream.range(0, mappings.size()).mapToObj(mappings::get).collect(toList());\r\n}\nprivate List<String> getNames(MirrorSet mirrorSet) {\r\n    List<String> names = new ArrayList<>(mirrorSet.size());\r\n    for (int i = 0; i < mirrorSet.size(); i++) {\r\n        names.add(mirrorSet.get(i).getName());\r\n    }\r\n    return names;\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface SimpleAnnotation {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AA {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ABC {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@ABC\r\n@interface AB {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AA\r\n@AB\r\n@interface A {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface B {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@A\r\n@B\r\n@interface MetaAnnotated {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Repeatings {\r\n\r\n    Repeating[] value();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Repeatable(Repeatings.class)\r\n@interface Repeating {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Repeating\r\n@Repeating\r\n@interface WithRepeatedMetaAnnotations {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@SelfAnnotated\r\n@interface SelfAnnotated {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@LoopB\r\n@interface LoopA {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@LoopA\r\n@interface LoopB {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForWithBothValueAndAttribute {\r\n\r\n    @AliasFor(value = \"bar\", attribute = \"foo\")\r\n    String test();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForToSelfNonExistingAttribute {\r\n\r\n    @AliasFor(\"missing\")\r\n    String test() default \"\";\r\n\r\n    String other() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForToOtherNonExistingAttributeTarget {\r\n\r\n    String other() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AliasForToOtherNonExistingAttributeTarget\r\n@interface AliasForToOtherNonExistingAttribute {\r\n\r\n    @AliasFor(annotation = AliasForToOtherNonExistingAttributeTarget.class, attribute = \"missing\")\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForToSelf {\r\n\r\n    @AliasFor(\"test\")\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForWithArrayCompatibleReturnTypesTarget {\r\n\r\n    String[] test() default {};\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AliasForWithArrayCompatibleReturnTypesTarget\r\n@interface AliasForWithArrayCompatibleReturnTypes {\r\n\r\n    @AliasFor(annotation = AliasForWithArrayCompatibleReturnTypesTarget.class)\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForWithIncompatibleReturnTypesTarget {\r\n\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForWithIncompatibleReturnTypes {\r\n\r\n    @AliasFor(annotation = AliasForWithIncompatibleReturnTypesTarget.class)\r\n    String[] test() default {};\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForToSelfAnnotatedToOtherAttribute {\r\n\r\n    @AliasFor(\"b\")\r\n    String a() default \"\";\r\n\r\n    @AliasFor(\"c\")\r\n    String b() default \"\";\r\n\r\n    @AliasFor(\"a\")\r\n    String c() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasPair {\r\n\r\n    @AliasFor(\"b\")\r\n    String a() default \"\";\r\n\r\n    @AliasFor(\"a\")\r\n    String b() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AliasPair\r\n@interface AliasForWithMixedImplicitAndExplicitAliasesV1 {\r\n\r\n    // attempted implicit alias via attribute override\r\n    @AliasFor(annotation = AliasPair.class, attribute = \"b\")\r\n    String b() default \"\";\r\n\r\n    // explicit local alias\r\n    @AliasFor(\"b\")\r\n    String a() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AliasPair\r\n@interface AliasForWithMixedImplicitAndExplicitAliasesV2 {\r\n\r\n    // attempted implicit alias via attribute override\r\n    @AliasFor(annotation = AliasPair.class, attribute = \"a\")\r\n    String b() default \"\";\r\n\r\n    // explicit local alias\r\n    @AliasFor(\"b\")\r\n    String a() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForNonMetaAnnotated {\r\n\r\n    @AliasFor(annotation = AliasForNonMetaAnnotatedTarget.class)\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForNonMetaAnnotatedTarget {\r\n\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForSelfWithDifferentDefaults {\r\n\r\n    @AliasFor(\"b\")\r\n    String a() default \"a\";\r\n\r\n    @AliasFor(\"a\")\r\n    String b() default \"b\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasForSelfWithMissingDefault {\r\n\r\n    @AliasFor(\"b\")\r\n    String a() default \"a\";\r\n\r\n    @AliasFor(\"a\")\r\n    String b();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface AliasWithExplicitMirrorAndDifferentDefaultsTarget {\r\n\r\n    String a() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@AliasWithExplicitMirrorAndDifferentDefaultsTarget\r\n@interface AliasWithExplicitMirrorAndDifferentDefaults {\r\n\r\n    @AliasFor(annotation = AliasWithExplicitMirrorAndDifferentDefaultsTarget.class, attribute = \"a\")\r\n    String a() default \"x\";\r\n\r\n    @AliasFor(annotation = AliasWithExplicitMirrorAndDifferentDefaultsTarget.class, attribute = \"a\")\r\n    String b() default \"x\";\r\n\r\n    @AliasFor(annotation = AliasWithExplicitMirrorAndDifferentDefaultsTarget.class, attribute = \"a\")\r\n    String c() default \"y\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MappedTarget {\r\n\r\n    String convention() default \"\";\r\n\r\n    String aliasTarget() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@MappedTarget\r\n@interface Mapped {\r\n\r\n    String convention() default \"\";\r\n\r\n    @AliasFor(annotation = MappedTarget.class, attribute = \"aliasTarget\")\r\n    String alias() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ImplicitMirrorsTarget {\r\n\r\n    @AliasFor(\"d\")\r\n    String c() default \"\";\r\n\r\n    @AliasFor(\"c\")\r\n    String d() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@ImplicitMirrorsTarget\r\n@interface ImplicitMirrors {\r\n\r\n    @AliasFor(annotation = ImplicitMirrorsTarget.class, attribute = \"c\")\r\n    String a() default \"\";\r\n\r\n    @AliasFor(annotation = ImplicitMirrorsTarget.class, attribute = \"c\")\r\n    String b() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ThreeDeepC {\r\n\r\n    String c1() default \"\";\r\n\r\n    String c2() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@ThreeDeepC\r\n@interface ThreeDeepB {\r\n\r\n    @AliasFor(annotation = ThreeDeepC.class, attribute = \"c1\")\r\n    String b1() default \"\";\r\n\r\n    @AliasFor(annotation = ThreeDeepC.class, attribute = \"c1\")\r\n    String b2() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@ThreeDeepB\r\n@interface ThreeDeepA {\r\n\r\n    @AliasFor(annotation = ThreeDeepB.class, attribute = \"b1\")\r\n    String a1() default \"\";\r\n\r\n    @AliasFor(annotation = ThreeDeepB.class, attribute = \"b2\")\r\n    String a2() default \"\";\r\n\r\n    @AliasFor(annotation = ThreeDeepC.class, attribute = \"c1\")\r\n    String a3() default \"\";\r\n\r\n    @AliasFor(annotation = ThreeDeepC.class, attribute = \"c2\")\r\n    String a4() default \"\";\r\n\r\n    @AliasFor(annotation = ThreeDeepC.class, attribute = \"c2\")\r\n    String a5() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface DefinedAttributesTarget {\r\n\r\n    String a();\r\n\r\n    String b() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@DefinedAttributesTarget(a = \"test\")\r\n@interface DefinedAttributes {\r\n\r\n    @AliasFor(annotation = DefinedAttributesTarget.class, attribute = \"b\")\r\n    String value();\r\n}\n@AliasPair(a = \"test\")\r\nstatic class WithAliasPairA {\r\n}\n@AliasPair(b = \"test\")\r\nstatic class WithAliasPairB {\r\n}\n@AliasPair(a = \"test\", b = \"test\")\r\nstatic class WithSameValueAliasPair {\r\n}\n@AliasPair(a = \"test1\", b = \"test2\")\r\nstatic class WithDifferentValueAliasPair {\r\n}\n@AliasPair\r\nstatic class WithDefaultValueAliasPair {\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface MultipleRoutesToAliasC {\r\n\r\n    @AliasFor(\"c2\")\r\n    String c1() default \"\";\r\n\r\n    @AliasFor(\"c1\")\r\n    String c2() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@MultipleRoutesToAliasC\r\n@interface MultipleRoutesToAliasB {\r\n\r\n    @AliasFor(annotation = MultipleRoutesToAliasC.class, attribute = \"c2\")\r\n    String b1() default \"\";\r\n\r\n    @AliasFor(annotation = MultipleRoutesToAliasC.class, attribute = \"c2\")\r\n    String b2() default \"\";\r\n\r\n    @AliasFor(annotation = MultipleRoutesToAliasC.class, attribute = \"c1\")\r\n    String b3() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@MultipleRoutesToAliasB\r\n@interface MultipleRoutesToAliasA {\r\n\r\n    @AliasFor(annotation = MultipleRoutesToAliasB.class, attribute = \"b2\")\r\n    String a1() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ConventionToExplicitAliasesTarget {\r\n\r\n    @AliasFor(\"test\")\r\n    String value() default \"\";\r\n\r\n    @AliasFor(\"value\")\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@ConventionToExplicitAliasesTarget\r\n@interface ConventionToExplicitAliases {\r\n\r\n    String test() default \"\";\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ClassValue {\r\n\r\n    Class<?> value();\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ClassValueWithDefault {\r\n\r\n    Class<?> value() default InputStream.class;\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface ClassArrayValueWithDefault {\r\n\r\n    Class<?>[] value() default { InputStream.class, OutputStream.class };\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface NestedValue {\r\n\r\n    ClassValue value() default @ClassValue(InputStream.class);\r\n}",
+    "comment": "\n * Tests for {@link AnnotationTypeMappings} and {@link AnnotationTypeMapping}.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenNoMetaAnnotationsReturnsMappings()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenNoMetaAnnotationsReturnsMappings() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(SimpleAnnotation.class);\r\n    assertThat(mappings.size()).isEqualTo(1);\r\n    assertThat(mappings.get(0).getAnnotationType()).isEqualTo(SimpleAnnotation.class);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(SimpleAnnotation.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenMetaAnnotationsReturnsMappings()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenMetaAnnotationsReturnsMappings() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(MetaAnnotated.class);\r\n    assertThat(mappings.size()).isEqualTo(6);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(MetaAnnotated.class, A.class, B.class, AA.class, AB.class, ABC.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenHasRepeatingMetaAnnotationReturnsMapping()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenHasRepeatingMetaAnnotationReturnsMapping() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(WithRepeatedMetaAnnotations.class);\r\n    assertThat(mappings.size()).isEqualTo(3);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(WithRepeatedMetaAnnotations.class, Repeating.class, Repeating.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenRepeatableMetaAnnotationIsFiltered()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenRepeatableMetaAnnotationIsFiltered() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(WithRepeatedMetaAnnotations.class, RepeatableContainers.standardRepeatables(), Repeating.class.getName()::equals);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(WithRepeatedMetaAnnotations.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenSelfAnnotatedReturnsMapping()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenSelfAnnotatedReturnsMapping() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(SelfAnnotated.class);\r\n    assertThat(mappings.size()).isEqualTo(1);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(SelfAnnotated.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenFormsLoopReturnsMapping()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenFormsLoopReturnsMapping() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(LoopA.class);\r\n    assertThat(mappings.size()).isEqualTo(2);\r\n    assertThat(getAll(mappings)).flatExtracting(AnnotationTypeMapping::getAnnotationType).containsExactly(LoopA.class, LoopB.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenHasAliasForWithBothValueAndAttributeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenHasAliasForWithBothValueAndAttributeThrowsException() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForWithBothValueAndAttribute.class)).withMessage(\"In @AliasFor declared on attribute 'test' in annotation [\" + AliasForWithBothValueAndAttribute.class.getName() + \"], attribute 'attribute' and its alias 'value' are present with values of 'foo' and 'bar', but only one is permitted.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForToSelfNonExistingAttribute()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForToSelfNonExistingAttribute() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToSelfNonExistingAttribute.class)).withMessage(\"@AliasFor declaration on attribute 'test' in annotation [\" + AliasForToSelfNonExistingAttribute.class.getName() + \"] declares an alias for 'missing' which is not present.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForToOtherNonExistingAttribute()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForToOtherNonExistingAttribute() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToOtherNonExistingAttribute.class)).withMessage(\"Attribute 'test' in annotation [\" + AliasForToOtherNonExistingAttribute.class.getName() + \"] is declared as an @AliasFor nonexistent \" + \"attribute 'missing' in annotation [\" + AliasForToOtherNonExistingAttributeTarget.class.getName() + \"].\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForToSelf()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForToSelf() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToSelf.class)).withMessage(\"@AliasFor declaration on attribute 'test' in annotation [\" + AliasForToSelf.class.getName() + \"] points to itself. Specify 'annotation' to point to \" + \"a same-named attribute on a meta-annotation.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForWithArrayCompatibleReturnTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForWithArrayCompatibleReturnTypes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(AliasForWithArrayCompatibleReturnTypes.class);\r\n    AnnotationTypeMapping mapping = getMapping(mappings, AliasForWithArrayCompatibleReturnTypesTarget.class);\r\n    assertThat(getAliasMapping(mapping, 0).getName()).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForWithIncompatibleReturnTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForWithIncompatibleReturnTypes() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForWithIncompatibleReturnTypes.class)).withMessage(\"Misconfigured aliases: attribute 'test' in annotation [\" + AliasForWithIncompatibleReturnTypes.class.getName() + \"] and attribute 'test' in annotation [\" + AliasForWithIncompatibleReturnTypesTarget.class.getName() + \"] must declare the same return type.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForToSelfAnnotatedToOtherAttribute()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForToSelfAnnotatedToOtherAttribute() {\r\n    String annotationType = AliasForToSelfAnnotatedToOtherAttribute.class.getName();\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForToSelfAnnotatedToOtherAttribute.class)).withMessage(\"Attribute 'b' in annotation [\" + annotationType + \"] must be declared as an @AliasFor attribute 'a' in annotation [\" + annotationType + \"], not attribute 'c' in annotation [\" + annotationType + \"].\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForHasMixedImplicitAndExplicitAliases()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForHasMixedImplicitAndExplicitAliases() {\r\n    assertMixedImplicitAndExplicitAliases(AliasForWithMixedImplicitAndExplicitAliasesV1.class, \"b\");\r\n    assertMixedImplicitAndExplicitAliases(AliasForWithMixedImplicitAndExplicitAliasesV2.class, \"a\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#assertMixedImplicitAndExplicitAliases(Class<? extends Annotation>,String)",
+    "entityType": "method",
+    "code": "private void assertMixedImplicitAndExplicitAliases(Class<? extends Annotation> annotationType, String overriddenAttribute) {\r\n    String annotationName = annotationType.getName();\r\n    String metaAnnotationName = AliasPair.class.getName();\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(annotationType)).withMessage(\"Attribute 'b' in annotation [\" + annotationName + \"] must be declared as an @AliasFor attribute 'a' in annotation [\" + annotationName + \"], not attribute '\" + overriddenAttribute + \"' in annotation [\" + metaAnnotationName + \"].\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForNonMetaAnnotated()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForNonMetaAnnotated() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForNonMetaAnnotated.class)).withMessage(\"@AliasFor declaration on attribute 'test' in annotation [\" + AliasForNonMetaAnnotated.class.getName() + \"] declares an alias for attribute 'test' in annotation [\" + AliasForNonMetaAnnotatedTarget.class.getName() + \"] which is not meta-present.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForSelfWithDifferentDefaults()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForSelfWithDifferentDefaults() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForSelfWithDifferentDefaults.class)).withMessage(\"Misconfigured aliases: attribute 'a' in annotation [\" + AliasForSelfWithDifferentDefaults.class.getName() + \"] and attribute 'b' in annotation [\" + AliasForSelfWithDifferentDefaults.class.getName() + \"] must declare the same default value.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasForSelfWithMissingDefault()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasForSelfWithMissingDefault() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasForSelfWithMissingDefault.class)).withMessage(\"Misconfigured aliases: attribute 'a' in annotation [\" + AliasForSelfWithMissingDefault.class.getName() + \"] and attribute 'b' in annotation [\" + AliasForSelfWithMissingDefault.class.getName() + \"] must declare default values.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#forAnnotationTypeWhenAliasWithExplicitMirrorAndDifferentDefaults()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid forAnnotationTypeWhenAliasWithExplicitMirrorAndDifferentDefaults() {\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> AnnotationTypeMappings.forAnnotationType(AliasWithExplicitMirrorAndDifferentDefaults.class)).withMessage(\"Misconfigured aliases: attribute 'a' in annotation [\" + AliasWithExplicitMirrorAndDifferentDefaults.class.getName() + \"] and attribute 'c' in annotation [\" + AliasWithExplicitMirrorAndDifferentDefaults.class.getName() + \"] must declare the same default value.\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#getDistanceReturnsDistance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getDistanceReturnsDistance() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(0).getDistance()).isEqualTo(0);\r\n    assertThat(mappings.get(1).getDistance()).isEqualTo(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#getAnnotationTypeReturnsAnnotationType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationTypeReturnsAnnotationType() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(0).getAnnotationType()).isEqualTo(Mapped.class);\r\n    assertThat(mappings.get(1).getAnnotationType()).isEqualTo(MappedTarget.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#getMetaTypeReturnsTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMetaTypeReturnsTypes() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(ThreeDeepA.class);\r\n    AnnotationTypeMapping mappingC = mappings.get(2);\r\n    assertThat(mappingC.getMetaTypes()).containsExactly(ThreeDeepA.class, ThreeDeepB.class, ThreeDeepC.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#getAnnotationWhenRootReturnsNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationWhenRootReturnsNull() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(0).getAnnotation()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationTypeMappingsTests#getAnnotationWhenMetaAnnotationReturnsAnnotation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAnnotationWhenMetaAnnotationReturnsAnnotation() {\r\n    AnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(Mapped.class);\r\n    assertThat(mappings.get(1).getAnnotation()).isEqualTo(Mapped.class.getAnnotation(MappedTarget.class));\r\n}",
+    "comment": ""
+  }
+]

@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#findAllMergedAnnotationsOnClassWithInterface()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findAllMergedAnnotationsOnClassWithInterface() throws Exception {\r\n    Method method = TransactionalServiceImpl.class.getMethod(\"doIt\");\r\n    Set<Transactional> allMergedAnnotations = findAllMergedAnnotations(method, Transactional.class);\r\n    assertThat(allMergedAnnotations).hasSize(1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#findMethodAnnotationFromGenericInterface()",
+    "entityType": "method",
+    "code": "// SPR-16060\r\n@Test\r\nvoid findMethodAnnotationFromGenericInterface() throws Exception {\r\n    Method method = ImplementsInterfaceWithGenericAnnotatedMethod.class.getMethod(\"foo\", String.class);\r\n    Order order = findMergedAnnotation(method, Order.class);\r\n    assertThat(order).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#findMethodAnnotationFromGenericSuperclass()",
+    "entityType": "method",
+    "code": "// SPR-17146\r\n@Test\r\nvoid findMethodAnnotationFromGenericSuperclass() throws Exception {\r\n    Method method = ExtendsBaseClassWithGenericAnnotatedMethod.class.getMethod(\"foo\", String.class);\r\n    Order order = findMergedAnnotation(method, Order.class);\r\n    assertThat(order).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#forAnnotationsCreatesCopyOfArrayOnEachCall()",
+    "entityType": "method",
+    "code": "// gh-22655\r\n@Test\r\nvoid forAnnotationsCreatesCopyOfArrayOnEachCall() {\r\n    AnnotatedElement element = AnnotatedElementUtils.forAnnotations(ForAnnotationsClass.class.getDeclaredAnnotations());\r\n    // Trigger the NPE as originally reported in the bug\r\n    AnnotationsScanner.getDeclaredAnnotations(element, false);\r\n    AnnotationsScanner.getDeclaredAnnotations(element, false);\r\n    // Also specifically test we get different instances\r\n    assertThat(element.getDeclaredAnnotations()).isNotSameAs(element.getDeclaredAnnotations());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#getMergedAnnotationOnThreeDeepMetaWithValue()",
+    "entityType": "method",
+    "code": "// gh-22703\r\n@Test\r\nvoid getMergedAnnotationOnThreeDeepMetaWithValue() {\r\n    ValueAttribute annotation = AnnotatedElementUtils.getMergedAnnotation(ValueAttributeMetaMetaClass.class, ValueAttribute.class);\r\n    assertThat(annotation.value()).containsExactly(\"FromValueAttributeMeta\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#getMergedRepeatableAnnotationsWithContainerWithMultipleAttributes()",
+    "entityType": "method",
+    "code": "/**\r\n * @since 5.3.25\r\n */\r\n// gh-29685\r\n@Test\r\nvoid getMergedRepeatableAnnotationsWithContainerWithMultipleAttributes() {\r\n    Set<StandardRepeatableWithContainerWithMultipleAttributes> repeatableAnnotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(StandardRepeatablesWithContainerWithMultipleAttributesTestCase.class, StandardRepeatableWithContainerWithMultipleAttributes.class);\r\n    assertThat(repeatableAnnotations).map(StandardRepeatableWithContainerWithMultipleAttributes::value).containsExactly(\"a\", \"b\");\r\n}",
+    "comment": "\n\t * @since 5.3.25\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#findMergedRepeatableAnnotationsWithContainerWithMultipleAttributes()",
+    "entityType": "method",
+    "code": "/**\r\n * @since 5.3.25\r\n */\r\n// gh-29685\r\n@Test\r\nvoid findMergedRepeatableAnnotationsWithContainerWithMultipleAttributes() {\r\n    Set<StandardRepeatableWithContainerWithMultipleAttributes> repeatableAnnotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(StandardRepeatablesWithContainerWithMultipleAttributesTestCase.class, StandardRepeatableWithContainerWithMultipleAttributes.class);\r\n    assertThat(repeatableAnnotations).map(StandardRepeatableWithContainerWithMultipleAttributes::value).containsExactly(\"a\", \"b\");\r\n}",
+    "comment": "\n\t * @since 5.3.25\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotatedElementUtilsTests#composedTransactionalMethod()",
+    "entityType": "method",
+    "code": "@ComposedMyAliasedTransactional\r\nvoid composedTransactionalMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid getMergedAnnotationAttributesWithConventionBasedComposedAnnotation() {\r\n    Class<?> element = ConventionBasedComposedContextConfigClass.class;\r\n    String name = ContextConfig.class.getName();\r\n    AnnotationAttributes attributes = getMergedAnnotationAttributes(element, name);\r\n    assertThat(attributes).as(\"Should find @ContextConfig on \" + element.getSimpleName()).isNotNull();\r\n    assertThat(attributes.getStringArray(\"locations\")).as(\"locations\").containsExactly(\"explicitDeclaration\");\r\n    assertThat(attributes.getStringArray(\"value\")).as(\"value\").containsExactly(\"explicitDeclaration\");\r\n    // Verify contracts between utility methods:\r\n    assertThat(isAnnotated(element, name)).isTrue();\r\n}\n/**\r\n * This test should never pass, simply because Spring does not support a hybrid\r\n * approach for annotation attribute overrides with transitive implicit aliases.\r\n * See SPR-13554 for details.\r\n * <p>Furthermore, if you choose to execute this test, it can fail for either\r\n * the first test class or the second one (with different exceptions), depending\r\n * on the order in which the JVM returns the attribute methods via reflection.\r\n */\r\n@Disabled(\"Permanently disabled but left in place for illustrative purposes\")\r\n@Test\r\nvoid getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation() {\r\n    for (Class<?> clazz : asList(HalfConventionBasedAndHalfAliasedComposedContextConfigClassV1.class, HalfConventionBasedAndHalfAliasedComposedContextConfigClassV2.class)) {\r\n        getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation(clazz);\r\n    }\r\n}\nprivate void getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation(Class<?> clazz) {\r\n    String name = ContextConfig.class.getName();\r\n    String simpleName = clazz.getSimpleName();\r\n    AnnotationAttributes attributes = getMergedAnnotationAttributes(clazz, name);\r\n    assertThat(attributes).as(\"Should find @ContextConfig on \" + simpleName).isNotNull();\r\n    assertThat(attributes.getStringArray(\"locations\")).as(\"locations for class [\" + simpleName + \"]\").containsExactly(\"explicitDeclaration\");\r\n    assertThat(attributes.getStringArray(\"value\")).as(\"value for class [\" + simpleName + \"]\").containsExactly(\"explicitDeclaration\");\r\n    // Verify contracts between utility methods:\r\n    assertThat(isAnnotated(clazz, name)).isTrue();\r\n}\n@Test\r\nvoid getMergedAnnotationAttributesWithInvalidConventionBasedComposedAnnotation() {\r\n    Class<?> element = InvalidConventionBasedComposedContextConfigClass.class;\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> getMergedAnnotationAttributes(element, ContextConfig.class)).withMessageContaining(\"Different @AliasFor mirror values for annotation\").withMessageContaining(\"attribute 'locations' and its alias 'value'\").withMessageContaining(\"values of [{requiredLocationsDeclaration}] and [{duplicateDeclaration}]\");\r\n}\n@Test\r\nvoid findMergedAnnotationAttributesWithSingleElementOverridingAnArrayViaConvention() {\r\n    assertComponentScanAttributes(ConventionBasedSinglePackageComponentScanClass.class, \"com.example.app.test\");\r\n}\n@Test\r\nvoid findMergedAnnotationWithLocalAliasesThatConflictWithAttributesInMetaAnnotationByConvention() {\r\n    Class<?> element = SpringAppConfigClass.class;\r\n    ContextConfig contextConfig = findMergedAnnotation(element, ContextConfig.class);\r\n    assertThat(contextConfig).as(\"Should find @ContextConfig on \" + element).isNotNull();\r\n    assertThat(contextConfig.locations()).as(\"locations for \" + element).isEmpty();\r\n    // 'value' in @SpringAppConfig should not override 'value' in @ContextConfig\r\n    assertThat(contextConfig.value()).as(\"value for \" + element).isEmpty();\r\n    assertThat(contextConfig.classes()).as(\"classes for \" + element).containsExactly(Number.class);\r\n}\n@Test\r\nvoid findMergedAnnotationWithSingleElementOverridingAnArrayViaConvention() throws Exception {\r\n    assertWebMapping(WebController.class.getMethod(\"postMappedWithPathAttribute\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#getMergedAnnotationAttributesWithConventionBasedComposedAnnotation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMergedAnnotationAttributesWithConventionBasedComposedAnnotation() {\r\n    Class<?> element = ConventionBasedComposedContextConfigClass.class;\r\n    String name = ContextConfig.class.getName();\r\n    AnnotationAttributes attributes = getMergedAnnotationAttributes(element, name);\r\n    assertThat(attributes).as(\"Should find @ContextConfig on \" + element.getSimpleName()).isNotNull();\r\n    assertThat(attributes.getStringArray(\"locations\")).as(\"locations\").containsExactly(\"explicitDeclaration\");\r\n    assertThat(attributes.getStringArray(\"value\")).as(\"value\").containsExactly(\"explicitDeclaration\");\r\n    // Verify contracts between utility methods:\r\n    assertThat(isAnnotated(element, name)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation()",
+    "entityType": "method",
+    "code": "/**\r\n * This test should never pass, simply because Spring does not support a hybrid\r\n * approach for annotation attribute overrides with transitive implicit aliases.\r\n * See SPR-13554 for details.\r\n * <p>Furthermore, if you choose to execute this test, it can fail for either\r\n * the first test class or the second one (with different exceptions), depending\r\n * on the order in which the JVM returns the attribute methods via reflection.\r\n */\r\n@Disabled(\"Permanently disabled but left in place for illustrative purposes\")\r\n@Test\r\nvoid getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation() {\r\n    for (Class<?> clazz : asList(HalfConventionBasedAndHalfAliasedComposedContextConfigClassV1.class, HalfConventionBasedAndHalfAliasedComposedContextConfigClassV2.class)) {\r\n        getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation(clazz);\r\n    }\r\n}",
+    "comment": "\n\t\t * This test should never pass, simply because Spring does not support a hybrid\n\t\t * approach for annotation attribute overrides with transitive implicit aliases.\n\t\t * See SPR-13554 for details.\n\t\t * <p>Furthermore, if you choose to execute this test, it can fail for either\n\t\t * the first test class or the second one (with different exceptions), depending\n\t\t * on the order in which the JVM returns the attribute methods via reflection.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation(Class<?>)",
+    "entityType": "method",
+    "code": "private void getMergedAnnotationAttributesWithHalfConventionBasedAndHalfAliasedComposedAnnotation(Class<?> clazz) {\r\n    String name = ContextConfig.class.getName();\r\n    String simpleName = clazz.getSimpleName();\r\n    AnnotationAttributes attributes = getMergedAnnotationAttributes(clazz, name);\r\n    assertThat(attributes).as(\"Should find @ContextConfig on \" + simpleName).isNotNull();\r\n    assertThat(attributes.getStringArray(\"locations\")).as(\"locations for class [\" + simpleName + \"]\").containsExactly(\"explicitDeclaration\");\r\n    assertThat(attributes.getStringArray(\"value\")).as(\"value for class [\" + simpleName + \"]\").containsExactly(\"explicitDeclaration\");\r\n    // Verify contracts between utility methods:\r\n    assertThat(isAnnotated(clazz, name)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#getMergedAnnotationAttributesWithInvalidConventionBasedComposedAnnotation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getMergedAnnotationAttributesWithInvalidConventionBasedComposedAnnotation() {\r\n    Class<?> element = InvalidConventionBasedComposedContextConfigClass.class;\r\n    assertThatExceptionOfType(AnnotationConfigurationException.class).isThrownBy(() -> getMergedAnnotationAttributes(element, ContextConfig.class)).withMessageContaining(\"Different @AliasFor mirror values for annotation\").withMessageContaining(\"attribute 'locations' and its alias 'value'\").withMessageContaining(\"values of [{requiredLocationsDeclaration}] and [{duplicateDeclaration}]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#findMergedAnnotationAttributesWithSingleElementOverridingAnArrayViaConvention()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findMergedAnnotationAttributesWithSingleElementOverridingAnArrayViaConvention() {\r\n    assertComponentScanAttributes(ConventionBasedSinglePackageComponentScanClass.class, \"com.example.app.test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#findMergedAnnotationWithLocalAliasesThatConflictWithAttributesInMetaAnnotationByConvention()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findMergedAnnotationWithLocalAliasesThatConflictWithAttributesInMetaAnnotationByConvention() {\r\n    Class<?> element = SpringAppConfigClass.class;\r\n    ContextConfig contextConfig = findMergedAnnotation(element, ContextConfig.class);\r\n    assertThat(contextConfig).as(\"Should find @ContextConfig on \" + element).isNotNull();\r\n    assertThat(contextConfig.locations()).as(\"locations for \" + element).isEmpty();\r\n    // 'value' in @SpringAppConfig should not override 'value' in @ContextConfig\r\n    assertThat(contextConfig.value()).as(\"value for \" + element).isEmpty();\r\n    assertThat(contextConfig.classes()).as(\"classes for \" + element).containsExactly(Number.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedAnnotationAttributeOverrideTests#findMergedAnnotationWithSingleElementOverridingAnArrayViaConvention()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid findMergedAnnotationWithSingleElementOverridingAnArrayViaConvention() throws Exception {\r\n    assertWebMapping(WebController.class.getMethod(\"postMappedWithPathAttribute\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MetaCycleAnnotatedClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.NonAnnotatedClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransactionalComponentClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubTransactionalComponentClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComposedTransactionalComponentClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AliasedTransactionalComponentClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComposedTransactionalClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ClassWithInheritedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubClassWithInheritedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubSubClassWithInheritedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ClassWithInheritedComposedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubClassWithInheritedComposedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubSubClassWithInheritedComposedAnnotation",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.MetaAndLocalTxConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TxConfig",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.DerivedTxConfig",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TxFromMultipleComposedAnnotations",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.InterfaceWithInheritedAnnotation",
+    "entityType": "class",
+    "code": "@Order\r\nvoid handleFromInterface();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.InterfaceWithInheritedAnnotation#handleFromInterface()",
+    "entityType": "method",
+    "code": "@Order\r\nvoid handleFromInterface();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AbstractClassWithInheritedAnnotation",
+    "entityType": "class",
+    "code": "@Transactional\r\npublic abstract void handle();\n@Transactional\r\npublic void handleParameterized(T t) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AbstractClassWithInheritedAnnotation#handle()",
+    "entityType": "method",
+    "code": "@Transactional\r\npublic abstract void handle();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AbstractClassWithInheritedAnnotation#handleParameterized(T)",
+    "entityType": "method",
+    "code": "@Transactional\r\npublic void handleParameterized(T t) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConcreteClassWithInheritedAnnotation",
+    "entityType": "class",
+    "code": "@Override\r\npublic void handle() ;\n@Override\r\npublic void handleParameterized(String s) ;\n@Override\r\npublic void handleFromInterface() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConcreteClassWithInheritedAnnotation#handle()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void handle() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConcreteClassWithInheritedAnnotation#handleParameterized(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void handleParameterized(String s) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConcreteClassWithInheritedAnnotation#handleFromInterface()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void handleFromInterface() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericParameter",
+    "entityType": "class",
+    "code": "T getFor(Class<T> cls);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.GenericParameter#getFor(Class<T>)",
+    "entityType": "method",
+    "code": "T getFor(Class<T> cls);",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StringGenericParameter",
+    "entityType": "class",
+    "code": "@Order\r\n@Override\r\npublic String getFor(Class<String> cls) {\r\n    return \"foo\";\r\n}\npublic String getFor(Integer integer) {\r\n    return \"foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StringGenericParameter#getFor(Class<String>)",
+    "entityType": "method",
+    "code": "@Order\r\n@Override\r\npublic String getFor(Class<String> cls) {\r\n    return \"foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StringGenericParameter#getFor(Integer)",
+    "entityType": "method",
+    "code": "public String getFor(Integer integer) {\r\n    return \"foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.InheritedAnnotationInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubInheritedAnnotationInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubSubInheritedAnnotationInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.NonInheritedAnnotationInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubNonInheritedAnnotationInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SubSubNonInheritedAnnotationInterface",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedComposedContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.InvalidConventionBasedComposedContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HalfConventionBasedAndHalfAliasedComposedContextConfigClassV1",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.HalfConventionBasedAndHalfAliasedComposedContextConfigClassV2",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AliasedComposedContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AliasedValueComposedContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ImplicitAliasesContextConfigClass1",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ImplicitAliasesContextConfigClass2",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ImplicitAliasesContextConfigClass3",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ImplicitAliasesWithDefaultsClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransitiveImplicitAliasesContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SingleLocationTransitiveImplicitAliasesContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransitiveImplicitAliasesWithSkippedLevelContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SingleLocationTransitiveImplicitAliasesWithSkippedLevelContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComposedImplicitAliasesContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ShadowedAliasComposedContextConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AliasedComposedContextConfigAndTestPropSourceClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ComponentScanWithBasePackagesAndValueAliasClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TestComponentScanClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ConventionBasedSinglePackageComponentScanClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AliasForBasedSinglePackageComponentScanClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.SpringAppConfigClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ResourceHolder",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransactionalService",
+    "entityType": "class",
+    "code": "@Transactional\r\n@Nullable\r\nObject doIt();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransactionalService#doIt()",
+    "entityType": "method",
+    "code": "@Transactional\r\n@Nullable\r\nObject doIt();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransactionalServiceImpl",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic Object doIt() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.TransactionalServiceImpl#doIt()",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic Object doIt() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ForAnnotationsClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.ValueAttributeMetaMetaClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.StandardRepeatablesWithContainerWithMultipleAttributesTestCase",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests",
+    "entityType": "class",
+    "code": "private AnnotationAttributes attributes = new AnnotationAttributes();\n@Test\r\nvoid typeSafeAttributeAccess() {\r\n    AnnotationAttributes nestedAttributes = new AnnotationAttributes();\r\n    nestedAttributes.put(\"value\", 10);\r\n    nestedAttributes.put(\"name\", \"algernon\");\r\n    attributes.put(\"name\", \"dave\");\r\n    attributes.put(\"names\", new String[] { \"dave\", \"frank\", \"hal\" });\r\n    attributes.put(\"bool1\", true);\r\n    attributes.put(\"bool2\", false);\r\n    attributes.put(\"color\", Color.RED);\r\n    attributes.put(\"class\", Integer.class);\r\n    attributes.put(\"classes\", new Class<?>[] { Number.class, Short.class, Integer.class });\r\n    attributes.put(\"number\", 42);\r\n    attributes.put(\"anno\", nestedAttributes);\r\n    attributes.put(\"annoArray\", new AnnotationAttributes[] { nestedAttributes });\r\n    assertThat(attributes.getString(\"name\")).isEqualTo(\"dave\");\r\n    assertThat(attributes.getStringArray(\"names\")).isEqualTo(new String[] { \"dave\", \"frank\", \"hal\" });\r\n    assertThat(attributes.getBoolean(\"bool1\")).isTrue();\r\n    assertThat(attributes.getBoolean(\"bool2\")).isFalse();\r\n    assertThat(attributes.<Color>getEnum(\"color\")).isEqualTo(Color.RED);\r\n    assertThat(attributes.getClass(\"class\").equals(Integer.class)).isTrue();\r\n    assertThat(attributes.getClassArray(\"classes\")).isEqualTo(new Class<?>[] { Number.class, Short.class, Integer.class });\r\n    assertThat(attributes.<Integer>getNumber(\"number\")).isEqualTo(42);\r\n    assertThat(attributes.getAnnotation(\"anno\").<Integer>getNumber(\"value\")).isEqualTo(10);\r\n    assertThat(attributes.getAnnotationArray(\"annoArray\")[0].getString(\"name\")).isEqualTo(\"algernon\");\r\n}\n@Test\r\nvoid unresolvableClassWithClassNotFoundException() {\r\n    attributes.put(\"unresolvableClass\", new ClassNotFoundException(\"myclass\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getClass(\"unresolvableClass\")).withMessageContaining(\"myclass\").withCauseInstanceOf(ClassNotFoundException.class);\r\n}\n@Test\r\nvoid unresolvableClassWithLinkageError() {\r\n    attributes.put(\"unresolvableClass\", new LinkageError(\"myclass\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getClass(\"unresolvableClass\")).withMessageContaining(\"myclass\").withCauseInstanceOf(LinkageError.class);\r\n}\n@Test\r\nvoid singleElementToSingleElementArrayConversionSupport() {\r\n    Filter filter = FilteredClass.class.getAnnotation(Filter.class);\r\n    AnnotationAttributes nestedAttributes = new AnnotationAttributes();\r\n    nestedAttributes.put(\"name\", \"Dilbert\");\r\n    // Store single elements\r\n    attributes.put(\"names\", \"Dogbert\");\r\n    attributes.put(\"classes\", Number.class);\r\n    attributes.put(\"nestedAttributes\", nestedAttributes);\r\n    attributes.put(\"filters\", filter);\r\n    // Get back arrays of single elements\r\n    assertThat(attributes.getStringArray(\"names\")).isEqualTo(new String[] { \"Dogbert\" });\r\n    assertThat(attributes.getClassArray(\"classes\")).isEqualTo(new Class<?>[] { Number.class });\r\n    AnnotationAttributes[] array = attributes.getAnnotationArray(\"nestedAttributes\");\r\n    assertThat(array).isNotNull();\r\n    assertThat(array).hasSize(1);\r\n    assertThat(array[0].getString(\"name\")).isEqualTo(\"Dilbert\");\r\n    Filter[] filters = attributes.getAnnotationArray(\"filters\", Filter.class);\r\n    assertThat(filters).isNotNull();\r\n    assertThat(filters).hasSize(1);\r\n    assertThat(filters[0].pattern()).isEqualTo(\"foo\");\r\n}\n@Test\r\nvoid nestedAnnotations() {\r\n    Filter filter = FilteredClass.class.getAnnotation(Filter.class);\r\n    attributes.put(\"filter\", filter);\r\n    attributes.put(\"filters\", new Filter[] { filter, filter });\r\n    Filter retrievedFilter = attributes.getAnnotation(\"filter\", Filter.class);\r\n    assertThat(retrievedFilter).isEqualTo(filter);\r\n    assertThat(retrievedFilter.pattern()).isEqualTo(\"foo\");\r\n    Filter[] retrievedFilters = attributes.getAnnotationArray(\"filters\", Filter.class);\r\n    assertThat(retrievedFilters).isNotNull();\r\n    assertThat(retrievedFilters).hasSize(2);\r\n    assertThat(retrievedFilters[1].pattern()).isEqualTo(\"foo\");\r\n}\n@Test\r\nvoid getEnumWithNullAttributeName() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(null)).withMessageContaining(\"must not be null or empty\");\r\n}\n@Test\r\nvoid getEnumWithEmptyAttributeName() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(\"\")).withMessageContaining(\"must not be null or empty\");\r\n}\n@Test\r\nvoid getEnumWithUnknownAttributeName() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(\"bogus\")).withMessageContaining(\"Attribute 'bogus' not found\");\r\n}\n@Test\r\nvoid getEnumWithTypeMismatch() {\r\n    attributes.put(\"color\", \"RED\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(\"color\")).withMessageContaining(\"Attribute 'color' is of type String, but Enum was expected\");\r\n}\n@Test\r\nvoid getAliasedStringWithImplicitAliases() {\r\n    String value = \"metaverse\";\r\n    List<String> aliases = Arrays.asList(\"value\", \"location1\", \"location2\", \"location3\", \"xmlFile\", \"groovyScript\");\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getString(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getString(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    attributes.put(\"location1\", value);\r\n    attributes.put(\"xmlFile\", value);\r\n    attributes.put(\"groovyScript\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getString(alias)).isEqualTo(value));\r\n}\n@Test\r\nvoid getAliasedStringArrayWithImplicitAliases() {\r\n    String[] value = new String[] { \"test.xml\" };\r\n    List<String> aliases = Arrays.asList(\"value\", \"location1\", \"location2\", \"location3\", \"xmlFile\", \"groovyScript\");\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    AnnotationUtils.registerDefaultValues(attributes);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.registerDefaultValues(attributes);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    AnnotationUtils.registerDefaultValues(attributes);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(new String[] { \"\" }));\r\n}\nenum Color {\r\n\r\n    RED, WHITE, BLUE\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Filter {\r\n\r\n    @AliasFor(attribute = \"classes\")\r\n    Class<?>[] value() default {};\r\n\r\n    @AliasFor(attribute = \"value\")\r\n    Class<?>[] classes() default {};\r\n\r\n    String pattern();\r\n}\n@Filter(pattern = \"foo\")\r\nstatic class FilteredClass {\r\n}",
+    "comment": "\n * Tests for {@link AnnotationAttributes}.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @author Juergen Hoeller\n * @since 3.1.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#typeSafeAttributeAccess()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid typeSafeAttributeAccess() {\r\n    AnnotationAttributes nestedAttributes = new AnnotationAttributes();\r\n    nestedAttributes.put(\"value\", 10);\r\n    nestedAttributes.put(\"name\", \"algernon\");\r\n    attributes.put(\"name\", \"dave\");\r\n    attributes.put(\"names\", new String[] { \"dave\", \"frank\", \"hal\" });\r\n    attributes.put(\"bool1\", true);\r\n    attributes.put(\"bool2\", false);\r\n    attributes.put(\"color\", Color.RED);\r\n    attributes.put(\"class\", Integer.class);\r\n    attributes.put(\"classes\", new Class<?>[] { Number.class, Short.class, Integer.class });\r\n    attributes.put(\"number\", 42);\r\n    attributes.put(\"anno\", nestedAttributes);\r\n    attributes.put(\"annoArray\", new AnnotationAttributes[] { nestedAttributes });\r\n    assertThat(attributes.getString(\"name\")).isEqualTo(\"dave\");\r\n    assertThat(attributes.getStringArray(\"names\")).isEqualTo(new String[] { \"dave\", \"frank\", \"hal\" });\r\n    assertThat(attributes.getBoolean(\"bool1\")).isTrue();\r\n    assertThat(attributes.getBoolean(\"bool2\")).isFalse();\r\n    assertThat(attributes.<Color>getEnum(\"color\")).isEqualTo(Color.RED);\r\n    assertThat(attributes.getClass(\"class\").equals(Integer.class)).isTrue();\r\n    assertThat(attributes.getClassArray(\"classes\")).isEqualTo(new Class<?>[] { Number.class, Short.class, Integer.class });\r\n    assertThat(attributes.<Integer>getNumber(\"number\")).isEqualTo(42);\r\n    assertThat(attributes.getAnnotation(\"anno\").<Integer>getNumber(\"value\")).isEqualTo(10);\r\n    assertThat(attributes.getAnnotationArray(\"annoArray\")[0].getString(\"name\")).isEqualTo(\"algernon\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#unresolvableClassWithClassNotFoundException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid unresolvableClassWithClassNotFoundException() {\r\n    attributes.put(\"unresolvableClass\", new ClassNotFoundException(\"myclass\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getClass(\"unresolvableClass\")).withMessageContaining(\"myclass\").withCauseInstanceOf(ClassNotFoundException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#unresolvableClassWithLinkageError()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid unresolvableClassWithLinkageError() {\r\n    attributes.put(\"unresolvableClass\", new LinkageError(\"myclass\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getClass(\"unresolvableClass\")).withMessageContaining(\"myclass\").withCauseInstanceOf(LinkageError.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#singleElementToSingleElementArrayConversionSupport()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singleElementToSingleElementArrayConversionSupport() {\r\n    Filter filter = FilteredClass.class.getAnnotation(Filter.class);\r\n    AnnotationAttributes nestedAttributes = new AnnotationAttributes();\r\n    nestedAttributes.put(\"name\", \"Dilbert\");\r\n    // Store single elements\r\n    attributes.put(\"names\", \"Dogbert\");\r\n    attributes.put(\"classes\", Number.class);\r\n    attributes.put(\"nestedAttributes\", nestedAttributes);\r\n    attributes.put(\"filters\", filter);\r\n    // Get back arrays of single elements\r\n    assertThat(attributes.getStringArray(\"names\")).isEqualTo(new String[] { \"Dogbert\" });\r\n    assertThat(attributes.getClassArray(\"classes\")).isEqualTo(new Class<?>[] { Number.class });\r\n    AnnotationAttributes[] array = attributes.getAnnotationArray(\"nestedAttributes\");\r\n    assertThat(array).isNotNull();\r\n    assertThat(array).hasSize(1);\r\n    assertThat(array[0].getString(\"name\")).isEqualTo(\"Dilbert\");\r\n    Filter[] filters = attributes.getAnnotationArray(\"filters\", Filter.class);\r\n    assertThat(filters).isNotNull();\r\n    assertThat(filters).hasSize(1);\r\n    assertThat(filters[0].pattern()).isEqualTo(\"foo\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#nestedAnnotations()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nestedAnnotations() {\r\n    Filter filter = FilteredClass.class.getAnnotation(Filter.class);\r\n    attributes.put(\"filter\", filter);\r\n    attributes.put(\"filters\", new Filter[] { filter, filter });\r\n    Filter retrievedFilter = attributes.getAnnotation(\"filter\", Filter.class);\r\n    assertThat(retrievedFilter).isEqualTo(filter);\r\n    assertThat(retrievedFilter.pattern()).isEqualTo(\"foo\");\r\n    Filter[] retrievedFilters = attributes.getAnnotationArray(\"filters\", Filter.class);\r\n    assertThat(retrievedFilters).isNotNull();\r\n    assertThat(retrievedFilters).hasSize(2);\r\n    assertThat(retrievedFilters[1].pattern()).isEqualTo(\"foo\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#getEnumWithNullAttributeName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getEnumWithNullAttributeName() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(null)).withMessageContaining(\"must not be null or empty\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#getEnumWithEmptyAttributeName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getEnumWithEmptyAttributeName() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(\"\")).withMessageContaining(\"must not be null or empty\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#getEnumWithUnknownAttributeName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getEnumWithUnknownAttributeName() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(\"bogus\")).withMessageContaining(\"Attribute 'bogus' not found\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#getEnumWithTypeMismatch()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getEnumWithTypeMismatch() {\r\n    attributes.put(\"color\", \"RED\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> attributes.getEnum(\"color\")).withMessageContaining(\"Attribute 'color' is of type String, but Enum was expected\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#getAliasedStringWithImplicitAliases()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAliasedStringWithImplicitAliases() {\r\n    String value = \"metaverse\";\r\n    List<String> aliases = Arrays.asList(\"value\", \"location1\", \"location2\", \"location3\", \"xmlFile\", \"groovyScript\");\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getString(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getString(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    attributes.put(\"location1\", value);\r\n    attributes.put(\"xmlFile\", value);\r\n    attributes.put(\"groovyScript\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getString(alias)).isEqualTo(value));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAttributesTests#getAliasedStringArrayWithImplicitAliases()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getAliasedStringArrayWithImplicitAliases() {\r\n    String[] value = new String[] { \"test.xml\" };\r\n    List<String> aliases = Arrays.asList(\"value\", \"location1\", \"location2\", \"location3\", \"xmlFile\", \"groovyScript\");\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"location1\", value);\r\n    AnnotationUtils.registerDefaultValues(attributes);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    attributes.put(\"value\", value);\r\n    AnnotationUtils.registerDefaultValues(attributes);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(value));\r\n    attributes = new AnnotationAttributes(ImplicitAliasesContextConfig.class);\r\n    AnnotationUtils.registerDefaultValues(attributes);\r\n    AnnotationUtils.postProcessAnnotationAttributes(null, attributes, false);\r\n    aliases.stream().forEach(alias -> assertThat(attributes.getStringArray(alias)).isEqualTo(new String[] { \"\" }));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.FilteredClass",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAwareOrderComparatorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid instanceVariableIsAnAnnotationAwareOrderComparator() {\r\n    assertThat(AnnotationAwareOrderComparator.INSTANCE).isInstanceOf(AnnotationAwareOrderComparator.class);\r\n}\n@Test\r\nvoid sortInstances() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new B());\r\n    list.add(new A());\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).hasExactlyElementsOfTypes(A.class, B.class);\r\n}\n@Test\r\nvoid sortInstancesWithPriority() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new B2());\r\n    list.add(new A2());\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).hasExactlyElementsOfTypes(A2.class, B2.class);\r\n}\n@Test\r\nvoid sortInstancesWithOrderAndPriority() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new B());\r\n    list.add(new A2());\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).hasExactlyElementsOfTypes(A2.class, B.class);\r\n}\n@Test\r\nvoid sortInstancesWithSubclass() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new B());\r\n    list.add(new C());\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).hasExactlyElementsOfTypes(C.class, B.class);\r\n}\n@Test\r\nvoid sortClasses() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(B.class);\r\n    list.add(A.class);\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).containsExactly(A.class, B.class);\r\n}\n@Test\r\nvoid sortClassesWithSubclass() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(B.class);\r\n    list.add(C.class);\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).containsExactly(C.class, B.class);\r\n}\n@Test\r\nvoid sortWithNulls() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(null);\r\n    list.add(B.class);\r\n    list.add(null);\r\n    list.add(A.class);\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).containsExactly(A.class, B.class, null, null);\r\n}\n@Order(1)\r\nprivate static class A {\r\n}\n@Order(2)\r\nprivate static class B {\r\n}\nprivate static class C extends A {\r\n}\n@Priority(1)\r\nprivate static class A2 {\r\n}\n@Priority(2)\r\nprivate static class B2 {\r\n}",
+    "comment": "\n * @author Juergen Hoeller\n * @author Oliver Gierke\n "
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAwareOrderComparatorTests#instanceVariableIsAnAnnotationAwareOrderComparator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid instanceVariableIsAnAnnotationAwareOrderComparator() {\r\n    assertThat(AnnotationAwareOrderComparator.INSTANCE).isInstanceOf(AnnotationAwareOrderComparator.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAwareOrderComparatorTests#sortInstances()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortInstances() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new B());\r\n    list.add(new A());\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).hasExactlyElementsOfTypes(A.class, B.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.annotation.AnnotationAwareOrderComparatorTests#sortInstancesWithPriority()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sortInstancesWithPriority() {\r\n    List<Object> list = new ArrayList<>();\r\n    list.add(new B2());\r\n    list.add(new A2());\r\n    AnnotationAwareOrderComparator.sort(list);\r\n    assertThat(list).hasExactlyElementsOfTypes(A2.class, B2.class);\r\n}",
+    "comment": ""
+  }
+]

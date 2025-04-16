@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#getDefaultProfiles()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getDefaultProfiles() {\r\n    assertThat(environment.getDefaultProfiles()).containsExactly(RESERVED_DEFAULT_PROFILE_NAME);\r\n    environment.getPropertySources().addFirst(new MockPropertySource().withProperty(DEFAULT_PROFILES_PROPERTY_NAME, \"pd1\"));\r\n    assertThat(environment.getDefaultProfiles()).containsExactly(\"pd1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#setDefaultProfiles()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid setDefaultProfiles() {\r\n    environment.setDefaultProfiles();\r\n    assertThat(environment.getDefaultProfiles()).isEmpty();\r\n    environment.setDefaultProfiles(\"pd1\");\r\n    assertThat(environment.getDefaultProfiles()).containsExactly(\"pd1\");\r\n    environment.setDefaultProfiles(\"pd2\", \"pd3\");\r\n    assertThat(environment.getDefaultProfiles()).containsExactly(\"pd2\", \"pd3\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#environmentSubclass_withCustomProfileValidation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid environmentSubclass_withCustomProfileValidation() {\r\n    ConfigurableEnvironment env = new AbstractEnvironment() {\r\n\r\n        @Override\r\n        protected void validateProfile(String profile) {\r\n            super.validateProfile(profile);\r\n            if (profile.contains(\"-\")) {\r\n                throw new IllegalArgumentException(\"Invalid profile [\" + profile + \"]: must not contain dash character\");\r\n            }\r\n        }\r\n    };\r\n    // succeeds\r\n    env.addActiveProfile(\"validProfile\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> env.addActiveProfile(\"invalid-profile\")).withMessage(\"Invalid profile [invalid-profile]: must not contain dash character\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#suppressGetenvAccessThroughSystemProperty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid suppressGetenvAccessThroughSystemProperty() {\r\n    try {\r\n        System.setProperty(\"spring.getenv.ignore\", \"true\");\r\n        assertThat(environment.getSystemEnvironment()).isEmpty();\r\n    } finally {\r\n        System.clearProperty(\"spring.getenv.ignore\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#suppressGetenvAccessThroughSpringProperty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid suppressGetenvAccessThroughSpringProperty() {\r\n    try {\r\n        SpringProperties.setProperty(\"spring.getenv.ignore\", \"true\");\r\n        assertThat(environment.getSystemEnvironment()).isEmpty();\r\n    } finally {\r\n        SpringProperties.setProperty(\"spring.getenv.ignore\", null);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#suppressGetenvAccessThroughSpringFlag()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid suppressGetenvAccessThroughSpringFlag() {\r\n    try {\r\n        SpringProperties.setFlag(\"spring.getenv.ignore\");\r\n        assertThat(environment.getSystemEnvironment()).isEmpty();\r\n    } finally {\r\n        SpringProperties.setProperty(\"spring.getenv.ignore\", null);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#getSystemProperties()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getSystemProperties() {\r\n    try {\r\n        System.setProperty(ALLOWED_PROPERTY_NAME, ALLOWED_PROPERTY_VALUE);\r\n        System.setProperty(DISALLOWED_PROPERTY_NAME, DISALLOWED_PROPERTY_VALUE);\r\n        System.getProperties().put(STRING_PROPERTY_NAME, NON_STRING_PROPERTY_VALUE);\r\n        System.getProperties().put(NON_STRING_PROPERTY_NAME, STRING_PROPERTY_VALUE);\r\n        Map<?, ?> systemProperties = environment.getSystemProperties();\r\n        assertThat(systemProperties).isNotNull();\r\n        assertThat(System.getProperties()).isSameAs(systemProperties);\r\n        assertThat(systemProperties.get(ALLOWED_PROPERTY_NAME)).isEqualTo(ALLOWED_PROPERTY_VALUE);\r\n        assertThat(systemProperties.get(DISALLOWED_PROPERTY_NAME)).isEqualTo(DISALLOWED_PROPERTY_VALUE);\r\n        assertThat(systemProperties.get(STRING_PROPERTY_NAME)).isEqualTo(NON_STRING_PROPERTY_VALUE);\r\n        assertThat(systemProperties.get(NON_STRING_PROPERTY_NAME)).isEqualTo(STRING_PROPERTY_VALUE);\r\n        PropertiesPropertySource systemPropertySource = (PropertiesPropertySource) environment.getPropertySources().get(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);\r\n        Set<String> expectedKeys = new HashSet<>(System.getProperties().stringPropertyNames());\r\n        // filtered out by stringPropertyNames due to non-String value\r\n        expectedKeys.add(STRING_PROPERTY_NAME);\r\n        assertThat(Set.of(systemPropertySource.getPropertyNames())).isEqualTo(expectedKeys);\r\n    } finally {\r\n        System.clearProperty(ALLOWED_PROPERTY_NAME);\r\n        System.clearProperty(DISALLOWED_PROPERTY_NAME);\r\n        System.getProperties().remove(STRING_PROPERTY_NAME);\r\n        System.getProperties().remove(NON_STRING_PROPERTY_NAME);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.StandardEnvironmentTests#getSystemEnvironment()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getSystemEnvironment() {\r\n    Map<String, Object> systemEnvironment = environment.getSystemEnvironment();\r\n    assertThat(systemEnvironment).isNotNull();\r\n    assertThat(System.getenv()).isSameAs(systemEnvironment);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.GetActiveProfiles",
+    "entityType": "class",
+    "code": "@Test\r\nvoid systemPropertiesEmpty() {\r\n    assertThat(environment.getActiveProfiles()).isEmpty();\r\n    try {\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"\");\r\n        assertThat(environment.getActiveProfiles()).isEmpty();\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}\n@Test\r\nvoid fromSystemProperties() {\r\n    try {\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"foo\");\r\n        assertThat(environment.getActiveProfiles()).containsExactly(\"foo\");\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}\n@Test\r\nvoid fromSystemProperties_withMultipleProfiles() {\r\n    try {\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"foo,bar\");\r\n        assertThat(environment.getActiveProfiles()).containsExactly(\"foo\", \"bar\");\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}\n@Test\r\nvoid fromSystemProperties_withMultipleProfiles_withWhitespace() {\r\n    try {\r\n        // notice whitespace\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \" bar , baz \");\r\n        assertThat(environment.getActiveProfiles()).containsExactly(\"bar\", \"baz\");\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.GetActiveProfiles#systemPropertiesEmpty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid systemPropertiesEmpty() {\r\n    assertThat(environment.getActiveProfiles()).isEmpty();\r\n    try {\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"\");\r\n        assertThat(environment.getActiveProfiles()).isEmpty();\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.GetActiveProfiles#fromSystemProperties()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fromSystemProperties() {\r\n    try {\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"foo\");\r\n        assertThat(environment.getActiveProfiles()).containsExactly(\"foo\");\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.GetActiveProfiles#fromSystemProperties_withMultipleProfiles()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fromSystemProperties_withMultipleProfiles() {\r\n    try {\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"foo,bar\");\r\n        assertThat(environment.getActiveProfiles()).containsExactly(\"foo\", \"bar\");\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.GetActiveProfiles#fromSystemProperties_withMultipleProfiles_withWhitespace()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fromSystemProperties_withMultipleProfiles_withWhitespace() {\r\n    try {\r\n        // notice whitespace\r\n        System.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \" bar , baz \");\r\n        assertThat(environment.getActiveProfiles()).containsExactly(\"bar\", \"baz\");\r\n    } finally {\r\n        System.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests",
+    "entityType": "class",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withEmptyArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(environment::acceptsProfiles);\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withNullArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles((String[]) null));\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withNullArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles((String) null));\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withEmptyArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles(\"\"));\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid activeProfileSetProgrammatically() {\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isFalse();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p2\");\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\", \"p2\");\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid activeProfileSetViaProperty() {\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isFalse();\r\n    environment.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isTrue();\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid defaultProfile() {\r\n    assertThat(environment.acceptsProfiles(\"pd\")).isFalse();\r\n    environment.setDefaultProfiles(\"pd\");\r\n    assertThat(environment.acceptsProfiles(\"pd\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.acceptsProfiles(\"pd\")).isFalse();\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isTrue();\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withNotOperator() {\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isFalse();\r\n    assertThat(environment.acceptsProfiles(\"!p1\")).isTrue();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isTrue();\r\n    assertThat(environment.acceptsProfiles(\"!p1\")).isFalse();\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withInvalidNotOperator() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles(\"p1\", \"!\"));\r\n}\n@Test\r\nvoid withProfileExpression() {\r\n    assertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isFalse();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isFalse();\r\n    environment.addActiveProfile(\"p2\");\r\n    assertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withEmptyArgumentList()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withEmptyArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(environment::acceptsProfiles);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withNullArgumentList()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withNullArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles((String[]) null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withNullArgument()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withNullArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles((String) null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withEmptyArgument()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withEmptyArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles(\"\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#activeProfileSetProgrammatically()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid activeProfileSetProgrammatically() {\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isFalse();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p2\");\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\", \"p2\");\r\n    assertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#activeProfileSetViaProperty()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid activeProfileSetViaProperty() {\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isFalse();\r\n    environment.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#defaultProfile()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid defaultProfile() {\r\n    assertThat(environment.acceptsProfiles(\"pd\")).isFalse();\r\n    environment.setDefaultProfiles(\"pd\");\r\n    assertThat(environment.acceptsProfiles(\"pd\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.acceptsProfiles(\"pd\")).isFalse();\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withNotOperator()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withNotOperator() {\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isFalse();\r\n    assertThat(environment.acceptsProfiles(\"!p1\")).isTrue();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.acceptsProfiles(\"p1\")).isTrue();\r\n    assertThat(environment.acceptsProfiles(\"!p1\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withInvalidNotOperator()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid withInvalidNotOperator() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles(\"p1\", \"!\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.AcceptsProfilesTests#withProfileExpression()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withProfileExpression() {\r\n    assertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isFalse();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isFalse();\r\n    environment.addActiveProfile(\"p2\");\r\n    assertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid withEmptyArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(environment::matchesProfiles);\r\n}\n@Test\r\nvoid withNullArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String[]) null));\r\n}\n@Test\r\nvoid withNullArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String) null));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", null));\r\n}\n@Test\r\nvoid withEmptyArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"      \"));\r\n}\n@Test\r\nvoid withInvalidNotOperator() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"!\"));\r\n}\n@Test\r\nvoid withInvalidCompoundExpressionGrouping() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 | p2 & p3\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 & p2 | p3\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 & (p2 | p3) | p4\"));\r\n}\n@Test\r\nvoid activeProfileSetProgrammatically() {\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isFalse();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p2\");\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\", \"p2\");\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\r\n}\n@Test\r\nvoid activeProfileSetViaProperty() {\r\n    assertThat(environment.matchesProfiles(\"p1\")).isFalse();\r\n    environment.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\r\n    assertThat(environment.matchesProfiles(\"p1\")).isTrue();\r\n}\n@Test\r\nvoid defaultProfile() {\r\n    assertThat(environment.matchesProfiles(\"pd\")).isFalse();\r\n    environment.setDefaultProfiles(\"pd\");\r\n    assertThat(environment.matchesProfiles(\"pd\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"pd\")).isFalse();\r\n    assertThat(environment.matchesProfiles(\"p1\")).isTrue();\r\n}\n@Test\r\nvoid withNotOperator() {\r\n    assertThat(environment.matchesProfiles(\"p1\")).isFalse();\r\n    assertThat(environment.matchesProfiles(\"!p1\")).isTrue();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"p1\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"!p1\")).isFalse();\r\n}\n@Test\r\nvoid withProfileExpressions() {\r\n    assertThat(environment.matchesProfiles(\"p1 & p2\")).isFalse();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"p1 | p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"p1 & p2\")).isFalse();\r\n    environment.addActiveProfile(\"p2\");\r\n    assertThat(environment.matchesProfiles(\"p1 & p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"p1 | p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo | p1\", \"p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo | p2\", \"p1\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo | (p2 & p1)\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"p2 & (foo | p1)\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo\", \"(p2 & p1)\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withEmptyArgumentList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withEmptyArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(environment::matchesProfiles);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withNullArgumentList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withNullArgumentList() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String[]) null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withNullArgument()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withNullArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String) null));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withEmptyArgument()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withEmptyArgument() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"      \"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withInvalidNotOperator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withInvalidNotOperator() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"!\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withInvalidCompoundExpressionGrouping()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withInvalidCompoundExpressionGrouping() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 | p2 & p3\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 & p2 | p3\"));\r\n    assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 & (p2 | p3) | p4\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#activeProfileSetProgrammatically()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid activeProfileSetProgrammatically() {\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isFalse();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p2\");\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\", \"p2\");\r\n    assertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#activeProfileSetViaProperty()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid activeProfileSetViaProperty() {\r\n    assertThat(environment.matchesProfiles(\"p1\")).isFalse();\r\n    environment.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\r\n    assertThat(environment.matchesProfiles(\"p1\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#defaultProfile()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid defaultProfile() {\r\n    assertThat(environment.matchesProfiles(\"pd\")).isFalse();\r\n    environment.setDefaultProfiles(\"pd\");\r\n    assertThat(environment.matchesProfiles(\"pd\")).isTrue();\r\n    environment.setActiveProfiles(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"pd\")).isFalse();\r\n    assertThat(environment.matchesProfiles(\"p1\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withNotOperator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withNotOperator() {\r\n    assertThat(environment.matchesProfiles(\"p1\")).isFalse();\r\n    assertThat(environment.matchesProfiles(\"!p1\")).isTrue();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"p1\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"!p1\")).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.MatchesProfilesTests#withProfileExpressions()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withProfileExpressions() {\r\n    assertThat(environment.matchesProfiles(\"p1 & p2\")).isFalse();\r\n    environment.addActiveProfile(\"p1\");\r\n    assertThat(environment.matchesProfiles(\"p1 | p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"p1 & p2\")).isFalse();\r\n    environment.addActiveProfile(\"p2\");\r\n    assertThat(environment.matchesProfiles(\"p1 & p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"p1 | p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo | p1\", \"p2\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo | p2\", \"p1\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo | (p2 & p1)\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"p2 & (foo | p1)\")).isTrue();\r\n    assertThat(environment.matchesProfiles(\"foo\", \"(p2 & p1)\")).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests",
+    "entityType": "class",
+    "code": "private Map<String, Object> envMap;\nprivate PropertySource<?> ps;\n@BeforeEach\r\nvoid setUp() {\r\n    envMap = new HashMap<>();\r\n    ps = new SystemEnvironmentPropertySource(\"sysEnv\", envMap);\r\n}\n@Test\r\nvoid none() {\r\n    assertThat(ps.containsProperty(\"a.key\")).isFalse();\r\n    assertThat(ps.getProperty(\"a.key\")).isNull();\r\n}\n@Test\r\nvoid normalWithoutPeriod() {\r\n    envMap.put(\"akey\", \"avalue\");\r\n    assertThat(ps.containsProperty(\"akey\")).isTrue();\r\n    assertThat(ps.getProperty(\"akey\")).isEqualTo(\"avalue\");\r\n}\n@Test\r\nvoid normalWithPeriod() {\r\n    envMap.put(\"a.key\", \"a.value\");\r\n    assertThat(ps.containsProperty(\"a.key\")).isTrue();\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a.value\");\r\n}\n@Test\r\nvoid withUnderscore() {\r\n    envMap.put(\"a_key\", \"a_value\");\r\n    assertThat(ps.containsProperty(\"a_key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a.key\")).isTrue();\r\n    assertThat(ps.getProperty(\"a_key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a_value\");\r\n}\n@Test\r\nvoid withBothPeriodAndUnderscore() {\r\n    envMap.put(\"a_key\", \"a_value\");\r\n    envMap.put(\"a.key\", \"a.value\");\r\n    assertThat(ps.getProperty(\"a_key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a.value\");\r\n}\n@Test\r\nvoid withUppercase() {\r\n    envMap.put(\"A_KEY\", \"a_value\");\r\n    envMap.put(\"A_LONG_KEY\", \"a_long_value\");\r\n    envMap.put(\"A_DOT.KEY\", \"a_dot_value\");\r\n    envMap.put(\"A_HYPHEN-KEY\", \"a_hyphen_value\");\r\n    assertThat(ps.containsProperty(\"A_KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a_key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a.key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a-key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_LONG_KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.LONG.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-LONG-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.LONG-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-LONG.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_long_KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.long.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-long-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.long-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-long.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_DOT.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-DOT.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_dot.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-dot.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_HYPHEN-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.HYPHEN-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_hyphen-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.hyphen-KEY\")).isTrue();\r\n    assertThat(ps.getProperty(\"A_KEY\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"A.KEY\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"A-KEY\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a_key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a-key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"A_LONG_KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.LONG.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-LONG-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.LONG-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-LONG.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A_long_KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.long.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-long-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.long-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-long.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A_DOT.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A-DOT.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A_dot.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A-dot.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A_HYPHEN-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n    assertThat(ps.getProperty(\"A.HYPHEN-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n    assertThat(ps.getProperty(\"A_hyphen-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n    assertThat(ps.getProperty(\"A.hyphen-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n}",
+    "comment": "\n * Tests for {@link SystemEnvironmentPropertySource}.\n *\n * @author Chris Beams\n * @author Juergen Hoeller\n * @since 3.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#setUp()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setUp() {\r\n    envMap = new HashMap<>();\r\n    ps = new SystemEnvironmentPropertySource(\"sysEnv\", envMap);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#none()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid none() {\r\n    assertThat(ps.containsProperty(\"a.key\")).isFalse();\r\n    assertThat(ps.getProperty(\"a.key\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#normalWithoutPeriod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid normalWithoutPeriod() {\r\n    envMap.put(\"akey\", \"avalue\");\r\n    assertThat(ps.containsProperty(\"akey\")).isTrue();\r\n    assertThat(ps.getProperty(\"akey\")).isEqualTo(\"avalue\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#normalWithPeriod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid normalWithPeriod() {\r\n    envMap.put(\"a.key\", \"a.value\");\r\n    assertThat(ps.containsProperty(\"a.key\")).isTrue();\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a.value\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#withUnderscore()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withUnderscore() {\r\n    envMap.put(\"a_key\", \"a_value\");\r\n    assertThat(ps.containsProperty(\"a_key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a.key\")).isTrue();\r\n    assertThat(ps.getProperty(\"a_key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a_value\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#withBothPeriodAndUnderscore()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withBothPeriodAndUnderscore() {\r\n    envMap.put(\"a_key\", \"a_value\");\r\n    envMap.put(\"a.key\", \"a.value\");\r\n    assertThat(ps.getProperty(\"a_key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a.value\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.env.SystemEnvironmentPropertySourceTests#withUppercase()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withUppercase() {\r\n    envMap.put(\"A_KEY\", \"a_value\");\r\n    envMap.put(\"A_LONG_KEY\", \"a_long_value\");\r\n    envMap.put(\"A_DOT.KEY\", \"a_dot_value\");\r\n    envMap.put(\"A_HYPHEN-KEY\", \"a_hyphen_value\");\r\n    assertThat(ps.containsProperty(\"A_KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a_key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a.key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"a-key\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_LONG_KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.LONG.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-LONG-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.LONG-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-LONG.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_long_KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.long.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-long-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.long-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-long.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_DOT.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-DOT.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_dot.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A-dot.KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_HYPHEN-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.HYPHEN-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A_hyphen-KEY\")).isTrue();\r\n    assertThat(ps.containsProperty(\"A.hyphen-KEY\")).isTrue();\r\n    assertThat(ps.getProperty(\"A_KEY\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"A.KEY\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"A-KEY\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a_key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a.key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"a-key\")).isEqualTo(\"a_value\");\r\n    assertThat(ps.getProperty(\"A_LONG_KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.LONG.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-LONG-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.LONG-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-LONG.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A_long_KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.long.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-long-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A.long-KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A-long.KEY\")).isEqualTo(\"a_long_value\");\r\n    assertThat(ps.getProperty(\"A_DOT.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A-DOT.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A_dot.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A-dot.KEY\")).isEqualTo(\"a_dot_value\");\r\n    assertThat(ps.getProperty(\"A_HYPHEN-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n    assertThat(ps.getProperty(\"A.HYPHEN-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n    assertThat(ps.getProperty(\"A_hyphen-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n    assertThat(ps.getProperty(\"A.hyphen-KEY\")).isEqualTo(\"a_hyphen_value\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid targetBeforeSameDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(TargetException.class, SameDepthException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}\n@Test\r\nvoid sameDepthBeforeTarget() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(SameDepthException.class, TargetException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}\n@Test\r\nvoid lowestDepthBeforeTarget() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(LowestDepthException.class, TargetException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}\n@Test\r\nvoid targetBeforeLowestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(TargetException.class, LowestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}\n@Test\r\nvoid noDepthBeforeTarget() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(NoDepthException.class, TargetException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}\n@Test\r\nvoid noDepthBeforeHighestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(NoDepthException.class, HighestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(HighestDepthException.class);\r\n}\n@Test\r\nvoid highestDepthBeforeNoDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(HighestDepthException.class, NoDepthException.class);\r\n    assertThat(foundClass).isEqualTo(HighestDepthException.class);\r\n}\n@Test\r\nvoid highestDepthBeforeLowestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(HighestDepthException.class, LowestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(LowestDepthException.class);\r\n}\n@Test\r\nvoid lowestDepthBeforeHighestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(LowestDepthException.class, HighestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(LowestDepthException.class);\r\n}\nprivate Class<? extends Throwable> findClosestMatch(Class<? extends Throwable>... classes) {\r\n    return ExceptionDepthComparator.findClosestMatch(Arrays.asList(classes), new TargetException());\r\n}\n@SuppressWarnings(\"serial\")\r\npublic class HighestDepthException extends Throwable {\r\n}\n@SuppressWarnings(\"serial\")\r\npublic class LowestDepthException extends HighestDepthException {\r\n}\n@SuppressWarnings(\"serial\")\r\npublic class TargetException extends LowestDepthException {\r\n}\n@SuppressWarnings(\"serial\")\r\npublic class SameDepthException extends LowestDepthException {\r\n}\n@SuppressWarnings(\"serial\")\r\npublic class NoDepthException extends TargetException {\r\n}",
+    "comment": "\n * @author Juergen Hoeller\n * @author Chris Shepperd\n "
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#targetBeforeSameDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid targetBeforeSameDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(TargetException.class, SameDepthException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#sameDepthBeforeTarget()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sameDepthBeforeTarget() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(SameDepthException.class, TargetException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#lowestDepthBeforeTarget()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid lowestDepthBeforeTarget() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(LowestDepthException.class, TargetException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#targetBeforeLowestDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid targetBeforeLowestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(TargetException.class, LowestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#noDepthBeforeTarget()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid noDepthBeforeTarget() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(NoDepthException.class, TargetException.class);\r\n    assertThat(foundClass).isEqualTo(TargetException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#noDepthBeforeHighestDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid noDepthBeforeHighestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(NoDepthException.class, HighestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(HighestDepthException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#highestDepthBeforeNoDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid highestDepthBeforeNoDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(HighestDepthException.class, NoDepthException.class);\r\n    assertThat(foundClass).isEqualTo(HighestDepthException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#highestDepthBeforeLowestDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid highestDepthBeforeLowestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(HighestDepthException.class, LowestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(LowestDepthException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#lowestDepthBeforeHighestDepth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid lowestDepthBeforeHighestDepth() {\r\n    Class<? extends Throwable> foundClass = findClosestMatch(LowestDepthException.class, HighestDepthException.class);\r\n    assertThat(foundClass).isEqualTo(LowestDepthException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ExceptionDepthComparatorTests#findClosestMatch(Class<? extends Throwable>)",
+    "entityType": "method",
+    "code": "private Class<? extends Throwable> findClosestMatch(Class<? extends Throwable>... classes) {\r\n    return ExceptionDepthComparator.findClosestMatch(Arrays.asList(classes), new TargetException());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.HighestDepthException",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.LowestDepthException",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.TargetException",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.SameDepthException",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NoDepthException",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid simpleInterfaceType() {\r\n    assertThat(resolveTypeArgument(MySimpleInterfaceType.class, MyInterfaceType.class)).isEqualTo(String.class);\r\n}\n@Test\r\nvoid simpleCollectionInterfaceType() {\r\n    assertThat(resolveTypeArgument(MyCollectionInterfaceType.class, MyInterfaceType.class)).isEqualTo(Collection.class);\r\n}\n@Test\r\nvoid simpleSuperclassType() {\r\n    assertThat(resolveTypeArgument(MySimpleSuperclassType.class, MySuperclassType.class)).isEqualTo(String.class);\r\n}\n@Test\r\nvoid simpleCollectionSuperclassType() {\r\n    assertThat(resolveTypeArgument(MyCollectionSuperclassType.class, MySuperclassType.class)).isEqualTo(Collection.class);\r\n}\n@Test\r\nvoid nullIfNotResolvable() {\r\n    GenericClass<String> obj = new GenericClass<>();\r\n    assertThat(resolveTypeArgument(obj.getClass(), GenericClass.class)).isNull();\r\n}\n@Test\r\nvoid methodReturnTypes() {\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"integer\"), MyInterfaceType.class)).isEqualTo(Integer.class);\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"string\"), MyInterfaceType.class)).isEqualTo(String.class);\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"character\"), MyAbstractType.class)).isEqualTo(Character.class);\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"raw\"), MyInterfaceType.class)).isNull();\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"object\"), MyInterfaceType.class)).isNull();\r\n}\n@Test\r\nvoid testResolveType() {\r\n    Method intMessageMethod = method(MyTypeWithMethods.class, \"readIntegerInputMessage\", MyInterfaceType.class);\r\n    MethodParameter intMessageMethodParam = new MethodParameter(intMessageMethod, 0);\r\n    assertThat(resolveType(intMessageMethodParam.getGenericParameterType(), new HashMap<>())).isEqualTo(MyInterfaceType.class);\r\n    Method intArrMessageMethod = method(MyTypeWithMethods.class, \"readIntegerArrayInputMessage\", MyInterfaceType[].class);\r\n    MethodParameter intArrMessageMethodParam = new MethodParameter(intArrMessageMethod, 0);\r\n    assertThat(resolveType(intArrMessageMethodParam.getGenericParameterType(), new HashMap<>())).isEqualTo(MyInterfaceType[].class);\r\n    Method genericArrMessageMethod = method(MySimpleTypeWithMethods.class, \"readGenericArrayInputMessage\", Object[].class);\r\n    MethodParameter genericArrMessageMethodParam = new MethodParameter(genericArrMessageMethod, 0);\r\n    Map<TypeVariable, Type> varMap = getTypeVariableMap(MySimpleTypeWithMethods.class);\r\n    assertThat(resolveType(genericArrMessageMethodParam.getGenericParameterType(), varMap)).isEqualTo(Integer[].class);\r\n}\n@Test\r\nvoid boundParameterizedType() {\r\n    assertThat(resolveTypeArgument(TestImpl.class, TestIfc.class)).isEqualTo(B.class);\r\n}\n@Test\r\nvoid testGetTypeVariableMap() {\r\n    Map<TypeVariable, Type> map;\r\n    map = GenericTypeResolver.getTypeVariableMap(MySimpleInterfaceType.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=class java.lang.String}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(MyCollectionInterfaceType.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=java.util.Collection<java.lang.String>}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(MyCollectionSuperclassType.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=java.util.Collection<java.lang.String>}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(MySimpleTypeWithMethods.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=class java.lang.Integer}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(TopLevelClass.class);\r\n    assertThat(map.toString()).isEqualTo(\";\");\r\n    map = GenericTypeResolver.getTypeVariableMap(TypedTopLevelClass.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=class java.lang.Integer}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(TypedTopLevelClass.TypedNested.class);\r\n    assertThat(map).hasSize(2);\r\n    Type t = null;\r\n    Type x = null;\r\n    for (Map.Entry<TypeVariable, Type> entry : map.entrySet()) {\r\n        if (entry.getKey().toString().equals(\"T\")) {\r\n            t = entry.getValue();\r\n        } else {\r\n            x = entry.getValue();\r\n        }\r\n    }\r\n    assertThat(t).isEqualTo(Integer.class);\r\n    assertThat(x).isEqualTo(Long.class);\r\n}\n@Test\r\nvoid resolveTypeArgumentsOfAbstractType() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(MyConcreteType.class, MyAbstractType.class);\r\n    assertThat(resolved).containsExactly(Character.class);\r\n}\n// SPR-11030\r\n@Test\r\nvoid getGenericsCannotBeResolved() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(List.class, Iterable.class);\r\n    assertThat(resolved).isNull();\r\n}\n// SPR-11052\r\n@Test\r\nvoid getRawMapTypeCannotBeResolved() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(Map.class, Map.class);\r\n    assertThat(resolved).isNull();\r\n}\n// SPR-11044\r\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid getGenericsOnArrayFromParamCannotBeResolved() throws Exception {\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(WithArrayBase.class.getDeclaredMethod(\"array\", Object[].class), 0);\r\n    Class<?> resolved = GenericTypeResolver.resolveParameterType(methodParameter, WithArray.class);\r\n    assertThat(resolved).isEqualTo(Object[].class);\r\n}\n// SPR-11044\r\n@Test\r\nvoid getGenericsOnArrayFromReturnCannotBeResolved() throws Exception {\r\n    Class<?> resolved = GenericTypeResolver.resolveReturnType(WithArrayBase.class.getDeclaredMethod(\"array\", Object[].class), WithArray.class);\r\n    assertThat(resolved).isEqualTo(Object[].class);\r\n}\n// SPR-11763\r\n@Test\r\nvoid resolveIncompleteTypeVariables() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(IdFixingRepository.class, Repository.class);\r\n    assertThat(resolved).isNotNull();\r\n    assertThat(resolved).hasSize(2);\r\n    assertThat(resolved[0]).isEqualTo(Object.class);\r\n    assertThat(resolved[1]).isEqualTo(Long.class);\r\n}\n@Test\r\nvoid resolvePartiallySpecializedTypeVariables() {\r\n    Type resolved = resolveType(BiGenericClass.class.getTypeParameters()[0], TypeFixedBiGenericClass.class);\r\n    assertThat(resolved).isEqualTo(D.class);\r\n}\n@Test\r\nvoid resolveTransitiveTypeVariableWithDifferentName() {\r\n    Type resolved = resolveType(BiGenericClass.class.getTypeParameters()[1], TypeFixedBiGenericClass.class);\r\n    assertThat(resolved).isEqualTo(E.class);\r\n}\n@Test\r\nvoid resolveMethodParameterWithNestedGenerics() {\r\n    Method method = method(WithMethodParameter.class, \"nestedGenerics\", List.class);\r\n    MethodParameter methodParameter = new MethodParameter(method, 0);\r\n    Type resolvedType = resolveType(methodParameter.getGenericParameterType(), WithMethodParameter.class);\r\n    ParameterizedTypeReference<List<Map<String, Integer>>> reference = new ParameterizedTypeReference<>() ;;\r\n    assertThat(resolvedType).isEqualTo(reference.getType());\r\n}\n@Test\r\nvoid resolveNestedTypeVariable() throws Exception {\r\n    Type resolved = resolveType(ListOfListSupplier.class.getMethod(\"get\").getGenericReturnType(), StringListOfListSupplier.class);\r\n    assertThat(ResolvableType.forType(resolved).getGeneric(0).getGeneric(0).resolve()).isEqualTo(String.class);\r\n}\n@Test\r\nvoid resolveTypeWithElementBounds() {\r\n    Type type = method(WithElementBounds.class, \"get\").getGenericReturnType();\r\n    Type resolvedType = resolveType(type, WithElementBounds.class);\r\n    ParameterizedTypeReference<List<A>> reference = new ParameterizedTypeReference<>() ;;\r\n    assertThat(resolvedType).isEqualTo(reference.getType());\r\n}\n@Test\r\nvoid resolveTypeWithUnresolvableElement() {\r\n    Type type = method(WithUnresolvableElement.class, \"get\").getGenericReturnType();\r\n    Type resolvedType = resolveType(type, WithUnresolvableElement.class);\r\n    assertThat(resolvedType.toString()).isEqualTo(\"java.util.List<E>\");\r\n}\nprivate static Method method(Class<?> target, String methodName, Class<?>... parameterTypes) {\r\n    Method method = findMethod(target, methodName, parameterTypes);\r\n    assertThat(method).describedAs(target.getName() + \"#\" + methodName).isNotNull();\r\n    return method;\r\n}\npublic interface MyInterfaceType<T> {\r\n}\npublic class MySimpleInterfaceType implements MyInterfaceType<String> {\r\n}\npublic class MyCollectionInterfaceType implements MyInterfaceType<Collection<String>> {\r\n}\npublic abstract class MyAbstractType<T> implements MyInterfaceType<T> {\r\n}\npublic class MyConcreteType extends MyAbstractType<Character> {\r\n}\npublic abstract class MySuperclassType<T> {\r\n}\npublic class MySimpleSuperclassType extends MySuperclassType<String> {\r\n}\npublic class MyCollectionSuperclassType extends MySuperclassType<Collection<String>> {\r\n}\npublic static class MyTypeWithMethods<T> {\r\n\r\n    public MyInterfaceType<Integer> integer() {\r\n        return null;\r\n    }\r\n\r\n    public MySimpleInterfaceType string() {\r\n        return null;\r\n    }\r\n\r\n    public MyConcreteType character() {\r\n        return null;\r\n    }\r\n\r\n    public Object object() {\r\n        return null;\r\n    }\r\n\r\n    public MyInterfaceType raw() {\r\n        return null;\r\n    }\r\n\r\n    public String notParameterized() {\r\n        return null;\r\n    }\r\n\r\n    public String notParameterizedWithArguments(Integer x, Boolean b) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Simulates a factory method that wraps the supplied object in a proxy of the\r\n     * same type.\r\n     */\r\n    public static <T> T createProxy(T object) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Similar to {@link #createProxy(Object)} but adds an additional argument before\r\n     * the argument of type {@code T}. Note that they may potentially be of the same\r\n     * time when invoked!\r\n     */\r\n    public static <T> T createNamedProxy(String name, T object) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Simulates factory methods found in libraries such as Mockito and EasyMock.\r\n     */\r\n    public static <MOCK> MOCK createMock(Class<MOCK> toMock) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Similar to {@link #createMock(Class)} but adds an additional method argument\r\n     * before the parameterized argument.\r\n     */\r\n    public static <T> T createNamedMock(String name, Class<T> toMock) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Similar to {@link #createNamedMock(String, Class)} but adds an additional\r\n     * parameterized type.\r\n     */\r\n    public static <V extends Object, T> T createVMock(V name, Class<T> toMock) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Extract some value of the type supported by the interface (i.e., by a concrete,\r\n     * non-generic implementation of the interface).\r\n     */\r\n    public static <T> T extractValueFrom(MyInterfaceType<T> myInterfaceType) {\r\n        return null;\r\n    }\r\n\r\n    /**\r\n     * Extract some magic value from the supplied map.\r\n     */\r\n    public static <K, V> V extractMagicValue(Map<K, V> map) {\r\n        return null;\r\n    }\r\n\r\n    public void readIntegerInputMessage(MyInterfaceType<Integer> message) {\r\n    }\r\n\r\n    public void readIntegerArrayInputMessage(MyInterfaceType<Integer>[] message) {\r\n    }\r\n\r\n    public void readGenericArrayInputMessage(T[] message) {\r\n    }\r\n}\npublic static class MySimpleTypeWithMethods extends MyTypeWithMethods<Integer> {\r\n}\nstatic class GenericClass<T> {\r\n}\nclass A {\r\n}\nclass B<T> {\r\n}\nclass C extends A {\r\n}\nclass D extends B<Long> {\r\n}\nclass E extends C {\r\n}\nclass TestIfc<T> {\r\n}\nclass TestImpl<I extends A, T extends B<I>> extends TestIfc<T> {\r\n}\nabstract static class BiGenericClass<T extends B<?>, V extends A> {\r\n}\nabstract static class SpecializedBiGenericClass<U extends C> extends BiGenericClass<D, U> {\r\n}\nstatic class TypeFixedBiGenericClass extends SpecializedBiGenericClass<E> {\r\n}\nstatic class TopLevelClass<T> {\r\n\r\n    class Nested<X> {\r\n    }\r\n}\nstatic class TypedTopLevelClass extends TopLevelClass<Integer> {\r\n\r\n    class TypedNested extends Nested<Long> {\r\n    }\r\n}\nabstract static class WithArrayBase<T> {\r\n\r\n    public abstract T[] array(T... args);\r\n}\nabstract static class WithArray<T> extends WithArrayBase<T> {\r\n}\ninterface Repository<T, ID extends Serializable> {\r\n}\ninterface IdFixingRepository<T> extends Repository<T, Long> {\r\n}\nstatic class WithMethodParameter {\r\n\r\n    public void nestedGenerics(List<Map<String, Integer>> input) {\r\n    }\r\n}\ninterface ListOfListSupplier<T> {\r\n\r\n    List<List<T>> get();\r\n}\ninterface StringListOfListSupplier extends ListOfListSupplier<String> {\r\n}\nstatic class WithElementBounds {\r\n\r\n    <T extends A> List<T> get() {\r\n        return List.of();\r\n    }\r\n}\nstatic class WithUnresolvableElement<T> {\r\n\r\n    List<T> get() {\r\n        return List.of();\r\n    }\r\n}",
+    "comment": "\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Yanming Zhou\n "
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#simpleInterfaceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid simpleInterfaceType() {\r\n    assertThat(resolveTypeArgument(MySimpleInterfaceType.class, MyInterfaceType.class)).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#simpleCollectionInterfaceType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid simpleCollectionInterfaceType() {\r\n    assertThat(resolveTypeArgument(MyCollectionInterfaceType.class, MyInterfaceType.class)).isEqualTo(Collection.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#simpleSuperclassType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid simpleSuperclassType() {\r\n    assertThat(resolveTypeArgument(MySimpleSuperclassType.class, MySuperclassType.class)).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#simpleCollectionSuperclassType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid simpleCollectionSuperclassType() {\r\n    assertThat(resolveTypeArgument(MyCollectionSuperclassType.class, MySuperclassType.class)).isEqualTo(Collection.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#nullIfNotResolvable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nullIfNotResolvable() {\r\n    GenericClass<String> obj = new GenericClass<>();\r\n    assertThat(resolveTypeArgument(obj.getClass(), GenericClass.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#methodReturnTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid methodReturnTypes() {\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"integer\"), MyInterfaceType.class)).isEqualTo(Integer.class);\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"string\"), MyInterfaceType.class)).isEqualTo(String.class);\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"character\"), MyAbstractType.class)).isEqualTo(Character.class);\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"raw\"), MyInterfaceType.class)).isNull();\r\n    assertThat(resolveReturnTypeArgument(method(MyTypeWithMethods.class, \"object\"), MyInterfaceType.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#testResolveType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid testResolveType() {\r\n    Method intMessageMethod = method(MyTypeWithMethods.class, \"readIntegerInputMessage\", MyInterfaceType.class);\r\n    MethodParameter intMessageMethodParam = new MethodParameter(intMessageMethod, 0);\r\n    assertThat(resolveType(intMessageMethodParam.getGenericParameterType(), new HashMap<>())).isEqualTo(MyInterfaceType.class);\r\n    Method intArrMessageMethod = method(MyTypeWithMethods.class, \"readIntegerArrayInputMessage\", MyInterfaceType[].class);\r\n    MethodParameter intArrMessageMethodParam = new MethodParameter(intArrMessageMethod, 0);\r\n    assertThat(resolveType(intArrMessageMethodParam.getGenericParameterType(), new HashMap<>())).isEqualTo(MyInterfaceType[].class);\r\n    Method genericArrMessageMethod = method(MySimpleTypeWithMethods.class, \"readGenericArrayInputMessage\", Object[].class);\r\n    MethodParameter genericArrMessageMethodParam = new MethodParameter(genericArrMessageMethod, 0);\r\n    Map<TypeVariable, Type> varMap = getTypeVariableMap(MySimpleTypeWithMethods.class);\r\n    assertThat(resolveType(genericArrMessageMethodParam.getGenericParameterType(), varMap)).isEqualTo(Integer[].class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#boundParameterizedType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid boundParameterizedType() {\r\n    assertThat(resolveTypeArgument(TestImpl.class, TestIfc.class)).isEqualTo(B.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#testGetTypeVariableMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid testGetTypeVariableMap() {\r\n    Map<TypeVariable, Type> map;\r\n    map = GenericTypeResolver.getTypeVariableMap(MySimpleInterfaceType.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=class java.lang.String}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(MyCollectionInterfaceType.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=java.util.Collection<java.lang.String>}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(MyCollectionSuperclassType.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=java.util.Collection<java.lang.String>}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(MySimpleTypeWithMethods.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=class java.lang.Integer}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(TopLevelClass.class);\r\n    assertThat(map.toString()).isEqualTo(\";\");\r\n    map = GenericTypeResolver.getTypeVariableMap(TypedTopLevelClass.class);\r\n    assertThat(map.toString()).isEqualTo(\"{T=class java.lang.Integer}\");\r\n    map = GenericTypeResolver.getTypeVariableMap(TypedTopLevelClass.TypedNested.class);\r\n    assertThat(map).hasSize(2);\r\n    Type t = null;\r\n    Type x = null;\r\n    for (Map.Entry<TypeVariable, Type> entry : map.entrySet()) {\r\n        if (entry.getKey().toString().equals(\"T\")) {\r\n            t = entry.getValue();\r\n        } else {\r\n            x = entry.getValue();\r\n        }\r\n    }\r\n    assertThat(t).isEqualTo(Integer.class);\r\n    assertThat(x).isEqualTo(Long.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveTypeArgumentsOfAbstractType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveTypeArgumentsOfAbstractType() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(MyConcreteType.class, MyAbstractType.class);\r\n    assertThat(resolved).containsExactly(Character.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#getGenericsCannotBeResolved()",
+    "entityType": "method",
+    "code": "// SPR-11030\r\n@Test\r\nvoid getGenericsCannotBeResolved() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(List.class, Iterable.class);\r\n    assertThat(resolved).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#getRawMapTypeCannotBeResolved()",
+    "entityType": "method",
+    "code": "// SPR-11052\r\n@Test\r\nvoid getRawMapTypeCannotBeResolved() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(Map.class, Map.class);\r\n    assertThat(resolved).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#getGenericsOnArrayFromParamCannotBeResolved()",
+    "entityType": "method",
+    "code": "// SPR-11044\r\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid getGenericsOnArrayFromParamCannotBeResolved() throws Exception {\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(WithArrayBase.class.getDeclaredMethod(\"array\", Object[].class), 0);\r\n    Class<?> resolved = GenericTypeResolver.resolveParameterType(methodParameter, WithArray.class);\r\n    assertThat(resolved).isEqualTo(Object[].class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#getGenericsOnArrayFromReturnCannotBeResolved()",
+    "entityType": "method",
+    "code": "// SPR-11044\r\n@Test\r\nvoid getGenericsOnArrayFromReturnCannotBeResolved() throws Exception {\r\n    Class<?> resolved = GenericTypeResolver.resolveReturnType(WithArrayBase.class.getDeclaredMethod(\"array\", Object[].class), WithArray.class);\r\n    assertThat(resolved).isEqualTo(Object[].class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveIncompleteTypeVariables()",
+    "entityType": "method",
+    "code": "// SPR-11763\r\n@Test\r\nvoid resolveIncompleteTypeVariables() {\r\n    Class<?>[] resolved = GenericTypeResolver.resolveTypeArguments(IdFixingRepository.class, Repository.class);\r\n    assertThat(resolved).isNotNull();\r\n    assertThat(resolved).hasSize(2);\r\n    assertThat(resolved[0]).isEqualTo(Object.class);\r\n    assertThat(resolved[1]).isEqualTo(Long.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolvePartiallySpecializedTypeVariables()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolvePartiallySpecializedTypeVariables() {\r\n    Type resolved = resolveType(BiGenericClass.class.getTypeParameters()[0], TypeFixedBiGenericClass.class);\r\n    assertThat(resolved).isEqualTo(D.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveTransitiveTypeVariableWithDifferentName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveTransitiveTypeVariableWithDifferentName() {\r\n    Type resolved = resolveType(BiGenericClass.class.getTypeParameters()[1], TypeFixedBiGenericClass.class);\r\n    assertThat(resolved).isEqualTo(E.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveMethodParameterWithNestedGenerics()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveMethodParameterWithNestedGenerics() {\r\n    Method method = method(WithMethodParameter.class, \"nestedGenerics\", List.class);\r\n    MethodParameter methodParameter = new MethodParameter(method, 0);\r\n    Type resolvedType = resolveType(methodParameter.getGenericParameterType(), WithMethodParameter.class);\r\n    ParameterizedTypeReference<List<Map<String, Integer>>> reference = new ParameterizedTypeReference<>() ;;\r\n    assertThat(resolvedType).isEqualTo(reference.getType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveNestedTypeVariable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveNestedTypeVariable() throws Exception {\r\n    Type resolved = resolveType(ListOfListSupplier.class.getMethod(\"get\").getGenericReturnType(), StringListOfListSupplier.class);\r\n    assertThat(ResolvableType.forType(resolved).getGeneric(0).getGeneric(0).resolve()).isEqualTo(String.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveTypeWithElementBounds()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveTypeWithElementBounds() {\r\n    Type type = method(WithElementBounds.class, \"get\").getGenericReturnType();\r\n    Type resolvedType = resolveType(type, WithElementBounds.class);\r\n    ParameterizedTypeReference<List<A>> reference = new ParameterizedTypeReference<>() ;;\r\n    assertThat(resolvedType).isEqualTo(reference.getType());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#resolveTypeWithUnresolvableElement()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid resolveTypeWithUnresolvableElement() {\r\n    Type type = method(WithUnresolvableElement.class, \"get\").getGenericReturnType();\r\n    Type resolvedType = resolveType(type, WithUnresolvableElement.class);\r\n    assertThat(resolvedType.toString()).isEqualTo(\"java.util.List<E>\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.GenericTypeResolverTests#method(Class<?>,String,Class<?>)",
+    "entityType": "method",
+    "code": "private static Method method(Class<?> target, String methodName, Class<?>... parameterTypes) {\r\n    Method method = findMethod(target, methodName, parameterTypes);\r\n    assertThat(method).describedAs(target.getName() + \"#\" + methodName).isNotNull();\r\n    return method;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyInterfaceType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MySimpleInterfaceType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyCollectionInterfaceType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyAbstractType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyConcreteType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MySuperclassType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MySimpleSuperclassType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyCollectionSuperclassType",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods",
+    "entityType": "class",
+    "code": "public MyInterfaceType<Integer> integer() {\r\n    return null;\r\n}\npublic MySimpleInterfaceType string() {\r\n    return null;\r\n}\npublic MyConcreteType character() {\r\n    return null;\r\n}\npublic Object object() {\r\n    return null;\r\n}\npublic MyInterfaceType raw() {\r\n    return null;\r\n}\npublic String notParameterized() {\r\n    return null;\r\n}\npublic String notParameterizedWithArguments(Integer x, Boolean b) {\r\n    return null;\r\n}\n/**\r\n * Simulates a factory method that wraps the supplied object in a proxy of the\r\n * same type.\r\n */\r\npublic static <T> T createProxy(T object) {\r\n    return null;\r\n}\n/**\r\n * Similar to {@link #createProxy(Object)} but adds an additional argument before\r\n * the argument of type {@code T}. Note that they may potentially be of the same\r\n * time when invoked!\r\n */\r\npublic static <T> T createNamedProxy(String name, T object) {\r\n    return null;\r\n}\n/**\r\n * Simulates factory methods found in libraries such as Mockito and EasyMock.\r\n */\r\npublic static <MOCK> MOCK createMock(Class<MOCK> toMock) {\r\n    return null;\r\n}\n/**\r\n * Similar to {@link #createMock(Class)} but adds an additional method argument\r\n * before the parameterized argument.\r\n */\r\npublic static <T> T createNamedMock(String name, Class<T> toMock) {\r\n    return null;\r\n}\n/**\r\n * Similar to {@link #createNamedMock(String, Class)} but adds an additional\r\n * parameterized type.\r\n */\r\npublic static <V extends Object, T> T createVMock(V name, Class<T> toMock) {\r\n    return null;\r\n}\n/**\r\n * Extract some value of the type supported by the interface (i.e., by a concrete,\r\n * non-generic implementation of the interface).\r\n */\r\npublic static <T> T extractValueFrom(MyInterfaceType<T> myInterfaceType) {\r\n    return null;\r\n}\n/**\r\n * Extract some magic value from the supplied map.\r\n */\r\npublic static <K, V> V extractMagicValue(Map<K, V> map) {\r\n    return null;\r\n}\npublic void readIntegerInputMessage(MyInterfaceType<Integer> message) ;\npublic void readIntegerArrayInputMessage(MyInterfaceType<Integer>[] message) ;\npublic void readGenericArrayInputMessage(T[] message) ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#integer()",
+    "entityType": "method",
+    "code": "public MyInterfaceType<Integer> integer() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#string()",
+    "entityType": "method",
+    "code": "public MySimpleInterfaceType string() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#character()",
+    "entityType": "method",
+    "code": "public MyConcreteType character() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#object()",
+    "entityType": "method",
+    "code": "public Object object() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#raw()",
+    "entityType": "method",
+    "code": "public MyInterfaceType raw() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#notParameterized()",
+    "entityType": "method",
+    "code": "public String notParameterized() {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#notParameterizedWithArguments(Integer,Boolean)",
+    "entityType": "method",
+    "code": "public String notParameterizedWithArguments(Integer x, Boolean b) {\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MyTypeWithMethods#createProxy(T)",
+    "entityType": "method",
+    "code": "/**\r\n * Simulates a factory method that wraps the supplied object in a proxy of the\r\n * same type.\r\n */\r\npublic static <T> T createProxy(T object) {\r\n    return null;\r\n}",
+    "comment": "\n\t\t * Simulates a factory method that wraps the supplied object in a proxy of the\n\t\t * same type.\n\t\t "
+  }
+]

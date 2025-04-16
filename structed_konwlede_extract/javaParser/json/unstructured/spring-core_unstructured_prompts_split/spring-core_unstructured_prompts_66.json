@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.VfsUtils",
+    "entityType": "class",
+    "code": "private static final String VFS3_PKG = \"org.jboss.vfs.\";\nprivate static final String VFS_NAME = \"VFS\";\nprivate static final Method VFS_METHOD_GET_ROOT_URL;\nprivate static final Method VFS_METHOD_GET_ROOT_URI;\nprivate static final Method VIRTUAL_FILE_METHOD_EXISTS;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_INPUT_STREAM;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_SIZE;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_LAST_MODIFIED;\nprivate static final Method VIRTUAL_FILE_METHOD_TO_URL;\nprivate static final Method VIRTUAL_FILE_METHOD_TO_URI;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_NAME;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_PATH_NAME;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_PHYSICAL_FILE;\nprivate static final Method VIRTUAL_FILE_METHOD_GET_CHILD;\nprotected static final Class<?> VIRTUAL_FILE_VISITOR_INTERFACE;\nprotected static final Method VIRTUAL_FILE_METHOD_VISIT;\nprivate static final Field VISITOR_ATTRIBUTES_FIELD_RECURSE;\nstatic {\r\n    ClassLoader loader = VfsUtils.class.getClassLoader();\r\n    try {\r\n        Class<?> vfsClass = loader.loadClass(VFS3_PKG + VFS_NAME);\r\n        VFS_METHOD_GET_ROOT_URL = vfsClass.getMethod(\"getChild\", URL.class);\r\n        VFS_METHOD_GET_ROOT_URI = vfsClass.getMethod(\"getChild\", URI.class);\r\n        Class<?> virtualFile = loader.loadClass(VFS3_PKG + \"VirtualFile\");\r\n        VIRTUAL_FILE_METHOD_EXISTS = virtualFile.getMethod(\"exists\");\r\n        VIRTUAL_FILE_METHOD_GET_INPUT_STREAM = virtualFile.getMethod(\"openStream\");\r\n        VIRTUAL_FILE_METHOD_GET_SIZE = virtualFile.getMethod(\"getSize\");\r\n        VIRTUAL_FILE_METHOD_GET_LAST_MODIFIED = virtualFile.getMethod(\"getLastModified\");\r\n        VIRTUAL_FILE_METHOD_TO_URI = virtualFile.getMethod(\"toURI\");\r\n        VIRTUAL_FILE_METHOD_TO_URL = virtualFile.getMethod(\"toURL\");\r\n        VIRTUAL_FILE_METHOD_GET_NAME = virtualFile.getMethod(\"getName\");\r\n        VIRTUAL_FILE_METHOD_GET_PATH_NAME = virtualFile.getMethod(\"getPathName\");\r\n        VIRTUAL_FILE_METHOD_GET_PHYSICAL_FILE = virtualFile.getMethod(\"getPhysicalFile\");\r\n        VIRTUAL_FILE_METHOD_GET_CHILD = virtualFile.getMethod(\"getChild\", String.class);\r\n        VIRTUAL_FILE_VISITOR_INTERFACE = loader.loadClass(VFS3_PKG + \"VirtualFileVisitor\");\r\n        VIRTUAL_FILE_METHOD_VISIT = virtualFile.getMethod(\"visit\", VIRTUAL_FILE_VISITOR_INTERFACE);\r\n        Class<?> visitorAttributesClass = loader.loadClass(VFS3_PKG + \"VisitorAttributes\");\r\n        VISITOR_ATTRIBUTES_FIELD_RECURSE = visitorAttributesClass.getField(\"RECURSE\");\r\n    } catch (Throwable ex) {\r\n        throw new IllegalStateException(\"Could not detect JBoss VFS infrastructure\", ex);\r\n    }\r\n}\nprotected static Object invokeVfsMethod(Method method, @Nullable Object target, Object... args) throws IOException {\r\n    try {\r\n        return method.invoke(target, args);\r\n    } catch (InvocationTargetException ex) {\r\n        Throwable targetEx = ex.getTargetException();\r\n        if (targetEx instanceof IOException ioException) {\r\n            throw ioException;\r\n        }\r\n        ReflectionUtils.handleInvocationTargetException(ex);\r\n    } catch (Exception ex) {\r\n        ReflectionUtils.handleReflectionException(ex);\r\n    }\r\n    throw new IllegalStateException(\"Invalid code path reached\");\r\n}\nstatic boolean exists(Object vfsResource) {\r\n    try {\r\n        return (Boolean) invokeVfsMethod(VIRTUAL_FILE_METHOD_EXISTS, vfsResource);\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}\nstatic boolean isReadable(Object vfsResource) {\r\n    try {\r\n        return (Long) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_SIZE, vfsResource) > 0;\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}\nstatic long getSize(Object vfsResource) throws IOException {\r\n    return (Long) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_SIZE, vfsResource);\r\n}\nstatic long getLastModified(Object vfsResource) throws IOException {\r\n    return (Long) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_LAST_MODIFIED, vfsResource);\r\n}\nstatic InputStream getInputStream(Object vfsResource) throws IOException {\r\n    return (InputStream) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_INPUT_STREAM, vfsResource);\r\n}\nstatic URL getURL(Object vfsResource) throws IOException {\r\n    return (URL) invokeVfsMethod(VIRTUAL_FILE_METHOD_TO_URL, vfsResource);\r\n}\nstatic URI getURI(Object vfsResource) throws IOException {\r\n    return (URI) invokeVfsMethod(VIRTUAL_FILE_METHOD_TO_URI, vfsResource);\r\n}\nstatic String getName(Object vfsResource) {\r\n    try {\r\n        return (String) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_NAME, vfsResource);\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(\"Cannot get resource name\", ex);\r\n    }\r\n}\nstatic Object getRelative(URL url) throws IOException {\r\n    return invokeVfsMethod(VFS_METHOD_GET_ROOT_URL, null, url);\r\n}\nstatic Object getChild(Object vfsResource, String path) throws IOException {\r\n    return invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_CHILD, vfsResource, path);\r\n}\nstatic File getFile(Object vfsResource) throws IOException {\r\n    return (File) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_PHYSICAL_FILE, vfsResource);\r\n}\nstatic Object getRoot(URI url) throws IOException {\r\n    return invokeVfsMethod(VFS_METHOD_GET_ROOT_URI, null, url);\r\n}\n// protected methods used by the support sub-package\r\nprotected static Object getRoot(URL url) throws IOException {\r\n    return invokeVfsMethod(VFS_METHOD_GET_ROOT_URL, null, url);\r\n}\n@Nullable\r\nprotected static Object doGetVisitorAttributes() {\r\n    return ReflectionUtils.getField(VISITOR_ATTRIBUTES_FIELD_RECURSE, null);\r\n}\n@Nullable\r\nprotected static String doGetPath(Object resource) {\r\n    return (String) ReflectionUtils.invokeMethod(VIRTUAL_FILE_METHOD_GET_PATH_NAME, resource);\r\n}",
+    "comment": "\n * Utility for detecting and accessing JBoss VFS in the classpath.\n *\n * <p>As of Spring 4.0, this class supports VFS 3.x on JBoss AS 6+\n * (package {@code org.jboss.vfs}) and is in particular compatible with\n * JBoss AS 7 and WildFly 8+.\n *\n * <p>Thanks go to Marius Bogoevici for the initial implementation.\n *\n * <p><b>Note:</b> This is an internal class and should not be used outside the framework.\n *\n * @author Costin Leau\n * @author Juergen Hoeller\n * @since 3.0.3\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#invokeVfsMethod(Method,Object,Object)",
+    "entityType": "method",
+    "code": "protected static Object invokeVfsMethod(Method method, @Nullable Object target, Object... args) throws IOException {\r\n    try {\r\n        return method.invoke(target, args);\r\n    } catch (InvocationTargetException ex) {\r\n        Throwable targetEx = ex.getTargetException();\r\n        if (targetEx instanceof IOException ioException) {\r\n            throw ioException;\r\n        }\r\n        ReflectionUtils.handleInvocationTargetException(ex);\r\n    } catch (Exception ex) {\r\n        ReflectionUtils.handleReflectionException(ex);\r\n    }\r\n    throw new IllegalStateException(\"Invalid code path reached\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#exists(Object)",
+    "entityType": "method",
+    "code": "static boolean exists(Object vfsResource) {\r\n    try {\r\n        return (Boolean) invokeVfsMethod(VIRTUAL_FILE_METHOD_EXISTS, vfsResource);\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#isReadable(Object)",
+    "entityType": "method",
+    "code": "static boolean isReadable(Object vfsResource) {\r\n    try {\r\n        return (Long) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_SIZE, vfsResource) > 0;\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getSize(Object)",
+    "entityType": "method",
+    "code": "static long getSize(Object vfsResource) throws IOException {\r\n    return (Long) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_SIZE, vfsResource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getLastModified(Object)",
+    "entityType": "method",
+    "code": "static long getLastModified(Object vfsResource) throws IOException {\r\n    return (Long) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_LAST_MODIFIED, vfsResource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getInputStream(Object)",
+    "entityType": "method",
+    "code": "static InputStream getInputStream(Object vfsResource) throws IOException {\r\n    return (InputStream) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_INPUT_STREAM, vfsResource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getURL(Object)",
+    "entityType": "method",
+    "code": "static URL getURL(Object vfsResource) throws IOException {\r\n    return (URL) invokeVfsMethod(VIRTUAL_FILE_METHOD_TO_URL, vfsResource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getURI(Object)",
+    "entityType": "method",
+    "code": "static URI getURI(Object vfsResource) throws IOException {\r\n    return (URI) invokeVfsMethod(VIRTUAL_FILE_METHOD_TO_URI, vfsResource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getName(Object)",
+    "entityType": "method",
+    "code": "static String getName(Object vfsResource) {\r\n    try {\r\n        return (String) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_NAME, vfsResource);\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(\"Cannot get resource name\", ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getRelative(URL)",
+    "entityType": "method",
+    "code": "static Object getRelative(URL url) throws IOException {\r\n    return invokeVfsMethod(VFS_METHOD_GET_ROOT_URL, null, url);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getChild(Object,String)",
+    "entityType": "method",
+    "code": "static Object getChild(Object vfsResource, String path) throws IOException {\r\n    return invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_CHILD, vfsResource, path);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getFile(Object)",
+    "entityType": "method",
+    "code": "static File getFile(Object vfsResource) throws IOException {\r\n    return (File) invokeVfsMethod(VIRTUAL_FILE_METHOD_GET_PHYSICAL_FILE, vfsResource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getRoot(URI)",
+    "entityType": "method",
+    "code": "static Object getRoot(URI url) throws IOException {\r\n    return invokeVfsMethod(VFS_METHOD_GET_ROOT_URI, null, url);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#getRoot(URL)",
+    "entityType": "method",
+    "code": "// protected methods used by the support sub-package\r\nprotected static Object getRoot(URL url) throws IOException {\r\n    return invokeVfsMethod(VFS_METHOD_GET_ROOT_URL, null, url);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#doGetVisitorAttributes()",
+    "entityType": "method",
+    "code": "@Nullable\r\nprotected static Object doGetVisitorAttributes() {\r\n    return ReflectionUtils.getField(VISITOR_ATTRIBUTES_FIELD_RECURSE, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.VfsUtils#doGetPath(Object)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprotected static String doGetPath(Object resource) {\r\n    return (String) ReflectionUtils.invokeMethod(VIRTUAL_FILE_METHOD_GET_PATH_NAME, resource);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.WritableResource",
+    "entityType": "class",
+    "code": "/**\r\n * Indicate whether the contents of this resource can be written\r\n * via {@link #getOutputStream()}.\r\n * <p>Will be {@code true} for typical resource descriptors;\r\n * note that actual content writing may still fail when attempted.\r\n * However, a value of {@code false} is a definitive indication\r\n * that the resource content cannot be modified.\r\n * @see #getOutputStream()\r\n * @see #isReadable()\r\n */\r\ndefault boolean isWritable() {\r\n    return true;\r\n}\n/**\r\n * Return an {@link OutputStream} for the underlying resource,\r\n * allowing to (over-)write its content.\r\n * @throws IOException if the stream could not be opened\r\n * @see #getInputStream()\r\n */\r\nOutputStream getOutputStream() throws IOException;\n/**\r\n * Return a {@link WritableByteChannel}.\r\n * <p>It is expected that each call creates a <i>fresh</i> channel.\r\n * <p>The default implementation returns {@link Channels#newChannel(OutputStream)}\r\n * with the result of {@link #getOutputStream()}.\r\n * @return the byte channel for the underlying resource (must not be {@code null})\r\n * @throws java.io.FileNotFoundException if the underlying resource doesn't exist\r\n * @throws IOException if the content channel could not be opened\r\n * @since 5.0\r\n * @see #getOutputStream()\r\n */\r\ndefault WritableByteChannel writableChannel() throws IOException {\r\n    return Channels.newChannel(getOutputStream());\r\n}",
+    "comment": "\n * Extended interface for a resource that supports writing to it.\n * Provides an {@link #getOutputStream() OutputStream accessor}.\n *\n * @author Juergen Hoeller\n * @since 3.1\n * @see java.io.OutputStream\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.WritableResource#isWritable()",
+    "entityType": "method",
+    "code": "/**\r\n * Indicate whether the contents of this resource can be written\r\n * via {@link #getOutputStream()}.\r\n * <p>Will be {@code true} for typical resource descriptors;\r\n * note that actual content writing may still fail when attempted.\r\n * However, a value of {@code false} is a definitive indication\r\n * that the resource content cannot be modified.\r\n * @see #getOutputStream()\r\n * @see #isReadable()\r\n */\r\ndefault boolean isWritable() {\r\n    return true;\r\n}",
+    "comment": "\n\t * Indicate whether the contents of this resource can be written\n\t * via {@link #getOutputStream()}.\n\t * <p>Will be {@code true} for typical resource descriptors;\n\t * note that actual content writing may still fail when attempted.\n\t * However, a value of {@code false} is a definitive indication\n\t * that the resource content cannot be modified.\n\t * @see #getOutputStream()\n\t * @see #isReadable()\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.WritableResource#getOutputStream()",
+    "entityType": "method",
+    "code": "/**\r\n * Return an {@link OutputStream} for the underlying resource,\r\n * allowing to (over-)write its content.\r\n * @throws IOException if the stream could not be opened\r\n * @see #getInputStream()\r\n */\r\nOutputStream getOutputStream() throws IOException;",
+    "comment": "\n\t * Return an {@link OutputStream} for the underlying resource,\n\t * allowing to (over-)write its content.\n\t * @throws IOException if the stream could not be opened\n\t * @see #getInputStream()\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.io.WritableResource#writableChannel()",
+    "entityType": "method",
+    "code": "/**\r\n * Return a {@link WritableByteChannel}.\r\n * <p>It is expected that each call creates a <i>fresh</i> channel.\r\n * <p>The default implementation returns {@link Channels#newChannel(OutputStream)}\r\n * with the result of {@link #getOutputStream()}.\r\n * @return the byte channel for the underlying resource (must not be {@code null})\r\n * @throws java.io.FileNotFoundException if the underlying resource doesn't exist\r\n * @throws IOException if the content channel could not be opened\r\n * @since 5.0\r\n * @see #getOutputStream()\r\n */\r\ndefault WritableByteChannel writableChannel() throws IOException {\r\n    return Channels.newChannel(getOutputStream());\r\n}",
+    "comment": "\n\t * Return a {@link WritableByteChannel}.\n\t * <p>It is expected that each call creates a <i>fresh</i> channel.\n\t * <p>The default implementation returns {@link Channels#newChannel(OutputStream)}\n\t * with the result of {@link #getOutputStream()}.\n\t * @return the byte channel for the underlying resource (must not be {@code null})\n\t * @throws java.io.FileNotFoundException if the underlying resource doesn't exist\n\t * @throws IOException if the content channel could not be opened\n\t * @since 5.0\n\t * @see #getOutputStream()\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDetector",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate static final Class<? extends Annotation> kotlinMetadata;\n@Nullable\r\nprivate static final Class<? extends Annotation> kotlinJvmInline;\n@Nullable\r\nprivate static final Class<?> kotlinCoroutineContinuation;\n// For ConstantFieldFeature compliance, otherwise could be deduced from kotlinMetadata\r\nprivate static final boolean kotlinPresent;\nprivate static final boolean kotlinReflectPresent;\nstatic {\r\n    ClassLoader classLoader = KotlinDetector.class.getClassLoader();\r\n    Class<?> metadata = null;\r\n    Class<?> jvmInline = null;\r\n    Class<?> coroutineContinuation = null;\r\n    try {\r\n        metadata = ClassUtils.forName(\"kotlin.Metadata\", classLoader);\r\n        try {\r\n            jvmInline = ClassUtils.forName(\"kotlin.jvm.JvmInline\", classLoader);\r\n        } catch (ClassNotFoundException ex) {\r\n            // JVM inline support not available\r\n        }\r\n        try {\r\n            coroutineContinuation = ClassUtils.forName(\"kotlin.coroutines.Continuation\", classLoader);\r\n        } catch (ClassNotFoundException ex) {\r\n            // Coroutines support not available\r\n        }\r\n    } catch (ClassNotFoundException ex) {\r\n        // Kotlin API not available - no Kotlin support\r\n    }\r\n    kotlinMetadata = (Class<? extends Annotation>) metadata;\r\n    kotlinPresent = (kotlinMetadata != null);\r\n    kotlinReflectPresent = ClassUtils.isPresent(\"kotlin.reflect.full.KClasses\", classLoader);\r\n    kotlinJvmInline = (Class<? extends Annotation>) jvmInline;\r\n    kotlinCoroutineContinuation = coroutineContinuation;\r\n}\n/**\r\n * Determine whether Kotlin is present in general.\r\n */\r\npublic static boolean isKotlinPresent() {\r\n    return kotlinPresent;\r\n}\n/**\r\n * Determine whether Kotlin reflection is present.\r\n * @since 5.1\r\n */\r\npublic static boolean isKotlinReflectPresent() {\r\n    return kotlinReflectPresent;\r\n}\n/**\r\n * Determine whether the given {@code Class} is a Kotlin type\r\n * (with Kotlin metadata present on it).\r\n *\r\n * <p>As of Kotlin 2.0, this method can't be used to detect Kotlin\r\n * lambdas unless they are annotated with <code>@JvmSerializableLambda</code>\r\n * as invokedynamic has become the default method for lambda generation.\r\n */\r\npublic static boolean isKotlinType(Class<?> clazz) {\r\n    return (kotlinPresent && clazz.getDeclaredAnnotation(kotlinMetadata) != null);\r\n}\n/**\r\n * Return {@code true} if the method is a suspending function.\r\n * @since 5.3\r\n */\r\npublic static boolean isSuspendingFunction(Method method) {\r\n    if (kotlinCoroutineContinuation == null) {\r\n        return false;\r\n    }\r\n    int parameterCount = method.getParameterCount();\r\n    return (parameterCount > 0 && method.getParameterTypes()[parameterCount - 1] == kotlinCoroutineContinuation);\r\n}\n/**\r\n * Determine whether the given {@code Class} is an inline class\r\n * (annotated with {@code @JvmInline}).\r\n * @since 6.1.5\r\n * @see <a href=\"https://kotlinlang.org/docs/inline-classes.html\">Kotlin inline value classes</a>\r\n */\r\npublic static boolean isInlineClass(Class<?> clazz) {\r\n    return (kotlinJvmInline != null && clazz.getDeclaredAnnotation(kotlinJvmInline) != null);\r\n}",
+    "comment": "\n * A common delegate for detecting Kotlin's presence and for identifying Kotlin types. All the methods of this class\n * can be safely used without any preliminary classpath checks.\n *\n * @author Juergen Hoeller\n * @author Sebastien Deleuze\n * @since 5.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDetector#isKotlinPresent()",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether Kotlin is present in general.\r\n */\r\npublic static boolean isKotlinPresent() {\r\n    return kotlinPresent;\r\n}",
+    "comment": "\n\t * Determine whether Kotlin is present in general.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDetector#isKotlinReflectPresent()",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether Kotlin reflection is present.\r\n * @since 5.1\r\n */\r\npublic static boolean isKotlinReflectPresent() {\r\n    return kotlinReflectPresent;\r\n}",
+    "comment": "\n\t * Determine whether Kotlin reflection is present.\n\t * @since 5.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDetector#isKotlinType(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the given {@code Class} is a Kotlin type\r\n * (with Kotlin metadata present on it).\r\n *\r\n * <p>As of Kotlin 2.0, this method can't be used to detect Kotlin\r\n * lambdas unless they are annotated with <code>@JvmSerializableLambda</code>\r\n * as invokedynamic has become the default method for lambda generation.\r\n */\r\npublic static boolean isKotlinType(Class<?> clazz) {\r\n    return (kotlinPresent && clazz.getDeclaredAnnotation(kotlinMetadata) != null);\r\n}",
+    "comment": "\n\t * Determine whether the given {@code Class} is a Kotlin type\n\t * (with Kotlin metadata present on it).\n\t *\n\t * <p>As of Kotlin 2.0, this method can't be used to detect Kotlin\n\t * lambdas unless they are annotated with <code>@JvmSerializableLambda</code>\n\t * as invokedynamic has become the default method for lambda generation.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDetector#isSuspendingFunction(Method)",
+    "entityType": "method",
+    "code": "/**\r\n * Return {@code true} if the method is a suspending function.\r\n * @since 5.3\r\n */\r\npublic static boolean isSuspendingFunction(Method method) {\r\n    if (kotlinCoroutineContinuation == null) {\r\n        return false;\r\n    }\r\n    int parameterCount = method.getParameterCount();\r\n    return (parameterCount > 0 && method.getParameterTypes()[parameterCount - 1] == kotlinCoroutineContinuation);\r\n}",
+    "comment": "\n\t * Return {@code true} if the method is a suspending function.\n\t * @since 5.3\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDetector#isInlineClass(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the given {@code Class} is an inline class\r\n * (annotated with {@code @JvmInline}).\r\n * @since 6.1.5\r\n * @see <a href=\"https://kotlinlang.org/docs/inline-classes.html\">Kotlin inline value classes</a>\r\n */\r\npublic static boolean isInlineClass(Class<?> clazz) {\r\n    return (kotlinJvmInline != null && clazz.getDeclaredAnnotation(kotlinJvmInline) != null);\r\n}",
+    "comment": "\n\t * Determine whether the given {@code Class} is an inline class\n\t * (annotated with {@code @JvmInline}).\n\t * @since 6.1.5\n\t * @see <a href=\"https://kotlinlang.org/docs/inline-classes.html\">Kotlin inline value classes</a>\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinReflectionParameterNameDiscoverer",
+    "entityType": "class",
+    "code": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Method method) {\r\n    if (!KotlinDetector.isKotlinType(method.getDeclaringClass())) {\r\n        return null;\r\n    }\r\n    try {\r\n        KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\r\n        return (function != null ? getParameterNames(function.getParameters()) : null);\r\n    } catch (UnsupportedOperationException ex) {\r\n        return null;\r\n    }\r\n}\n@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Constructor<?> ctor) {\r\n    if (ctor.getDeclaringClass().isEnum() || !KotlinDetector.isKotlinType(ctor.getDeclaringClass())) {\r\n        return null;\r\n    }\r\n    try {\r\n        KFunction<?> function = ReflectJvmMapping.getKotlinFunction(ctor);\r\n        return (function != null ? getParameterNames(function.getParameters()) : null);\r\n    } catch (UnsupportedOperationException ex) {\r\n        return null;\r\n    }\r\n}\n@Nullable\r\nprivate String @Nullable [] getParameterNames(List<KParameter> parameters) {\r\n    String[] parameterNames = parameters.stream().// Extension receivers of extension methods must be included as they appear as normal method parameters in Java\r\n    filter(p -> KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind())).// extension receivers are not explicitly named, but require a name for Java interoperability\r\n    // $receiver is not a valid Kotlin identifier, but valid in Java, so it can be used here\r\n    map(p -> KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()) ? \"$receiver\" : p.getName()).toArray(String[]::new);\r\n    for (String parameterName : parameterNames) {\r\n        if (parameterName == null) {\r\n            return null;\r\n        }\r\n    }\r\n    return parameterNames;\r\n}",
+    "comment": "\n * {@link ParameterNameDiscoverer} implementation which uses Kotlin's reflection facilities\n * for introspecting parameter names.\n *\n * <p>Compared to {@link StandardReflectionParameterNameDiscoverer}, it allows in addition to\n * determine interface parameter names without requiring Java 8 -parameters compiler flag.\n *\n * @author Sebastien Deleuze\n * @since 5.0\n * @see StandardReflectionParameterNameDiscoverer\n * @see DefaultParameterNameDiscoverer\n "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Method)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Method method) {\r\n    if (!KotlinDetector.isKotlinType(method.getDeclaringClass())) {\r\n        return null;\r\n    }\r\n    try {\r\n        KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\r\n        return (function != null ? getParameterNames(function.getParameters()) : null);\r\n    } catch (UnsupportedOperationException ex) {\r\n        return null;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Constructor<?> ctor) {\r\n    if (ctor.getDeclaringClass().isEnum() || !KotlinDetector.isKotlinType(ctor.getDeclaringClass())) {\r\n        return null;\r\n    }\r\n    try {\r\n        KFunction<?> function = ReflectJvmMapping.getKotlinFunction(ctor);\r\n        return (function != null ? getParameterNames(function.getParameters()) : null);\r\n    } catch (UnsupportedOperationException ex) {\r\n        return null;\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(List<KParameter>)",
+    "entityType": "method",
+    "code": "@Nullable\r\nprivate String @Nullable [] getParameterNames(List<KParameter> parameters) {\r\n    String[] parameterNames = parameters.stream().// Extension receivers of extension methods must be included as they appear as normal method parameters in Java\r\n    filter(p -> KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind())).// extension receivers are not explicitly named, but require a name for Java interoperability\r\n    // $receiver is not a valid Kotlin identifier, but valid in Java, so it can be used here\r\n    map(p -> KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()) ? \"$receiver\" : p.getName()).toArray(String[]::new);\r\n    for (String parameterName : parameterNames) {\r\n        if (parameterName == null) {\r\n            return null;\r\n        }\r\n    }\r\n    return parameterNames;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog",
+    "entityType": "class",
+    "code": "private static final Log NO_OP_LOG = new NoOpLog();\nprivate final List<Log> loggers;\n/**\r\n * Package-private constructor with list of loggers.\r\n * @param loggers the loggers to use\r\n */\r\nCompositeLog(List<Log> loggers) {\r\n    this.loggers = loggers;\r\n}\n@Override\r\npublic boolean isFatalEnabled() {\r\n    return isEnabled(Log::isFatalEnabled);\r\n}\n@Override\r\npublic boolean isErrorEnabled() {\r\n    return isEnabled(Log::isErrorEnabled);\r\n}\n@Override\r\npublic boolean isWarnEnabled() {\r\n    return isEnabled(Log::isWarnEnabled);\r\n}\n@Override\r\npublic boolean isInfoEnabled() {\r\n    return isEnabled(Log::isInfoEnabled);\r\n}\n@Override\r\npublic boolean isDebugEnabled() {\r\n    return isEnabled(Log::isDebugEnabled);\r\n}\n@Override\r\npublic boolean isTraceEnabled() {\r\n    return isEnabled(Log::isTraceEnabled);\r\n}\nprivate boolean isEnabled(Predicate<Log> predicate) {\r\n    return (getLogger(predicate) != NO_OP_LOG);\r\n}\n@Override\r\npublic void fatal(Object message) {\r\n    getLogger(Log::isFatalEnabled).fatal(message);\r\n}\n@Override\r\npublic void fatal(Object message, Throwable ex) {\r\n    getLogger(Log::isFatalEnabled).fatal(message, ex);\r\n}\n@Override\r\npublic void error(Object message) {\r\n    getLogger(Log::isErrorEnabled).error(message);\r\n}\n@Override\r\npublic void error(Object message, Throwable ex) {\r\n    getLogger(Log::isErrorEnabled).error(message, ex);\r\n}\n@Override\r\npublic void warn(Object message) {\r\n    getLogger(Log::isWarnEnabled).warn(message);\r\n}\n@Override\r\npublic void warn(Object message, Throwable ex) {\r\n    getLogger(Log::isWarnEnabled).warn(message, ex);\r\n}\n@Override\r\npublic void info(Object message) {\r\n    getLogger(Log::isInfoEnabled).info(message);\r\n}\n@Override\r\npublic void info(Object message, Throwable ex) {\r\n    getLogger(Log::isInfoEnabled).info(message, ex);\r\n}\n@Override\r\npublic void debug(Object message) {\r\n    getLogger(Log::isDebugEnabled).debug(message);\r\n}\n@Override\r\npublic void debug(Object message, Throwable ex) {\r\n    getLogger(Log::isDebugEnabled).debug(message, ex);\r\n}\n@Override\r\npublic void trace(Object message) {\r\n    getLogger(Log::isTraceEnabled).trace(message);\r\n}\n@Override\r\npublic void trace(Object message, Throwable ex) {\r\n    getLogger(Log::isTraceEnabled).trace(message, ex);\r\n}\nprivate Log getLogger(Predicate<Log> predicate) {\r\n    for (Log logger : this.loggers) {\r\n        if (predicate.test(logger)) {\r\n            return logger;\r\n        }\r\n    }\r\n    return NO_OP_LOG;\r\n}",
+    "comment": "\n * Implementation of {@link Log} that wraps a list of loggers and delegates\n * to the first one for which logging is enabled at the given level.\n *\n * @author Rossen Stoyanchev\n * @since 5.1\n * @see LogDelegateFactory#getCompositeLog\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isFatalEnabled()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isFatalEnabled() {\r\n    return isEnabled(Log::isFatalEnabled);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isErrorEnabled()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isErrorEnabled() {\r\n    return isEnabled(Log::isErrorEnabled);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isWarnEnabled()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isWarnEnabled() {\r\n    return isEnabled(Log::isWarnEnabled);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isInfoEnabled()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isInfoEnabled() {\r\n    return isEnabled(Log::isInfoEnabled);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isDebugEnabled()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isDebugEnabled() {\r\n    return isEnabled(Log::isDebugEnabled);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isTraceEnabled()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean isTraceEnabled() {\r\n    return isEnabled(Log::isTraceEnabled);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#isEnabled(Predicate<Log>)",
+    "entityType": "method",
+    "code": "private boolean isEnabled(Predicate<Log> predicate) {\r\n    return (getLogger(predicate) != NO_OP_LOG);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#fatal(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void fatal(Object message) {\r\n    getLogger(Log::isFatalEnabled).fatal(message);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#fatal(Object,Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void fatal(Object message, Throwable ex) {\r\n    getLogger(Log::isFatalEnabled).fatal(message, ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#error(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void error(Object message) {\r\n    getLogger(Log::isErrorEnabled).error(message);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#error(Object,Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void error(Object message, Throwable ex) {\r\n    getLogger(Log::isErrorEnabled).error(message, ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#warn(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void warn(Object message) {\r\n    getLogger(Log::isWarnEnabled).warn(message);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#warn(Object,Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void warn(Object message, Throwable ex) {\r\n    getLogger(Log::isWarnEnabled).warn(message, ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#info(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void info(Object message) {\r\n    getLogger(Log::isInfoEnabled).info(message);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#info(Object,Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void info(Object message, Throwable ex) {\r\n    getLogger(Log::isInfoEnabled).info(message, ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#debug(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void debug(Object message) {\r\n    getLogger(Log::isDebugEnabled).debug(message);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#debug(Object,Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void debug(Object message, Throwable ex) {\r\n    getLogger(Log::isDebugEnabled).debug(message, ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#trace(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void trace(Object message) {\r\n    getLogger(Log::isTraceEnabled).trace(message);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#trace(Object,Throwable)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void trace(Object message, Throwable ex) {\r\n    getLogger(Log::isTraceEnabled).trace(message, ex);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLog#getLogger(Predicate<Log>)",
+    "entityType": "method",
+    "code": "private Log getLogger(Predicate<Log> predicate) {\r\n    for (Log logger : this.loggers) {\r\n        if (predicate.test(logger)) {\r\n            return logger;\r\n        }\r\n    }\r\n    return NO_OP_LOG;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor",
+    "entityType": "class",
+    "code": "private final Log log;\n/**\r\n * Create a new accessor for the given Commons Log.\r\n * @see LogFactory#getLog(Class)\r\n * @see LogFactory#getLog(String)\r\n */\r\npublic LogAccessor(Log log) {\r\n    this.log = log;\r\n}\n/**\r\n * Create a new accessor for the specified Commons Log category.\r\n * @see LogFactory#getLog(Class)\r\n */\r\npublic LogAccessor(Class<?> logCategory) {\r\n    this.log = LogFactory.getLog(logCategory);\r\n}\n/**\r\n * Create a new accessor for the specified Commons Log category.\r\n * @see LogFactory#getLog(String)\r\n */\r\npublic LogAccessor(String logCategory) {\r\n    this.log = LogFactory.getLog(logCategory);\r\n}\n/**\r\n * Return the target Commons Log.\r\n */\r\npublic final Log getLog() {\r\n    return this.log;\r\n}\n// Log level checks\r\n/**\r\n * Is fatal logging currently enabled?\r\n */\r\npublic boolean isFatalEnabled() {\r\n    return this.log.isFatalEnabled();\r\n}\n/**\r\n * Is error logging currently enabled?\r\n */\r\npublic boolean isErrorEnabled() {\r\n    return this.log.isErrorEnabled();\r\n}\n/**\r\n * Is warn logging currently enabled?\r\n */\r\npublic boolean isWarnEnabled() {\r\n    return this.log.isWarnEnabled();\r\n}\n/**\r\n * Is info logging currently enabled?\r\n */\r\npublic boolean isInfoEnabled() {\r\n    return this.log.isInfoEnabled();\r\n}\n/**\r\n * Is debug logging currently enabled?\r\n */\r\npublic boolean isDebugEnabled() {\r\n    return this.log.isDebugEnabled();\r\n}\n/**\r\n * Is trace logging currently enabled?\r\n */\r\npublic boolean isTraceEnabled() {\r\n    return this.log.isTraceEnabled();\r\n}\n// Plain log methods\r\n/**\r\n * Log a message with fatal log level.\r\n * @param message the message to log\r\n */\r\npublic void fatal(CharSequence message) {\r\n    this.log.fatal(message);\r\n}\n/**\r\n * Log an error with fatal log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void fatal(Throwable cause, CharSequence message) {\r\n    this.log.fatal(message, cause);\r\n}\n/**\r\n * Log a message with error log level.\r\n * @param message the message to log\r\n */\r\npublic void error(CharSequence message) {\r\n    this.log.error(message);\r\n}\n/**\r\n * Log an error with error log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void error(Throwable cause, CharSequence message) {\r\n    this.log.error(message, cause);\r\n}\n/**\r\n * Log a message with warn log level.\r\n * @param message the message to log\r\n */\r\npublic void warn(CharSequence message) {\r\n    this.log.warn(message);\r\n}\n/**\r\n * Log an error with warn log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void warn(Throwable cause, CharSequence message) {\r\n    this.log.warn(message, cause);\r\n}\n/**\r\n * Log a message with info log level.\r\n * @param message the message to log\r\n */\r\npublic void info(CharSequence message) {\r\n    this.log.info(message);\r\n}\n/**\r\n * Log an error with info log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void info(Throwable cause, CharSequence message) {\r\n    this.log.info(message, cause);\r\n}\n/**\r\n * Log a message with debug log level.\r\n * @param message the message to log\r\n */\r\npublic void debug(CharSequence message) {\r\n    this.log.debug(message);\r\n}\n/**\r\n * Log an error with debug log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void debug(Throwable cause, CharSequence message) {\r\n    this.log.debug(message, cause);\r\n}\n/**\r\n * Log a message with trace log level.\r\n * @param message the message to log\r\n */\r\npublic void trace(CharSequence message) {\r\n    this.log.trace(message);\r\n}\n/**\r\n * Log an error with trace log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void trace(Throwable cause, CharSequence message) {\r\n    this.log.trace(message, cause);\r\n}\n// Supplier-based log methods\r\n/**\r\n * Log a message with fatal log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void fatal(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isFatalEnabled()) {\r\n        this.log.fatal(LogMessage.of(messageSupplier));\r\n    }\r\n}\n/**\r\n * Log an error with fatal log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void fatal(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isFatalEnabled()) {\r\n        this.log.fatal(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}\n/**\r\n * Log a message with error log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void error(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isErrorEnabled()) {\r\n        this.log.error(LogMessage.of(messageSupplier));\r\n    }\r\n}\n/**\r\n * Log an error with error log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void error(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isErrorEnabled()) {\r\n        this.log.error(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}\n/**\r\n * Log a message with warn log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void warn(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isWarnEnabled()) {\r\n        this.log.warn(LogMessage.of(messageSupplier));\r\n    }\r\n}\n/**\r\n * Log an error with warn log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void warn(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isWarnEnabled()) {\r\n        this.log.warn(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}\n/**\r\n * Log a message with info log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void info(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isInfoEnabled()) {\r\n        this.log.info(LogMessage.of(messageSupplier));\r\n    }\r\n}\n/**\r\n * Log an error with info log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void info(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isInfoEnabled()) {\r\n        this.log.info(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}\n/**\r\n * Log a message with debug log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void debug(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isDebugEnabled()) {\r\n        this.log.debug(LogMessage.of(messageSupplier));\r\n    }\r\n}\n/**\r\n * Log an error with debug log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void debug(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isDebugEnabled()) {\r\n        this.log.debug(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}\n/**\r\n * Log a message with trace log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void trace(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isTraceEnabled()) {\r\n        this.log.trace(LogMessage.of(messageSupplier));\r\n    }\r\n}\n/**\r\n * Log an error with trace log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void trace(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isTraceEnabled()) {\r\n        this.log.trace(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n * A convenient accessor for Commons Logging, providing not only\n * {@code CharSequence} based log methods but also {@code Supplier}\n * based variants for use with Java 8 lambda expressions.\n *\n * @author Juergen Hoeller\n * @since 5.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#getLog()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the target Commons Log.\r\n */\r\npublic final Log getLog() {\r\n    return this.log;\r\n}",
+    "comment": "\n\t * Return the target Commons Log.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#isFatalEnabled()",
+    "entityType": "method",
+    "code": "// Log level checks\r\n/**\r\n * Is fatal logging currently enabled?\r\n */\r\npublic boolean isFatalEnabled() {\r\n    return this.log.isFatalEnabled();\r\n}",
+    "comment": "\n\t * Is fatal logging currently enabled?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#isErrorEnabled()",
+    "entityType": "method",
+    "code": "/**\r\n * Is error logging currently enabled?\r\n */\r\npublic boolean isErrorEnabled() {\r\n    return this.log.isErrorEnabled();\r\n}",
+    "comment": "\n\t * Is error logging currently enabled?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#isWarnEnabled()",
+    "entityType": "method",
+    "code": "/**\r\n * Is warn logging currently enabled?\r\n */\r\npublic boolean isWarnEnabled() {\r\n    return this.log.isWarnEnabled();\r\n}",
+    "comment": "\n\t * Is warn logging currently enabled?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#isInfoEnabled()",
+    "entityType": "method",
+    "code": "/**\r\n * Is info logging currently enabled?\r\n */\r\npublic boolean isInfoEnabled() {\r\n    return this.log.isInfoEnabled();\r\n}",
+    "comment": "\n\t * Is info logging currently enabled?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#isDebugEnabled()",
+    "entityType": "method",
+    "code": "/**\r\n * Is debug logging currently enabled?\r\n */\r\npublic boolean isDebugEnabled() {\r\n    return this.log.isDebugEnabled();\r\n}",
+    "comment": "\n\t * Is debug logging currently enabled?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#isTraceEnabled()",
+    "entityType": "method",
+    "code": "/**\r\n * Is trace logging currently enabled?\r\n */\r\npublic boolean isTraceEnabled() {\r\n    return this.log.isTraceEnabled();\r\n}",
+    "comment": "\n\t * Is trace logging currently enabled?\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#fatal(CharSequence)",
+    "entityType": "method",
+    "code": "// Plain log methods\r\n/**\r\n * Log a message with fatal log level.\r\n * @param message the message to log\r\n */\r\npublic void fatal(CharSequence message) {\r\n    this.log.fatal(message);\r\n}",
+    "comment": "\n\t * Log a message with fatal log level.\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#fatal(Throwable,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with fatal log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void fatal(Throwable cause, CharSequence message) {\r\n    this.log.fatal(message, cause);\r\n}",
+    "comment": "\n\t * Log an error with fatal log level.\n\t * @param cause the exception to log\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#error(CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with error log level.\r\n * @param message the message to log\r\n */\r\npublic void error(CharSequence message) {\r\n    this.log.error(message);\r\n}",
+    "comment": "\n\t * Log a message with error log level.\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#error(Throwable,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with error log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void error(Throwable cause, CharSequence message) {\r\n    this.log.error(message, cause);\r\n}",
+    "comment": "\n\t * Log an error with error log level.\n\t * @param cause the exception to log\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#warn(CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with warn log level.\r\n * @param message the message to log\r\n */\r\npublic void warn(CharSequence message) {\r\n    this.log.warn(message);\r\n}",
+    "comment": "\n\t * Log a message with warn log level.\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#warn(Throwable,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with warn log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void warn(Throwable cause, CharSequence message) {\r\n    this.log.warn(message, cause);\r\n}",
+    "comment": "\n\t * Log an error with warn log level.\n\t * @param cause the exception to log\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#info(CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with info log level.\r\n * @param message the message to log\r\n */\r\npublic void info(CharSequence message) {\r\n    this.log.info(message);\r\n}",
+    "comment": "\n\t * Log a message with info log level.\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#info(Throwable,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with info log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void info(Throwable cause, CharSequence message) {\r\n    this.log.info(message, cause);\r\n}",
+    "comment": "\n\t * Log an error with info log level.\n\t * @param cause the exception to log\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#debug(CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with debug log level.\r\n * @param message the message to log\r\n */\r\npublic void debug(CharSequence message) {\r\n    this.log.debug(message);\r\n}",
+    "comment": "\n\t * Log a message with debug log level.\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#debug(Throwable,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with debug log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void debug(Throwable cause, CharSequence message) {\r\n    this.log.debug(message, cause);\r\n}",
+    "comment": "\n\t * Log an error with debug log level.\n\t * @param cause the exception to log\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#trace(CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with trace log level.\r\n * @param message the message to log\r\n */\r\npublic void trace(CharSequence message) {\r\n    this.log.trace(message);\r\n}",
+    "comment": "\n\t * Log a message with trace log level.\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#trace(Throwable,CharSequence)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with trace log level.\r\n * @param cause the exception to log\r\n * @param message the message to log\r\n */\r\npublic void trace(Throwable cause, CharSequence message) {\r\n    this.log.trace(message, cause);\r\n}",
+    "comment": "\n\t * Log an error with trace log level.\n\t * @param cause the exception to log\n\t * @param message the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#fatal(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "// Supplier-based log methods\r\n/**\r\n * Log a message with fatal log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void fatal(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isFatalEnabled()) {\r\n        this.log.fatal(LogMessage.of(messageSupplier));\r\n    }\r\n}",
+    "comment": "\n\t * Log a message with fatal log level.\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#fatal(Throwable,Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with fatal log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void fatal(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isFatalEnabled()) {\r\n        this.log.fatal(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n\t * Log an error with fatal log level.\n\t * @param cause the exception to log\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#error(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with error log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void error(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isErrorEnabled()) {\r\n        this.log.error(LogMessage.of(messageSupplier));\r\n    }\r\n}",
+    "comment": "\n\t * Log a message with error log level.\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#error(Throwable,Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with error log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void error(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isErrorEnabled()) {\r\n        this.log.error(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n\t * Log an error with error log level.\n\t * @param cause the exception to log\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#warn(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with warn log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void warn(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isWarnEnabled()) {\r\n        this.log.warn(LogMessage.of(messageSupplier));\r\n    }\r\n}",
+    "comment": "\n\t * Log a message with warn log level.\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#warn(Throwable,Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with warn log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void warn(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isWarnEnabled()) {\r\n        this.log.warn(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n\t * Log an error with warn log level.\n\t * @param cause the exception to log\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#info(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with info log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void info(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isInfoEnabled()) {\r\n        this.log.info(LogMessage.of(messageSupplier));\r\n    }\r\n}",
+    "comment": "\n\t * Log a message with info log level.\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#info(Throwable,Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with info log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void info(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isInfoEnabled()) {\r\n        this.log.info(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n\t * Log an error with info log level.\n\t * @param cause the exception to log\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#debug(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with debug log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void debug(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isDebugEnabled()) {\r\n        this.log.debug(LogMessage.of(messageSupplier));\r\n    }\r\n}",
+    "comment": "\n\t * Log a message with debug log level.\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#debug(Throwable,Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with debug log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void debug(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isDebugEnabled()) {\r\n        this.log.debug(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n\t * Log an error with debug log level.\n\t * @param cause the exception to log\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#trace(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log a message with trace log level.\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void trace(Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isTraceEnabled()) {\r\n        this.log.trace(LogMessage.of(messageSupplier));\r\n    }\r\n}",
+    "comment": "\n\t * Log a message with trace log level.\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogAccessor#trace(Throwable,Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Log an error with trace log level.\r\n * @param cause the exception to log\r\n * @param messageSupplier a lazy supplier for the message to log\r\n */\r\npublic void trace(Throwable cause, Supplier<? extends CharSequence> messageSupplier) {\r\n    if (this.log.isTraceEnabled()) {\r\n        this.log.trace(LogMessage.of(messageSupplier), cause);\r\n    }\r\n}",
+    "comment": "\n\t * Log an error with trace log level.\n\t * @param cause the exception to log\n\t * @param messageSupplier a lazy supplier for the message to log\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogDelegateFactory",
+    "entityType": "class",
+    "code": "private LogDelegateFactory() {\r\n}\n/**\r\n * Create a composite logger that delegates to a primary or falls back on a\r\n * secondary logger if logging for the primary logger is not enabled.\r\n * <p>This may be used for fallback logging from lower-level packages that\r\n * logically should log together with some higher-level package but the two\r\n * don't happen to share a suitable parent package (for example, logging for the web\r\n * and lower-level http and codec packages). For such cases the primary\r\n * (class-based) logger can be wrapped with a shared fallback logger.\r\n * @param primaryLogger primary logger to try first\r\n * @param secondaryLogger secondary logger\r\n * @param tertiaryLoggers optional vararg of further fallback loggers\r\n * @return the resulting composite logger for the related categories\r\n */\r\npublic static Log getCompositeLog(Log primaryLogger, Log secondaryLogger, Log... tertiaryLoggers) {\r\n    List<Log> loggers = new ArrayList<>(2 + tertiaryLoggers.length);\r\n    loggers.add(primaryLogger);\r\n    loggers.add(secondaryLogger);\r\n    Collections.addAll(loggers, tertiaryLoggers);\r\n    return new CompositeLog(loggers);\r\n}\n/**\r\n * Create a \"hidden\" logger with a category name prefixed with \"_\", thus\r\n * precluding it from being enabled together with other log categories from\r\n * the same package. This is useful for specialized output that is either\r\n * too verbose or otherwise optional or unnecessary to see all the time.\r\n * @param clazz the class for which to create a logger\r\n * @return a Log with the category {@code \"_\" + fully-qualified class name}\r\n */\r\npublic static Log getHiddenLog(Class<?> clazz) {\r\n    return getHiddenLog(clazz.getName());\r\n}\n/**\r\n * Create a \"hidden\" logger with a category name prefixed with \"_\", thus\r\n * precluding it from being enabled together with other log categories from\r\n * the same package. This is useful for specialized output that is either\r\n * too verbose or otherwise optional or unnecessary to see all the time.\r\n * @param category the log category to use\r\n * @return a Log with the category {@code \"_\" + category}\r\n * @since 5.3.5\r\n */\r\npublic static Log getHiddenLog(String category) {\r\n    return LogFactory.getLog(\"_\" + category);\r\n}",
+    "comment": "\n * Factory for common {@link Log} delegates with Spring's logging conventions.\n *\n * <p>Mainly for internal use within the framework with Apache Commons Logging.\n *\n * @author Rossen Stoyanchev\n * @author Juergen Hoeller\n * @since 5.1\n * @see org.apache.commons.logging.LogFactory\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogDelegateFactory#getCompositeLog(Log,Log,Log)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a composite logger that delegates to a primary or falls back on a\r\n * secondary logger if logging for the primary logger is not enabled.\r\n * <p>This may be used for fallback logging from lower-level packages that\r\n * logically should log together with some higher-level package but the two\r\n * don't happen to share a suitable parent package (for example, logging for the web\r\n * and lower-level http and codec packages). For such cases the primary\r\n * (class-based) logger can be wrapped with a shared fallback logger.\r\n * @param primaryLogger primary logger to try first\r\n * @param secondaryLogger secondary logger\r\n * @param tertiaryLoggers optional vararg of further fallback loggers\r\n * @return the resulting composite logger for the related categories\r\n */\r\npublic static Log getCompositeLog(Log primaryLogger, Log secondaryLogger, Log... tertiaryLoggers) {\r\n    List<Log> loggers = new ArrayList<>(2 + tertiaryLoggers.length);\r\n    loggers.add(primaryLogger);\r\n    loggers.add(secondaryLogger);\r\n    Collections.addAll(loggers, tertiaryLoggers);\r\n    return new CompositeLog(loggers);\r\n}",
+    "comment": "\n\t * Create a composite logger that delegates to a primary or falls back on a\n\t * secondary logger if logging for the primary logger is not enabled.\n\t * <p>This may be used for fallback logging from lower-level packages that\n\t * logically should log together with some higher-level package but the two\n\t * don't happen to share a suitable parent package (for example, logging for the web\n\t * and lower-level http and codec packages). For such cases the primary\n\t * (class-based) logger can be wrapped with a shared fallback logger.\n\t * @param primaryLogger primary logger to try first\n\t * @param secondaryLogger secondary logger\n\t * @param tertiaryLoggers optional vararg of further fallback loggers\n\t * @return the resulting composite logger for the related categories\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogDelegateFactory#getHiddenLog(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a \"hidden\" logger with a category name prefixed with \"_\", thus\r\n * precluding it from being enabled together with other log categories from\r\n * the same package. This is useful for specialized output that is either\r\n * too verbose or otherwise optional or unnecessary to see all the time.\r\n * @param clazz the class for which to create a logger\r\n * @return a Log with the category {@code \"_\" + fully-qualified class name}\r\n */\r\npublic static Log getHiddenLog(Class<?> clazz) {\r\n    return getHiddenLog(clazz.getName());\r\n}",
+    "comment": "\n\t * Create a \"hidden\" logger with a category name prefixed with \"_\", thus\n\t * precluding it from being enabled together with other log categories from\n\t * the same package. This is useful for specialized output that is either\n\t * too verbose or otherwise optional or unnecessary to see all the time.\n\t * @param clazz the class for which to create a logger\n\t * @return a Log with the category {@code \"_\" + fully-qualified class name}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogDelegateFactory#getHiddenLog(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a \"hidden\" logger with a category name prefixed with \"_\", thus\r\n * precluding it from being enabled together with other log categories from\r\n * the same package. This is useful for specialized output that is either\r\n * too verbose or otherwise optional or unnecessary to see all the time.\r\n * @param category the log category to use\r\n * @return a Log with the category {@code \"_\" + category}\r\n * @since 5.3.5\r\n */\r\npublic static Log getHiddenLog(String category) {\r\n    return LogFactory.getLog(\"_\" + category);\r\n}",
+    "comment": "\n\t * Create a \"hidden\" logger with a category name prefixed with \"_\", thus\n\t * precluding it from being enabled together with other log categories from\n\t * the same package. This is useful for specialized output that is either\n\t * too verbose or otherwise optional or unnecessary to see all the time.\n\t * @param category the log category to use\n\t * @return a Log with the category {@code \"_\" + category}\n\t * @since 5.3.5\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogFormatUtils",
+    "entityType": "class",
+    "code": "private static final Pattern NEWLINE_PATTERN = Pattern.compile(\"[\\n\\r]\");\nprivate static final Pattern CONTROL_CHARACTER_PATTERN = Pattern.compile(\"\\\\p{Cc}\");\n/**\r\n * Convenience variant of {@link #formatValue(Object, int, boolean)} that\r\n * limits the length of a log message to 100 characters and also replaces\r\n * newline and control characters if {@code limitLength} is set to \"true\".\r\n * @param value the value to format\r\n * @param limitLength whether to truncate the value at a length of 100\r\n * @return the formatted value\r\n */\r\npublic static String formatValue(@Nullable Object value, boolean limitLength) {\r\n    return formatValue(value, (limitLength ? 100 : -1), limitLength);\r\n}\n/**\r\n * Format the given value via {@code toString()}, quoting it if it is a\r\n * {@link CharSequence}, truncating at the specified {@code maxLength}, and\r\n * compacting it into a single line when {@code replaceNewLines} is set.\r\n * @param value the value to be formatted\r\n * @param maxLength the max length, after which to truncate, or -1 for unlimited\r\n * @param replaceNewlinesAndControlCharacters whether to replace newline and\r\n * control characters with placeholders\r\n * @return the formatted value\r\n */\r\npublic static String formatValue(@Nullable Object value, int maxLength, boolean replaceNewlinesAndControlCharacters) {\r\n    if (value == null) {\r\n        return \"\";\r\n    }\r\n    String result;\r\n    try {\r\n        result = ObjectUtils.nullSafeToString(value);\r\n    } catch (Throwable ex) {\r\n        result = ObjectUtils.nullSafeToString(ex);\r\n    }\r\n    if (maxLength != -1) {\r\n        result = StringUtils.truncate(result, maxLength);\r\n    }\r\n    if (replaceNewlinesAndControlCharacters) {\r\n        result = NEWLINE_PATTERN.matcher(result).replaceAll(\"<EOL>\");\r\n        result = CONTROL_CHARACTER_PATTERN.matcher(result).replaceAll(\"?\");\r\n    }\r\n    if (value instanceof CharSequence) {\r\n        result = \"\\\"\" + result + \"\\\"\";\r\n    }\r\n    return result;\r\n}\n/**\r\n * Use this to log a message with different levels of detail (or different\r\n * messages) at TRACE vs DEBUG log levels. Effectively, a substitute for:\r\n * <pre class=\"code\">\r\n * if (logger.isDebugEnabled()) {\r\n *   String str = logger.isTraceEnabled() ? \"...\" : \"...\";\r\n *   if (logger.isTraceEnabled()) {\r\n *     logger.trace(str);\r\n *   }\r\n *   else {\r\n *     logger.debug(str);\r\n *   }\r\n * }\r\n * </pre>\r\n * @param logger the logger to use to log the message\r\n * @param messageFactory function that accepts a boolean set to the value\r\n * of {@link Log#isTraceEnabled()}\r\n */\r\npublic static void traceDebug(Log logger, Function<Boolean, String> messageFactory) {\r\n    if (logger.isDebugEnabled()) {\r\n        boolean traceEnabled = logger.isTraceEnabled();\r\n        String logMessage = messageFactory.apply(traceEnabled);\r\n        if (traceEnabled) {\r\n            logger.trace(logMessage);\r\n        } else {\r\n            logger.debug(logMessage);\r\n        }\r\n    }\r\n}",
+    "comment": "\n * Utility methods for formatting and logging messages.\n *\n * <p>Mainly for internal use within the framework with Apache Commons Logging.\n *\n * @author Rossen Stoyanchev\n * @author Juergen Hoeller\n * @since 5.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogFormatUtils#formatValue(Object,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Convenience variant of {@link #formatValue(Object, int, boolean)} that\r\n * limits the length of a log message to 100 characters and also replaces\r\n * newline and control characters if {@code limitLength} is set to \"true\".\r\n * @param value the value to format\r\n * @param limitLength whether to truncate the value at a length of 100\r\n * @return the formatted value\r\n */\r\npublic static String formatValue(@Nullable Object value, boolean limitLength) {\r\n    return formatValue(value, (limitLength ? 100 : -1), limitLength);\r\n}",
+    "comment": "\n\t * Convenience variant of {@link #formatValue(Object, int, boolean)} that\n\t * limits the length of a log message to 100 characters and also replaces\n\t * newline and control characters if {@code limitLength} is set to \"true\".\n\t * @param value the value to format\n\t * @param limitLength whether to truncate the value at a length of 100\n\t * @return the formatted value\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogFormatUtils#formatValue(Object,int,boolean)",
+    "entityType": "method",
+    "code": "/**\r\n * Format the given value via {@code toString()}, quoting it if it is a\r\n * {@link CharSequence}, truncating at the specified {@code maxLength}, and\r\n * compacting it into a single line when {@code replaceNewLines} is set.\r\n * @param value the value to be formatted\r\n * @param maxLength the max length, after which to truncate, or -1 for unlimited\r\n * @param replaceNewlinesAndControlCharacters whether to replace newline and\r\n * control characters with placeholders\r\n * @return the formatted value\r\n */\r\npublic static String formatValue(@Nullable Object value, int maxLength, boolean replaceNewlinesAndControlCharacters) {\r\n    if (value == null) {\r\n        return \"\";\r\n    }\r\n    String result;\r\n    try {\r\n        result = ObjectUtils.nullSafeToString(value);\r\n    } catch (Throwable ex) {\r\n        result = ObjectUtils.nullSafeToString(ex);\r\n    }\r\n    if (maxLength != -1) {\r\n        result = StringUtils.truncate(result, maxLength);\r\n    }\r\n    if (replaceNewlinesAndControlCharacters) {\r\n        result = NEWLINE_PATTERN.matcher(result).replaceAll(\"<EOL>\");\r\n        result = CONTROL_CHARACTER_PATTERN.matcher(result).replaceAll(\"?\");\r\n    }\r\n    if (value instanceof CharSequence) {\r\n        result = \"\\\"\" + result + \"\\\"\";\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n\t * Format the given value via {@code toString()}, quoting it if it is a\n\t * {@link CharSequence}, truncating at the specified {@code maxLength}, and\n\t * compacting it into a single line when {@code replaceNewLines} is set.\n\t * @param value the value to be formatted\n\t * @param maxLength the max length, after which to truncate, or -1 for unlimited\n\t * @param replaceNewlinesAndControlCharacters whether to replace newline and\n\t * control characters with placeholders\n\t * @return the formatted value\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogFormatUtils#traceDebug(Log,Function<Boolean,String>)",
+    "entityType": "method",
+    "code": "/**\r\n * Use this to log a message with different levels of detail (or different\r\n * messages) at TRACE vs DEBUG log levels. Effectively, a substitute for:\r\n * <pre class=\"code\">\r\n * if (logger.isDebugEnabled()) {\r\n *   String str = logger.isTraceEnabled() ? \"...\" : \"...\";\r\n *   if (logger.isTraceEnabled()) {\r\n *     logger.trace(str);\r\n *   }\r\n *   else {\r\n *     logger.debug(str);\r\n *   }\r\n * }\r\n * </pre>\r\n * @param logger the logger to use to log the message\r\n * @param messageFactory function that accepts a boolean set to the value\r\n * of {@link Log#isTraceEnabled()}\r\n */\r\npublic static void traceDebug(Log logger, Function<Boolean, String> messageFactory) {\r\n    if (logger.isDebugEnabled()) {\r\n        boolean traceEnabled = logger.isTraceEnabled();\r\n        String logMessage = messageFactory.apply(traceEnabled);\r\n        if (traceEnabled) {\r\n            logger.trace(logMessage);\r\n        } else {\r\n            logger.debug(logMessage);\r\n        }\r\n    }\r\n}",
+    "comment": "\n\t * Use this to log a message with different levels of detail (or different\n\t * messages) at TRACE vs DEBUG log levels. Effectively, a substitute for:\n\t * <pre class=\"code\">\n\t * if (logger.isDebugEnabled()) {\n\t *   String str = logger.isTraceEnabled() ? \"...\" : \"...\";\n\t *   if (logger.isTraceEnabled()) {\n\t *     logger.trace(str);\n\t *   }\n\t *   else {\n\t *     logger.debug(str);\n\t *   }\n\t * }\n\t * </pre>\n\t * @param logger the logger to use to log the message\n\t * @param messageFactory function that accepts a boolean set to the value\n\t * of {@link Log#isTraceEnabled()}\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate String result;\n@Override\r\npublic int length() {\r\n    return toString().length();\r\n}\n@Override\r\npublic char charAt(int index) {\r\n    return toString().charAt(index);\r\n}\n@Override\r\npublic CharSequence subSequence(int start, int end) {\r\n    return toString().subSequence(start, end);\r\n}\n/**\r\n * This will be called by the logging provider, potentially once\r\n * per log target (therefore locally caching the result here).\r\n */\r\n@Override\r\npublic String toString() {\r\n    if (this.result == null) {\r\n        this.result = buildString();\r\n    }\r\n    return this.result;\r\n}\nabstract String buildString();\n/**\r\n * Build a lazily resolving message from the given supplier.\r\n * @param supplier the supplier (typically bound to a lambda expression)\r\n * @see #toString()\r\n */\r\npublic static LogMessage of(Supplier<? extends CharSequence> supplier) {\r\n    return new SupplierMessage(supplier);\r\n}\n/**\r\n * Build a lazily formatted message from the given format string and argument.\r\n * @param format the format string (following {@link String#format} rules)\r\n * @param arg1 the argument (can be {@code null})\r\n * @see String#format(String, Object...)\r\n */\r\npublic static LogMessage format(String format, @Nullable Object arg1) {\r\n    return new FormatMessage1(format, arg1);\r\n}\n/**\r\n * Build a lazily formatted message from the given format string and arguments.\r\n * @param format the format string (following {@link String#format} rules)\r\n * @param arg1 the first argument (can be {@code null})\r\n * @param arg2 the second argument (can be {@code null})\r\n * @see String#format(String, Object...)\r\n */\r\npublic static LogMessage format(String format, @Nullable Object arg1, @Nullable Object arg2) {\r\n    return new FormatMessage2(format, arg1, arg2);\r\n}\n/**\r\n * Build a lazily formatted message from the given format string and arguments.\r\n * @param format the format string (following {@link String#format} rules)\r\n * @param arg1 the first argument (can be {@code null})\r\n * @param arg2 the second argument (can be {@code null})\r\n * @param arg3 the third argument (can be {@code null})\r\n * @see String#format(String, Object...)\r\n */\r\npublic static LogMessage format(String format, @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3) {\r\n    return new FormatMessage3(format, arg1, arg2, arg3);\r\n}\n/**\r\n * Build a lazily formatted message from the given format string and arguments.\r\n * @param format the format string (following {@link String#format} rules)\r\n * @param arg1 the first argument (can be {@code null})\r\n * @param arg2 the second argument (can be {@code null})\r\n * @param arg3 the third argument (can be {@code null})\r\n * @param arg4 the fourth argument (can be {@code null})\r\n * @see String#format(String, Object...)\r\n */\r\npublic static LogMessage format(String format, @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3, @Nullable Object arg4) {\r\n    return new FormatMessage4(format, arg1, arg2, arg3, arg4);\r\n}\n/**\r\n * Build a lazily formatted message from the given format string and varargs.\r\n * <p>This varargs {@code format()} variant may be costly. You should therefore\r\n * use the individual argument variants whenever possible;\r\n * {@link #format(String, Object)}, {@link #format(String, Object, Object)}, etc.\r\n * @param format the format string (following {@link String#format} rules)\r\n * @param args the varargs array (can be {@code null} and can contain {@code null}\r\n * elements)\r\n * @see String#format(String, Object...)\r\n */\r\npublic static LogMessage format(String format, @Nullable Object... args) {\r\n    return new FormatMessageX(format, args);\r\n}\nprivate static final class SupplierMessage extends LogMessage {\r\n\r\n    private final Supplier<? extends CharSequence> supplier;\r\n\r\n    SupplierMessage(Supplier<? extends CharSequence> supplier) {\r\n        Assert.notNull(supplier, \"Supplier must not be null\");\r\n        this.supplier = supplier;\r\n    }\r\n\r\n    @Override\r\n    String buildString() {\r\n        return this.supplier.get().toString();\r\n    }\r\n}\nprivate abstract static class FormatMessage extends LogMessage {\r\n\r\n    protected final String format;\r\n\r\n    FormatMessage(String format) {\r\n        Assert.notNull(format, \"Format must not be null\");\r\n        this.format = format;\r\n    }\r\n}\nprivate static final class FormatMessage1 extends FormatMessage {\r\n\r\n    @Nullable\r\n    private final Object arg1;\r\n\r\n    FormatMessage1(String format, @Nullable Object arg1) {\r\n        super(format);\r\n        this.arg1 = arg1;\r\n    }\r\n\r\n    @Override\r\n    protected String buildString() {\r\n        return String.format(this.format, this.arg1);\r\n    }\r\n}\nprivate static final class FormatMessage2 extends FormatMessage {\r\n\r\n    @Nullable\r\n    private final Object arg1;\r\n\r\n    @Nullable\r\n    private final Object arg2;\r\n\r\n    FormatMessage2(String format, @Nullable Object arg1, @Nullable Object arg2) {\r\n        super(format);\r\n        this.arg1 = arg1;\r\n        this.arg2 = arg2;\r\n    }\r\n\r\n    @Override\r\n    String buildString() {\r\n        return String.format(this.format, this.arg1, this.arg2);\r\n    }\r\n}\nprivate static final class FormatMessage3 extends FormatMessage {\r\n\r\n    @Nullable\r\n    private final Object arg1;\r\n\r\n    @Nullable\r\n    private final Object arg2;\r\n\r\n    @Nullable\r\n    private final Object arg3;\r\n\r\n    FormatMessage3(String format, @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3) {\r\n        super(format);\r\n        this.arg1 = arg1;\r\n        this.arg2 = arg2;\r\n        this.arg3 = arg3;\r\n    }\r\n\r\n    @Override\r\n    String buildString() {\r\n        return String.format(this.format, this.arg1, this.arg2, this.arg3);\r\n    }\r\n}\nprivate static final class FormatMessage4 extends FormatMessage {\r\n\r\n    @Nullable\r\n    private final Object arg1;\r\n\r\n    @Nullable\r\n    private final Object arg2;\r\n\r\n    @Nullable\r\n    private final Object arg3;\r\n\r\n    @Nullable\r\n    private final Object arg4;\r\n\r\n    FormatMessage4(String format, @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3, @Nullable Object arg4) {\r\n        super(format);\r\n        this.arg1 = arg1;\r\n        this.arg2 = arg2;\r\n        this.arg3 = arg3;\r\n        this.arg4 = arg4;\r\n    }\r\n\r\n    @Override\r\n    String buildString() {\r\n        return String.format(this.format, this.arg1, this.arg2, this.arg3, this.arg4);\r\n    }\r\n}\nprivate static final class FormatMessageX extends FormatMessage {\r\n\r\n    @Nullable\r\n    private final Object[] args;\r\n\r\n    FormatMessageX(String format, @Nullable Object... args) {\r\n        super(format);\r\n        this.args = args;\r\n    }\r\n\r\n    @Override\r\n    String buildString() {\r\n        return String.format(this.format, this.args);\r\n    }\r\n}",
+    "comment": "\n * A simple log message type for use with Commons Logging, allowing for convenient\n * lazy resolution of a given {@link Supplier} instance (typically bound to a lambda\n * expression) or a printf-style format string ({@link String#format}) in its\n * {@link #toString()}.\n *\n * @author Juergen Hoeller\n * @author Sebastien Deleuze\n * @since 5.2\n * @see #of(Supplier)\n * @see #format(String, Object)\n * @see #format(String, Object...)\n * @see org.apache.commons.logging.Log#fatal(Object)\n * @see org.apache.commons.logging.Log#error(Object)\n * @see org.apache.commons.logging.Log#warn(Object)\n * @see org.apache.commons.logging.Log#info(Object)\n * @see org.apache.commons.logging.Log#debug(Object)\n * @see org.apache.commons.logging.Log#trace(Object)\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#length()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int length() {\r\n    return toString().length();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#charAt(int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic char charAt(int index) {\r\n    return toString().charAt(index);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#subSequence(int,int)",
+    "entityType": "method",
+    "code": "@Override\r\npublic CharSequence subSequence(int start, int end) {\r\n    return toString().subSequence(start, end);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#toString()",
+    "entityType": "method",
+    "code": "/**\r\n * This will be called by the logging provider, potentially once\r\n * per log target (therefore locally caching the result here).\r\n */\r\n@Override\r\npublic String toString() {\r\n    if (this.result == null) {\r\n        this.result = buildString();\r\n    }\r\n    return this.result;\r\n}",
+    "comment": "\n\t * This will be called by the logging provider, potentially once\n\t * per log target (therefore locally caching the result here).\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#buildString()",
+    "entityType": "method",
+    "code": "abstract String buildString();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#of(Supplier<? extends CharSequence>)",
+    "entityType": "method",
+    "code": "/**\r\n * Build a lazily resolving message from the given supplier.\r\n * @param supplier the supplier (typically bound to a lambda expression)\r\n * @see #toString()\r\n */\r\npublic static LogMessage of(Supplier<? extends CharSequence> supplier) {\r\n    return new SupplierMessage(supplier);\r\n}",
+    "comment": "\n\t * Build a lazily resolving message from the given supplier.\n\t * @param supplier the supplier (typically bound to a lambda expression)\n\t * @see #toString()\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogMessage#format(String,Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Build a lazily formatted message from the given format string and argument.\r\n * @param format the format string (following {@link String#format} rules)\r\n * @param arg1 the argument (can be {@code null})\r\n * @see String#format(String, Object...)\r\n */\r\npublic static LogMessage format(String format, @Nullable Object arg1) {\r\n    return new FormatMessage1(format, arg1);\r\n}",
+    "comment": "\n\t * Build a lazily formatted message from the given format string and argument.\n\t * @param format the format string (following {@link String#format} rules)\n\t * @param arg1 the argument (can be {@code null})\n\t * @see String#format(String, Object...)\n\t "
+  }
+]

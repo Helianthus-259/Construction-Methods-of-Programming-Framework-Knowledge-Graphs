@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#factoryMethodsProduceEqualResources()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid factoryMethodsProduceEqualResources() throws Exception {\r\n    Resource resource1 = new UrlResource(\"file:core/io/ResourceTests.class\");\r\n    Resource resource2 = UrlResource.from(\"file:core/io/ResourceTests.class\");\r\n    Resource resource3 = UrlResource.from(resource1.getURI());\r\n    assertThat(resource2.getURL()).isEqualTo(resource1.getURL());\r\n    assertThat(resource3.getURL()).isEqualTo(resource1.getURL());\r\n    assertThat(UrlResource.from(\"file:core/../core/io/./ResourceTests.class\")).isEqualTo(resource1);\r\n    assertThat(UrlResource.from(\"file:/dir/test.txt?argh\").getFilename()).isEqualTo(\"test.txt\");\r\n    assertThat(UrlResource.from(\"file:\\\\dir\\\\test.txt?argh\").getFilename()).isEqualTo(\"test.txt\");\r\n    assertThat(UrlResource.from(\"file:\\\\dir/test.txt?argh\").getFilename()).isEqualTo(\"test.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#relativeResourcesAreEqual()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid relativeResourcesAreEqual() throws Exception {\r\n    Resource resource = new UrlResource(\"file:dir/\");\r\n    Resource relative = resource.createRelative(\"subdir\");\r\n    assertThat(relative).isEqualTo(new UrlResource(\"file:dir/subdir\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#unusualRelativeResourcesAreEqual()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid unusualRelativeResourcesAreEqual() throws Exception {\r\n    Resource resource = new UrlResource(\"file:dir/\");\r\n    Resource relative = resource.createRelative(\"https://spring.io\");\r\n    assertThat(relative).isEqualTo(new UrlResource(\"file:dir/https://spring.io\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#missingRemoteResourceDoesNotExist()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid missingRemoteResourceDoesNotExist() throws Exception {\r\n    String baseUrl = startServer(true);\r\n    UrlResource resource = new UrlResource(baseUrl + \"/missing\");\r\n    assertThat(resource.exists()).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#remoteResourceExists()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid remoteResourceExists() throws Exception {\r\n    String baseUrl = startServer(true);\r\n    UrlResource resource = new UrlResource(baseUrl + \"/resource\");\r\n    assertThat(resource.exists()).isTrue();\r\n    assertThat(resource.isReadable()).isTrue();\r\n    assertThat(resource.contentLength()).isEqualTo(6);\r\n    assertThat(resource.lastModified()).isGreaterThan(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#remoteResourceExistsFallback()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid remoteResourceExistsFallback() throws Exception {\r\n    String baseUrl = startServer(false);\r\n    UrlResource resource = new UrlResource(baseUrl + \"/resource\");\r\n    assertThat(resource.exists()).isTrue();\r\n    assertThat(resource.isReadable()).isTrue();\r\n    assertThat(resource.contentLength()).isEqualTo(6);\r\n    assertThat(resource.lastModified()).isGreaterThan(0);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#canCustomizeHttpUrlConnectionForExists()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canCustomizeHttpUrlConnectionForExists() throws Exception {\r\n    String baseUrl = startServer(true);\r\n    CustomResource resource = new CustomResource(baseUrl + \"/resource\");\r\n    assertThat(resource.exists()).isTrue();\r\n    RecordedRequest request = this.server.takeRequest();\r\n    assertThat(request.getMethod()).isEqualTo(\"HEAD\");\r\n    assertThat(request.getHeader(\"Framework-Name\")).isEqualTo(\"Spring\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#canCustomizeHttpUrlConnectionForExistsFallback()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canCustomizeHttpUrlConnectionForExistsFallback() throws Exception {\r\n    String baseUrl = startServer(false);\r\n    CustomResource resource = new CustomResource(baseUrl + \"/resource\");\r\n    assertThat(resource.exists()).isTrue();\r\n    RecordedRequest request = this.server.takeRequest();\r\n    assertThat(request.getMethod()).isEqualTo(\"HEAD\");\r\n    assertThat(request.getHeader(\"Framework-Name\")).isEqualTo(\"Spring\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#canCustomizeHttpUrlConnectionForRead()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canCustomizeHttpUrlConnectionForRead() throws Exception {\r\n    String baseUrl = startServer(true);\r\n    CustomResource resource = new CustomResource(baseUrl + \"/resource\");\r\n    assertThat(resource.getInputStream()).hasContent(\"Spring\");\r\n    RecordedRequest request = this.server.takeRequest();\r\n    assertThat(request.getMethod()).isEqualTo(\"GET\");\r\n    assertThat(request.getHeader(\"Framework-Name\")).isEqualTo(\"Spring\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#useUserInfoToSetBasicAuth()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid useUserInfoToSetBasicAuth() throws Exception {\r\n    startServer(true);\r\n    UrlResource resource = new UrlResource(\"http://alice:secret@localhost:\" + this.server.getPort() + \"/resource\");\r\n    assertThat(resource.getInputStream()).hasContent(\"Spring\");\r\n    RecordedRequest request = this.server.takeRequest();\r\n    String authorization = request.getHeader(\"Authorization\");\r\n    assertThat(authorization).isNotNull().startsWith(\"Basic \");\r\n    assertThat(new String(Base64.getDecoder().decode(authorization.substring(6)), StandardCharsets.ISO_8859_1)).isEqualTo(\"alice:secret\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#shutdown()",
+    "entityType": "method",
+    "code": "@AfterEach\r\nvoid shutdown() throws Exception {\r\n    this.server.shutdown();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.UrlResourceTests#startServer(boolean)",
+    "entityType": "method",
+    "code": "private String startServer(boolean withHeadSupport) throws Exception {\r\n    this.server.setDispatcher(new ResourceDispatcher(withHeadSupport));\r\n    this.server.start();\r\n    return \"http://localhost:\" + this.server.getPort();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.CustomResource",
+    "entityType": "class",
+    "code": "public CustomResource(String path) throws MalformedURLException {\r\n    super(path);\r\n}\n@Override\r\nprotected void customizeConnection(HttpURLConnection con) {\r\n    con.setRequestProperty(\"Framework-Name\", \"Spring\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.CustomResource#customizeConnection(HttpURLConnection)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void customizeConnection(HttpURLConnection con) {\r\n    con.setRequestProperty(\"Framework-Name\", \"Spring\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.ResourceDispatcher",
+    "entityType": "class",
+    "code": "boolean withHeadSupport;\npublic ResourceDispatcher(boolean withHeadSupport) {\r\n    this.withHeadSupport = withHeadSupport;\r\n}\n@Override\r\npublic MockResponse dispatch(RecordedRequest request) {\r\n    if (request.getPath().equals(\"/resource\")) {\r\n        return switch(request.getMethod()) {\r\n            case \"HEAD\" ->\r\n                (this.withHeadSupport ? new MockResponse().addHeader(\"Content-Type\", \"text/plain\").addHeader(\"Content-Length\", \"6\").addHeader(\"Last-Modified\", LAST_MODIFIED) : new MockResponse().setResponseCode(405));\r\n            case \"GET\" ->\r\n                new MockResponse().addHeader(\"Content-Type\", \"text/plain\").addHeader(\"Content-Length\", \"6\").addHeader(\"Last-Modified\", LAST_MODIFIED).setBody(\"Spring\");\r\n            default ->\r\n                new MockResponse().setResponseCode(404);\r\n        };\r\n    }\r\n    return new MockResponse().setResponseCode(404);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.ResourceDispatcher#dispatch(RecordedRequest)",
+    "entityType": "method",
+    "code": "@Override\r\npublic MockResponse dispatch(RecordedRequest request) {\r\n    if (request.getPath().equals(\"/resource\")) {\r\n        return switch(request.getMethod()) {\r\n            case \"HEAD\" ->\r\n                (this.withHeadSupport ? new MockResponse().addHeader(\"Content-Type\", \"text/plain\").addHeader(\"Content-Length\", \"6\").addHeader(\"Last-Modified\", LAST_MODIFIED) : new MockResponse().setResponseCode(405));\r\n            case \"GET\" ->\r\n                new MockResponse().addHeader(\"Content-Type\", \"text/plain\").addHeader(\"Content-Length\", \"6\").addHeader(\"Last-Modified\", LAST_MODIFIED).setBody(\"Spring\");\r\n            default ->\r\n                new MockResponse().setResponseCode(404);\r\n        };\r\n    }\r\n    return new MockResponse().setResponseCode(404);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.AbstractResourceTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid missingResourceIsNotReadable() {\r\n    final String name = \"test-resource\";\r\n    Resource resource = new AbstractResource() {\r\n\r\n        @Override\r\n        public String getDescription() {\r\n            return name;\r\n        }\r\n\r\n        @Override\r\n        public InputStream getInputStream() throws IOException {\r\n            throw new FileNotFoundException();\r\n        }\r\n    };\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getURL).withMessageContaining(name);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getFile).withMessageContaining(name);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resource.createRelative(\"/testing\")).withMessageContaining(name);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getContentAsByteArray);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resource.getContentAsString(StandardCharsets.US_ASCII));\r\n    assertThat(resource.getFilename()).isNull();\r\n}\n@Test\r\nvoid hasContentLength() throws Exception {\r\n    AbstractResource resource = new AbstractResource() {\r\n\r\n        @Override\r\n        public InputStream getInputStream() {\r\n            return new ByteArrayInputStream(new byte[] { 'a', 'b', 'c' });\r\n        }\r\n\r\n        @Override\r\n        public String getDescription() {\r\n            return \"\";\r\n        }\r\n    };\r\n    assertThat(resource.contentLength()).isEqualTo(3L);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.AbstractResourceTests#missingResourceIsNotReadable()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid missingResourceIsNotReadable() {\r\n    final String name = \"test-resource\";\r\n    Resource resource = new AbstractResource() {\r\n\r\n        @Override\r\n        public String getDescription() {\r\n            return name;\r\n        }\r\n\r\n        @Override\r\n        public InputStream getInputStream() throws IOException {\r\n            throw new FileNotFoundException();\r\n        }\r\n    };\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getURL).withMessageContaining(name);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getFile).withMessageContaining(name);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resource.createRelative(\"/testing\")).withMessageContaining(name);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getContentAsByteArray);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resource.getContentAsString(StandardCharsets.US_ASCII));\r\n    assertThat(resource.getFilename()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.AbstractResourceTests#hasContentLength()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid hasContentLength() throws Exception {\r\n    AbstractResource resource = new AbstractResource() {\r\n\r\n        @Override\r\n        public InputStream getInputStream() {\r\n            return new ByteArrayInputStream(new byte[] { 'a', 'b', 'c' });\r\n        }\r\n\r\n        @Override\r\n        public String getDescription() {\r\n            return \"\";\r\n        }\r\n    };\r\n    assertThat(resource.contentLength()).isEqualTo(3L);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntriesTestApplication",
+    "entityType": "class",
+    "code": "public static void main(String[] args) throws IOException {\r\n    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();\r\n    System.out.println(\"!!!!\" + List.of(resolver.getResources(\"classpath*:/**/*.txt\")));\r\n}",
+    "comment": "\n * Class packaged into a temporary jar to test\n * {@link PathMatchingResourcePatternResolver} detection of classpath manifest\n * entries.\n *\n * @author Phillip Webb\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntriesTestApplication#main(String[])",
+    "entityType": "method",
+    "code": "public static void main(String[] args) throws IOException {\r\n    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();\r\n    System.out.println(\"!!!!\" + List.of(resolver.getResources(\"classpath*:/**/*.txt\")));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ConstructorArgsDummyFactory",
+    "entityType": "class",
+    "code": "private final String string;\npublic ConstructorArgsDummyFactory(String string) {\r\n    this(string, 0);\r\n}\nprivate ConstructorArgsDummyFactory(String string, int reasonCode) {\r\n    this.string = string;\r\n}\n@Override\r\npublic String getString() {\r\n    return this.string;\r\n}",
+    "comment": "\n * Used by {@link SpringFactoriesLoaderTests}.\n *\n * @author Andy Wilkinson\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ConstructorArgsDummyFactory#getString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getString() {\r\n    return this.string;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.DummyFactory",
+    "entityType": "class",
+    "code": "String getString();",
+    "comment": "\n * Used by {@link SpringFactoriesLoaderTests}\n *\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.DummyFactory#getString()",
+    "entityType": "method",
+    "code": "String getString();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.DummyPackagePrivateFactory",
+    "entityType": "class",
+    "code": "",
+    "comment": "\n * Used by {@link SpringFactoriesLoaderTests}\n\n * @author Phillip Webb\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests",
+    "entityType": "class",
+    "code": "private static final String UTF8 = \"UTF-8\";\nprivate static final String UTF16 = \"UTF-16\";\nprivate static final Charset UTF8_CS = StandardCharsets.UTF_8;\nprivate static final Charset UTF16_CS = StandardCharsets.UTF_16;\nprivate final Resource resource = new DescriptiveResource(\"test\");\n@Test\r\nvoid equalsWithNullOtherObject() {\r\n    assertThat(new EncodedResource(resource)).isNotEqualTo(null);\r\n}\n@Test\r\nvoid equalsWithSameEncoding() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF8);\r\n    assertThat(er2).isEqualTo(er1);\r\n}\n@Test\r\nvoid equalsWithDifferentEncoding() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF16);\r\n    assertThat(er2).isNotEqualTo(er1);\r\n}\n@Test\r\nvoid equalsWithSameCharset() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8_CS);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF8_CS);\r\n    assertThat(er2).isEqualTo(er1);\r\n}\n@Test\r\nvoid equalsWithDifferentCharset() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8_CS);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF16_CS);\r\n    assertThat(er2).isNotEqualTo(er1);\r\n}\n@Test\r\nvoid equalsWithEncodingAndCharset() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF8_CS);\r\n    assertThat(er2).isNotEqualTo(er1);\r\n}",
+    "comment": "\n * Tests for {@link EncodedResource}.\n *\n * @author Sam Brannen\n * @since 3.2.14\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests#equalsWithNullOtherObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithNullOtherObject() {\r\n    assertThat(new EncodedResource(resource)).isNotEqualTo(null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests#equalsWithSameEncoding()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithSameEncoding() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF8);\r\n    assertThat(er2).isEqualTo(er1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests#equalsWithDifferentEncoding()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithDifferentEncoding() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF16);\r\n    assertThat(er2).isNotEqualTo(er1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests#equalsWithSameCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithSameCharset() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8_CS);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF8_CS);\r\n    assertThat(er2).isEqualTo(er1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests#equalsWithDifferentCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithDifferentCharset() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8_CS);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF16_CS);\r\n    assertThat(er2).isNotEqualTo(er1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.EncodedResourceTests#equalsWithEncodingAndCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithEncodingAndCharset() {\r\n    EncodedResource er1 = new EncodedResource(resource, UTF8);\r\n    EncodedResource er2 = new EncodedResource(resource, UTF8_CS);\r\n    assertThat(er2).isNotEqualTo(er1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MultipleConstructorArgsDummyFactory",
+    "entityType": "class",
+    "code": "private final String string;\nprivate final Integer age;\nMultipleConstructorArgsDummyFactory(String string) {\r\n    this(string, null);\r\n}\nMultipleConstructorArgsDummyFactory(String string, Integer age) {\r\n    this.string = string;\r\n    this.age = age;\r\n}\n@Override\r\npublic String getString() {\r\n    return this.string + this.age;\r\n}",
+    "comment": "\n * Used by {@link SpringFactoriesLoaderTests}.\n *\n * @author Madhura Bhave\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MultipleConstructorArgsDummyFactory#getString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getString() {\r\n    return this.string + this.age;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MyDummyFactory1",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getString() {\r\n    return \"Foo\";\r\n}",
+    "comment": "\n * Used by {@link SpringFactoriesLoaderTests}\n *\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MyDummyFactory1#getString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getString() {\r\n    return \"Foo\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MyDummyFactory2",
+    "entityType": "class",
+    "code": "@Override\r\npublic String getString() {\r\n    return \"Bar\";\r\n}",
+    "comment": "\n * Used by {@link SpringFactoriesLoaderTests}\n *\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MyDummyFactory2#getString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getString() {\r\n    return \"Bar\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PathMatchingResourcePatternResolverTests",
+    "entityType": "class",
+    "code": "private static final String[] CLASSES_IN_CORE_IO_SUPPORT = { \"EncodedResource.class\", \"LocalizedResourceHelper.class\", \"PathMatchingResourcePatternResolver.class\", \"PropertiesLoaderSupport.class\", \"PropertiesLoaderUtils.class\", \"ResourceArrayPropertyEditor.class\", \"ResourcePatternResolver.class\", \"ResourcePatternUtils.class\", \"SpringFactoriesLoader.class\" };\nprivate static final String[] TEST_CLASSES_IN_CORE_IO_SUPPORT = { \"PathMatchingResourcePatternResolverTests.class\" };\nprivate static final String[] CLASSES_IN_REACTOR_UTIL_ANNOTATION = { \"Incubating.class\", \"NonNull.class\", \"NonNullApi.class\", \"Nullable.class\" };\nprivate PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();\n@Nested\r\nclass InvalidPatterns {\r\n\r\n    @Test\r\n    void invalidPrefixWithPatternElementInItThrowsException() {\r\n        assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resolver.getResources(\"xx**:**/*.xy\"));\r\n    }\r\n}\n@Nested\r\nclass FileSystemResources {\r\n\r\n    @Test\r\n    void singleResourceOnFileSystem() {\r\n        String pattern = \"org/springframework/core/io/support/PathMatchingResourcePatternResolverTests.class\";\r\n        assertExactFilenames(pattern, \"PathMatchingResourcePatternResolverTests.class\");\r\n    }\r\n\r\n    @Test\r\n    void classpathStarWithPatternOnFileSystem() {\r\n        String pattern = \"classpath*:org/springframework/core/io/sup*/*.class\";\r\n        String[] expectedFilenames = StringUtils.concatenateStringArrays(CLASSES_IN_CORE_IO_SUPPORT, TEST_CLASSES_IN_CORE_IO_SUPPORT);\r\n        assertFilenames(pattern, expectedFilenames);\r\n    }\r\n\r\n    // gh-31111\r\n    @Test\r\n    void usingFileProtocolWithWildcardInPatternAndNonexistentRootPath() throws IOException {\r\n        Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n        String pattern = String.format(\"file:%s/example/bogus/**\", testResourcesDir);\r\n        assertThat(resolver.getResources(pattern)).isEmpty();\r\n        // When the log level for the resolver is set to at least INFO, we should see\r\n        // a log entry similar to the following.\r\n        //\r\n        // [main] INFO  o.s.c.i.s.PathMatchingResourcePatternResolver -\r\n        // Skipping search for files matching pattern [**]: directory\r\n        // [/<...>/spring-core/src/test/resources/example/bogus] does not exist\r\n    }\r\n\r\n    @Test\r\n    void encodedHashtagInPath() throws IOException {\r\n        Path rootDir = Paths.get(\"src/test/resources/custom%23root\").toAbsolutePath();\r\n        URL root = new URL(\"file:\" + rootDir + \"/\");\r\n        resolver = new PathMatchingResourcePatternResolver(new DefaultResourceLoader(new URLClassLoader(new URL[] { root })));\r\n        assertExactFilenames(\"classpath*:scanned/*.txt\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n    }\r\n\r\n    @Nested\r\n    class WithHashtagsInTheirFilenames {\r\n\r\n        @Test\r\n        void usingClasspathStarProtocol() {\r\n            String pattern = \"classpath*:org/springframework/core/io/**/resource#test*.txt\";\r\n            String pathPrefix = \".+org/springframework/core/io/\";\r\n            assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n            assertExactSubPaths(pattern, pathPrefix, \"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n        }\r\n\r\n        @Test\r\n        void usingClasspathStarProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n            String pattern = \"classpath*:org/springframework/core/io/sup*\";\r\n            String pathPrefix = \".+org/springframework/core/io/\";\r\n            List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n            // We DO find \"support\" if the pattern does NOT end with a slash.\r\n            assertThat(actualSubPaths).containsExactly(\"support\");\r\n        }\r\n\r\n        @Test\r\n        void usingFileProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n            Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n            String pattern = String.format(\"file:%s/org/springframework/core/io/sup*\", testResourcesDir);\r\n            String pathPrefix = \".+org/springframework/core/io/\";\r\n            List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n            // We DO find \"support\" if the pattern does NOT end with a slash.\r\n            assertThat(actualSubPaths).containsExactly(\"support\");\r\n        }\r\n\r\n        @Test\r\n        void usingClasspathStarProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n            String pattern = \"classpath*:org/springframework/core/io/sup*/\";\r\n            String pathPrefix = \".+org/springframework/core/io/\";\r\n            List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n            URL url = getClass().getClassLoader().getResource(\"org/springframework/core/io/support/EncodedResource.class\");\r\n            if (!url.getProtocol().equals(\"jar\")) {\r\n                // We do NOT find \"support\" if the pattern ENDS with a slash if org/springframework/core/io/support\r\n                // is in the local file system.\r\n                assertThat(actualSubPaths).isEmpty();\r\n            } else {\r\n                // But we do find \"support/\" if org/springframework/core/io/support is found in a JAR on the classpath.\r\n                assertThat(actualSubPaths).containsExactly(\"support/\");\r\n            }\r\n        }\r\n\r\n        @Test\r\n        void usingFileProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n            Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n            String pattern = String.format(\"file:%s/org/springframework/core/io/sup*/\", testResourcesDir);\r\n            String pathPrefix = \".+org/springframework/core/io/\";\r\n            List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n            // We do NOT find \"support\" if the pattern ENDS with a slash.\r\n            assertThat(actualSubPaths).isEmpty();\r\n        }\r\n\r\n        @Test\r\n        void usingClasspathStarProtocolWithWildcardInPatternAndEndingWithSuffixPattern() throws Exception {\r\n            String pattern = \"classpath*:org/springframework/core/io/sup*/*.txt\";\r\n            String pathPrefix = \".+org/springframework/core/io/\";\r\n            List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n            assertThat(actualSubPaths).containsExactlyInAnyOrder(\"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n        }\r\n\r\n        private List<String> getSubPathsIgnoringClassFilesEtc(String pattern, String pathPrefix) throws IOException {\r\n            return Arrays.stream(resolver.getResources(pattern)).map(resource -> getPath(resource).replaceFirst(pathPrefix, \"\")).filter(name -> !name.endsWith(\".class\")).filter(name -> !name.endsWith(\".kt\")).filter(name -> !name.endsWith(\".factories\")).distinct().sorted().collect(Collectors.toList());\r\n        }\r\n\r\n        @Test\r\n        void usingFileProtocolWithoutWildcardInPatternAndEndingInSlashStarStar() {\r\n            Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n            String pattern = String.format(\"file:%s/scanned-resources/**\", testResourcesDir);\r\n            String pathPrefix = \".+?resources/\";\r\n            // We do NOT find \"scanned-resources\" if the pattern ENDS with \"/**\" AND does NOT otherwise contain a wildcard.\r\n            assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n            assertExactSubPaths(pattern, pathPrefix, \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n        }\r\n\r\n        @Test\r\n        void usingFileProtocolWithWildcardInPatternAndEndingInSlashStarStar() {\r\n            Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n            String pattern = String.format(\"file:%s/scanned*resources/**\", testResourcesDir);\r\n            String pathPrefix = \".+?resources/\";\r\n            // We DO find \"scanned-resources\" if the pattern ENDS with \"/**\" AND DOES otherwise contain a wildcard.\r\n            assertExactFilenames(pattern, \"scanned-resources\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n            assertExactSubPaths(pattern, pathPrefix, \"scanned-resources\", \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n        }\r\n\r\n        @Test\r\n        void usingFileProtocolAndAssertingUrlAndUriSyntax() throws Exception {\r\n            Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n            String pattern = \"file:%s/scanned-resources/**/resource#test1.txt\".formatted(testResourcesDir);\r\n            Resource[] resources = resolver.getResources(pattern);\r\n            assertThat(resources).hasSize(1);\r\n            Resource resource = resources[0];\r\n            assertThat(resource.getFilename()).isEqualTo(\"resource#test1.txt\");\r\n            // The following assertions serve as regression tests for the lack of the\r\n            // \"authority component\" (//) in the returned URI/URL. For example, we are\r\n            // expecting file:/my/path (or file:/C:/My/Path) instead of file:///my/path.\r\n            assertThat(resource.getURL().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n            assertThat(resource.getURI().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n        }\r\n    }\r\n}\n@Nested\r\nclass JarResources {\r\n\r\n    @Test\r\n    void singleResourceInJar() {\r\n        String pattern = \"org/reactivestreams/Publisher.class\";\r\n        assertExactFilenames(pattern, \"Publisher.class\");\r\n    }\r\n\r\n    @Test\r\n    void singleResourceInRootOfJar() {\r\n        String pattern = \"aspectj_1_5_0.dtd\";\r\n        assertExactFilenames(pattern, \"aspectj_1_5_0.dtd\");\r\n    }\r\n\r\n    @Test\r\n    void classpathWithPatternInJar() {\r\n        String pattern = \"classpath:reactor/util/annotation/*.class\";\r\n        assertExactFilenames(pattern, CLASSES_IN_REACTOR_UTIL_ANNOTATION);\r\n    }\r\n\r\n    @Test\r\n    void classpathStarWithPatternInJar() {\r\n        String pattern = \"classpath*:reactor/util/annotation/*.class\";\r\n        assertExactFilenames(pattern, CLASSES_IN_REACTOR_UTIL_ANNOTATION);\r\n    }\r\n\r\n    // Fails in a native image -- https://github.com/oracle/graal/issues/5020\r\n    @Test\r\n    void rootPatternRetrievalInJarFiles() throws IOException {\r\n        assertThat(resolver.getResources(\"classpath*:aspectj*.dtd\")).extracting(Resource::getFilename).as(\"Could not find aspectj_1_5_0.dtd in the root of the aspectjweaver jar\").containsExactly(\"aspectj_1_5_0.dtd\");\r\n    }\r\n}\n@Nested\r\nclass ClassPathManifestEntries {\r\n\r\n    @TempDir\r\n    Path temp;\r\n\r\n    @Test\r\n    void javaDashJarFindsClassPathManifestEntries() throws Exception {\r\n        Path lib = this.temp.resolve(\"lib\");\r\n        Files.createDirectories(lib);\r\n        writeAssetJar(lib.resolve(\"asset.jar\"));\r\n        writeApplicationJar(this.temp.resolve(\"app.jar\"));\r\n        String java = ProcessHandle.current().info().command().get();\r\n        Process process = new ProcessBuilder(java, \"-jar\", \"app.jar\").directory(this.temp.toFile()).start();\r\n        assertThat(process.waitFor()).isZero();\r\n        String result = StreamUtils.copyToString(process.getInputStream(), StandardCharsets.UTF_8);\r\n        assertThat(result.replace(\"\\\\\", \"/\")).contains(\"!!!!\").contains(\"/lib/asset.jar!/assets/file.txt\");\r\n    }\r\n\r\n    private void writeAssetJar(Path path) throws Exception {\r\n        try (JarOutputStream jar = new JarOutputStream(new FileOutputStream(path.toFile()))) {\r\n            jar.putNextEntry(new ZipEntry(\"assets/\"));\r\n            jar.closeEntry();\r\n            jar.putNextEntry(new ZipEntry(\"assets/file.txt\"));\r\n            StreamUtils.copy(\"test\", StandardCharsets.UTF_8, jar);\r\n            jar.closeEntry();\r\n        }\r\n    }\r\n\r\n    private void writeApplicationJar(Path path) throws Exception {\r\n        Manifest manifest = new Manifest();\r\n        Attributes mainAttributes = manifest.getMainAttributes();\r\n        mainAttributes.put(Name.CLASS_PATH, buildSpringClassPath() + \"lib/asset.jar\");\r\n        mainAttributes.put(Name.MAIN_CLASS, ClassPathManifestEntriesTestApplication.class.getName());\r\n        mainAttributes.put(Name.MANIFEST_VERSION, \"1.0\");\r\n        try (JarOutputStream jar = new JarOutputStream(new FileOutputStream(path.toFile()), manifest)) {\r\n            String appClassResource = ClassUtils.convertClassNameToResourcePath(ClassPathManifestEntriesTestApplication.class.getName()) + ClassUtils.CLASS_FILE_SUFFIX;\r\n            String folder = \"\";\r\n            for (String name : appClassResource.split(\"/\")) {\r\n                if (!name.endsWith(ClassUtils.CLASS_FILE_SUFFIX)) {\r\n                    folder += name + \"/\";\r\n                    jar.putNextEntry(new ZipEntry(folder));\r\n                    jar.closeEntry();\r\n                } else {\r\n                    jar.putNextEntry(new ZipEntry(folder + name));\r\n                    try (InputStream in = getClass().getResourceAsStream(name)) {\r\n                        in.transferTo(jar);\r\n                    }\r\n                    jar.closeEntry();\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    private String buildSpringClassPath() throws Exception {\r\n        return copyClasses(PathMatchingResourcePatternResolver.class, \"spring-core\") + copyClasses(LogFactory.class, \"commons-logging\");\r\n    }\r\n\r\n    private String copyClasses(Class<?> sourceClass, String destinationName) throws URISyntaxException, IOException {\r\n        Path destination = this.temp.resolve(destinationName);\r\n        String resourcePath = ClassUtils.convertClassNameToResourcePath(sourceClass.getName()) + ClassUtils.CLASS_FILE_SUFFIX;\r\n        URL resource = getClass().getClassLoader().getResource(resourcePath);\r\n        URL url = new URL(resource.toString().replace(resourcePath, \"\"));\r\n        URLConnection connection = url.openConnection();\r\n        if (connection instanceof JarURLConnection jarUrlConnection) {\r\n            try (JarFile jarFile = jarUrlConnection.getJarFile()) {\r\n                Enumeration<JarEntry> entries = jarFile.entries();\r\n                while (entries.hasMoreElements()) {\r\n                    JarEntry entry = entries.nextElement();\r\n                    if (!entry.isDirectory()) {\r\n                        Path entryPath = destination.resolve(entry.getName());\r\n                        try (InputStream in = jarFile.getInputStream(entry)) {\r\n                            Files.createDirectories(entryPath.getParent());\r\n                            Files.copy(in, destination.resolve(entry.getName()));\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        } else {\r\n            File source = new File(url.toURI());\r\n            Files.createDirectories(destination);\r\n            FileSystemUtils.copyRecursively(source, destination.toFile());\r\n        }\r\n        return destinationName + \"/ \";\r\n    }\r\n}\nprivate void assertFilenames(String pattern, String... filenames) {\r\n    assertFilenames(pattern, false, filenames);\r\n}\nprivate void assertExactFilenames(String pattern, String... filenames) {\r\n    assertFilenames(pattern, true, filenames);\r\n}\nprivate void assertFilenames(String pattern, boolean exactly, String... filenames) {\r\n    try {\r\n        Resource[] resources = resolver.getResources(pattern);\r\n        List<String> actualNames = Arrays.stream(resources).peek(resource -> assertThat(resource.exists()).as(resource + \" exists\").isTrue()).map(Resource::getFilename).sorted().toList();\r\n        // Uncomment the following if you encounter problems with matching against the file system.\r\n        // List<String> expectedNames = Arrays.stream(filenames).sorted().toList();\r\n        // System.out.println(\"----------------------------------------------------------------------\");\r\n        // System.out.println(\"Expected: \" + expectedNames);\r\n        // System.out.println(\"Actual: \" + actualNames);\r\n        // Arrays.stream(resources).forEach(System.out::println);\r\n        if (exactly) {\r\n            assertThat(actualNames).as(\"subset of files found\").containsExactlyInAnyOrder(filenames);\r\n        } else {\r\n            assertThat(actualNames).as(\"subset of files found\").contains(filenames);\r\n        }\r\n    } catch (IOException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}\nprivate void assertExactSubPaths(String pattern, String pathPrefix, String... subPaths) {\r\n    try {\r\n        Resource[] resources = resolver.getResources(pattern);\r\n        List<String> actualSubPaths = Arrays.stream(resources).map(resource -> getPath(resource).replaceFirst(pathPrefix, \"\")).sorted().toList();\r\n        assertThat(actualSubPaths).containsExactlyInAnyOrder(subPaths);\r\n    } catch (IOException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}\nprivate String getPath(Resource resource) {\r\n    // Tests fail if we use resource.getURL().getPath(). They would also fail on macOS when\r\n    // using resource.getURI().getPath() if the resource paths are not Unicode normalized.\r\n    //\r\n    // On the JVM, all tests should pass when using resource.getFile().getPath(); however,\r\n    // we use FileSystemResource#getPath since this test class is sometimes run within a\r\n    // GraalVM native image which cannot support Path#toFile.\r\n    //\r\n    // See: https://github.com/spring-projects/spring-framework/issues/29243\r\n    if (resource instanceof FileSystemResource fileSystemResource) {\r\n        return fileSystemResource.getPath();\r\n    }\r\n    try {\r\n        // Fall back to URL in case the resource came from a JAR\r\n        return resource.getURL().getPath();\r\n    } catch (IOException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link PathMatchingResourcePatternResolver}.\n *\n * <p>If tests fail, uncomment the diagnostics in {@link #assertFilenames(String, boolean, String...)}.\n *\n * @author Oliver Hutchison\n * @author Juergen Hoeller\n * @author Chris Beams\n * @author Sam Brannen\n * @since 17.11.2004\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PathMatchingResourcePatternResolverTests#assertFilenames(String,String)",
+    "entityType": "method",
+    "code": "private void assertFilenames(String pattern, String... filenames) {\r\n    assertFilenames(pattern, false, filenames);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PathMatchingResourcePatternResolverTests#assertExactFilenames(String,String)",
+    "entityType": "method",
+    "code": "private void assertExactFilenames(String pattern, String... filenames) {\r\n    assertFilenames(pattern, true, filenames);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PathMatchingResourcePatternResolverTests#assertFilenames(String,boolean,String)",
+    "entityType": "method",
+    "code": "private void assertFilenames(String pattern, boolean exactly, String... filenames) {\r\n    try {\r\n        Resource[] resources = resolver.getResources(pattern);\r\n        List<String> actualNames = Arrays.stream(resources).peek(resource -> assertThat(resource.exists()).as(resource + \" exists\").isTrue()).map(Resource::getFilename).sorted().toList();\r\n        // Uncomment the following if you encounter problems with matching against the file system.\r\n        // List<String> expectedNames = Arrays.stream(filenames).sorted().toList();\r\n        // System.out.println(\"----------------------------------------------------------------------\");\r\n        // System.out.println(\"Expected: \" + expectedNames);\r\n        // System.out.println(\"Actual: \" + actualNames);\r\n        // Arrays.stream(resources).forEach(System.out::println);\r\n        if (exactly) {\r\n            assertThat(actualNames).as(\"subset of files found\").containsExactlyInAnyOrder(filenames);\r\n        } else {\r\n            assertThat(actualNames).as(\"subset of files found\").contains(filenames);\r\n        }\r\n    } catch (IOException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PathMatchingResourcePatternResolverTests#assertExactSubPaths(String,String,String)",
+    "entityType": "method",
+    "code": "private void assertExactSubPaths(String pattern, String pathPrefix, String... subPaths) {\r\n    try {\r\n        Resource[] resources = resolver.getResources(pattern);\r\n        List<String> actualSubPaths = Arrays.stream(resources).map(resource -> getPath(resource).replaceFirst(pathPrefix, \"\")).sorted().toList();\r\n        assertThat(actualSubPaths).containsExactlyInAnyOrder(subPaths);\r\n    } catch (IOException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PathMatchingResourcePatternResolverTests#getPath(Resource)",
+    "entityType": "method",
+    "code": "private String getPath(Resource resource) {\r\n    // Tests fail if we use resource.getURL().getPath(). They would also fail on macOS when\r\n    // using resource.getURI().getPath() if the resource paths are not Unicode normalized.\r\n    //\r\n    // On the JVM, all tests should pass when using resource.getFile().getPath(); however,\r\n    // we use FileSystemResource#getPath since this test class is sometimes run within a\r\n    // GraalVM native image which cannot support Path#toFile.\r\n    //\r\n    // See: https://github.com/spring-projects/spring-framework/issues/29243\r\n    if (resource instanceof FileSystemResource fileSystemResource) {\r\n        return fileSystemResource.getPath();\r\n    }\r\n    try {\r\n        // Fall back to URL in case the resource came from a JAR\r\n        return resource.getURL().getPath();\r\n    } catch (IOException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.InvalidPatterns",
+    "entityType": "class",
+    "code": "@Test\r\nvoid invalidPrefixWithPatternElementInItThrowsException() {\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resolver.getResources(\"xx**:**/*.xy\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.InvalidPatterns#invalidPrefixWithPatternElementInItThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid invalidPrefixWithPatternElementInItThrowsException() {\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> resolver.getResources(\"xx**:**/*.xy\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileSystemResources",
+    "entityType": "class",
+    "code": "@Test\r\nvoid singleResourceOnFileSystem() {\r\n    String pattern = \"org/springframework/core/io/support/PathMatchingResourcePatternResolverTests.class\";\r\n    assertExactFilenames(pattern, \"PathMatchingResourcePatternResolverTests.class\");\r\n}\n@Test\r\nvoid classpathStarWithPatternOnFileSystem() {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*/*.class\";\r\n    String[] expectedFilenames = StringUtils.concatenateStringArrays(CLASSES_IN_CORE_IO_SUPPORT, TEST_CLASSES_IN_CORE_IO_SUPPORT);\r\n    assertFilenames(pattern, expectedFilenames);\r\n}\n// gh-31111\r\n@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndNonexistentRootPath() throws IOException {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/example/bogus/**\", testResourcesDir);\r\n    assertThat(resolver.getResources(pattern)).isEmpty();\r\n    // When the log level for the resolver is set to at least INFO, we should see\r\n    // a log entry similar to the following.\r\n    //\r\n    // [main] INFO  o.s.c.i.s.PathMatchingResourcePatternResolver -\r\n    // Skipping search for files matching pattern [**]: directory\r\n    // [/<...>/spring-core/src/test/resources/example/bogus] does not exist\r\n}\n@Test\r\nvoid encodedHashtagInPath() throws IOException {\r\n    Path rootDir = Paths.get(\"src/test/resources/custom%23root\").toAbsolutePath();\r\n    URL root = new URL(\"file:\" + rootDir + \"/\");\r\n    resolver = new PathMatchingResourcePatternResolver(new DefaultResourceLoader(new URLClassLoader(new URL[] { root })));\r\n    assertExactFilenames(\"classpath*:scanned/*.txt\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n}\n@Nested\r\nclass WithHashtagsInTheirFilenames {\r\n\r\n    @Test\r\n    void usingClasspathStarProtocol() {\r\n        String pattern = \"classpath*:org/springframework/core/io/**/resource#test*.txt\";\r\n        String pathPrefix = \".+org/springframework/core/io/\";\r\n        assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n        assertExactSubPaths(pattern, pathPrefix, \"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n    }\r\n\r\n    @Test\r\n    void usingClasspathStarProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n        String pattern = \"classpath*:org/springframework/core/io/sup*\";\r\n        String pathPrefix = \".+org/springframework/core/io/\";\r\n        List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n        // We DO find \"support\" if the pattern does NOT end with a slash.\r\n        assertThat(actualSubPaths).containsExactly(\"support\");\r\n    }\r\n\r\n    @Test\r\n    void usingFileProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n        Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n        String pattern = String.format(\"file:%s/org/springframework/core/io/sup*\", testResourcesDir);\r\n        String pathPrefix = \".+org/springframework/core/io/\";\r\n        List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n        // We DO find \"support\" if the pattern does NOT end with a slash.\r\n        assertThat(actualSubPaths).containsExactly(\"support\");\r\n    }\r\n\r\n    @Test\r\n    void usingClasspathStarProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n        String pattern = \"classpath*:org/springframework/core/io/sup*/\";\r\n        String pathPrefix = \".+org/springframework/core/io/\";\r\n        List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n        URL url = getClass().getClassLoader().getResource(\"org/springframework/core/io/support/EncodedResource.class\");\r\n        if (!url.getProtocol().equals(\"jar\")) {\r\n            // We do NOT find \"support\" if the pattern ENDS with a slash if org/springframework/core/io/support\r\n            // is in the local file system.\r\n            assertThat(actualSubPaths).isEmpty();\r\n        } else {\r\n            // But we do find \"support/\" if org/springframework/core/io/support is found in a JAR on the classpath.\r\n            assertThat(actualSubPaths).containsExactly(\"support/\");\r\n        }\r\n    }\r\n\r\n    @Test\r\n    void usingFileProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n        Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n        String pattern = String.format(\"file:%s/org/springframework/core/io/sup*/\", testResourcesDir);\r\n        String pathPrefix = \".+org/springframework/core/io/\";\r\n        List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n        // We do NOT find \"support\" if the pattern ENDS with a slash.\r\n        assertThat(actualSubPaths).isEmpty();\r\n    }\r\n\r\n    @Test\r\n    void usingClasspathStarProtocolWithWildcardInPatternAndEndingWithSuffixPattern() throws Exception {\r\n        String pattern = \"classpath*:org/springframework/core/io/sup*/*.txt\";\r\n        String pathPrefix = \".+org/springframework/core/io/\";\r\n        List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n        assertThat(actualSubPaths).containsExactlyInAnyOrder(\"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n    }\r\n\r\n    private List<String> getSubPathsIgnoringClassFilesEtc(String pattern, String pathPrefix) throws IOException {\r\n        return Arrays.stream(resolver.getResources(pattern)).map(resource -> getPath(resource).replaceFirst(pathPrefix, \"\")).filter(name -> !name.endsWith(\".class\")).filter(name -> !name.endsWith(\".kt\")).filter(name -> !name.endsWith(\".factories\")).distinct().sorted().collect(Collectors.toList());\r\n    }\r\n\r\n    @Test\r\n    void usingFileProtocolWithoutWildcardInPatternAndEndingInSlashStarStar() {\r\n        Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n        String pattern = String.format(\"file:%s/scanned-resources/**\", testResourcesDir);\r\n        String pathPrefix = \".+?resources/\";\r\n        // We do NOT find \"scanned-resources\" if the pattern ENDS with \"/**\" AND does NOT otherwise contain a wildcard.\r\n        assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n        assertExactSubPaths(pattern, pathPrefix, \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n    }\r\n\r\n    @Test\r\n    void usingFileProtocolWithWildcardInPatternAndEndingInSlashStarStar() {\r\n        Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n        String pattern = String.format(\"file:%s/scanned*resources/**\", testResourcesDir);\r\n        String pathPrefix = \".+?resources/\";\r\n        // We DO find \"scanned-resources\" if the pattern ENDS with \"/**\" AND DOES otherwise contain a wildcard.\r\n        assertExactFilenames(pattern, \"scanned-resources\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n        assertExactSubPaths(pattern, pathPrefix, \"scanned-resources\", \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n    }\r\n\r\n    @Test\r\n    void usingFileProtocolAndAssertingUrlAndUriSyntax() throws Exception {\r\n        Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n        String pattern = \"file:%s/scanned-resources/**/resource#test1.txt\".formatted(testResourcesDir);\r\n        Resource[] resources = resolver.getResources(pattern);\r\n        assertThat(resources).hasSize(1);\r\n        Resource resource = resources[0];\r\n        assertThat(resource.getFilename()).isEqualTo(\"resource#test1.txt\");\r\n        // The following assertions serve as regression tests for the lack of the\r\n        // \"authority component\" (//) in the returned URI/URL. For example, we are\r\n        // expecting file:/my/path (or file:/C:/My/Path) instead of file:///my/path.\r\n        assertThat(resource.getURL().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n        assertThat(resource.getURI().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileSystemResources#singleResourceOnFileSystem()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singleResourceOnFileSystem() {\r\n    String pattern = \"org/springframework/core/io/support/PathMatchingResourcePatternResolverTests.class\";\r\n    assertExactFilenames(pattern, \"PathMatchingResourcePatternResolverTests.class\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileSystemResources#classpathStarWithPatternOnFileSystem()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid classpathStarWithPatternOnFileSystem() {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*/*.class\";\r\n    String[] expectedFilenames = StringUtils.concatenateStringArrays(CLASSES_IN_CORE_IO_SUPPORT, TEST_CLASSES_IN_CORE_IO_SUPPORT);\r\n    assertFilenames(pattern, expectedFilenames);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileSystemResources#usingFileProtocolWithWildcardInPatternAndNonexistentRootPath()",
+    "entityType": "method",
+    "code": "// gh-31111\r\n@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndNonexistentRootPath() throws IOException {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/example/bogus/**\", testResourcesDir);\r\n    assertThat(resolver.getResources(pattern)).isEmpty();\r\n    // When the log level for the resolver is set to at least INFO, we should see\r\n    // a log entry similar to the following.\r\n    //\r\n    // [main] INFO  o.s.c.i.s.PathMatchingResourcePatternResolver -\r\n    // Skipping search for files matching pattern [**]: directory\r\n    // [/<...>/spring-core/src/test/resources/example/bogus] does not exist\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileSystemResources#encodedHashtagInPath()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid encodedHashtagInPath() throws IOException {\r\n    Path rootDir = Paths.get(\"src/test/resources/custom%23root\").toAbsolutePath();\r\n    URL root = new URL(\"file:\" + rootDir + \"/\");\r\n    resolver = new PathMatchingResourcePatternResolver(new DefaultResourceLoader(new URLClassLoader(new URL[] { root })));\r\n    assertExactFilenames(\"classpath*:scanned/*.txt\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames",
+    "entityType": "class",
+    "code": "@Test\r\nvoid usingClasspathStarProtocol() {\r\n    String pattern = \"classpath*:org/springframework/core/io/**/resource#test*.txt\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n    assertExactSubPaths(pattern, pathPrefix, \"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n}\n@Test\r\nvoid usingClasspathStarProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    // We DO find \"support\" if the pattern does NOT end with a slash.\r\n    assertThat(actualSubPaths).containsExactly(\"support\");\r\n}\n@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/org/springframework/core/io/sup*\", testResourcesDir);\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    // We DO find \"support\" if the pattern does NOT end with a slash.\r\n    assertThat(actualSubPaths).containsExactly(\"support\");\r\n}\n@Test\r\nvoid usingClasspathStarProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*/\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    URL url = getClass().getClassLoader().getResource(\"org/springframework/core/io/support/EncodedResource.class\");\r\n    if (!url.getProtocol().equals(\"jar\")) {\r\n        // We do NOT find \"support\" if the pattern ENDS with a slash if org/springframework/core/io/support\r\n        // is in the local file system.\r\n        assertThat(actualSubPaths).isEmpty();\r\n    } else {\r\n        // But we do find \"support/\" if org/springframework/core/io/support is found in a JAR on the classpath.\r\n        assertThat(actualSubPaths).containsExactly(\"support/\");\r\n    }\r\n}\n@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/org/springframework/core/io/sup*/\", testResourcesDir);\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    // We do NOT find \"support\" if the pattern ENDS with a slash.\r\n    assertThat(actualSubPaths).isEmpty();\r\n}\n@Test\r\nvoid usingClasspathStarProtocolWithWildcardInPatternAndEndingWithSuffixPattern() throws Exception {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*/*.txt\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    assertThat(actualSubPaths).containsExactlyInAnyOrder(\"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n}\nprivate List<String> getSubPathsIgnoringClassFilesEtc(String pattern, String pathPrefix) throws IOException {\r\n    return Arrays.stream(resolver.getResources(pattern)).map(resource -> getPath(resource).replaceFirst(pathPrefix, \"\")).filter(name -> !name.endsWith(\".class\")).filter(name -> !name.endsWith(\".kt\")).filter(name -> !name.endsWith(\".factories\")).distinct().sorted().collect(Collectors.toList());\r\n}\n@Test\r\nvoid usingFileProtocolWithoutWildcardInPatternAndEndingInSlashStarStar() {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/scanned-resources/**\", testResourcesDir);\r\n    String pathPrefix = \".+?resources/\";\r\n    // We do NOT find \"scanned-resources\" if the pattern ENDS with \"/**\" AND does NOT otherwise contain a wildcard.\r\n    assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n    assertExactSubPaths(pattern, pathPrefix, \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n}\n@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndEndingInSlashStarStar() {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/scanned*resources/**\", testResourcesDir);\r\n    String pathPrefix = \".+?resources/\";\r\n    // We DO find \"scanned-resources\" if the pattern ENDS with \"/**\" AND DOES otherwise contain a wildcard.\r\n    assertExactFilenames(pattern, \"scanned-resources\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n    assertExactSubPaths(pattern, pathPrefix, \"scanned-resources\", \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n}\n@Test\r\nvoid usingFileProtocolAndAssertingUrlAndUriSyntax() throws Exception {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = \"file:%s/scanned-resources/**/resource#test1.txt\".formatted(testResourcesDir);\r\n    Resource[] resources = resolver.getResources(pattern);\r\n    assertThat(resources).hasSize(1);\r\n    Resource resource = resources[0];\r\n    assertThat(resource.getFilename()).isEqualTo(\"resource#test1.txt\");\r\n    // The following assertions serve as regression tests for the lack of the\r\n    // \"authority component\" (//) in the returned URI/URL. For example, we are\r\n    // expecting file:/my/path (or file:/C:/My/Path) instead of file:///my/path.\r\n    assertThat(resource.getURL().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n    assertThat(resource.getURI().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingClasspathStarProtocol()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingClasspathStarProtocol() {\r\n    String pattern = \"classpath*:org/springframework/core/io/**/resource#test*.txt\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n    assertExactSubPaths(pattern, pathPrefix, \"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingClasspathStarProtocolWithWildcardInPatternAndNotEndingInSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingClasspathStarProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    // We DO find \"support\" if the pattern does NOT end with a slash.\r\n    assertThat(actualSubPaths).containsExactly(\"support\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingFileProtocolWithWildcardInPatternAndNotEndingInSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndNotEndingInSlash() throws Exception {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/org/springframework/core/io/sup*\", testResourcesDir);\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    // We DO find \"support\" if the pattern does NOT end with a slash.\r\n    assertThat(actualSubPaths).containsExactly(\"support\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingClasspathStarProtocolWithWildcardInPatternAndEndingInSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingClasspathStarProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*/\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    URL url = getClass().getClassLoader().getResource(\"org/springframework/core/io/support/EncodedResource.class\");\r\n    if (!url.getProtocol().equals(\"jar\")) {\r\n        // We do NOT find \"support\" if the pattern ENDS with a slash if org/springframework/core/io/support\r\n        // is in the local file system.\r\n        assertThat(actualSubPaths).isEmpty();\r\n    } else {\r\n        // But we do find \"support/\" if org/springframework/core/io/support is found in a JAR on the classpath.\r\n        assertThat(actualSubPaths).containsExactly(\"support/\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingFileProtocolWithWildcardInPatternAndEndingInSlash()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndEndingInSlash() throws Exception {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/org/springframework/core/io/sup*/\", testResourcesDir);\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    // We do NOT find \"support\" if the pattern ENDS with a slash.\r\n    assertThat(actualSubPaths).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingClasspathStarProtocolWithWildcardInPatternAndEndingWithSuffixPattern()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingClasspathStarProtocolWithWildcardInPatternAndEndingWithSuffixPattern() throws Exception {\r\n    String pattern = \"classpath*:org/springframework/core/io/sup*/*.txt\";\r\n    String pathPrefix = \".+org/springframework/core/io/\";\r\n    List<String> actualSubPaths = getSubPathsIgnoringClassFilesEtc(pattern, pathPrefix);\r\n    assertThat(actualSubPaths).containsExactlyInAnyOrder(\"support/resource#test1.txt\", \"support/resource#test2.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#getSubPathsIgnoringClassFilesEtc(String,String)",
+    "entityType": "method",
+    "code": "private List<String> getSubPathsIgnoringClassFilesEtc(String pattern, String pathPrefix) throws IOException {\r\n    return Arrays.stream(resolver.getResources(pattern)).map(resource -> getPath(resource).replaceFirst(pathPrefix, \"\")).filter(name -> !name.endsWith(\".class\")).filter(name -> !name.endsWith(\".kt\")).filter(name -> !name.endsWith(\".factories\")).distinct().sorted().collect(Collectors.toList());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingFileProtocolWithoutWildcardInPatternAndEndingInSlashStarStar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingFileProtocolWithoutWildcardInPatternAndEndingInSlashStarStar() {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/scanned-resources/**\", testResourcesDir);\r\n    String pathPrefix = \".+?resources/\";\r\n    // We do NOT find \"scanned-resources\" if the pattern ENDS with \"/**\" AND does NOT otherwise contain a wildcard.\r\n    assertExactFilenames(pattern, \"resource#test1.txt\", \"resource#test2.txt\");\r\n    assertExactSubPaths(pattern, pathPrefix, \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingFileProtocolWithWildcardInPatternAndEndingInSlashStarStar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingFileProtocolWithWildcardInPatternAndEndingInSlashStarStar() {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = String.format(\"file:%s/scanned*resources/**\", testResourcesDir);\r\n    String pathPrefix = \".+?resources/\";\r\n    // We DO find \"scanned-resources\" if the pattern ENDS with \"/**\" AND DOES otherwise contain a wildcard.\r\n    assertExactFilenames(pattern, \"scanned-resources\", \"resource#test1.txt\", \"resource#test2.txt\");\r\n    assertExactSubPaths(pattern, pathPrefix, \"scanned-resources\", \"scanned-resources/resource#test1.txt\", \"scanned-resources/resource#test2.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WithHashtagsInTheirFilenames#usingFileProtocolAndAssertingUrlAndUriSyntax()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid usingFileProtocolAndAssertingUrlAndUriSyntax() throws Exception {\r\n    Path testResourcesDir = Paths.get(\"src/test/resources\").toAbsolutePath();\r\n    String pattern = \"file:%s/scanned-resources/**/resource#test1.txt\".formatted(testResourcesDir);\r\n    Resource[] resources = resolver.getResources(pattern);\r\n    assertThat(resources).hasSize(1);\r\n    Resource resource = resources[0];\r\n    assertThat(resource.getFilename()).isEqualTo(\"resource#test1.txt\");\r\n    // The following assertions serve as regression tests for the lack of the\r\n    // \"authority component\" (//) in the returned URI/URL. For example, we are\r\n    // expecting file:/my/path (or file:/C:/My/Path) instead of file:///my/path.\r\n    assertThat(resource.getURL().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n    assertThat(resource.getURI().toString()).matches(\"^file:\\\\/[^\\\\/].+test1\\\\.txt$\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.JarResources",
+    "entityType": "class",
+    "code": "@Test\r\nvoid singleResourceInJar() {\r\n    String pattern = \"org/reactivestreams/Publisher.class\";\r\n    assertExactFilenames(pattern, \"Publisher.class\");\r\n}\n@Test\r\nvoid singleResourceInRootOfJar() {\r\n    String pattern = \"aspectj_1_5_0.dtd\";\r\n    assertExactFilenames(pattern, \"aspectj_1_5_0.dtd\");\r\n}\n@Test\r\nvoid classpathWithPatternInJar() {\r\n    String pattern = \"classpath:reactor/util/annotation/*.class\";\r\n    assertExactFilenames(pattern, CLASSES_IN_REACTOR_UTIL_ANNOTATION);\r\n}\n@Test\r\nvoid classpathStarWithPatternInJar() {\r\n    String pattern = \"classpath*:reactor/util/annotation/*.class\";\r\n    assertExactFilenames(pattern, CLASSES_IN_REACTOR_UTIL_ANNOTATION);\r\n}\n// Fails in a native image -- https://github.com/oracle/graal/issues/5020\r\n@Test\r\nvoid rootPatternRetrievalInJarFiles() throws IOException {\r\n    assertThat(resolver.getResources(\"classpath*:aspectj*.dtd\")).extracting(Resource::getFilename).as(\"Could not find aspectj_1_5_0.dtd in the root of the aspectjweaver jar\").containsExactly(\"aspectj_1_5_0.dtd\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.JarResources#singleResourceInJar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singleResourceInJar() {\r\n    String pattern = \"org/reactivestreams/Publisher.class\";\r\n    assertExactFilenames(pattern, \"Publisher.class\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.JarResources#singleResourceInRootOfJar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singleResourceInRootOfJar() {\r\n    String pattern = \"aspectj_1_5_0.dtd\";\r\n    assertExactFilenames(pattern, \"aspectj_1_5_0.dtd\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.JarResources#classpathWithPatternInJar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid classpathWithPatternInJar() {\r\n    String pattern = \"classpath:reactor/util/annotation/*.class\";\r\n    assertExactFilenames(pattern, CLASSES_IN_REACTOR_UTIL_ANNOTATION);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.JarResources#classpathStarWithPatternInJar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid classpathStarWithPatternInJar() {\r\n    String pattern = \"classpath*:reactor/util/annotation/*.class\";\r\n    assertExactFilenames(pattern, CLASSES_IN_REACTOR_UTIL_ANNOTATION);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.JarResources#rootPatternRetrievalInJarFiles()",
+    "entityType": "method",
+    "code": "// Fails in a native image -- https://github.com/oracle/graal/issues/5020\r\n@Test\r\nvoid rootPatternRetrievalInJarFiles() throws IOException {\r\n    assertThat(resolver.getResources(\"classpath*:aspectj*.dtd\")).extracting(Resource::getFilename).as(\"Could not find aspectj_1_5_0.dtd in the root of the aspectjweaver jar\").containsExactly(\"aspectj_1_5_0.dtd\");\r\n}",
+    "comment": " Fails in a native image -- https://github.com/oracle/graal/issues/5020"
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntries",
+    "entityType": "class",
+    "code": "@TempDir\r\nPath temp;\n@Test\r\nvoid javaDashJarFindsClassPathManifestEntries() throws Exception {\r\n    Path lib = this.temp.resolve(\"lib\");\r\n    Files.createDirectories(lib);\r\n    writeAssetJar(lib.resolve(\"asset.jar\"));\r\n    writeApplicationJar(this.temp.resolve(\"app.jar\"));\r\n    String java = ProcessHandle.current().info().command().get();\r\n    Process process = new ProcessBuilder(java, \"-jar\", \"app.jar\").directory(this.temp.toFile()).start();\r\n    assertThat(process.waitFor()).isZero();\r\n    String result = StreamUtils.copyToString(process.getInputStream(), StandardCharsets.UTF_8);\r\n    assertThat(result.replace(\"\\\\\", \"/\")).contains(\"!!!!\").contains(\"/lib/asset.jar!/assets/file.txt\");\r\n}\nprivate void writeAssetJar(Path path) throws Exception {\r\n    try (JarOutputStream jar = new JarOutputStream(new FileOutputStream(path.toFile()))) {\r\n        jar.putNextEntry(new ZipEntry(\"assets/\"));\r\n        jar.closeEntry();\r\n        jar.putNextEntry(new ZipEntry(\"assets/file.txt\"));\r\n        StreamUtils.copy(\"test\", StandardCharsets.UTF_8, jar);\r\n        jar.closeEntry();\r\n    }\r\n}\nprivate void writeApplicationJar(Path path) throws Exception {\r\n    Manifest manifest = new Manifest();\r\n    Attributes mainAttributes = manifest.getMainAttributes();\r\n    mainAttributes.put(Name.CLASS_PATH, buildSpringClassPath() + \"lib/asset.jar\");\r\n    mainAttributes.put(Name.MAIN_CLASS, ClassPathManifestEntriesTestApplication.class.getName());\r\n    mainAttributes.put(Name.MANIFEST_VERSION, \"1.0\");\r\n    try (JarOutputStream jar = new JarOutputStream(new FileOutputStream(path.toFile()), manifest)) {\r\n        String appClassResource = ClassUtils.convertClassNameToResourcePath(ClassPathManifestEntriesTestApplication.class.getName()) + ClassUtils.CLASS_FILE_SUFFIX;\r\n        String folder = \"\";\r\n        for (String name : appClassResource.split(\"/\")) {\r\n            if (!name.endsWith(ClassUtils.CLASS_FILE_SUFFIX)) {\r\n                folder += name + \"/\";\r\n                jar.putNextEntry(new ZipEntry(folder));\r\n                jar.closeEntry();\r\n            } else {\r\n                jar.putNextEntry(new ZipEntry(folder + name));\r\n                try (InputStream in = getClass().getResourceAsStream(name)) {\r\n                    in.transferTo(jar);\r\n                }\r\n                jar.closeEntry();\r\n            }\r\n        }\r\n    }\r\n}\nprivate String buildSpringClassPath() throws Exception {\r\n    return copyClasses(PathMatchingResourcePatternResolver.class, \"spring-core\") + copyClasses(LogFactory.class, \"commons-logging\");\r\n}\nprivate String copyClasses(Class<?> sourceClass, String destinationName) throws URISyntaxException, IOException {\r\n    Path destination = this.temp.resolve(destinationName);\r\n    String resourcePath = ClassUtils.convertClassNameToResourcePath(sourceClass.getName()) + ClassUtils.CLASS_FILE_SUFFIX;\r\n    URL resource = getClass().getClassLoader().getResource(resourcePath);\r\n    URL url = new URL(resource.toString().replace(resourcePath, \"\"));\r\n    URLConnection connection = url.openConnection();\r\n    if (connection instanceof JarURLConnection jarUrlConnection) {\r\n        try (JarFile jarFile = jarUrlConnection.getJarFile()) {\r\n            Enumeration<JarEntry> entries = jarFile.entries();\r\n            while (entries.hasMoreElements()) {\r\n                JarEntry entry = entries.nextElement();\r\n                if (!entry.isDirectory()) {\r\n                    Path entryPath = destination.resolve(entry.getName());\r\n                    try (InputStream in = jarFile.getInputStream(entry)) {\r\n                        Files.createDirectories(entryPath.getParent());\r\n                        Files.copy(in, destination.resolve(entry.getName()));\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    } else {\r\n        File source = new File(url.toURI());\r\n        Files.createDirectories(destination);\r\n        FileSystemUtils.copyRecursively(source, destination.toFile());\r\n    }\r\n    return destinationName + \"/ \";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntries#javaDashJarFindsClassPathManifestEntries()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid javaDashJarFindsClassPathManifestEntries() throws Exception {\r\n    Path lib = this.temp.resolve(\"lib\");\r\n    Files.createDirectories(lib);\r\n    writeAssetJar(lib.resolve(\"asset.jar\"));\r\n    writeApplicationJar(this.temp.resolve(\"app.jar\"));\r\n    String java = ProcessHandle.current().info().command().get();\r\n    Process process = new ProcessBuilder(java, \"-jar\", \"app.jar\").directory(this.temp.toFile()).start();\r\n    assertThat(process.waitFor()).isZero();\r\n    String result = StreamUtils.copyToString(process.getInputStream(), StandardCharsets.UTF_8);\r\n    assertThat(result.replace(\"\\\\\", \"/\")).contains(\"!!!!\").contains(\"/lib/asset.jar!/assets/file.txt\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntries#writeAssetJar(Path)",
+    "entityType": "method",
+    "code": "private void writeAssetJar(Path path) throws Exception {\r\n    try (JarOutputStream jar = new JarOutputStream(new FileOutputStream(path.toFile()))) {\r\n        jar.putNextEntry(new ZipEntry(\"assets/\"));\r\n        jar.closeEntry();\r\n        jar.putNextEntry(new ZipEntry(\"assets/file.txt\"));\r\n        StreamUtils.copy(\"test\", StandardCharsets.UTF_8, jar);\r\n        jar.closeEntry();\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntries#writeApplicationJar(Path)",
+    "entityType": "method",
+    "code": "private void writeApplicationJar(Path path) throws Exception {\r\n    Manifest manifest = new Manifest();\r\n    Attributes mainAttributes = manifest.getMainAttributes();\r\n    mainAttributes.put(Name.CLASS_PATH, buildSpringClassPath() + \"lib/asset.jar\");\r\n    mainAttributes.put(Name.MAIN_CLASS, ClassPathManifestEntriesTestApplication.class.getName());\r\n    mainAttributes.put(Name.MANIFEST_VERSION, \"1.0\");\r\n    try (JarOutputStream jar = new JarOutputStream(new FileOutputStream(path.toFile()), manifest)) {\r\n        String appClassResource = ClassUtils.convertClassNameToResourcePath(ClassPathManifestEntriesTestApplication.class.getName()) + ClassUtils.CLASS_FILE_SUFFIX;\r\n        String folder = \"\";\r\n        for (String name : appClassResource.split(\"/\")) {\r\n            if (!name.endsWith(ClassUtils.CLASS_FILE_SUFFIX)) {\r\n                folder += name + \"/\";\r\n                jar.putNextEntry(new ZipEntry(folder));\r\n                jar.closeEntry();\r\n            } else {\r\n                jar.putNextEntry(new ZipEntry(folder + name));\r\n                try (InputStream in = getClass().getResourceAsStream(name)) {\r\n                    in.transferTo(jar);\r\n                }\r\n                jar.closeEntry();\r\n            }\r\n        }\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntries#buildSpringClassPath()",
+    "entityType": "method",
+    "code": "private String buildSpringClassPath() throws Exception {\r\n    return copyClasses(PathMatchingResourcePatternResolver.class, \"spring-core\") + copyClasses(LogFactory.class, \"commons-logging\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ClassPathManifestEntries#copyClasses(Class<?>,String)",
+    "entityType": "method",
+    "code": "private String copyClasses(Class<?> sourceClass, String destinationName) throws URISyntaxException, IOException {\r\n    Path destination = this.temp.resolve(destinationName);\r\n    String resourcePath = ClassUtils.convertClassNameToResourcePath(sourceClass.getName()) + ClassUtils.CLASS_FILE_SUFFIX;\r\n    URL resource = getClass().getClassLoader().getResource(resourcePath);\r\n    URL url = new URL(resource.toString().replace(resourcePath, \"\"));\r\n    URLConnection connection = url.openConnection();\r\n    if (connection instanceof JarURLConnection jarUrlConnection) {\r\n        try (JarFile jarFile = jarUrlConnection.getJarFile()) {\r\n            Enumeration<JarEntry> entries = jarFile.entries();\r\n            while (entries.hasMoreElements()) {\r\n                JarEntry entry = entries.nextElement();\r\n                if (!entry.isDirectory()) {\r\n                    Path entryPath = destination.resolve(entry.getName());\r\n                    try (InputStream in = jarFile.getInputStream(entry)) {\r\n                        Files.createDirectories(entryPath.getParent());\r\n                        Files.copy(in, destination.resolve(entry.getName()));\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    } else {\r\n        File source = new File(url.toURI());\r\n        Files.createDirectories(destination);\r\n        FileSystemUtils.copyRecursively(source, destination.toFile());\r\n    }\r\n    return destinationName + \"/ \";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PropertySourceProcessorTests",
+    "entityType": "class",
+    "code": "private static final String PROPS_FILE = ClassUtils.classPackageAsResourcePath(PropertySourceProcessorTests.class) + \"/test.properties\";\nprivate final StandardEnvironment environment = new StandardEnvironment();\nprivate final ResourceLoader resourceLoader = new DefaultResourceLoader();\nprivate final PropertySourceProcessor processor = new PropertySourceProcessor(environment, resourceLoader);\n@BeforeEach\r\nvoid checkInitialPropertySources() {\r\n    assertThat(environment.getPropertySources()).hasSize(2);\r\n}\n@Test\r\nvoid processorRegistersPropertySource() throws Exception {\r\n    PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), false, null, DefaultPropertySourceFactory.class, null);\r\n    processor.processPropertySource(descriptor);\r\n    assertThat(environment.getPropertySources()).hasSize(3);\r\n    assertThat(environment.getProperty(\"enigma\")).isEqualTo(\"42\");\r\n}\n@Nested\r\nclass FailOnErrorTests {\r\n\r\n    @Test\r\n    void processorFailsOnPlaceholderResolutionException() {\r\n        assertProcessorFailsOnError(PlaceholderResolutionExceptionPropertySourceFactory.class, PlaceholderResolutionException.class);\r\n    }\r\n\r\n    @Test\r\n    void processorFailsOnFileNotFoundException() {\r\n        assertProcessorFailsOnError(FileNotFoundExceptionPropertySourceFactory.class, FileNotFoundException.class);\r\n    }\r\n\r\n    private void assertProcessorFailsOnError(Class<? extends PropertySourceFactory> factoryClass, Class<? extends Throwable> exceptionType) {\r\n        PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), false, null, factoryClass, null);\r\n        assertThatExceptionOfType(exceptionType).isThrownBy(() -> processor.processPropertySource(descriptor));\r\n        assertThat(environment.getPropertySources()).hasSize(2);\r\n    }\r\n}\n@Nested\r\nclass IgnoreResourceNotFoundTests {\r\n\r\n    @Test\r\n    void processorIgnoresIllegalArgumentException() {\r\n        assertProcessorIgnoresFailure(PlaceholderResolutionExceptionPropertySourceFactory.class);\r\n    }\r\n\r\n    @Test\r\n    void processorIgnoresFileNotFoundException() {\r\n        assertProcessorIgnoresFailure(FileNotFoundExceptionPropertySourceFactory.class);\r\n    }\r\n\r\n    @Test\r\n    void processorIgnoresUnknownHostException() {\r\n        assertProcessorIgnoresFailure(UnknownHostExceptionPropertySourceFactory.class);\r\n    }\r\n\r\n    @Test\r\n    void processorIgnoresSocketException() {\r\n        assertProcessorIgnoresFailure(SocketExceptionPropertySourceFactory.class);\r\n    }\r\n\r\n    @Test\r\n    void processorIgnoresSupportedExceptionWrappedInIllegalStateException() {\r\n        assertProcessorIgnoresFailure(WrappedIOExceptionPropertySourceFactory.class);\r\n    }\r\n\r\n    @Test\r\n    void processorIgnoresSupportedExceptionWrappedInUncheckedIOException() {\r\n        assertProcessorIgnoresFailure(UncheckedIOExceptionPropertySourceFactory.class);\r\n    }\r\n\r\n    private void assertProcessorIgnoresFailure(Class<? extends PropertySourceFactory> factoryClass) {\r\n        PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), true, null, factoryClass, null);\r\n        assertThatNoException().isThrownBy(() -> processor.processPropertySource(descriptor));\r\n        assertThat(environment.getPropertySources()).hasSize(2);\r\n    }\r\n}\nprivate static class PlaceholderResolutionExceptionPropertySourceFactory implements PropertySourceFactory {\r\n\r\n    @Override\r\n    public PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n        throw mock(PlaceholderResolutionException.class);\r\n    }\r\n}\nprivate static class FileNotFoundExceptionPropertySourceFactory implements PropertySourceFactory {\r\n\r\n    @Override\r\n    public PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n        throw new FileNotFoundException(\"bogus\");\r\n    }\r\n}\nprivate static class UnknownHostExceptionPropertySourceFactory implements PropertySourceFactory {\r\n\r\n    @Override\r\n    public PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n        throw new UnknownHostException(\"bogus\");\r\n    }\r\n}\nprivate static class SocketExceptionPropertySourceFactory implements PropertySourceFactory {\r\n\r\n    @Override\r\n    public PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n        throw new SocketException(\"bogus\");\r\n    }\r\n}\nprivate static class WrappedIOExceptionPropertySourceFactory implements PropertySourceFactory {\r\n\r\n    @Override\r\n    public PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n        throw new IllegalStateException(\"Wrapped\", new FileNotFoundException(\"bogus\"));\r\n    }\r\n}\nprivate static class UncheckedIOExceptionPropertySourceFactory implements PropertySourceFactory {\r\n\r\n    @Override\r\n    public PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n        throw new UncheckedIOException(\"Wrapped\", new FileNotFoundException(\"bogus\"));\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link PropertySourceProcessor}.\n *\n * @author Sam Brannen\n * @since 6.0.12\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PropertySourceProcessorTests#checkInitialPropertySources()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid checkInitialPropertySources() {\r\n    assertThat(environment.getPropertySources()).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PropertySourceProcessorTests#processorRegistersPropertySource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorRegistersPropertySource() throws Exception {\r\n    PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), false, null, DefaultPropertySourceFactory.class, null);\r\n    processor.processPropertySource(descriptor);\r\n    assertThat(environment.getPropertySources()).hasSize(3);\r\n    assertThat(environment.getProperty(\"enigma\")).isEqualTo(\"42\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailOnErrorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid processorFailsOnPlaceholderResolutionException() {\r\n    assertProcessorFailsOnError(PlaceholderResolutionExceptionPropertySourceFactory.class, PlaceholderResolutionException.class);\r\n}\n@Test\r\nvoid processorFailsOnFileNotFoundException() {\r\n    assertProcessorFailsOnError(FileNotFoundExceptionPropertySourceFactory.class, FileNotFoundException.class);\r\n}\nprivate void assertProcessorFailsOnError(Class<? extends PropertySourceFactory> factoryClass, Class<? extends Throwable> exceptionType) {\r\n    PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), false, null, factoryClass, null);\r\n    assertThatExceptionOfType(exceptionType).isThrownBy(() -> processor.processPropertySource(descriptor));\r\n    assertThat(environment.getPropertySources()).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailOnErrorTests#processorFailsOnPlaceholderResolutionException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorFailsOnPlaceholderResolutionException() {\r\n    assertProcessorFailsOnError(PlaceholderResolutionExceptionPropertySourceFactory.class, PlaceholderResolutionException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailOnErrorTests#processorFailsOnFileNotFoundException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorFailsOnFileNotFoundException() {\r\n    assertProcessorFailsOnError(FileNotFoundExceptionPropertySourceFactory.class, FileNotFoundException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailOnErrorTests#assertProcessorFailsOnError(Class<? extends PropertySourceFactory>,Class<? extends Throwable>)",
+    "entityType": "method",
+    "code": "private void assertProcessorFailsOnError(Class<? extends PropertySourceFactory> factoryClass, Class<? extends Throwable> exceptionType) {\r\n    PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), false, null, factoryClass, null);\r\n    assertThatExceptionOfType(exceptionType).isThrownBy(() -> processor.processPropertySource(descriptor));\r\n    assertThat(environment.getPropertySources()).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid processorIgnoresIllegalArgumentException() {\r\n    assertProcessorIgnoresFailure(PlaceholderResolutionExceptionPropertySourceFactory.class);\r\n}\n@Test\r\nvoid processorIgnoresFileNotFoundException() {\r\n    assertProcessorIgnoresFailure(FileNotFoundExceptionPropertySourceFactory.class);\r\n}\n@Test\r\nvoid processorIgnoresUnknownHostException() {\r\n    assertProcessorIgnoresFailure(UnknownHostExceptionPropertySourceFactory.class);\r\n}\n@Test\r\nvoid processorIgnoresSocketException() {\r\n    assertProcessorIgnoresFailure(SocketExceptionPropertySourceFactory.class);\r\n}\n@Test\r\nvoid processorIgnoresSupportedExceptionWrappedInIllegalStateException() {\r\n    assertProcessorIgnoresFailure(WrappedIOExceptionPropertySourceFactory.class);\r\n}\n@Test\r\nvoid processorIgnoresSupportedExceptionWrappedInUncheckedIOException() {\r\n    assertProcessorIgnoresFailure(UncheckedIOExceptionPropertySourceFactory.class);\r\n}\nprivate void assertProcessorIgnoresFailure(Class<? extends PropertySourceFactory> factoryClass) {\r\n    PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), true, null, factoryClass, null);\r\n    assertThatNoException().isThrownBy(() -> processor.processPropertySource(descriptor));\r\n    assertThat(environment.getPropertySources()).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#processorIgnoresIllegalArgumentException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorIgnoresIllegalArgumentException() {\r\n    assertProcessorIgnoresFailure(PlaceholderResolutionExceptionPropertySourceFactory.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#processorIgnoresFileNotFoundException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorIgnoresFileNotFoundException() {\r\n    assertProcessorIgnoresFailure(FileNotFoundExceptionPropertySourceFactory.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#processorIgnoresUnknownHostException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorIgnoresUnknownHostException() {\r\n    assertProcessorIgnoresFailure(UnknownHostExceptionPropertySourceFactory.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#processorIgnoresSocketException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorIgnoresSocketException() {\r\n    assertProcessorIgnoresFailure(SocketExceptionPropertySourceFactory.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#processorIgnoresSupportedExceptionWrappedInIllegalStateException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorIgnoresSupportedExceptionWrappedInIllegalStateException() {\r\n    assertProcessorIgnoresFailure(WrappedIOExceptionPropertySourceFactory.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#processorIgnoresSupportedExceptionWrappedInUncheckedIOException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid processorIgnoresSupportedExceptionWrappedInUncheckedIOException() {\r\n    assertProcessorIgnoresFailure(UncheckedIOExceptionPropertySourceFactory.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.IgnoreResourceNotFoundTests#assertProcessorIgnoresFailure(Class<? extends PropertySourceFactory>)",
+    "entityType": "method",
+    "code": "private void assertProcessorIgnoresFailure(Class<? extends PropertySourceFactory> factoryClass) {\r\n    PropertySourceDescriptor descriptor = new PropertySourceDescriptor(List.of(PROPS_FILE), true, null, factoryClass, null);\r\n    assertThatNoException().isThrownBy(() -> processor.processPropertySource(descriptor));\r\n    assertThat(environment.getPropertySources()).hasSize(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PlaceholderResolutionExceptionPropertySourceFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n    throw mock(PlaceholderResolutionException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.PlaceholderResolutionExceptionPropertySourceFactory#createPropertySource(String,EncodedResource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n    throw mock(PlaceholderResolutionException.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileNotFoundExceptionPropertySourceFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n    throw new FileNotFoundException(\"bogus\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FileNotFoundExceptionPropertySourceFactory#createPropertySource(String,EncodedResource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n    throw new FileNotFoundException(\"bogus\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.UnknownHostExceptionPropertySourceFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n    throw new UnknownHostException(\"bogus\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.UnknownHostExceptionPropertySourceFactory#createPropertySource(String,EncodedResource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n    throw new UnknownHostException(\"bogus\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SocketExceptionPropertySourceFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n    throw new SocketException(\"bogus\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SocketExceptionPropertySourceFactory#createPropertySource(String,EncodedResource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {\r\n    throw new SocketException(\"bogus\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WrappedIOExceptionPropertySourceFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n    throw new IllegalStateException(\"Wrapped\", new FileNotFoundException(\"bogus\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.WrappedIOExceptionPropertySourceFactory#createPropertySource(String,EncodedResource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n    throw new IllegalStateException(\"Wrapped\", new FileNotFoundException(\"bogus\"));\r\n}",
+    "comment": ""
+  }
+]

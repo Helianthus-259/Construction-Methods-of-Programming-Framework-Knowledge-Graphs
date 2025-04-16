@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferEncoderTests#canEncode()",
+    "entityType": "method",
+    "code": "@Test\r\n@Override\r\npublic void canEncode() {\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Buffer.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Buffer.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    // gh-20024\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.Netty5BufferEncoderTests#encode()",
+    "entityType": "method",
+    "code": "@Test\r\n@Override\r\n@SuppressWarnings(\"resource\")\r\npublic void encode() {\r\n    Flux<Buffer> input = Flux.just(this.fooBytes, this.barBytes).map(DefaultBufferAllocators.preferredAllocator()::copyOf);\r\n    testEncodeAll(input, Buffer.class, step -> step.consumeNextWith(expectBytes(this.fooBytes)).consumeNextWith(expectBytes(this.barBytes)).verifyComplete());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufDecoderTests",
+    "entityType": "class",
+    "code": "private final byte[] fooBytes = \"foo\".getBytes(StandardCharsets.UTF_8);\nprivate final byte[] barBytes = \"bar\".getBytes(StandardCharsets.UTF_8);\nNettyByteBufDecoderTests() {\r\n    super(new NettyByteBufDecoder());\r\n}\n@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n}\n@Override\r\n@Test\r\nprotected void decode() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeAll(input, ByteBuf.class, step -> step.consumeNextWith(expectByteBuffer(Unpooled.copiedBuffer(this.fooBytes))).consumeNextWith(expectByteBuffer(Unpooled.copiedBuffer(this.barBytes))).verifyComplete());\r\n}\n@Override\r\n@Test\r\nprotected void decodeToMono() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    ByteBuf expected = Unpooled.buffer(this.fooBytes.length + this.barBytes.length).writeBytes(this.fooBytes).writeBytes(this.barBytes).readerIndex(0);\r\n    testDecodeToMonoAll(input, ByteBuf.class, step -> step.consumeNextWith(expectByteBuffer(expected)).verifyComplete());\r\n}\nprivate Consumer<ByteBuf> expectByteBuffer(ByteBuf expected) {\r\n    return actual -> assertThat(actual).isEqualTo(expected);\r\n}",
+    "comment": "\n * @author Vladislav Kisel\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufDecoderTests#canDecode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufDecoderTests#decode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void decode() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeAll(input, ByteBuf.class, step -> step.consumeNextWith(expectByteBuffer(Unpooled.copiedBuffer(this.fooBytes))).consumeNextWith(expectByteBuffer(Unpooled.copiedBuffer(this.barBytes))).verifyComplete());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufDecoderTests#decodeToMono()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void decodeToMono() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    ByteBuf expected = Unpooled.buffer(this.fooBytes.length + this.barBytes.length).writeBytes(this.fooBytes).writeBytes(this.barBytes).readerIndex(0);\r\n    testDecodeToMonoAll(input, ByteBuf.class, step -> step.consumeNextWith(expectByteBuffer(expected)).verifyComplete());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufDecoderTests#expectByteBuffer(ByteBuf)",
+    "entityType": "method",
+    "code": "private Consumer<ByteBuf> expectByteBuffer(ByteBuf expected) {\r\n    return actual -> assertThat(actual).isEqualTo(expected);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufEncoderTests",
+    "entityType": "class",
+    "code": "private final byte[] fooBytes = \"foo\".getBytes(StandardCharsets.UTF_8);\nprivate final byte[] barBytes = \"bar\".getBytes(StandardCharsets.UTF_8);\nNettyByteBufEncoderTests() {\r\n    super(new NettyByteBufEncoder());\r\n}\n@Override\r\n@Test\r\nprotected void canEncode() {\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    // gh-20024\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}\n@Override\r\n@Test\r\nprotected void encode() {\r\n    Flux<ByteBuf> input = Flux.just(this.fooBytes, this.barBytes).map(Unpooled::copiedBuffer);\r\n    testEncodeAll(input, ByteBuf.class, step -> step.consumeNextWith(expectBytes(this.fooBytes)).consumeNextWith(expectBytes(this.barBytes)).verifyComplete());\r\n}",
+    "comment": "\n * @author Vladislav Kisel\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufEncoderTests#canEncode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void canEncode() {\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteBuf.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    // gh-20024\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.NettyByteBufEncoderTests#encode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void encode() {\r\n    Flux<ByteBuf> input = Flux.just(this.fooBytes, this.barBytes).map(Unpooled::copiedBuffer);\r\n    testEncodeAll(input, ByteBuf.class, step -> step.consumeNextWith(expectBytes(this.fooBytes)).consumeNextWith(expectBytes(this.barBytes)).verifyComplete());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceDecoderTests",
+    "entityType": "class",
+    "code": "private final byte[] fooBytes = \"foo\".getBytes(StandardCharsets.UTF_8);\nprivate final byte[] barBytes = \"bar\".getBytes(StandardCharsets.UTF_8);\nResourceDecoderTests() {\r\n    super(new ResourceDecoder());\r\n}\n@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(forClass(InputStreamResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(ByteArrayResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(Resource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(InputStreamResource.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(Object.class), MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}\n@Override\r\n@Test\r\nprotected void decode() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeAll(input, Resource.class, step -> step.consumeNextWith(resource -> {\r\n        try {\r\n            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());\r\n            assertThat(new String(bytes)).isEqualTo(\"foobar\");\r\n        } catch (IOException ex) {\r\n            throw new AssertionError(ex.getMessage(), ex);\r\n        }\r\n    }).expectComplete().verify());\r\n}\n@Override\r\n@Test\r\nprotected void decodeToMono() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeToMonoAll(input, ResolvableType.forClass(Resource.class), step -> step.consumeNextWith(value -> {\r\n        Resource resource = (Resource) value;\r\n        try {\r\n            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());\r\n            assertThat(new String(bytes)).isEqualTo(\"foobar\");\r\n            assertThat(resource.getFilename()).isEqualTo(\"testFile\");\r\n        } catch (IOException ex) {\r\n            throw new AssertionError(ex.getMessage(), ex);\r\n        }\r\n    }).expectComplete().verify(), null, Collections.singletonMap(ResourceDecoder.FILENAME_HINT, \"testFile\"));\r\n}\n@Test\r\nvoid decodeInputStreamResource() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeAll(input, InputStreamResource.class, step -> step.consumeNextWith(resource -> {\r\n        try {\r\n            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());\r\n            assertThat(new String(bytes)).isEqualTo(\"foobar\");\r\n            assertThat(resource.contentLength()).isEqualTo(fooBytes.length + barBytes.length);\r\n        } catch (IOException ex) {\r\n            throw new AssertionError(ex.getMessage(), ex);\r\n        }\r\n    }).expectComplete().verify());\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceDecoderTests#canDecode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(forClass(InputStreamResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(ByteArrayResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(Resource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(InputStreamResource.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    assertThat(this.decoder.canDecode(forClass(Object.class), MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceDecoderTests#decode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void decode() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeAll(input, Resource.class, step -> step.consumeNextWith(resource -> {\r\n        try {\r\n            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());\r\n            assertThat(new String(bytes)).isEqualTo(\"foobar\");\r\n        } catch (IOException ex) {\r\n            throw new AssertionError(ex.getMessage(), ex);\r\n        }\r\n    }).expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceDecoderTests#decodeToMono()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void decodeToMono() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeToMonoAll(input, ResolvableType.forClass(Resource.class), step -> step.consumeNextWith(value -> {\r\n        Resource resource = (Resource) value;\r\n        try {\r\n            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());\r\n            assertThat(new String(bytes)).isEqualTo(\"foobar\");\r\n            assertThat(resource.getFilename()).isEqualTo(\"testFile\");\r\n        } catch (IOException ex) {\r\n            throw new AssertionError(ex.getMessage(), ex);\r\n        }\r\n    }).expectComplete().verify(), null, Collections.singletonMap(ResourceDecoder.FILENAME_HINT, \"testFile\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceDecoderTests#decodeInputStreamResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeInputStreamResource() {\r\n    Flux<DataBuffer> input = Flux.concat(dataBuffer(this.fooBytes), dataBuffer(this.barBytes));\r\n    testDecodeAll(input, InputStreamResource.class, step -> step.consumeNextWith(resource -> {\r\n        try {\r\n            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());\r\n            assertThat(new String(bytes)).isEqualTo(\"foobar\");\r\n            assertThat(resource.contentLength()).isEqualTo(fooBytes.length + barBytes.length);\r\n        } catch (IOException ex) {\r\n            throw new AssertionError(ex.getMessage(), ex);\r\n        }\r\n    }).expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceEncoderTests",
+    "entityType": "class",
+    "code": "private final byte[] bytes = \"foo\".getBytes(UTF_8);\nResourceEncoderTests() {\r\n    super(new ResourceEncoder());\r\n}\n@Override\r\n@Test\r\nprotected void canEncode() {\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteArrayResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    // SPR-15464\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}\n@Override\r\n@Test\r\nprotected void encode() {\r\n    Flux<Resource> input = Flux.just(new ByteArrayResource(this.bytes));\r\n    testEncodeAll(input, Resource.class, step -> step.consumeNextWith(expectBytes(this.bytes)).verifyComplete());\r\n}\n@Override\r\nprotected void testEncodeError(Publisher<?> input, ResolvableType outputType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Flux<Resource> i = Flux.error(new InputException());\r\n    Flux<DataBuffer> result = this.encoder.encode(i, this.bufferFactory, outputType, mimeType, hints);\r\n    StepVerifier.create(result).expectError(InputException.class).verify();\r\n}",
+    "comment": "\n * @author Arjen Poutsma\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceEncoderTests#canEncode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void canEncode() {\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteArrayResource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class), MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    // SPR-15464\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceEncoderTests#encode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void encode() {\r\n    Flux<Resource> input = Flux.just(new ByteArrayResource(this.bytes));\r\n    testEncodeAll(input, Resource.class, step -> step.consumeNextWith(expectBytes(this.bytes)).verifyComplete());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceEncoderTests#testEncodeError(Publisher<?>,ResolvableType,MimeType,Map<String,Object>)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void testEncodeError(Publisher<?> input, ResolvableType outputType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {\r\n    Flux<Resource> i = Flux.error(new InputException());\r\n    Flux<DataBuffer> result = this.encoder.encode(i, this.bufferFactory, outputType, mimeType, hints);\r\n    StepVerifier.create(result).expectError(InputException.class).verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "entityType": "class",
+    "code": "private ResourceRegionEncoder encoder = new ResourceRegionEncoder();\n@Test\r\nvoid canEncode() {\r\n    ResolvableType resourceRegion = ResolvableType.forClass(ResourceRegion.class);\r\n    MimeType allMimeType = MimeType.valueOf(\"*/*\");\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), MimeTypeUtils.APPLICATION_OCTET_STREAM)).isFalse();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), allMimeType)).isFalse();\r\n    assertThat(this.encoder.canEncode(resourceRegion, MimeTypeUtils.APPLICATION_OCTET_STREAM)).isTrue();\r\n    assertThat(this.encoder.canEncode(resourceRegion, allMimeType)).isTrue();\r\n    // SPR-15464\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}\n@Test\r\nvoid shouldEncodeResourceRegionFileResource() {\r\n    ResourceRegion region = new ResourceRegion(new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass()), 0, 6);\r\n    Flux<DataBuffer> result = this.encoder.encode(Mono.just(region), this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeTypeUtils.APPLICATION_OCTET_STREAM, Collections.emptyMap());\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"Spring\")).expectComplete().verify();\r\n}\n@Test\r\nvoid shouldEncodeMultipleResourceRegionsFileResource() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(resource, 7, 9), new ResourceRegion(resource, 17, 4), new ResourceRegion(resource, 22, 17));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Spring\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 7-15/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Framework\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 17-20/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"test\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 22-38/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"resource content.\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"--\")).expectComplete().verify();\r\n}\n// gh-22107\r\n@Test\r\nvoid cancelWithoutDemandForMultipleResourceRegions() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(resource, 7, 9), new ResourceRegion(resource, 17, 4), new ResourceRegion(resource, 22, 17));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    ZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\r\n    flux.subscribe(subscriber);\r\n    subscriber.cancel();\r\n}\n// gh-22107\r\n@Test\r\nvoid cancelWithoutDemandForSingleResourceRegion() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Mono<ResourceRegion> regions = Mono.just(new ResourceRegion(resource, 0, 6));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    ZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\r\n    flux.subscribe(subscriber);\r\n    subscriber.cancel();\r\n}\n@Test\r\nvoid nonExisting() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Resource nonExisting = new ClassPathResource(\"does not exist\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(nonExisting, 0, 6));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Spring\")).expectError(EncodingException.class).verify();\r\n}\nprotected Consumer<DataBuffer> stringConsumer(String expected) {\r\n    return dataBuffer -> {\r\n        String value = dataBuffer.toString(UTF_8);\r\n        DataBufferUtils.release(dataBuffer);\r\n        assertThat(value).isEqualTo(expected);\r\n    };\r\n}\nprivate static class ZeroDemandSubscriber extends BaseSubscriber<DataBuffer> {\r\n\r\n    @Override\r\n    protected void hookOnSubscribe(Subscription subscription) {\r\n        // Just subscribe without requesting\r\n    }\r\n}",
+    "comment": "\n * Test cases for {@link ResourceRegionEncoder} class.\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#canEncode()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid canEncode() {\r\n    ResolvableType resourceRegion = ResolvableType.forClass(ResourceRegion.class);\r\n    MimeType allMimeType = MimeType.valueOf(\"*/*\");\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), MimeTypeUtils.APPLICATION_OCTET_STREAM)).isFalse();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), allMimeType)).isFalse();\r\n    assertThat(this.encoder.canEncode(resourceRegion, MimeTypeUtils.APPLICATION_OCTET_STREAM)).isTrue();\r\n    assertThat(this.encoder.canEncode(resourceRegion, allMimeType)).isTrue();\r\n    // SPR-15464\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeResourceRegionFileResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldEncodeResourceRegionFileResource() {\r\n    ResourceRegion region = new ResourceRegion(new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass()), 0, 6);\r\n    Flux<DataBuffer> result = this.encoder.encode(Mono.just(region), this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeTypeUtils.APPLICATION_OCTET_STREAM, Collections.emptyMap());\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"Spring\")).expectComplete().verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeMultipleResourceRegionsFileResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldEncodeMultipleResourceRegionsFileResource() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(resource, 7, 9), new ResourceRegion(resource, 17, 4), new ResourceRegion(resource, 22, 17));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Spring\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 7-15/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Framework\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 17-20/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"test\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 22-38/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"resource content.\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"--\")).expectComplete().verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForMultipleResourceRegions()",
+    "entityType": "method",
+    "code": "// gh-22107\r\n@Test\r\nvoid cancelWithoutDemandForMultipleResourceRegions() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(resource, 7, 9), new ResourceRegion(resource, 17, 4), new ResourceRegion(resource, 22, 17));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    ZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\r\n    flux.subscribe(subscriber);\r\n    subscriber.cancel();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForSingleResourceRegion()",
+    "entityType": "method",
+    "code": "// gh-22107\r\n@Test\r\nvoid cancelWithoutDemandForSingleResourceRegion() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Mono<ResourceRegion> regions = Mono.just(new ResourceRegion(resource, 0, 6));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    ZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\r\n    flux.subscribe(subscriber);\r\n    subscriber.cancel();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#nonExisting()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nonExisting() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Resource nonExisting = new ClassPathResource(\"does not exist\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(nonExisting, 0, 6));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Spring\")).expectError(EncodingException.class).verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ResourceRegionEncoderTests#stringConsumer(String)",
+    "entityType": "method",
+    "code": "protected Consumer<DataBuffer> stringConsumer(String expected) {\r\n    return dataBuffer -> {\r\n        String value = dataBuffer.toString(UTF_8);\r\n        DataBufferUtils.release(dataBuffer);\r\n        assertThat(value).isEqualTo(expected);\r\n    };\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ZeroDemandSubscriber",
+    "entityType": "class",
+    "code": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    // Just subscribe without requesting\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.ZeroDemandSubscriber#hookOnSubscribe(Subscription)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    // Just subscribe without requesting\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests",
+    "entityType": "class",
+    "code": "private static final ResolvableType TYPE = ResolvableType.forClass(String.class);\nStringDecoderTests() {\r\n    super(StringDecoder.allMimeTypes());\r\n}\n@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_HTML)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-8\"))).isTrue();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Object.class), MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}\n@Override\r\n@Test\r\nprotected void decode() {\r\n    String u = \"ü\";\r\n    String e = \"é\";\r\n    String o = \"ø\";\r\n    String s = String.format(\"%s\\n%s\\n%s\", u, e, o);\r\n    Flux<DataBuffer> input = toDataBuffers(s, 1, UTF_8);\r\n    testDecodeAll(input, TYPE, step -> step.expectNext(u, e, o).verifyComplete(), null, null);\r\n}\n// gh-30299\r\n@Test\r\npublic void decodeAndCancelWithPendingChunks() {\r\n    Flux<DataBuffer> input = toDataBuffers(\"abc\", 1, UTF_8).concatWith(Flux.never());\r\n    Flux<String> result = this.decoder.decode(input, TYPE, null, null);\r\n    StepVerifier.create(result).thenAwait(Duration.ofMillis(100)).thenCancel().verify();\r\n}\n@Test\r\nvoid decodeMultibyteCharacterUtf16() {\r\n    String u = \"ü\";\r\n    String e = \"é\";\r\n    String o = \"ø\";\r\n    String s = String.format(\"%s\\n%s\\n%s\", u, e, o);\r\n    Flux<DataBuffer> source = toDataBuffers(s, 2, UTF_16BE);\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-16be\");\r\n    testDecode(source, TYPE, step -> step.expectNext(u, e, o).verifyComplete(), mimeType, null);\r\n}\nprivate Flux<DataBuffer> toDataBuffers(String s, int length, Charset charset) {\r\n    byte[] bytes = s.getBytes(charset);\r\n    List<byte[]> chunks = new ArrayList<>();\r\n    for (int i = 0; i < bytes.length; i += length) {\r\n        chunks.add(Arrays.copyOfRange(bytes, i, i + length));\r\n    }\r\n    return Flux.fromIterable(chunks).map(chunk -> {\r\n        DataBuffer dataBuffer = this.bufferFactory.allocateBuffer(length);\r\n        dataBuffer.write(chunk, 0, chunk.length);\r\n        return dataBuffer;\r\n    });\r\n}\n@Test\r\nvoid decodeNewLine() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\\r\\nabc\\n\"), stringBuffer(\"def\"), stringBuffer(\"ghi\\r\\n\\n\"), stringBuffer(\"jkl\"), stringBuffer(\"mno\\npqr\\n\"), stringBuffer(\"stu\"), stringBuffer(\"vw\"), stringBuffer(\"xyz\"));\r\n    testDecode(input, String.class, step -> step.expectNext(\"\").as(\"1st\").expectNext(\"abc\").expectNext(\"defghi\").expectNext(\"\").as(\"2nd\").expectNext(\"jklmno\").expectNext(\"pqr\").expectNext(\"stuvwxyz\").expectComplete().verify());\r\n}\n@Test\r\nvoid decodeNewlinesAcrossBuffers() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\\r\"), stringBuffer(\"\\n\"), stringBuffer(\"xyz\"));\r\n    testDecode(input, String.class, step -> step.expectNext(\"\").expectNext(\"xyz\").expectComplete().verify());\r\n}\n@Test\r\nvoid maxInMemoryLimit() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"abc\\n\"), stringBuffer(\"defg\\n\"), stringBuffer(\"hi\"), stringBuffer(\"jkl\"), stringBuffer(\"mnop\"));\r\n    this.decoder.setMaxInMemorySize(5);\r\n    testDecode(input, String.class, step -> step.expectNext(\"abc\", \"defg\").verifyError(DataBufferLimitException.class));\r\n}\n@Test\r\nvoid maxInMemoryLimitDoesNotApplyToParsedItemsThatDontRequireBuffering() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"TOO MUCH DATA\\nanother line\\n\\nand another\\n\"));\r\n    this.decoder.setMaxInMemorySize(5);\r\n    testDecode(input, String.class, step -> step.expectNext(\"TOO MUCH DATA\").expectNext(\"another line\").expectNext(\"\").expectNext(\"and another\").expectComplete().verify());\r\n}\n// gh-24339\r\n@Test\r\nvoid maxInMemoryLimitReleaseUnprocessedLinesWhenUnlimited() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"Line 1\\nLine 2\\nLine 3\\n\"));\r\n    this.decoder.setMaxInMemorySize(-1);\r\n    testDecodeCancel(input, ResolvableType.forClass(String.class), null, Collections.emptyMap());\r\n}\n@Test\r\nvoid decodeNewLineIncludeDelimiters() {\r\n    this.decoder = StringDecoder.allMimeTypes(StringDecoder.DEFAULT_DELIMITERS, false);\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\\r\\nabc\\n\"), stringBuffer(\"def\"), stringBuffer(\"ghi\\r\\n\\n\"), stringBuffer(\"jkl\"), stringBuffer(\"mno\\npqr\\n\"), stringBuffer(\"stu\"), stringBuffer(\"vw\"), stringBuffer(\"xyz\"));\r\n    testDecode(input, String.class, step -> step.expectNext(\"\\r\\n\").expectNext(\"abc\\n\").expectNext(\"defghi\\r\\n\").expectNext(\"\\n\").expectNext(\"jklmno\\n\").expectNext(\"pqr\\n\").expectNext(\"stuvwxyz\").expectComplete().verify());\r\n}\n@Test\r\nvoid decodeEmptyFlux() {\r\n    Flux<DataBuffer> input = Flux.empty();\r\n    testDecode(input, String.class, step -> step.expectComplete().verify());\r\n}\n@Test\r\nvoid decodeEmptyDataBuffer() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\"));\r\n    Flux<String> output = this.decoder.decode(input, TYPE, null, Collections.emptyMap());\r\n    StepVerifier.create(output).expectNext(\"\").expectComplete().verify();\r\n}\n@Override\r\n@Test\r\nprotected void decodeToMono() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"foo\"), stringBuffer(\"bar\"), stringBuffer(\"baz\"));\r\n    testDecodeToMonoAll(input, String.class, step -> step.expectNext(\"foobarbaz\").expectComplete().verify());\r\n}\n@Test\r\nvoid decodeToMonoWithEmptyFlux() {\r\n    Flux<DataBuffer> input = Flux.empty();\r\n    testDecodeToMono(input, String.class, step -> step.expectComplete().verify());\r\n}\nprivate DataBuffer stringBuffer(String value) {\r\n    byte[] bytes = value.getBytes(StandardCharsets.UTF_8);\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(bytes.length);\r\n    buffer.write(bytes);\r\n    return buffer;\r\n}",
+    "comment": "\n * Tests for {@link StringDecoder}.\n *\n * @author Sebastien Deleuze\n * @author Brian Clozel\n * @author Mark Paluch\n "
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#canDecode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_HTML)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-8\"))).isTrue();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Object.class), MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decode()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void decode() {\r\n    String u = \"ü\";\r\n    String e = \"é\";\r\n    String o = \"ø\";\r\n    String s = String.format(\"%s\\n%s\\n%s\", u, e, o);\r\n    Flux<DataBuffer> input = toDataBuffers(s, 1, UTF_8);\r\n    testDecodeAll(input, TYPE, step -> step.expectNext(u, e, o).verifyComplete(), null, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeAndCancelWithPendingChunks()",
+    "entityType": "method",
+    "code": "// gh-30299\r\n@Test\r\npublic void decodeAndCancelWithPendingChunks() {\r\n    Flux<DataBuffer> input = toDataBuffers(\"abc\", 1, UTF_8).concatWith(Flux.never());\r\n    Flux<String> result = this.decoder.decode(input, TYPE, null, null);\r\n    StepVerifier.create(result).thenAwait(Duration.ofMillis(100)).thenCancel().verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeMultibyteCharacterUtf16()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeMultibyteCharacterUtf16() {\r\n    String u = \"ü\";\r\n    String e = \"é\";\r\n    String o = \"ø\";\r\n    String s = String.format(\"%s\\n%s\\n%s\", u, e, o);\r\n    Flux<DataBuffer> source = toDataBuffers(s, 2, UTF_16BE);\r\n    MimeType mimeType = MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-16be\");\r\n    testDecode(source, TYPE, step -> step.expectNext(u, e, o).verifyComplete(), mimeType, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#toDataBuffers(String,int,Charset)",
+    "entityType": "method",
+    "code": "private Flux<DataBuffer> toDataBuffers(String s, int length, Charset charset) {\r\n    byte[] bytes = s.getBytes(charset);\r\n    List<byte[]> chunks = new ArrayList<>();\r\n    for (int i = 0; i < bytes.length; i += length) {\r\n        chunks.add(Arrays.copyOfRange(bytes, i, i + length));\r\n    }\r\n    return Flux.fromIterable(chunks).map(chunk -> {\r\n        DataBuffer dataBuffer = this.bufferFactory.allocateBuffer(length);\r\n        dataBuffer.write(chunk, 0, chunk.length);\r\n        return dataBuffer;\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeNewLine()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeNewLine() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\\r\\nabc\\n\"), stringBuffer(\"def\"), stringBuffer(\"ghi\\r\\n\\n\"), stringBuffer(\"jkl\"), stringBuffer(\"mno\\npqr\\n\"), stringBuffer(\"stu\"), stringBuffer(\"vw\"), stringBuffer(\"xyz\"));\r\n    testDecode(input, String.class, step -> step.expectNext(\"\").as(\"1st\").expectNext(\"abc\").expectNext(\"defghi\").expectNext(\"\").as(\"2nd\").expectNext(\"jklmno\").expectNext(\"pqr\").expectNext(\"stuvwxyz\").expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeNewlinesAcrossBuffers()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeNewlinesAcrossBuffers() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\\r\"), stringBuffer(\"\\n\"), stringBuffer(\"xyz\"));\r\n    testDecode(input, String.class, step -> step.expectNext(\"\").expectNext(\"xyz\").expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#maxInMemoryLimit()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid maxInMemoryLimit() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"abc\\n\"), stringBuffer(\"defg\\n\"), stringBuffer(\"hi\"), stringBuffer(\"jkl\"), stringBuffer(\"mnop\"));\r\n    this.decoder.setMaxInMemorySize(5);\r\n    testDecode(input, String.class, step -> step.expectNext(\"abc\", \"defg\").verifyError(DataBufferLimitException.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#maxInMemoryLimitDoesNotApplyToParsedItemsThatDontRequireBuffering()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid maxInMemoryLimitDoesNotApplyToParsedItemsThatDontRequireBuffering() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"TOO MUCH DATA\\nanother line\\n\\nand another\\n\"));\r\n    this.decoder.setMaxInMemorySize(5);\r\n    testDecode(input, String.class, step -> step.expectNext(\"TOO MUCH DATA\").expectNext(\"another line\").expectNext(\"\").expectNext(\"and another\").expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#maxInMemoryLimitReleaseUnprocessedLinesWhenUnlimited()",
+    "entityType": "method",
+    "code": "// gh-24339\r\n@Test\r\nvoid maxInMemoryLimitReleaseUnprocessedLinesWhenUnlimited() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"Line 1\\nLine 2\\nLine 3\\n\"));\r\n    this.decoder.setMaxInMemorySize(-1);\r\n    testDecodeCancel(input, ResolvableType.forClass(String.class), null, Collections.emptyMap());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeNewLineIncludeDelimiters()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeNewLineIncludeDelimiters() {\r\n    this.decoder = StringDecoder.allMimeTypes(StringDecoder.DEFAULT_DELIMITERS, false);\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\\r\\nabc\\n\"), stringBuffer(\"def\"), stringBuffer(\"ghi\\r\\n\\n\"), stringBuffer(\"jkl\"), stringBuffer(\"mno\\npqr\\n\"), stringBuffer(\"stu\"), stringBuffer(\"vw\"), stringBuffer(\"xyz\"));\r\n    testDecode(input, String.class, step -> step.expectNext(\"\\r\\n\").expectNext(\"abc\\n\").expectNext(\"defghi\\r\\n\").expectNext(\"\\n\").expectNext(\"jklmno\\n\").expectNext(\"pqr\\n\").expectNext(\"stuvwxyz\").expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeEmptyFlux()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeEmptyFlux() {\r\n    Flux<DataBuffer> input = Flux.empty();\r\n    testDecode(input, String.class, step -> step.expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeEmptyDataBuffer()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeEmptyDataBuffer() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"\"));\r\n    Flux<String> output = this.decoder.decode(input, TYPE, null, Collections.emptyMap());\r\n    StepVerifier.create(output).expectNext(\"\").expectComplete().verify();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeToMono()",
+    "entityType": "method",
+    "code": "@Override\r\n@Test\r\nprotected void decodeToMono() {\r\n    Flux<DataBuffer> input = Flux.just(stringBuffer(\"foo\"), stringBuffer(\"bar\"), stringBuffer(\"baz\"));\r\n    testDecodeToMonoAll(input, String.class, step -> step.expectNext(\"foobarbaz\").expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#decodeToMonoWithEmptyFlux()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid decodeToMonoWithEmptyFlux() {\r\n    Flux<DataBuffer> input = Flux.empty();\r\n    testDecodeToMono(input, String.class, step -> step.expectComplete().verify());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.codec.StringDecoderTests#stringBuffer(String)",
+    "entityType": "method",
+    "code": "private DataBuffer stringBuffer(String value) {\r\n    byte[] bytes = value.getBytes(StandardCharsets.UTF_8);\r\n    DataBuffer buffer = this.bufferFactory.allocateBuffer(bytes.length);\r\n    buffer.write(bytes);\r\n    return buffer;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests",
+    "entityType": "class",
+    "code": "/**\r\n * The test demonstrates that the generics-based API for\r\n * {@link CollectionFactory#createApproximateCollection(Object, int)}\r\n * is not type-safe.\r\n * <p>Specifically, the parameterized type {@code E} is not bound to\r\n * the type of elements contained in the {@code collection} argument\r\n * passed to {@code createApproximateCollection()}. Thus casting the\r\n * value returned by {@link EnumSet#copyOf(EnumSet)} to\r\n * {@code (Collection<E>)} cannot guarantee that the returned collection\r\n * actually contains elements of type {@code E}.\r\n */\r\n@Test\r\nvoid createApproximateCollectionIsNotTypeSafeForEnumSet() {\r\n    Collection<Integer> ints = createApproximateCollection(EnumSet.of(Color.BLUE), 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that ints is of type Collection<Integer>, but the collection returned\r\n    // by createApproximateCollection() is of type Collection<Color>. Thus, 42\r\n    // cannot be cast to a Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> ints.add(42));\r\n}\n@Test\r\nvoid createCollectionIsNotTypeSafeForEnumSet() {\r\n    Collection<Integer> ints = createCollection(EnumSet.class, Color.class, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that ints is of type Collection<Integer>, but the collection returned\r\n    // by createCollection() is of type Collection<Color>. Thus, 42 cannot be cast\r\n    // to a Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> ints.add(42));\r\n}\n/**\r\n * The test demonstrates that the generics-based API for\r\n * {@link CollectionFactory#createApproximateMap(Object, int)}\r\n * is not type-safe.\r\n * <p>The reasoning is similar that described in\r\n * {@link #createApproximateCollectionIsNotTypeSafeForEnumSet}.\r\n */\r\n@Test\r\nvoid createApproximateMapIsNotTypeSafeForEnumMap() {\r\n    EnumMap<Color, Integer> enumMap = new EnumMap<>(Color.class);\r\n    enumMap.put(Color.RED, 1);\r\n    enumMap.put(Color.BLUE, 2);\r\n    Map<String, Integer> map = createApproximateMap(enumMap, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that the 'map' key must be of type String, but the keys in the map\r\n    // returned by createApproximateMap() are of type Color. Thus \"foo\" cannot be\r\n    // cast to a Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> map.put(\"foo\", 1));\r\n}\n@Test\r\nvoid createMapIsNotTypeSafeForEnumMap() {\r\n    Map<String, Integer> map = createMap(EnumMap.class, Color.class, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that the 'map' key must be of type String, but the keys in the map\r\n    // returned by createMap() are of type Color. Thus \"foo\" cannot be cast to a\r\n    // Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> map.put(\"foo\", 1));\r\n}\n@Test\r\nvoid createMapIsNotTypeSafeForLinkedMultiValueMap() {\r\n    Map<String, Integer> map = createMap(MultiValueMap.class, null, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note: 'map' values must be of type Integer, but the values in the map\r\n    // returned by createMap() are of type java.util.List. Thus 1 cannot be\r\n    // cast to a List.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> map.put(\"foo\", 1));\r\n}\n@Test\r\nvoid createApproximateCollectionFromEmptyHashSet() {\r\n    Collection<String> set = createApproximateCollection(new HashSet<>(), 2);\r\n    assertThat(set).isEmpty();\r\n}\n@Test\r\nvoid createApproximateCollectionFromNonEmptyHashSet() {\r\n    HashSet<String> hashSet = new HashSet<>();\r\n    hashSet.add(\"foo\");\r\n    Collection<String> set = createApproximateCollection(hashSet, 2);\r\n    assertThat(set).isEmpty();\r\n}\n@Test\r\nvoid createApproximateCollectionFromEmptyEnumSet() {\r\n    Collection<Color> colors = createApproximateCollection(EnumSet.noneOf(Color.class), 2);\r\n    assertThat(colors).isEmpty();\r\n}\n@Test\r\nvoid createApproximateCollectionFromNonEmptyEnumSet() {\r\n    Collection<Color> colors = createApproximateCollection(EnumSet.of(Color.BLUE), 2);\r\n    assertThat(colors).isEmpty();\r\n}\n@Test\r\nvoid createApproximateMapFromEmptyHashMap() {\r\n    Map<String, String> map = createApproximateMap(new HashMap<>(), 2);\r\n    assertThat(map).isEmpty();\r\n}\n@Test\r\nvoid createApproximateMapFromNonEmptyHashMap() {\r\n    Map<String, String> hashMap = new HashMap<>();\r\n    hashMap.put(\"foo\", \"bar\");\r\n    Map<String, String> map = createApproximateMap(hashMap, 2);\r\n    assertThat(map).isEmpty();\r\n}\n@Test\r\nvoid createApproximateMapFromEmptyEnumMap() {\r\n    Map<Color, String> colors = createApproximateMap(new EnumMap<>(Color.class), 2);\r\n    assertThat(colors).isEmpty();\r\n}\n@Test\r\nvoid createApproximateMapFromNonEmptyEnumMap() {\r\n    EnumMap<Color, String> enumMap = new EnumMap<>(Color.class);\r\n    enumMap.put(Color.BLUE, \"blue\");\r\n    Map<Color, String> colors = createApproximateMap(enumMap, 2);\r\n    assertThat(colors).isEmpty();\r\n}\n@Test\r\nvoid createsCollectionsCorrectly() {\r\n    // interfaces\r\n    testCollection(List.class, ArrayList.class);\r\n    testCollection(Set.class, LinkedHashSet.class);\r\n    testCollection(Collection.class, LinkedHashSet.class);\r\n    // on JDK 21: testCollection(SequencedSet.class, LinkedHashSet.class);\r\n    // on JDK 21: testCollection(SequencedCollection.class, LinkedHashSet.class);\r\n    testCollection(SortedSet.class, TreeSet.class);\r\n    testCollection(NavigableSet.class, TreeSet.class);\r\n    // concrete types\r\n    testCollection(ArrayList.class, ArrayList.class);\r\n    testCollection(HashSet.class, HashSet.class);\r\n    testCollection(LinkedHashSet.class, LinkedHashSet.class);\r\n    testCollection(TreeSet.class, TreeSet.class);\r\n}\nprivate void testCollection(Class<?> collectionType, Class<?> resultType) {\r\n    assertThat(CollectionFactory.isApproximableCollectionType(collectionType)).isTrue();\r\n    assertThat(createCollection(collectionType, 0)).isExactlyInstanceOf(resultType);\r\n    assertThat(createCollection(collectionType, String.class, 0)).isExactlyInstanceOf(resultType);\r\n}\n@Test\r\nvoid createsEnumSet() {\r\n    assertThat(createCollection(EnumSet.class, Color.class, 0)).isInstanceOf(EnumSet.class);\r\n}\n// SPR-17619\r\n@Test\r\nvoid createsEnumSetSubclass() {\r\n    EnumSet<Color> enumSet = EnumSet.noneOf(Color.class);\r\n    assertThat(createCollection(enumSet.getClass(), Color.class, 0)).isInstanceOf(enumSet.getClass());\r\n}\n@Test\r\nvoid rejectsInvalidElementTypeForEnumSet() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createCollection(EnumSet.class, Object.class, 0));\r\n}\n@Test\r\nvoid rejectsNullElementTypeForEnumSet() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createCollection(EnumSet.class, null, 0));\r\n}\n@Test\r\nvoid rejectsNullCollectionType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createCollection(null, Object.class, 0));\r\n}\n@Test\r\nvoid createsMapsCorrectly() {\r\n    // interfaces\r\n    testMap(Map.class, LinkedHashMap.class);\r\n    // on JDK 21: testMap(SequencedMap.class, LinkedHashMap.class);\r\n    testMap(SortedMap.class, TreeMap.class);\r\n    testMap(NavigableMap.class, TreeMap.class);\r\n    testMap(MultiValueMap.class, LinkedMultiValueMap.class);\r\n    // concrete types\r\n    testMap(HashMap.class, HashMap.class);\r\n    testMap(LinkedHashMap.class, LinkedHashMap.class);\r\n    testMap(TreeMap.class, TreeMap.class);\r\n    testMap(LinkedMultiValueMap.class, LinkedMultiValueMap.class);\r\n}\nprivate void testMap(Class<?> mapType, Class<?> resultType) {\r\n    assertThat(CollectionFactory.isApproximableMapType(mapType)).isTrue();\r\n    assertThat(createMap(mapType, 0)).isExactlyInstanceOf(resultType);\r\n    assertThat(createMap(mapType, String.class, 0)).isExactlyInstanceOf(resultType);\r\n}\n@Test\r\nvoid createsEnumMap() {\r\n    assertThat(createMap(EnumMap.class, Color.class, 0)).isInstanceOf(EnumMap.class);\r\n}\n@Test\r\nvoid rejectsInvalidKeyTypeForEnumMap() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createMap(EnumMap.class, Object.class, 0));\r\n}\n@Test\r\nvoid rejectsNullKeyTypeForEnumMap() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createMap(EnumMap.class, null, 0));\r\n}\n@Test\r\nvoid rejectsNullMapType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createMap(null, Object.class, 0));\r\n}\nenum Color {\r\n\r\n    RED, BLUE\r\n}",
+    "comment": "\n * Tests for {@link CollectionFactory}.\n *\n * @author Oliver Gierke\n * @author Sam Brannen\n * @since 4.1.4\n "
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateCollectionIsNotTypeSafeForEnumSet()",
+    "entityType": "method",
+    "code": "/**\r\n * The test demonstrates that the generics-based API for\r\n * {@link CollectionFactory#createApproximateCollection(Object, int)}\r\n * is not type-safe.\r\n * <p>Specifically, the parameterized type {@code E} is not bound to\r\n * the type of elements contained in the {@code collection} argument\r\n * passed to {@code createApproximateCollection()}. Thus casting the\r\n * value returned by {@link EnumSet#copyOf(EnumSet)} to\r\n * {@code (Collection<E>)} cannot guarantee that the returned collection\r\n * actually contains elements of type {@code E}.\r\n */\r\n@Test\r\nvoid createApproximateCollectionIsNotTypeSafeForEnumSet() {\r\n    Collection<Integer> ints = createApproximateCollection(EnumSet.of(Color.BLUE), 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that ints is of type Collection<Integer>, but the collection returned\r\n    // by createApproximateCollection() is of type Collection<Color>. Thus, 42\r\n    // cannot be cast to a Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> ints.add(42));\r\n}",
+    "comment": "\n\t * The test demonstrates that the generics-based API for\n\t * {@link CollectionFactory#createApproximateCollection(Object, int)}\n\t * is not type-safe.\n\t * <p>Specifically, the parameterized type {@code E} is not bound to\n\t * the type of elements contained in the {@code collection} argument\n\t * passed to {@code createApproximateCollection()}. Thus casting the\n\t * value returned by {@link EnumSet#copyOf(EnumSet)} to\n\t * {@code (Collection<E>)} cannot guarantee that the returned collection\n\t * actually contains elements of type {@code E}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createCollectionIsNotTypeSafeForEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createCollectionIsNotTypeSafeForEnumSet() {\r\n    Collection<Integer> ints = createCollection(EnumSet.class, Color.class, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that ints is of type Collection<Integer>, but the collection returned\r\n    // by createCollection() is of type Collection<Color>. Thus, 42 cannot be cast\r\n    // to a Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> ints.add(42));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateMapIsNotTypeSafeForEnumMap()",
+    "entityType": "method",
+    "code": "/**\r\n * The test demonstrates that the generics-based API for\r\n * {@link CollectionFactory#createApproximateMap(Object, int)}\r\n * is not type-safe.\r\n * <p>The reasoning is similar that described in\r\n * {@link #createApproximateCollectionIsNotTypeSafeForEnumSet}.\r\n */\r\n@Test\r\nvoid createApproximateMapIsNotTypeSafeForEnumMap() {\r\n    EnumMap<Color, Integer> enumMap = new EnumMap<>(Color.class);\r\n    enumMap.put(Color.RED, 1);\r\n    enumMap.put(Color.BLUE, 2);\r\n    Map<String, Integer> map = createApproximateMap(enumMap, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that the 'map' key must be of type String, but the keys in the map\r\n    // returned by createApproximateMap() are of type Color. Thus \"foo\" cannot be\r\n    // cast to a Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> map.put(\"foo\", 1));\r\n}",
+    "comment": "\n\t * The test demonstrates that the generics-based API for\n\t * {@link CollectionFactory#createApproximateMap(Object, int)}\n\t * is not type-safe.\n\t * <p>The reasoning is similar that described in\n\t * {@link #createApproximateCollectionIsNotTypeSafeForEnumSet}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createMapIsNotTypeSafeForEnumMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createMapIsNotTypeSafeForEnumMap() {\r\n    Map<String, Integer> map = createMap(EnumMap.class, Color.class, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note that the 'map' key must be of type String, but the keys in the map\r\n    // returned by createMap() are of type Color. Thus \"foo\" cannot be cast to a\r\n    // Color.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> map.put(\"foo\", 1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createMapIsNotTypeSafeForLinkedMultiValueMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createMapIsNotTypeSafeForLinkedMultiValueMap() {\r\n    Map<String, Integer> map = createMap(MultiValueMap.class, null, 3);\r\n    // Use a try-catch block to ensure that the exception is thrown as a result of the\r\n    // next line and not as a result of the previous line.\r\n    // Note: 'map' values must be of type Integer, but the values in the map\r\n    // returned by createMap() are of type java.util.List. Thus 1 cannot be\r\n    // cast to a List.\r\n    assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> map.put(\"foo\", 1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateCollectionFromEmptyHashSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateCollectionFromEmptyHashSet() {\r\n    Collection<String> set = createApproximateCollection(new HashSet<>(), 2);\r\n    assertThat(set).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateCollectionFromNonEmptyHashSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateCollectionFromNonEmptyHashSet() {\r\n    HashSet<String> hashSet = new HashSet<>();\r\n    hashSet.add(\"foo\");\r\n    Collection<String> set = createApproximateCollection(hashSet, 2);\r\n    assertThat(set).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateCollectionFromEmptyEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateCollectionFromEmptyEnumSet() {\r\n    Collection<Color> colors = createApproximateCollection(EnumSet.noneOf(Color.class), 2);\r\n    assertThat(colors).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateCollectionFromNonEmptyEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateCollectionFromNonEmptyEnumSet() {\r\n    Collection<Color> colors = createApproximateCollection(EnumSet.of(Color.BLUE), 2);\r\n    assertThat(colors).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateMapFromEmptyHashMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateMapFromEmptyHashMap() {\r\n    Map<String, String> map = createApproximateMap(new HashMap<>(), 2);\r\n    assertThat(map).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateMapFromNonEmptyHashMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateMapFromNonEmptyHashMap() {\r\n    Map<String, String> hashMap = new HashMap<>();\r\n    hashMap.put(\"foo\", \"bar\");\r\n    Map<String, String> map = createApproximateMap(hashMap, 2);\r\n    assertThat(map).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateMapFromEmptyEnumMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateMapFromEmptyEnumMap() {\r\n    Map<Color, String> colors = createApproximateMap(new EnumMap<>(Color.class), 2);\r\n    assertThat(colors).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createApproximateMapFromNonEmptyEnumMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createApproximateMapFromNonEmptyEnumMap() {\r\n    EnumMap<Color, String> enumMap = new EnumMap<>(Color.class);\r\n    enumMap.put(Color.BLUE, \"blue\");\r\n    Map<Color, String> colors = createApproximateMap(enumMap, 2);\r\n    assertThat(colors).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createsCollectionsCorrectly()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createsCollectionsCorrectly() {\r\n    // interfaces\r\n    testCollection(List.class, ArrayList.class);\r\n    testCollection(Set.class, LinkedHashSet.class);\r\n    testCollection(Collection.class, LinkedHashSet.class);\r\n    // on JDK 21: testCollection(SequencedSet.class, LinkedHashSet.class);\r\n    // on JDK 21: testCollection(SequencedCollection.class, LinkedHashSet.class);\r\n    testCollection(SortedSet.class, TreeSet.class);\r\n    testCollection(NavigableSet.class, TreeSet.class);\r\n    // concrete types\r\n    testCollection(ArrayList.class, ArrayList.class);\r\n    testCollection(HashSet.class, HashSet.class);\r\n    testCollection(LinkedHashSet.class, LinkedHashSet.class);\r\n    testCollection(TreeSet.class, TreeSet.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#testCollection(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "private void testCollection(Class<?> collectionType, Class<?> resultType) {\r\n    assertThat(CollectionFactory.isApproximableCollectionType(collectionType)).isTrue();\r\n    assertThat(createCollection(collectionType, 0)).isExactlyInstanceOf(resultType);\r\n    assertThat(createCollection(collectionType, String.class, 0)).isExactlyInstanceOf(resultType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createsEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createsEnumSet() {\r\n    assertThat(createCollection(EnumSet.class, Color.class, 0)).isInstanceOf(EnumSet.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createsEnumSetSubclass()",
+    "entityType": "method",
+    "code": "// SPR-17619\r\n@Test\r\nvoid createsEnumSetSubclass() {\r\n    EnumSet<Color> enumSet = EnumSet.noneOf(Color.class);\r\n    assertThat(createCollection(enumSet.getClass(), Color.class, 0)).isInstanceOf(enumSet.getClass());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#rejectsInvalidElementTypeForEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsInvalidElementTypeForEnumSet() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createCollection(EnumSet.class, Object.class, 0));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#rejectsNullElementTypeForEnumSet()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsNullElementTypeForEnumSet() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createCollection(EnumSet.class, null, 0));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#rejectsNullCollectionType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsNullCollectionType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createCollection(null, Object.class, 0));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createsMapsCorrectly()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createsMapsCorrectly() {\r\n    // interfaces\r\n    testMap(Map.class, LinkedHashMap.class);\r\n    // on JDK 21: testMap(SequencedMap.class, LinkedHashMap.class);\r\n    testMap(SortedMap.class, TreeMap.class);\r\n    testMap(NavigableMap.class, TreeMap.class);\r\n    testMap(MultiValueMap.class, LinkedMultiValueMap.class);\r\n    // concrete types\r\n    testMap(HashMap.class, HashMap.class);\r\n    testMap(LinkedHashMap.class, LinkedHashMap.class);\r\n    testMap(TreeMap.class, TreeMap.class);\r\n    testMap(LinkedMultiValueMap.class, LinkedMultiValueMap.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#testMap(Class<?>,Class<?>)",
+    "entityType": "method",
+    "code": "private void testMap(Class<?> mapType, Class<?> resultType) {\r\n    assertThat(CollectionFactory.isApproximableMapType(mapType)).isTrue();\r\n    assertThat(createMap(mapType, 0)).isExactlyInstanceOf(resultType);\r\n    assertThat(createMap(mapType, String.class, 0)).isExactlyInstanceOf(resultType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#createsEnumMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createsEnumMap() {\r\n    assertThat(createMap(EnumMap.class, Color.class, 0)).isInstanceOf(EnumMap.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#rejectsInvalidKeyTypeForEnumMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsInvalidKeyTypeForEnumMap() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createMap(EnumMap.class, Object.class, 0));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#rejectsNullKeyTypeForEnumMap()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsNullKeyTypeForEnumMap() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createMap(EnumMap.class, null, 0));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.CollectionFactoryTests#rejectsNullMapType()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid rejectsNullMapType() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> createMap(null, Object.class, 0));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid constants() {\r\n    Constants c = new Constants(A.class);\r\n    assertThat(c.getClassName()).isEqualTo(A.class.getName());\r\n    assertThat(c.getSize()).isEqualTo(9);\r\n    assertThat(c.asNumber(\"DOG\").intValue()).isEqualTo(A.DOG);\r\n    assertThat(c.asNumber(\"dog\").intValue()).isEqualTo(A.DOG);\r\n    assertThat(c.asNumber(\"cat\").intValue()).isEqualTo(A.CAT);\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.asNumber(\"bogus\"));\r\n    assertThat(c.asString(\"S1\")).isEqualTo(A.S1);\r\n    assertThatExceptionOfType(Constants.ConstantException.class).as(\"wrong type\").isThrownBy(() -> c.asNumber(\"S1\"));\r\n}\n@Test\r\nvoid getNames() {\r\n    Constants c = new Constants(A.class);\r\n    Set<String> names = c.getNames(\"\");\r\n    assertThat(names).hasSize(c.getSize());\r\n    assertThat(names).contains(\"DOG\");\r\n    assertThat(names).contains(\"CAT\");\r\n    assertThat(names).contains(\"S1\");\r\n    names = c.getNames(\"D\");\r\n    assertThat(names).hasSize(1);\r\n    assertThat(names).contains(\"DOG\");\r\n    names = c.getNames(\"d\");\r\n    assertThat(names).hasSize(1);\r\n    assertThat(names).contains(\"DOG\");\r\n}\n@Test\r\nvoid getValues() {\r\n    Constants c = new Constants(A.class);\r\n    Set<Object> values = c.getValues(\"\");\r\n    assertThat(values).hasSize(7);\r\n    assertThat(values).contains(0);\r\n    assertThat(values).contains(66);\r\n    assertThat(values).contains(\"\");\r\n    values = c.getValues(\"D\");\r\n    assertThat(values).hasSize(1);\r\n    assertThat(values).contains(0);\r\n    values = c.getValues(\"prefix\");\r\n    assertThat(values).hasSize(2);\r\n    assertThat(values).contains(1);\r\n    assertThat(values).contains(2);\r\n    values = c.getValuesForProperty(\"myProperty\");\r\n    assertThat(values).hasSize(2);\r\n    assertThat(values).contains(1);\r\n    assertThat(values).contains(2);\r\n}\n@Test\r\nvoid getValuesInTurkey() {\r\n    Locale oldLocale = Locale.getDefault();\r\n    Locale.setDefault(new Locale(\"tr\", \"\"));\r\n    try {\r\n        Constants c = new Constants(A.class);\r\n        Set<Object> values = c.getValues(\"\");\r\n        assertThat(values).hasSize(7);\r\n        assertThat(values).contains(0);\r\n        assertThat(values).contains(66);\r\n        assertThat(values).contains(\"\");\r\n        values = c.getValues(\"D\");\r\n        assertThat(values).hasSize(1);\r\n        assertThat(values).contains(0);\r\n        values = c.getValues(\"prefix\");\r\n        assertThat(values).hasSize(2);\r\n        assertThat(values).contains(1);\r\n        assertThat(values).contains(2);\r\n        values = c.getValuesForProperty(\"myProperty\");\r\n        assertThat(values).hasSize(2);\r\n        assertThat(values).contains(1);\r\n        assertThat(values).contains(2);\r\n    } finally {\r\n        Locale.setDefault(oldLocale);\r\n    }\r\n}\n@Test\r\nvoid suffixAccess() {\r\n    Constants c = new Constants(A.class);\r\n    Set<String> names = c.getNamesForSuffix(\"_PROPERTY\");\r\n    assertThat(names).hasSize(2);\r\n    assertThat(names).contains(\"NO_PROPERTY\");\r\n    assertThat(names).contains(\"YES_PROPERTY\");\r\n    Set<Object> values = c.getValuesForSuffix(\"_PROPERTY\");\r\n    assertThat(values).hasSize(2);\r\n    assertThat(values).contains(3);\r\n    assertThat(values).contains(4);\r\n}\n@Test\r\nvoid toCode() {\r\n    Constants c = new Constants(A.class);\r\n    assertThat(c.toCode(0, \"\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, \"D\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, \"DO\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, \"DoG\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, null)).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(66, \"\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, \"C\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, \"ca\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, \"cAt\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, null)).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(\"\", \"\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCode(\"\", \"s\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCode(\"\", \"s1\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCode(\"\", null)).isEqualTo(\"S1\");\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCode(\"bogus\", \"bogus\"));\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCode(\"bogus\", null));\r\n    assertThat(c.toCodeForProperty(1, \"myProperty\")).isEqualTo(\"MY_PROPERTY_NO\");\r\n    assertThat(c.toCodeForProperty(2, \"myProperty\")).isEqualTo(\"MY_PROPERTY_YES\");\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCodeForProperty(\"bogus\", \"bogus\"));\r\n    assertThat(c.toCodeForSuffix(0, \"\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, \"G\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, \"OG\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, \"DoG\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, null)).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(66, \"\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, \"T\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, \"at\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, \"cAt\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, null)).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(\"\", \"\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCodeForSuffix(\"\", \"1\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCodeForSuffix(\"\", \"s1\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCodeForSuffix(\"\", null)).isEqualTo(\"S1\");\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCodeForSuffix(\"bogus\", \"bogus\"));\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCodeForSuffix(\"bogus\", null));\r\n}\n@Test\r\nvoid getValuesWithNullPrefix() {\r\n    Constants c = new Constants(A.class);\r\n    Set<?> values = c.getValues(null);\r\n    assertThat(values).as(\"Must have returned *all* public static final values\").hasSize(7);\r\n}\n@Test\r\nvoid getValuesWithEmptyStringPrefix() {\r\n    Constants c = new Constants(A.class);\r\n    Set<Object> values = c.getValues(\"\");\r\n    assertThat(values).as(\"Must have returned *all* public static final values\").hasSize(7);\r\n}\n@Test\r\nvoid getValuesWithWhitespacedStringPrefix() {\r\n    Constants c = new Constants(A.class);\r\n    Set<?> values = c.getValues(\" \");\r\n    assertThat(values).as(\"Must have returned *all* public static final values\").hasSize(7);\r\n}\n@Test\r\nvoid withClassThatExposesNoConstants() {\r\n    Constants c = new Constants(NoConstants.class);\r\n    assertThat(c.getSize()).isEqualTo(0);\r\n    final Set<?> values = c.getValues(\"\");\r\n    assertThat(values).isNotNull();\r\n    assertThat(values).isEmpty();\r\n}\n@Test\r\nvoid ctorWithNullClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new Constants(null));\r\n}\nprivate static final class NoConstants {\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate static final class A {\r\n\r\n    public static final int DOG = 0;\r\n\r\n    public static final int CAT = 66;\r\n\r\n    public static final String S1 = \"\";\r\n\r\n    public static final int PREFIX_NO = 1;\r\n\r\n    public static final int PREFIX_YES = 2;\r\n\r\n    public static final int MY_PROPERTY_NO = 1;\r\n\r\n    public static final int MY_PROPERTY_YES = 2;\r\n\r\n    public static final int NO_PROPERTY = 3;\r\n\r\n    public static final int YES_PROPERTY = 4;\r\n\r\n    /**\r\n     * ignore these\r\n     */\r\n    protected static final int P = -1;\r\n\r\n    protected boolean f;\r\n\r\n    static final Object o = new Object();\r\n}",
+    "comment": "\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @author Rick Evans\n * @since 28.04.2003\n "
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#constants()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid constants() {\r\n    Constants c = new Constants(A.class);\r\n    assertThat(c.getClassName()).isEqualTo(A.class.getName());\r\n    assertThat(c.getSize()).isEqualTo(9);\r\n    assertThat(c.asNumber(\"DOG\").intValue()).isEqualTo(A.DOG);\r\n    assertThat(c.asNumber(\"dog\").intValue()).isEqualTo(A.DOG);\r\n    assertThat(c.asNumber(\"cat\").intValue()).isEqualTo(A.CAT);\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.asNumber(\"bogus\"));\r\n    assertThat(c.asString(\"S1\")).isEqualTo(A.S1);\r\n    assertThatExceptionOfType(Constants.ConstantException.class).as(\"wrong type\").isThrownBy(() -> c.asNumber(\"S1\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#getNames()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getNames() {\r\n    Constants c = new Constants(A.class);\r\n    Set<String> names = c.getNames(\"\");\r\n    assertThat(names).hasSize(c.getSize());\r\n    assertThat(names).contains(\"DOG\");\r\n    assertThat(names).contains(\"CAT\");\r\n    assertThat(names).contains(\"S1\");\r\n    names = c.getNames(\"D\");\r\n    assertThat(names).hasSize(1);\r\n    assertThat(names).contains(\"DOG\");\r\n    names = c.getNames(\"d\");\r\n    assertThat(names).hasSize(1);\r\n    assertThat(names).contains(\"DOG\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#getValues()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getValues() {\r\n    Constants c = new Constants(A.class);\r\n    Set<Object> values = c.getValues(\"\");\r\n    assertThat(values).hasSize(7);\r\n    assertThat(values).contains(0);\r\n    assertThat(values).contains(66);\r\n    assertThat(values).contains(\"\");\r\n    values = c.getValues(\"D\");\r\n    assertThat(values).hasSize(1);\r\n    assertThat(values).contains(0);\r\n    values = c.getValues(\"prefix\");\r\n    assertThat(values).hasSize(2);\r\n    assertThat(values).contains(1);\r\n    assertThat(values).contains(2);\r\n    values = c.getValuesForProperty(\"myProperty\");\r\n    assertThat(values).hasSize(2);\r\n    assertThat(values).contains(1);\r\n    assertThat(values).contains(2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#getValuesInTurkey()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getValuesInTurkey() {\r\n    Locale oldLocale = Locale.getDefault();\r\n    Locale.setDefault(new Locale(\"tr\", \"\"));\r\n    try {\r\n        Constants c = new Constants(A.class);\r\n        Set<Object> values = c.getValues(\"\");\r\n        assertThat(values).hasSize(7);\r\n        assertThat(values).contains(0);\r\n        assertThat(values).contains(66);\r\n        assertThat(values).contains(\"\");\r\n        values = c.getValues(\"D\");\r\n        assertThat(values).hasSize(1);\r\n        assertThat(values).contains(0);\r\n        values = c.getValues(\"prefix\");\r\n        assertThat(values).hasSize(2);\r\n        assertThat(values).contains(1);\r\n        assertThat(values).contains(2);\r\n        values = c.getValuesForProperty(\"myProperty\");\r\n        assertThat(values).hasSize(2);\r\n        assertThat(values).contains(1);\r\n        assertThat(values).contains(2);\r\n    } finally {\r\n        Locale.setDefault(oldLocale);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#suffixAccess()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid suffixAccess() {\r\n    Constants c = new Constants(A.class);\r\n    Set<String> names = c.getNamesForSuffix(\"_PROPERTY\");\r\n    assertThat(names).hasSize(2);\r\n    assertThat(names).contains(\"NO_PROPERTY\");\r\n    assertThat(names).contains(\"YES_PROPERTY\");\r\n    Set<Object> values = c.getValuesForSuffix(\"_PROPERTY\");\r\n    assertThat(values).hasSize(2);\r\n    assertThat(values).contains(3);\r\n    assertThat(values).contains(4);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#toCode()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid toCode() {\r\n    Constants c = new Constants(A.class);\r\n    assertThat(c.toCode(0, \"\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, \"D\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, \"DO\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, \"DoG\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(0, null)).isEqualTo(\"DOG\");\r\n    assertThat(c.toCode(66, \"\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, \"C\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, \"ca\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, \"cAt\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(66, null)).isEqualTo(\"CAT\");\r\n    assertThat(c.toCode(\"\", \"\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCode(\"\", \"s\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCode(\"\", \"s1\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCode(\"\", null)).isEqualTo(\"S1\");\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCode(\"bogus\", \"bogus\"));\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCode(\"bogus\", null));\r\n    assertThat(c.toCodeForProperty(1, \"myProperty\")).isEqualTo(\"MY_PROPERTY_NO\");\r\n    assertThat(c.toCodeForProperty(2, \"myProperty\")).isEqualTo(\"MY_PROPERTY_YES\");\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCodeForProperty(\"bogus\", \"bogus\"));\r\n    assertThat(c.toCodeForSuffix(0, \"\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, \"G\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, \"OG\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, \"DoG\")).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(0, null)).isEqualTo(\"DOG\");\r\n    assertThat(c.toCodeForSuffix(66, \"\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, \"T\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, \"at\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, \"cAt\")).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(66, null)).isEqualTo(\"CAT\");\r\n    assertThat(c.toCodeForSuffix(\"\", \"\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCodeForSuffix(\"\", \"1\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCodeForSuffix(\"\", \"s1\")).isEqualTo(\"S1\");\r\n    assertThat(c.toCodeForSuffix(\"\", null)).isEqualTo(\"S1\");\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCodeForSuffix(\"bogus\", \"bogus\"));\r\n    assertThatExceptionOfType(Constants.ConstantException.class).isThrownBy(() -> c.toCodeForSuffix(\"bogus\", null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#getValuesWithNullPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getValuesWithNullPrefix() {\r\n    Constants c = new Constants(A.class);\r\n    Set<?> values = c.getValues(null);\r\n    assertThat(values).as(\"Must have returned *all* public static final values\").hasSize(7);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#getValuesWithEmptyStringPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getValuesWithEmptyStringPrefix() {\r\n    Constants c = new Constants(A.class);\r\n    Set<Object> values = c.getValues(\"\");\r\n    assertThat(values).as(\"Must have returned *all* public static final values\").hasSize(7);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#getValuesWithWhitespacedStringPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getValuesWithWhitespacedStringPrefix() {\r\n    Constants c = new Constants(A.class);\r\n    Set<?> values = c.getValues(\" \");\r\n    assertThat(values).as(\"Must have returned *all* public static final values\").hasSize(7);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#withClassThatExposesNoConstants()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withClassThatExposesNoConstants() {\r\n    Constants c = new Constants(NoConstants.class);\r\n    assertThat(c.getSize()).isEqualTo(0);\r\n    final Set<?> values = c.getValues(\"\");\r\n    assertThat(values).isNotNull();\r\n    assertThat(values).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConstantsTests#ctorWithNullClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ctorWithNullClass() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new Constants(null));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NoConstants",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.A",
+    "entityType": "class",
+    "code": "public static final int DOG = 0;\npublic static final int CAT = 66;\npublic static final String S1 = \"\";\npublic static final int PREFIX_NO = 1;\npublic static final int PREFIX_YES = 2;\npublic static final int MY_PROPERTY_NO = 1;\npublic static final int MY_PROPERTY_YES = 2;\npublic static final int NO_PROPERTY = 3;\npublic static final int YES_PROPERTY = 4;\n/**\r\n * ignore these\r\n */\r\nprotected static final int P = -1;\nprotected boolean f;\nstatic final Object o = new Object();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid simpleObject() {\r\n    assertThat(Conventions.getVariableName(new TestObject())).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(TestObject.class))).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(TestObject.class))).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\r\n}\n@Test\r\nvoid array() {\r\n    Object actual = Conventions.getVariableName(new TestObject[0]);\r\n    assertThat(actual).as(\"Incorrect plural array form\").isEqualTo(\"testObjectList\");\r\n}\n@Test\r\nvoid list() {\r\n    assertThat(Conventions.getVariableName(Collections.singletonList(new TestObject()))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(List.class))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(List.class))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\r\n}\n@Test\r\nvoid emptyList() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> Conventions.getVariableName(new ArrayList<>()));\r\n}\n@Test\r\nvoid set() {\r\n    assertThat(Conventions.getVariableName(Collections.singleton(new TestObject()))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Set.class))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Set.class))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\r\n}\n@Test\r\nvoid reactiveParameters() {\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Mono.class))).isEqualTo(\"testObjectMono\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Flux.class))).isEqualTo(\"testObjectFlux\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Single.class))).isEqualTo(\"testObjectSingle\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Observable.class))).isEqualTo(\"testObjectObservable\");\r\n}\n@Test\r\nvoid reactiveReturnTypes() {\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Mono.class))).isEqualTo(\"testObjectMono\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Flux.class))).isEqualTo(\"testObjectFlux\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Single.class))).isEqualTo(\"testObjectSingle\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Observable.class))).isEqualTo(\"testObjectObservable\");\r\n}\n@Test\r\nvoid attributeNameToPropertyName() {\r\n    assertThat(Conventions.attributeNameToPropertyName(\"transaction-manager\")).isEqualTo(\"transactionManager\");\r\n    assertThat(Conventions.attributeNameToPropertyName(\"pointcut-ref\")).isEqualTo(\"pointcutRef\");\r\n    assertThat(Conventions.attributeNameToPropertyName(\"lookup-on-startup\")).isEqualTo(\"lookupOnStartup\");\r\n}\n@Test\r\nvoid getQualifiedAttributeName() {\r\n    String baseName = \"foo\";\r\n    Class<String> cls = String.class;\r\n    String desiredResult = \"java.lang.String.foo\";\r\n    assertThat(Conventions.getQualifiedAttributeName(cls, baseName)).isEqualTo(desiredResult);\r\n}\nprivate static MethodParameter getMethodParameter(Class<?> parameterType) {\r\n    Method method = ClassUtils.getMethod(TestBean.class, \"handle\", (Class<?>[]) null);\r\n    for (int i = 0; i < method.getParameterCount(); i++) {\r\n        if (parameterType.equals(method.getParameterTypes()[i])) {\r\n            return new MethodParameter(method, i);\r\n        }\r\n    }\r\n    throw new IllegalArgumentException(\"Parameter type not found: \" + parameterType);\r\n}\nprivate static Method getMethodForReturnType(Class<?> returnType) {\r\n    return Arrays.stream(TestBean.class.getMethods()).filter(method -> method.getReturnType().equals(returnType)).findFirst().orElseThrow(() -> new IllegalArgumentException(\"Unique return type not found: \" + returnType));\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate static class TestBean {\r\n\r\n    public void handle(TestObject to, List<TestObject> toList, Set<TestObject> toSet, Mono<TestObject> toMono, Flux<TestObject> toFlux, Single<TestObject> toSingle, Observable<TestObject> toObservable) {\r\n    }\r\n\r\n    public TestObject handleTo() {\r\n        return null;\r\n    }\r\n\r\n    public List<TestObject> handleToList() {\r\n        return null;\r\n    }\r\n\r\n    public Set<TestObject> handleToSet() {\r\n        return null;\r\n    }\r\n\r\n    public Mono<TestObject> handleToMono() {\r\n        return null;\r\n    }\r\n\r\n    public Flux<TestObject> handleToFlux() {\r\n        return null;\r\n    }\r\n\r\n    public Single<TestObject> handleToSingle() {\r\n        return null;\r\n    }\r\n\r\n    public Observable<TestObject> handleToObservable() {\r\n        return null;\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link Conventions}.\n *\n * @author Rob Harrop\n * @author Sam Brannen\n "
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#simpleObject()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid simpleObject() {\r\n    assertThat(Conventions.getVariableName(new TestObject())).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(TestObject.class))).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(TestObject.class))).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#array()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid array() {\r\n    Object actual = Conventions.getVariableName(new TestObject[0]);\r\n    assertThat(actual).as(\"Incorrect plural array form\").isEqualTo(\"testObjectList\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#list()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid list() {\r\n    assertThat(Conventions.getVariableName(Collections.singletonList(new TestObject()))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(List.class))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(List.class))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#emptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid emptyList() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> Conventions.getVariableName(new ArrayList<>()));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#set()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid set() {\r\n    assertThat(Conventions.getVariableName(Collections.singleton(new TestObject()))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Set.class))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Set.class))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#reactiveParameters()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid reactiveParameters() {\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Mono.class))).isEqualTo(\"testObjectMono\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Flux.class))).isEqualTo(\"testObjectFlux\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Single.class))).isEqualTo(\"testObjectSingle\");\r\n    assertThat(Conventions.getVariableNameForParameter(getMethodParameter(Observable.class))).isEqualTo(\"testObjectObservable\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#reactiveReturnTypes()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid reactiveReturnTypes() {\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Mono.class))).isEqualTo(\"testObjectMono\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Flux.class))).isEqualTo(\"testObjectFlux\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Single.class))).isEqualTo(\"testObjectSingle\");\r\n    assertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Observable.class))).isEqualTo(\"testObjectObservable\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#attributeNameToPropertyName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid attributeNameToPropertyName() {\r\n    assertThat(Conventions.attributeNameToPropertyName(\"transaction-manager\")).isEqualTo(\"transactionManager\");\r\n    assertThat(Conventions.attributeNameToPropertyName(\"pointcut-ref\")).isEqualTo(\"pointcutRef\");\r\n    assertThat(Conventions.attributeNameToPropertyName(\"lookup-on-startup\")).isEqualTo(\"lookupOnStartup\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#getQualifiedAttributeName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getQualifiedAttributeName() {\r\n    String baseName = \"foo\";\r\n    Class<String> cls = String.class;\r\n    String desiredResult = \"java.lang.String.foo\";\r\n    assertThat(Conventions.getQualifiedAttributeName(cls, baseName)).isEqualTo(desiredResult);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#getMethodParameter(Class<?>)",
+    "entityType": "method",
+    "code": "private static MethodParameter getMethodParameter(Class<?> parameterType) {\r\n    Method method = ClassUtils.getMethod(TestBean.class, \"handle\", (Class<?>[]) null);\r\n    for (int i = 0; i < method.getParameterCount(); i++) {\r\n        if (parameterType.equals(method.getParameterTypes()[i])) {\r\n            return new MethodParameter(method, i);\r\n        }\r\n    }\r\n    throw new IllegalArgumentException(\"Parameter type not found: \" + parameterType);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ConventionsTests#getMethodForReturnType(Class<?>)",
+    "entityType": "method",
+    "code": "private static Method getMethodForReturnType(Class<?> returnType) {\r\n    return Arrays.stream(TestBean.class.getMethods()).filter(method -> method.getReturnType().equals(returnType)).findFirst().orElseThrow(() -> new IllegalArgumentException(\"Unique return type not found: \" + returnType));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.TestBean",
+    "entityType": "class",
+    "code": "public void handle(TestObject to, List<TestObject> toList, Set<TestObject> toSet, Mono<TestObject> toMono, Flux<TestObject> toFlux, Single<TestObject> toSingle, Observable<TestObject> toObservable) ;\npublic TestObject handleTo() {\r\n    return null;\r\n}\npublic List<TestObject> handleToList() {\r\n    return null;\r\n}\npublic Set<TestObject> handleToSet() {\r\n    return null;\r\n}\npublic Mono<TestObject> handleToMono() {\r\n    return null;\r\n}\npublic Flux<TestObject> handleToFlux() {\r\n    return null;\r\n}\npublic Single<TestObject> handleToSingle() {\r\n    return null;\r\n}\npublic Observable<TestObject> handleToObservable() {\r\n    return null;\r\n}",
+    "comment": ""
+  }
+]

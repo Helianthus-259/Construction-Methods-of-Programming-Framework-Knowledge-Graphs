@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.io.support.UncheckedIOExceptionPropertySourceFactory",
+    "entityType": "class",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n    throw new UncheckedIOException(\"Wrapped\", new FileNotFoundException(\"bogus\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.UncheckedIOExceptionPropertySourceFactory#createPropertySource(String,EncodedResource)",
+    "entityType": "method",
+    "code": "@Override\r\npublic PropertySource<?> createPropertySource(String name, EncodedResource resource) {\r\n    throw new UncheckedIOException(\"Wrapped\", new FileNotFoundException(\"bogus\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid vanillaResource() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"classpath:org/springframework/core/io/support/ResourceArrayPropertyEditor.class\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0].exists()).isTrue();\r\n}\n@Test\r\nvoid patternResource() {\r\n    // N.B. this will sometimes fail if you use classpath: instead of classpath*:.\r\n    // The result depends on the classpath - if test-classes are segregated from classes\r\n    // and they come first on the classpath (like in Maven) then it breaks, if classes\r\n    // comes first (like in Spring Build) then it is OK.\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"classpath*:org/springframework/core/io/support/Resource*Editor.class\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0].exists()).isTrue();\r\n}\n@Test\r\nvoid systemPropertyReplacement() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    System.setProperty(\"test.prop\", \"foo\");\r\n    try {\r\n        editor.setAsText(\"${test.prop}\");\r\n        Resource[] resources = (Resource[]) editor.getValue();\r\n        assertThat(resources[0].getFilename()).isEqualTo(\"foo\");\r\n    } finally {\r\n        System.clearProperty(\"test.prop\");\r\n    }\r\n}\n@Test\r\nvoid strictSystemPropertyReplacementWithUnresolvablePlaceholder() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor(new PathMatchingResourcePatternResolver(), new StandardEnvironment(), false);\r\n    System.setProperty(\"test.prop\", \"foo\");\r\n    try {\r\n        assertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() -> editor.setAsText(\"${test.prop}-${bar}\"));\r\n    } finally {\r\n        System.clearProperty(\"test.prop\");\r\n    }\r\n}\n@Test\r\nvoid commaDelimitedResourcesWithSingleResource() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"classpath:org/springframework/core/io/support/ResourceArrayPropertyEditor.class,file:/test.txt\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0]).isInstanceOfSatisfying(ClassPathResource.class, resource -> assertThat(resource.exists()).isTrue());\r\n    assertThat(resources[1]).isInstanceOfSatisfying(FileUrlResource.class, resource -> assertThat(resource.getFilename()).isEqualTo(\"test.txt\"));\r\n}\n@Test\r\nvoid commaDelimitedResourcesWithMultipleResources() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"file:/test.txt, classpath:org/springframework/core/io/support/test-resources/*.txt\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0]).isInstanceOfSatisfying(FileUrlResource.class, resource -> assertThat(resource.getFilename()).isEqualTo(\"test.txt\"));\r\n    assertThat(resources).anySatisfy(candidate -> assertThat(candidate.getFilename()).isEqualTo(\"resource1.txt\"));\r\n    assertThat(resources).anySatisfy(candidate -> assertThat(candidate.getFilename()).isEqualTo(\"resource2.txt\"));\r\n    assertThat(resources).hasSize(3);\r\n}",
+    "comment": "\n * Tests for {@link ResourceArrayPropertyEditor}.\n *\n * @author Dave Syer\n * @author Juergen Hoeller\n * @author Yanming Zhou\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests#vanillaResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid vanillaResource() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"classpath:org/springframework/core/io/support/ResourceArrayPropertyEditor.class\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0].exists()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests#patternResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid patternResource() {\r\n    // N.B. this will sometimes fail if you use classpath: instead of classpath*:.\r\n    // The result depends on the classpath - if test-classes are segregated from classes\r\n    // and they come first on the classpath (like in Maven) then it breaks, if classes\r\n    // comes first (like in Spring Build) then it is OK.\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"classpath*:org/springframework/core/io/support/Resource*Editor.class\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0].exists()).isTrue();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests#systemPropertyReplacement()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid systemPropertyReplacement() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    System.setProperty(\"test.prop\", \"foo\");\r\n    try {\r\n        editor.setAsText(\"${test.prop}\");\r\n        Resource[] resources = (Resource[]) editor.getValue();\r\n        assertThat(resources[0].getFilename()).isEqualTo(\"foo\");\r\n    } finally {\r\n        System.clearProperty(\"test.prop\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests#strictSystemPropertyReplacementWithUnresolvablePlaceholder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid strictSystemPropertyReplacementWithUnresolvablePlaceholder() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor(new PathMatchingResourcePatternResolver(), new StandardEnvironment(), false);\r\n    System.setProperty(\"test.prop\", \"foo\");\r\n    try {\r\n        assertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() -> editor.setAsText(\"${test.prop}-${bar}\"));\r\n    } finally {\r\n        System.clearProperty(\"test.prop\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests#commaDelimitedResourcesWithSingleResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid commaDelimitedResourcesWithSingleResource() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"classpath:org/springframework/core/io/support/ResourceArrayPropertyEditor.class,file:/test.txt\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0]).isInstanceOfSatisfying(ClassPathResource.class, resource -> assertThat(resource.exists()).isTrue());\r\n    assertThat(resources[1]).isInstanceOfSatisfying(FileUrlResource.class, resource -> assertThat(resource.getFilename()).isEqualTo(\"test.txt\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceArrayPropertyEditorTests#commaDelimitedResourcesWithMultipleResources()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid commaDelimitedResourcesWithMultipleResources() {\r\n    PropertyEditor editor = new ResourceArrayPropertyEditor();\r\n    editor.setAsText(\"file:/test.txt, classpath:org/springframework/core/io/support/test-resources/*.txt\");\r\n    Resource[] resources = (Resource[]) editor.getValue();\r\n    assertThat(resources).isNotNull();\r\n    assertThat(resources[0]).isInstanceOfSatisfying(FileUrlResource.class, resource -> assertThat(resource.getFilename()).isEqualTo(\"test.txt\"));\r\n    assertThat(resources).anySatisfy(candidate -> assertThat(candidate.getFilename()).isEqualTo(\"resource1.txt\"));\r\n    assertThat(resources).anySatisfy(candidate -> assertThat(candidate.getFilename()).isEqualTo(\"resource2.txt\"));\r\n    assertThat(resources).hasSize(3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests",
+    "entityType": "class",
+    "code": "private static final String PROPERTIES_PATH = \"org/springframework/core/io/example.properties\";\nprivate static final String PROPERTIES_LOCATION = \"classpath:\" + PROPERTIES_PATH;\nprivate static final String PROPERTIES_RESOURCE_DESCRIPTION = \"class path resource [\" + PROPERTIES_PATH + \"]\";\nprivate static final String XML_PROPERTIES_PATH = \"org/springframework/core/io/example.xml\";\nprivate static final String XML_PROPERTIES_LOCATION = \"classpath:\" + XML_PROPERTIES_PATH;\nprivate static final String XML_PROPERTIES_RESOURCE_DESCRIPTION = \"class path resource [\" + XML_PROPERTIES_PATH + \"]\";\n@Test\r\nvoid withLocationAndGeneratedName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(PROPERTIES_LOCATION);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(PROPERTIES_RESOURCE_DESCRIPTION);\r\n}\n@Test\r\nvoid xmlWithLocationAndGeneratedName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(XML_PROPERTIES_LOCATION);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(XML_PROPERTIES_RESOURCE_DESCRIPTION);\r\n}\n@Test\r\nvoid withLocationAndExplicitName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(\"ps1\", PROPERTIES_LOCATION);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"ps1\");\r\n}\n@Test\r\nvoid withLocationAndExplicitNameAndExplicitClassLoader() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(\"ps1\", PROPERTIES_LOCATION, getClass().getClassLoader());\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"ps1\");\r\n}\n@Test\r\nvoid withLocationAndGeneratedNameAndExplicitClassLoader() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(PROPERTIES_LOCATION, getClass().getClassLoader());\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(PROPERTIES_RESOURCE_DESCRIPTION);\r\n}\n@Test\r\nvoid withResourceAndGeneratedName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(new ClassPathResource(PROPERTIES_PATH));\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(PROPERTIES_RESOURCE_DESCRIPTION);\r\n}\n@Test\r\nvoid withResourceAndExplicitName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(\"ps1\", new ClassPathResource(PROPERTIES_PATH));\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"ps1\");\r\n}\n@Test\r\nvoid withResourceHavingNoDescription() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(new ByteArrayResource(\"foo=bar\".getBytes(), \"\"));\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"Byte array resource []\");\r\n}",
+    "comment": "\n * Tests for {@link ResourcePropertySource}.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @since 3.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withLocationAndGeneratedName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withLocationAndGeneratedName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(PROPERTIES_LOCATION);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(PROPERTIES_RESOURCE_DESCRIPTION);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#xmlWithLocationAndGeneratedName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid xmlWithLocationAndGeneratedName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(XML_PROPERTIES_LOCATION);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(XML_PROPERTIES_RESOURCE_DESCRIPTION);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withLocationAndExplicitName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withLocationAndExplicitName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(\"ps1\", PROPERTIES_LOCATION);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"ps1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withLocationAndExplicitNameAndExplicitClassLoader()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withLocationAndExplicitNameAndExplicitClassLoader() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(\"ps1\", PROPERTIES_LOCATION, getClass().getClassLoader());\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"ps1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withLocationAndGeneratedNameAndExplicitClassLoader()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withLocationAndGeneratedNameAndExplicitClassLoader() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(PROPERTIES_LOCATION, getClass().getClassLoader());\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(PROPERTIES_RESOURCE_DESCRIPTION);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withResourceAndGeneratedName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withResourceAndGeneratedName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(new ClassPathResource(PROPERTIES_PATH));\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(PROPERTIES_RESOURCE_DESCRIPTION);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withResourceAndExplicitName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withResourceAndExplicitName() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(\"ps1\", new ClassPathResource(PROPERTIES_PATH));\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"ps1\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourcePropertySourceTests#withResourceHavingNoDescription()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withResourceHavingNoDescription() throws IOException {\r\n    PropertySource<?> ps = new ResourcePropertySource(new ByteArrayResource(\"foo=bar\".getBytes(), \"\"));\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(ps.getName()).isEqualTo(\"Byte array resource []\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceRegionTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid shouldThrowExceptionWithNullResource() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourceRegion(null, 0, 1));\r\n}\n@Test\r\nvoid shouldThrowExceptionForNegativePosition() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourceRegion(mock(), -1, 1));\r\n}\n@Test\r\nvoid shouldThrowExceptionForNegativeCount() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourceRegion(mock(), 0, -1));\r\n}",
+    "comment": "\n * Tests for {@link ResourceRegion}.\n *\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceRegionTests#shouldThrowExceptionWithNullResource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldThrowExceptionWithNullResource() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourceRegion(null, 0, 1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceRegionTests#shouldThrowExceptionForNegativePosition()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldThrowExceptionForNegativePosition() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourceRegion(mock(), -1, 1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ResourceRegionTests#shouldThrowExceptionForNegativeCount()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid shouldThrowExceptionForNegativeCount() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new ResourceRegion(mock(), 0, -1));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests",
+    "entityType": "class",
+    "code": "@BeforeAll\r\nstatic void clearCache() {\r\n    SpringFactoriesLoader.cache.clear();\r\n    assertThat(SpringFactoriesLoader.cache).isEmpty();\r\n}\n@AfterAll\r\nstatic void checkCache() {\r\n    assertThat(SpringFactoriesLoader.cache).hasSize(3);\r\n    SpringFactoriesLoader.cache.clear();\r\n}\n@Test\r\n@Deprecated\r\nvoid loadFactoryNames() {\r\n    List<String> factoryNames = SpringFactoriesLoader.loadFactoryNames(DummyFactory.class, null);\r\n    assertThat(factoryNames).containsExactlyInAnyOrder(MyDummyFactory1.class.getName(), MyDummyFactory2.class.getName());\r\n}\n@Test\r\nvoid loadWhenNoRegisteredImplementationsReturnsEmptyList() {\r\n    List<Integer> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(Integer.class);\r\n    assertThat(factories).isEmpty();\r\n}\n@Test\r\nvoid loadWhenDuplicateRegistrationsPresentReturnsListInCorrectOrder() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(DummyFactory.class);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class);\r\n}\n@Test\r\nvoid loadWhenPackagePrivateFactory() {\r\n    List<DummyPackagePrivateFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(DummyPackagePrivateFactory.class);\r\n    assertThat(factories).hasSize(1);\r\n    assertThat(Modifier.isPublic(factories.get(0).getClass().getModifiers())).isFalse();\r\n}\n@Test\r\nvoid loadWhenIncompatibleTypeThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SpringFactoriesLoader.forDefaultResourceLocation().load(String.class)).withMessageContaining(\"Unable to instantiate factory class \" + \"[org.springframework.core.io.support.MyDummyFactory1] for factory type [java.lang.String]\");\r\n}\n@Test\r\nvoid loadWithLoggingFailureHandlerWhenIncompatibleTypeReturnsEmptyList() {\r\n    Log logger = mock();\r\n    FailureHandler failureHandler = FailureHandler.logging(logger);\r\n    List<String> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(String.class, failureHandler);\r\n    assertThat(factories).isEmpty();\r\n}\n@Test\r\nvoid loadWithArgumentResolverWhenNoDefaultConstructor() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(String.class, \"injected\");\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation(LimitedClassLoader.constructorArgumentFactories).load(DummyFactory.class, resolver);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class, ConstructorArgsDummyFactory.class);\r\n    assertThat(factories).extracting(DummyFactory::getString).containsExactly(\"Foo\", \"Bar\", \"injected\");\r\n}\n@Test\r\nvoid loadWhenMultipleConstructorsThrowsException() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(String.class, \"injected\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SpringFactoriesLoader.forDefaultResourceLocation(LimitedClassLoader.multipleArgumentFactories).load(DummyFactory.class, resolver)).withMessageContaining(\"Unable to instantiate factory class \" + \"[org.springframework.core.io.support.MultipleConstructorArgsDummyFactory] for factory type [org.springframework.core.io.support.DummyFactory]\").havingRootCause().withMessageContaining(\"Class [org.springframework.core.io.support.MultipleConstructorArgsDummyFactory] has no suitable constructor\");\r\n}\n@Test\r\nvoid loadWithLoggingFailureHandlerWhenMissingArgumentDropsItem() {\r\n    Log logger = mock();\r\n    FailureHandler failureHandler = FailureHandler.logging(logger);\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation(LimitedClassLoader.multipleArgumentFactories).load(DummyFactory.class, failureHandler);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class);\r\n}\n@Test\r\nvoid loadFactoriesLoadsFromDefaultLocation() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.loadFactories(DummyFactory.class, null);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class);\r\n}\n@Test\r\nvoid loadForResourceLocationWhenLocationDoesNotExistReturnsEmptyList() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forResourceLocation(\"META-INF/missing/missing-spring.factories\").load(DummyFactory.class);\r\n    assertThat(factories).isEmpty();\r\n}\n@Test\r\nvoid loadForResourceLocationLoadsFactories() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forResourceLocation(\"META-INF/custom/custom-spring.factories\").load(DummyFactory.class);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class);\r\n}\n@Test\r\nvoid sameCachedResultIsUsedForDefaultClassLoaderAndNullClassLoader() {\r\n    SpringFactoriesLoader forNull = SpringFactoriesLoader.forDefaultResourceLocation(null);\r\n    SpringFactoriesLoader forDefault = SpringFactoriesLoader.forDefaultResourceLocation(ClassUtils.getDefaultClassLoader());\r\n    assertThat(forNull).isSameAs(forDefault);\r\n}\n@Nested\r\nclass FailureHandlerTests {\r\n\r\n    @Test\r\n    void throwingReturnsHandlerThatThrowsIllegalArgumentException() {\r\n        FailureHandler handler = FailureHandler.throwing();\r\n        RuntimeException cause = new RuntimeException();\r\n        assertThatIllegalArgumentException().isThrownBy(() -> handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause)).withMessageStartingWith(\"Unable to instantiate factory class\").withCause(cause);\r\n    }\r\n\r\n    @Test\r\n    void throwingWithFactoryReturnsHandlerThatThrows() {\r\n        FailureHandler handler = FailureHandler.throwing(IllegalStateException::new);\r\n        RuntimeException cause = new RuntimeException();\r\n        assertThatIllegalStateException().isThrownBy(() -> handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause)).withMessageStartingWith(\"Unable to instantiate factory class\").withCause(cause);\r\n    }\r\n\r\n    @Test\r\n    void loggingReturnsHandlerThatLogs() {\r\n        Log logger = mock();\r\n        FailureHandler handler = FailureHandler.logging(logger);\r\n        RuntimeException cause = new RuntimeException();\r\n        handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause);\r\n        verify(logger).trace(isA(LogMessage.class), eq(cause));\r\n    }\r\n\r\n    @Test\r\n    void handleMessageReturnsHandlerThatAcceptsMessage() {\r\n        List<Throwable> failures = new ArrayList<>();\r\n        List<String> messages = new ArrayList<>();\r\n        FailureHandler handler = FailureHandler.handleMessage((message, failure) -> {\r\n            failures.add(failure);\r\n            messages.add(message.get());\r\n        });\r\n        RuntimeException cause = new RuntimeException();\r\n        handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause);\r\n        assertThat(failures).containsExactly(cause);\r\n        assertThat(messages).singleElement().asString().startsWith(\"Unable to instantiate factory class\");\r\n    }\r\n}\n@Nested\r\nclass ArgumentResolverTests {\r\n\r\n    @Test\r\n    void ofValueResolvesValue() {\r\n        ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\");\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n        assertThat(resolver.resolve(String.class)).isNull();\r\n        assertThat(resolver.resolve(Integer.class)).isNull();\r\n    }\r\n\r\n    @Test\r\n    void ofValueSupplierResolvesValue() {\r\n        ArgumentResolver resolver = ArgumentResolver.ofSupplied(CharSequence.class, () -> \"test\");\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n        assertThat(resolver.resolve(String.class)).isNull();\r\n        assertThat(resolver.resolve(Integer.class)).isNull();\r\n    }\r\n\r\n    @Test\r\n    void fromAdaptsFunction() {\r\n        ArgumentResolver resolver = ArgumentResolver.from(type -> CharSequence.class.equals(type) ? \"test\" : null);\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n        assertThat(resolver.resolve(String.class)).isNull();\r\n        assertThat(resolver.resolve(Integer.class)).isNull();\r\n    }\r\n\r\n    @Test\r\n    void andValueReturnsComposite() {\r\n        ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(Integer.class, 123);\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n        assertThat(resolver.resolve(String.class)).isNull();\r\n        assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n    }\r\n\r\n    @Test\r\n    void andValueWhenSameTypeReturnsCompositeResolvingFirst() {\r\n        ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(CharSequence.class, \"ignore\");\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    }\r\n\r\n    @Test\r\n    void andValueSupplierReturnsComposite() {\r\n        ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").andSupplied(Integer.class, () -> 123);\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n        assertThat(resolver.resolve(String.class)).isNull();\r\n        assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n    }\r\n\r\n    @Test\r\n    void andValueSupplierWhenSameTypeReturnsCompositeResolvingFirst() {\r\n        ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").andSupplied(CharSequence.class, () -> \"ignore\");\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    }\r\n\r\n    @Test\r\n    void andResolverReturnsComposite() {\r\n        ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(Integer.class, 123);\r\n        resolver = resolver.and(ArgumentResolver.of(CharSequence.class, \"ignore\").and(Long.class, 234L));\r\n        assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n        assertThat(resolver.resolve(String.class)).isNull();\r\n        assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n        assertThat(resolver.resolve(Long.class)).isEqualTo(234L);\r\n    }\r\n}\n@Nested\r\nclass FactoryInstantiatorTests {\r\n\r\n    private final ArgumentResolver resolver = ArgumentResolver.of(String.class, \"test\");\r\n\r\n    @Test\r\n    void defaultConstructorCreatesInstance() throws Exception {\r\n        Object instance = FactoryInstantiator.forClass(DefaultConstructor.class).instantiate(this.resolver);\r\n        assertThat(instance).isNotNull();\r\n    }\r\n\r\n    @Test\r\n    void singleConstructorWithArgumentsCreatesInstance() throws Exception {\r\n        Object instance = FactoryInstantiator.forClass(SingleConstructor.class).instantiate(this.resolver);\r\n        assertThat(instance).isNotNull();\r\n    }\r\n\r\n    @Test\r\n    void multiplePrivateAndSinglePublicConstructorCreatesInstance() throws Exception {\r\n        Object instance = FactoryInstantiator.forClass(MultiplePrivateAndSinglePublicConstructor.class).instantiate(this.resolver);\r\n        assertThat(instance).isNotNull();\r\n    }\r\n\r\n    @Test\r\n    void multiplePackagePrivateAndSinglePublicConstructorCreatesInstance() throws Exception {\r\n        Object instance = FactoryInstantiator.forClass(MultiplePackagePrivateAndSinglePublicConstructor.class).instantiate(this.resolver);\r\n        assertThat(instance).isNotNull();\r\n    }\r\n\r\n    @Test\r\n    void singlePackagePrivateConstructorCreatesInstance() throws Exception {\r\n        Object instance = FactoryInstantiator.forClass(SinglePackagePrivateConstructor.class).instantiate(this.resolver);\r\n        assertThat(instance).isNotNull();\r\n    }\r\n\r\n    @Test\r\n    void singlePrivateConstructorCreatesInstance() throws Exception {\r\n        Object instance = FactoryInstantiator.forClass(SinglePrivateConstructor.class).instantiate(this.resolver);\r\n        assertThat(instance).isNotNull();\r\n    }\r\n\r\n    @Test\r\n    void multiplePackagePrivateConstructorsThrowsException() {\r\n        assertThatIllegalStateException().isThrownBy(() -> FactoryInstantiator.forClass(MultiplePackagePrivateConstructors.class)).withMessageContaining(\"has no suitable constructor\");\r\n    }\r\n\r\n    static class DefaultConstructor {\r\n    }\r\n\r\n    static class SingleConstructor {\r\n\r\n        SingleConstructor(String arg) {\r\n        }\r\n    }\r\n\r\n    static class MultiplePrivateAndSinglePublicConstructor {\r\n\r\n        public MultiplePrivateAndSinglePublicConstructor(String arg) {\r\n            this(arg, false);\r\n        }\r\n\r\n        private MultiplePrivateAndSinglePublicConstructor(String arg, boolean extra) {\r\n        }\r\n    }\r\n\r\n    static class MultiplePackagePrivateAndSinglePublicConstructor {\r\n\r\n        public MultiplePackagePrivateAndSinglePublicConstructor(String arg) {\r\n            this(arg, false);\r\n        }\r\n\r\n        MultiplePackagePrivateAndSinglePublicConstructor(String arg, boolean extra) {\r\n        }\r\n    }\r\n\r\n    static class SinglePackagePrivateConstructor {\r\n\r\n        SinglePackagePrivateConstructor(String arg) {\r\n        }\r\n    }\r\n\r\n    static class SinglePrivateConstructor {\r\n\r\n        private SinglePrivateConstructor(String arg) {\r\n        }\r\n    }\r\n\r\n    static class MultiplePackagePrivateConstructors {\r\n\r\n        MultiplePackagePrivateConstructors(String arg) {\r\n            this(arg, false);\r\n        }\r\n\r\n        MultiplePackagePrivateConstructors(String arg, boolean extra) {\r\n        }\r\n    }\r\n}\nprivate static class LimitedClassLoader extends URLClassLoader {\r\n\r\n    private static final ClassLoader constructorArgumentFactories = new LimitedClassLoader(\"constructor-argument-factories\");\r\n\r\n    private static final ClassLoader multipleArgumentFactories = new LimitedClassLoader(\"multiple-arguments-factories\");\r\n\r\n    LimitedClassLoader(String location) {\r\n        super(new URL[] { toUrl(location) });\r\n    }\r\n\r\n    private static URL toUrl(String location) {\r\n        try {\r\n            return new File(\"src/test/resources/org/springframework/core/io/support/\" + location + \"/\").toURI().toURL();\r\n        } catch (MalformedURLException ex) {\r\n            throw new IllegalStateException(ex);\r\n        }\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link SpringFactoriesLoader}.\n *\n * @author Arjen Poutsma\n * @author Phillip Webb\n * @author Sam Brannen\n * @author Andy Wilkinson\n * @author Madhura Bhave\n "
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#clearCache()",
+    "entityType": "method",
+    "code": "@BeforeAll\r\nstatic void clearCache() {\r\n    SpringFactoriesLoader.cache.clear();\r\n    assertThat(SpringFactoriesLoader.cache).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#checkCache()",
+    "entityType": "method",
+    "code": "@AfterAll\r\nstatic void checkCache() {\r\n    assertThat(SpringFactoriesLoader.cache).hasSize(3);\r\n    SpringFactoriesLoader.cache.clear();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadFactoryNames()",
+    "entityType": "method",
+    "code": "@Test\r\n@Deprecated\r\nvoid loadFactoryNames() {\r\n    List<String> factoryNames = SpringFactoriesLoader.loadFactoryNames(DummyFactory.class, null);\r\n    assertThat(factoryNames).containsExactlyInAnyOrder(MyDummyFactory1.class.getName(), MyDummyFactory2.class.getName());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWhenNoRegisteredImplementationsReturnsEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWhenNoRegisteredImplementationsReturnsEmptyList() {\r\n    List<Integer> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(Integer.class);\r\n    assertThat(factories).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWhenDuplicateRegistrationsPresentReturnsListInCorrectOrder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWhenDuplicateRegistrationsPresentReturnsListInCorrectOrder() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(DummyFactory.class);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWhenPackagePrivateFactory()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWhenPackagePrivateFactory() {\r\n    List<DummyPackagePrivateFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(DummyPackagePrivateFactory.class);\r\n    assertThat(factories).hasSize(1);\r\n    assertThat(Modifier.isPublic(factories.get(0).getClass().getModifiers())).isFalse();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWhenIncompatibleTypeThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWhenIncompatibleTypeThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SpringFactoriesLoader.forDefaultResourceLocation().load(String.class)).withMessageContaining(\"Unable to instantiate factory class \" + \"[org.springframework.core.io.support.MyDummyFactory1] for factory type [java.lang.String]\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWithLoggingFailureHandlerWhenIncompatibleTypeReturnsEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWithLoggingFailureHandlerWhenIncompatibleTypeReturnsEmptyList() {\r\n    Log logger = mock();\r\n    FailureHandler failureHandler = FailureHandler.logging(logger);\r\n    List<String> factories = SpringFactoriesLoader.forDefaultResourceLocation().load(String.class, failureHandler);\r\n    assertThat(factories).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWithArgumentResolverWhenNoDefaultConstructor()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWithArgumentResolverWhenNoDefaultConstructor() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(String.class, \"injected\");\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation(LimitedClassLoader.constructorArgumentFactories).load(DummyFactory.class, resolver);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class, ConstructorArgsDummyFactory.class);\r\n    assertThat(factories).extracting(DummyFactory::getString).containsExactly(\"Foo\", \"Bar\", \"injected\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWhenMultipleConstructorsThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWhenMultipleConstructorsThrowsException() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(String.class, \"injected\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> SpringFactoriesLoader.forDefaultResourceLocation(LimitedClassLoader.multipleArgumentFactories).load(DummyFactory.class, resolver)).withMessageContaining(\"Unable to instantiate factory class \" + \"[org.springframework.core.io.support.MultipleConstructorArgsDummyFactory] for factory type [org.springframework.core.io.support.DummyFactory]\").havingRootCause().withMessageContaining(\"Class [org.springframework.core.io.support.MultipleConstructorArgsDummyFactory] has no suitable constructor\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadWithLoggingFailureHandlerWhenMissingArgumentDropsItem()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadWithLoggingFailureHandlerWhenMissingArgumentDropsItem() {\r\n    Log logger = mock();\r\n    FailureHandler failureHandler = FailureHandler.logging(logger);\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forDefaultResourceLocation(LimitedClassLoader.multipleArgumentFactories).load(DummyFactory.class, failureHandler);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadFactoriesLoadsFromDefaultLocation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadFactoriesLoadsFromDefaultLocation() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.loadFactories(DummyFactory.class, null);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class, MyDummyFactory2.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadForResourceLocationWhenLocationDoesNotExistReturnsEmptyList()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadForResourceLocationWhenLocationDoesNotExistReturnsEmptyList() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forResourceLocation(\"META-INF/missing/missing-spring.factories\").load(DummyFactory.class);\r\n    assertThat(factories).isEmpty();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#loadForResourceLocationLoadsFactories()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loadForResourceLocationLoadsFactories() {\r\n    List<DummyFactory> factories = SpringFactoriesLoader.forResourceLocation(\"META-INF/custom/custom-spring.factories\").load(DummyFactory.class);\r\n    assertThat(factories).hasExactlyElementsOfTypes(MyDummyFactory1.class);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SpringFactoriesLoaderTests#sameCachedResultIsUsedForDefaultClassLoaderAndNullClassLoader()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid sameCachedResultIsUsedForDefaultClassLoaderAndNullClassLoader() {\r\n    SpringFactoriesLoader forNull = SpringFactoriesLoader.forDefaultResourceLocation(null);\r\n    SpringFactoriesLoader forDefault = SpringFactoriesLoader.forDefaultResourceLocation(ClassUtils.getDefaultClassLoader());\r\n    assertThat(forNull).isSameAs(forDefault);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailureHandlerTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid throwingReturnsHandlerThatThrowsIllegalArgumentException() {\r\n    FailureHandler handler = FailureHandler.throwing();\r\n    RuntimeException cause = new RuntimeException();\r\n    assertThatIllegalArgumentException().isThrownBy(() -> handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause)).withMessageStartingWith(\"Unable to instantiate factory class\").withCause(cause);\r\n}\n@Test\r\nvoid throwingWithFactoryReturnsHandlerThatThrows() {\r\n    FailureHandler handler = FailureHandler.throwing(IllegalStateException::new);\r\n    RuntimeException cause = new RuntimeException();\r\n    assertThatIllegalStateException().isThrownBy(() -> handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause)).withMessageStartingWith(\"Unable to instantiate factory class\").withCause(cause);\r\n}\n@Test\r\nvoid loggingReturnsHandlerThatLogs() {\r\n    Log logger = mock();\r\n    FailureHandler handler = FailureHandler.logging(logger);\r\n    RuntimeException cause = new RuntimeException();\r\n    handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause);\r\n    verify(logger).trace(isA(LogMessage.class), eq(cause));\r\n}\n@Test\r\nvoid handleMessageReturnsHandlerThatAcceptsMessage() {\r\n    List<Throwable> failures = new ArrayList<>();\r\n    List<String> messages = new ArrayList<>();\r\n    FailureHandler handler = FailureHandler.handleMessage((message, failure) -> {\r\n        failures.add(failure);\r\n        messages.add(message.get());\r\n    });\r\n    RuntimeException cause = new RuntimeException();\r\n    handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause);\r\n    assertThat(failures).containsExactly(cause);\r\n    assertThat(messages).singleElement().asString().startsWith(\"Unable to instantiate factory class\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailureHandlerTests#throwingReturnsHandlerThatThrowsIllegalArgumentException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwingReturnsHandlerThatThrowsIllegalArgumentException() {\r\n    FailureHandler handler = FailureHandler.throwing();\r\n    RuntimeException cause = new RuntimeException();\r\n    assertThatIllegalArgumentException().isThrownBy(() -> handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause)).withMessageStartingWith(\"Unable to instantiate factory class\").withCause(cause);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailureHandlerTests#throwingWithFactoryReturnsHandlerThatThrows()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid throwingWithFactoryReturnsHandlerThatThrows() {\r\n    FailureHandler handler = FailureHandler.throwing(IllegalStateException::new);\r\n    RuntimeException cause = new RuntimeException();\r\n    assertThatIllegalStateException().isThrownBy(() -> handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause)).withMessageStartingWith(\"Unable to instantiate factory class\").withCause(cause);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailureHandlerTests#loggingReturnsHandlerThatLogs()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid loggingReturnsHandlerThatLogs() {\r\n    Log logger = mock();\r\n    FailureHandler handler = FailureHandler.logging(logger);\r\n    RuntimeException cause = new RuntimeException();\r\n    handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause);\r\n    verify(logger).trace(isA(LogMessage.class), eq(cause));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FailureHandlerTests#handleMessageReturnsHandlerThatAcceptsMessage()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid handleMessageReturnsHandlerThatAcceptsMessage() {\r\n    List<Throwable> failures = new ArrayList<>();\r\n    List<String> messages = new ArrayList<>();\r\n    FailureHandler handler = FailureHandler.handleMessage((message, failure) -> {\r\n        failures.add(failure);\r\n        messages.add(message.get());\r\n    });\r\n    RuntimeException cause = new RuntimeException();\r\n    handler.handleFailure(DummyFactory.class, MyDummyFactory1.class.getName(), cause);\r\n    assertThat(failures).containsExactly(cause);\r\n    assertThat(messages).singleElement().asString().startsWith(\"Unable to instantiate factory class\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid ofValueResolvesValue() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isNull();\r\n}\n@Test\r\nvoid ofValueSupplierResolvesValue() {\r\n    ArgumentResolver resolver = ArgumentResolver.ofSupplied(CharSequence.class, () -> \"test\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isNull();\r\n}\n@Test\r\nvoid fromAdaptsFunction() {\r\n    ArgumentResolver resolver = ArgumentResolver.from(type -> CharSequence.class.equals(type) ? \"test\" : null);\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isNull();\r\n}\n@Test\r\nvoid andValueReturnsComposite() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(Integer.class, 123);\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n}\n@Test\r\nvoid andValueWhenSameTypeReturnsCompositeResolvingFirst() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(CharSequence.class, \"ignore\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid andValueSupplierReturnsComposite() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").andSupplied(Integer.class, () -> 123);\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n}\n@Test\r\nvoid andValueSupplierWhenSameTypeReturnsCompositeResolvingFirst() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").andSupplied(CharSequence.class, () -> \"ignore\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid andResolverReturnsComposite() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(Integer.class, 123);\r\n    resolver = resolver.and(ArgumentResolver.of(CharSequence.class, \"ignore\").and(Long.class, 234L));\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n    assertThat(resolver.resolve(Long.class)).isEqualTo(234L);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#ofValueResolvesValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofValueResolvesValue() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#ofValueSupplierResolvesValue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofValueSupplierResolvesValue() {\r\n    ArgumentResolver resolver = ArgumentResolver.ofSupplied(CharSequence.class, () -> \"test\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#fromAdaptsFunction()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid fromAdaptsFunction() {\r\n    ArgumentResolver resolver = ArgumentResolver.from(type -> CharSequence.class.equals(type) ? \"test\" : null);\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#andValueReturnsComposite()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andValueReturnsComposite() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(Integer.class, 123);\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#andValueWhenSameTypeReturnsCompositeResolvingFirst()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andValueWhenSameTypeReturnsCompositeResolvingFirst() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(CharSequence.class, \"ignore\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#andValueSupplierReturnsComposite()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andValueSupplierReturnsComposite() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").andSupplied(Integer.class, () -> 123);\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#andValueSupplierWhenSameTypeReturnsCompositeResolvingFirst()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andValueSupplierWhenSameTypeReturnsCompositeResolvingFirst() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").andSupplied(CharSequence.class, () -> \"ignore\");\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.ArgumentResolverTests#andResolverReturnsComposite()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andResolverReturnsComposite() {\r\n    ArgumentResolver resolver = ArgumentResolver.of(CharSequence.class, \"test\").and(Integer.class, 123);\r\n    resolver = resolver.and(ArgumentResolver.of(CharSequence.class, \"ignore\").and(Long.class, 234L));\r\n    assertThat(resolver.resolve(CharSequence.class)).isEqualTo(\"test\");\r\n    assertThat(resolver.resolve(String.class)).isNull();\r\n    assertThat(resolver.resolve(Integer.class)).isEqualTo(123);\r\n    assertThat(resolver.resolve(Long.class)).isEqualTo(234L);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests",
+    "entityType": "class",
+    "code": "private final ArgumentResolver resolver = ArgumentResolver.of(String.class, \"test\");\n@Test\r\nvoid defaultConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(DefaultConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}\n@Test\r\nvoid singleConstructorWithArgumentsCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(SingleConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}\n@Test\r\nvoid multiplePrivateAndSinglePublicConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(MultiplePrivateAndSinglePublicConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}\n@Test\r\nvoid multiplePackagePrivateAndSinglePublicConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(MultiplePackagePrivateAndSinglePublicConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}\n@Test\r\nvoid singlePackagePrivateConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(SinglePackagePrivateConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}\n@Test\r\nvoid singlePrivateConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(SinglePrivateConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}\n@Test\r\nvoid multiplePackagePrivateConstructorsThrowsException() {\r\n    assertThatIllegalStateException().isThrownBy(() -> FactoryInstantiator.forClass(MultiplePackagePrivateConstructors.class)).withMessageContaining(\"has no suitable constructor\");\r\n}\nstatic class DefaultConstructor {\r\n}\nstatic class SingleConstructor {\r\n\r\n    SingleConstructor(String arg) {\r\n    }\r\n}\nstatic class MultiplePrivateAndSinglePublicConstructor {\r\n\r\n    public MultiplePrivateAndSinglePublicConstructor(String arg) {\r\n        this(arg, false);\r\n    }\r\n\r\n    private MultiplePrivateAndSinglePublicConstructor(String arg, boolean extra) {\r\n    }\r\n}\nstatic class MultiplePackagePrivateAndSinglePublicConstructor {\r\n\r\n    public MultiplePackagePrivateAndSinglePublicConstructor(String arg) {\r\n        this(arg, false);\r\n    }\r\n\r\n    MultiplePackagePrivateAndSinglePublicConstructor(String arg, boolean extra) {\r\n    }\r\n}\nstatic class SinglePackagePrivateConstructor {\r\n\r\n    SinglePackagePrivateConstructor(String arg) {\r\n    }\r\n}\nstatic class SinglePrivateConstructor {\r\n\r\n    private SinglePrivateConstructor(String arg) {\r\n    }\r\n}\nstatic class MultiplePackagePrivateConstructors {\r\n\r\n    MultiplePackagePrivateConstructors(String arg) {\r\n        this(arg, false);\r\n    }\r\n\r\n    MultiplePackagePrivateConstructors(String arg, boolean extra) {\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#defaultConstructorCreatesInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid defaultConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(DefaultConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#singleConstructorWithArgumentsCreatesInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singleConstructorWithArgumentsCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(SingleConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#multiplePrivateAndSinglePublicConstructorCreatesInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid multiplePrivateAndSinglePublicConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(MultiplePrivateAndSinglePublicConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#multiplePackagePrivateAndSinglePublicConstructorCreatesInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid multiplePackagePrivateAndSinglePublicConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(MultiplePackagePrivateAndSinglePublicConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#singlePackagePrivateConstructorCreatesInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singlePackagePrivateConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(SinglePackagePrivateConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#singlePrivateConstructorCreatesInstance()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid singlePrivateConstructorCreatesInstance() throws Exception {\r\n    Object instance = FactoryInstantiator.forClass(SinglePrivateConstructor.class).instantiate(this.resolver);\r\n    assertThat(instance).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.FactoryInstantiatorTests#multiplePackagePrivateConstructorsThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid multiplePackagePrivateConstructorsThrowsException() {\r\n    assertThatIllegalStateException().isThrownBy(() -> FactoryInstantiator.forClass(MultiplePackagePrivateConstructors.class)).withMessageContaining(\"has no suitable constructor\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.DefaultConstructor",
+    "entityType": "class",
+    "code": "",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SingleConstructor",
+    "entityType": "class",
+    "code": "SingleConstructor(String arg) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MultiplePrivateAndSinglePublicConstructor",
+    "entityType": "class",
+    "code": "public MultiplePrivateAndSinglePublicConstructor(String arg) {\r\n    this(arg, false);\r\n}\nprivate MultiplePrivateAndSinglePublicConstructor(String arg, boolean extra) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MultiplePackagePrivateAndSinglePublicConstructor",
+    "entityType": "class",
+    "code": "public MultiplePackagePrivateAndSinglePublicConstructor(String arg) {\r\n    this(arg, false);\r\n}\nMultiplePackagePrivateAndSinglePublicConstructor(String arg, boolean extra) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SinglePackagePrivateConstructor",
+    "entityType": "class",
+    "code": "SinglePackagePrivateConstructor(String arg) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.SinglePrivateConstructor",
+    "entityType": "class",
+    "code": "private SinglePrivateConstructor(String arg) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.MultiplePackagePrivateConstructors",
+    "entityType": "class",
+    "code": "MultiplePackagePrivateConstructors(String arg) {\r\n    this(arg, false);\r\n}\nMultiplePackagePrivateConstructors(String arg, boolean extra) {\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.LimitedClassLoader",
+    "entityType": "class",
+    "code": "private static final ClassLoader constructorArgumentFactories = new LimitedClassLoader(\"constructor-argument-factories\");\nprivate static final ClassLoader multipleArgumentFactories = new LimitedClassLoader(\"multiple-arguments-factories\");\nLimitedClassLoader(String location) {\r\n    super(new URL[] { toUrl(location) });\r\n}\nprivate static URL toUrl(String location) {\r\n    try {\r\n        return new File(\"src/test/resources/org/springframework/core/io/support/\" + location + \"/\").toURI().toURL();\r\n    } catch (MalformedURLException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.io.support.LimitedClassLoader#toUrl(String)",
+    "entityType": "method",
+    "code": "private static URL toUrl(String location) {\r\n    try {\r\n        return new File(\"src/test/resources/org/springframework/core/io/support/\" + location + \"/\").toURI().toURL();\r\n    } catch (MalformedURLException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLogTests",
+    "entityType": "class",
+    "code": "private final Log logger1 = mock();\nprivate final Log logger2 = mock();\nprivate final CompositeLog compositeLog = new CompositeLog(Arrays.asList(logger1, logger2));\n@Test\r\nvoid useFirstLogger() {\r\n    when(logger1.isInfoEnabled()).thenReturn(true);\r\n    when(logger2.isInfoEnabled()).thenReturn(true);\r\n    this.compositeLog.info(\"info message\");\r\n    verify(this.logger1).isInfoEnabled();\r\n    verify(this.logger1).info(\"info message\");\r\n    verifyNoMoreInteractions(this.logger1);\r\n    verifyNoMoreInteractions(this.logger2);\r\n}\n@Test\r\nvoid useSecondLogger() {\r\n    when(logger1.isInfoEnabled()).thenReturn(false);\r\n    when(logger2.isInfoEnabled()).thenReturn(true);\r\n    this.compositeLog.info(\"info message\");\r\n    verify(this.logger1).isInfoEnabled();\r\n    verify(this.logger2).isInfoEnabled();\r\n    verify(this.logger2).info(\"info message\");\r\n    verifyNoMoreInteractions(this.logger1);\r\n    verifyNoMoreInteractions(this.logger2);\r\n}\n@Test\r\nvoid useNeitherLogger() {\r\n    when(logger1.isInfoEnabled()).thenReturn(false);\r\n    when(logger2.isInfoEnabled()).thenReturn(false);\r\n    this.compositeLog.info(\"info message\");\r\n    verify(this.logger1).isInfoEnabled();\r\n    verify(this.logger2).isInfoEnabled();\r\n    verifyNoMoreInteractions(this.logger1);\r\n    verifyNoMoreInteractions(this.logger2);\r\n}",
+    "comment": "\n * Tests for {@link CompositeLog}.\n *\n * @author Rossen Stoyanchev\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLogTests#useFirstLogger()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid useFirstLogger() {\r\n    when(logger1.isInfoEnabled()).thenReturn(true);\r\n    when(logger2.isInfoEnabled()).thenReturn(true);\r\n    this.compositeLog.info(\"info message\");\r\n    verify(this.logger1).isInfoEnabled();\r\n    verify(this.logger1).info(\"info message\");\r\n    verifyNoMoreInteractions(this.logger1);\r\n    verifyNoMoreInteractions(this.logger2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLogTests#useSecondLogger()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid useSecondLogger() {\r\n    when(logger1.isInfoEnabled()).thenReturn(false);\r\n    when(logger2.isInfoEnabled()).thenReturn(true);\r\n    this.compositeLog.info(\"info message\");\r\n    verify(this.logger1).isInfoEnabled();\r\n    verify(this.logger2).isInfoEnabled();\r\n    verify(this.logger2).info(\"info message\");\r\n    verifyNoMoreInteractions(this.logger1);\r\n    verifyNoMoreInteractions(this.logger2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.CompositeLogTests#useNeitherLogger()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid useNeitherLogger() {\r\n    when(logger1.isInfoEnabled()).thenReturn(false);\r\n    when(logger2.isInfoEnabled()).thenReturn(false);\r\n    this.compositeLog.info(\"info message\");\r\n    verify(this.logger1).isInfoEnabled();\r\n    verify(this.logger2).isInfoEnabled();\r\n    verifyNoMoreInteractions(this.logger1);\r\n    verifyNoMoreInteractions(this.logger2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid logMessageWithSupplier() {\r\n    LogMessage msg = LogMessage.of(() -> new StringBuilder(\"a\").append(\" b\"));\r\n    assertThat(msg.toString()).isEqualTo(\"a b\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}\n@Test\r\nvoid logMessageWithFormat1() {\r\n    LogMessage msg = LogMessage.format(\"a %s\", \"b\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}\n@Test\r\nvoid logMessageWithFormat2() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s\", \"b\", \"c\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}\n@Test\r\nvoid logMessageWithFormat3() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s\", \"b\", \"c\", \"d\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}\n@Test\r\nvoid logMessageWithFormat4() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s %s\", \"b\", \"c\", \"d\", \"e\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d e\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}\n@Test\r\nvoid logMessageWithFormatX() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s %s %s\", \"b\", \"c\", \"d\", \"e\", \"f\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d e f\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": "\n * @author Juergen Hoeller\n * @since 5.2\n "
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests#logMessageWithSupplier()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid logMessageWithSupplier() {\r\n    LogMessage msg = LogMessage.of(() -> new StringBuilder(\"a\").append(\" b\"));\r\n    assertThat(msg.toString()).isEqualTo(\"a b\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests#logMessageWithFormat1()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid logMessageWithFormat1() {\r\n    LogMessage msg = LogMessage.format(\"a %s\", \"b\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests#logMessageWithFormat2()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid logMessageWithFormat2() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s\", \"b\", \"c\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests#logMessageWithFormat3()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid logMessageWithFormat3() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s\", \"b\", \"c\", \"d\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests#logMessageWithFormat4()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid logMessageWithFormat4() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s %s\", \"b\", \"c\", \"d\", \"e\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d e\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.log.LogSupportTests#logMessageWithFormatX()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid logMessageWithFormatX() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s %s %s\", \"b\", \"c\", \"d\", \"e\", \"f\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d e f\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodIntrospectorTests",
+    "entityType": "class",
+    "code": "// gh-32586\r\n@Test\r\nvoid selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations() {\r\n    Class<?> targetType = ActualController.class;\r\n    // Preconditions for this use case.\r\n    assertThat(targetType).isPublic();\r\n    assertThat(targetType.getSuperclass()).isPackagePrivate();\r\n    MetadataLookup<String> metadataLookup = (MetadataLookup<String>) method -> {\r\n        if (MergedAnnotations.from(method, TYPE_HIERARCHY).isPresent(Mapped.class)) {\r\n            return method.getName();\r\n        }\r\n        return null;\r\n    };\r\n    // Start with a clean slate.\r\n    ReflectionUtils.clearCache();\r\n    // Round #1\r\n    Map<Method, String> methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\r\n    assertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\r\n    // Simulate ConfigurableApplicationContext#refresh() which clears the\r\n    // ReflectionUtils#declaredMethodsCache but NOT the BridgeMethodResolver#cache.\r\n    // As a consequence, ReflectionUtils.getDeclaredMethods(...) will return a\r\n    // new set of methods that are logically equivalent to but not identical\r\n    // to (in terms of object identity) any bridged methods cached in the\r\n    // BridgeMethodResolver cache.\r\n    ReflectionUtils.clearCache();\r\n    // Round #2\r\n    methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\r\n    assertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@interface Mapped {\r\n}\ninterface Controller {\r\n\r\n    void unmappedMethod();\r\n\r\n    @Mapped\r\n    void update();\r\n\r\n    @Mapped\r\n    void delete();\r\n}\n// Must NOT be public.\r\nabstract static class AbstractController implements Controller {\r\n\r\n    @Override\r\n    public void unmappedMethod() {\r\n    }\r\n\r\n    @Override\r\n    public void delete() {\r\n    }\r\n}\n// MUST be public.\r\npublic static class ActualController extends AbstractController {\r\n\r\n    @Override\r\n    public void update() {\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link MethodIntrospector}.\n *\n * @author Sam Brannen\n * @since 5.3.34\n "
+  },
+  {
+    "entityId": "org.springframework.core.MethodIntrospectorTests#selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations()",
+    "entityType": "method",
+    "code": "// gh-32586\r\n@Test\r\nvoid selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations() {\r\n    Class<?> targetType = ActualController.class;\r\n    // Preconditions for this use case.\r\n    assertThat(targetType).isPublic();\r\n    assertThat(targetType.getSuperclass()).isPackagePrivate();\r\n    MetadataLookup<String> metadataLookup = (MetadataLookup<String>) method -> {\r\n        if (MergedAnnotations.from(method, TYPE_HIERARCHY).isPresent(Mapped.class)) {\r\n            return method.getName();\r\n        }\r\n        return null;\r\n    };\r\n    // Start with a clean slate.\r\n    ReflectionUtils.clearCache();\r\n    // Round #1\r\n    Map<Method, String> methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\r\n    assertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\r\n    // Simulate ConfigurableApplicationContext#refresh() which clears the\r\n    // ReflectionUtils#declaredMethodsCache but NOT the BridgeMethodResolver#cache.\r\n    // As a consequence, ReflectionUtils.getDeclaredMethods(...) will return a\r\n    // new set of methods that are logically equivalent to but not identical\r\n    // to (in terms of object identity) any bridged methods cached in the\r\n    // BridgeMethodResolver cache.\r\n    ReflectionUtils.clearCache();\r\n    // Round #2\r\n    methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\r\n    assertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.Controller",
+    "entityType": "class",
+    "code": "void unmappedMethod();\n@Mapped\r\nvoid update();\n@Mapped\r\nvoid delete();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.Controller#unmappedMethod()",
+    "entityType": "method",
+    "code": "void unmappedMethod();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.Controller#update()",
+    "entityType": "method",
+    "code": "@Mapped\r\nvoid update();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.Controller#delete()",
+    "entityType": "method",
+    "code": "@Mapped\r\nvoid delete();",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.AbstractController",
+    "entityType": "class",
+    "code": "@Override\r\npublic void unmappedMethod() ;\n@Override\r\npublic void delete() ;",
+    "comment": " Must NOT be public."
+  },
+  {
+    "entityId": "org.springframework.core.AbstractController#unmappedMethod()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void unmappedMethod() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.AbstractController#delete()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void delete() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ActualController",
+    "entityType": "class",
+    "code": "@Override\r\npublic void update() ;",
+    "comment": " MUST be public."
+  },
+  {
+    "entityId": "org.springframework.core.ActualController#update()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void update() ;",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests",
+    "entityType": "class",
+    "code": "private Method method;\nprivate MethodParameter stringParameter;\nprivate MethodParameter longParameter;\nprivate MethodParameter intReturnType;\nprivate MethodParameter jspecifyNullableParameter;\nprivate MethodParameter jspecifyNonNullParameter;\nprivate MethodParameter springNullableParameter;\nprivate MethodParameter springNonNullParameter;\n@BeforeEach\r\nvoid setup() throws NoSuchMethodException {\r\n    method = getClass().getMethod(\"method\", String.class, long.class);\r\n    stringParameter = new MethodParameter(method, 0);\r\n    longParameter = new MethodParameter(method, 1);\r\n    intReturnType = new MethodParameter(method, -1);\r\n    Method jspecifyNullableMethod = getClass().getMethod(\"jspecifyNullableMethod\", String.class, String.class);\r\n    jspecifyNullableParameter = new MethodParameter(jspecifyNullableMethod, 0);\r\n    jspecifyNonNullParameter = new MethodParameter(jspecifyNullableMethod, 1);\r\n    Method springNullableMethod = getClass().getMethod(\"springNullableMethod\", String.class, String.class);\r\n    springNullableParameter = new MethodParameter(springNullableMethod, 0);\r\n    springNonNullParameter = new MethodParameter(springNullableMethod, 1);\r\n}\n@Test\r\nvoid equals() throws NoSuchMethodException {\r\n    assertThat(stringParameter).isEqualTo(stringParameter);\r\n    assertThat(longParameter).isEqualTo(longParameter);\r\n    assertThat(intReturnType).isEqualTo(intReturnType);\r\n    assertThat(stringParameter).isNotEqualTo(longParameter);\r\n    assertThat(stringParameter).isNotEqualTo(intReturnType);\r\n    assertThat(longParameter).isNotEqualTo(stringParameter);\r\n    assertThat(longParameter).isNotEqualTo(intReturnType);\r\n    assertThat(intReturnType).isNotEqualTo(stringParameter);\r\n    assertThat(intReturnType).isNotEqualTo(longParameter);\r\n    Method method = getClass().getMethod(\"method\", String.class, long.class);\r\n    MethodParameter methodParameter = new MethodParameter(method, 0);\r\n    assertThat(methodParameter).isEqualTo(stringParameter);\r\n    assertThat(stringParameter).isEqualTo(methodParameter);\r\n    assertThat(methodParameter).isNotEqualTo(longParameter);\r\n    assertThat(longParameter).isNotEqualTo(methodParameter);\r\n}\n@Test\r\nvoid testHashCode() throws NoSuchMethodException {\r\n    assertThat(stringParameter.hashCode()).isEqualTo(stringParameter.hashCode());\r\n    assertThat(longParameter.hashCode()).isEqualTo(longParameter.hashCode());\r\n    assertThat(intReturnType.hashCode()).isEqualTo(intReturnType.hashCode());\r\n    Method method = getClass().getMethod(\"method\", String.class, long.class);\r\n    MethodParameter methodParameter = new MethodParameter(method, 0);\r\n    assertThat(methodParameter.hashCode()).isEqualTo(stringParameter.hashCode());\r\n    assertThat(methodParameter.hashCode()).isNotEqualTo(longParameter.hashCode());\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid testFactoryMethods() {\r\n    assertThat(MethodParameter.forMethodOrConstructor(method, 0)).isEqualTo(stringParameter);\r\n    assertThat(MethodParameter.forMethodOrConstructor(method, 1)).isEqualTo(longParameter);\r\n    assertThat(MethodParameter.forExecutable(method, 0)).isEqualTo(stringParameter);\r\n    assertThat(MethodParameter.forExecutable(method, 1)).isEqualTo(longParameter);\r\n    assertThat(MethodParameter.forParameter(method.getParameters()[0])).isEqualTo(stringParameter);\r\n    assertThat(MethodParameter.forParameter(method.getParameters()[1])).isEqualTo(longParameter);\r\n}\n@Test\r\nvoid indexValidation() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new MethodParameter(method, 2));\r\n}\n@Test\r\nvoid annotatedConstructorParameterInStaticNestedClass() throws Exception {\r\n    Constructor<?> constructor = NestedClass.class.getDeclaredConstructor(String.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(constructor, 0);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).as(\"Failed to find @Param annotation\").isNotNull();\r\n}\n// SPR-16652\r\n@Test\r\nvoid annotatedConstructorParameterInInnerClass() throws Exception {\r\n    Constructor<?> constructor = InnerClass.class.getConstructor(getClass(), String.class, Callable.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(constructor, 0);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(getClass());\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).isNull();\r\n    methodParameter = MethodParameter.forExecutable(constructor, 1);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).as(\"Failed to find @Param annotation\").isNotNull();\r\n    methodParameter = MethodParameter.forExecutable(constructor, 2);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(Callable.class);\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).isNull();\r\n}\n// SPR-16734\r\n@Test\r\nvoid genericConstructorParameterInInnerClass() throws Exception {\r\n    Constructor<?> constructor = InnerClass.class.getConstructor(getClass(), String.class, Callable.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(constructor, 0);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(getClass());\r\n    assertThat(methodParameter.getGenericParameterType()).isEqualTo(getClass());\r\n    methodParameter = MethodParameter.forExecutable(constructor, 1);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    assertThat(methodParameter.getGenericParameterType()).isEqualTo(String.class);\r\n    methodParameter = MethodParameter.forExecutable(constructor, 2);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(Callable.class);\r\n    assertThat(methodParameter.getGenericParameterType()).isEqualTo(ResolvableType.forClassWithGenerics(Callable.class, Integer.class).getType());\r\n}\n@Test\r\n@Deprecated\r\nvoid multipleResolveParameterTypeCalls() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(method, -1);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(Object.class);\r\n    GenericTypeResolver.resolveParameterType(methodParameter, StringList.class);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    GenericTypeResolver.resolveParameterType(methodParameter, IntegerList.class);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid equalsAndHashCodeConsidersContainingClass() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter m1 = MethodParameter.forExecutable(method, -1);\r\n    MethodParameter m2 = MethodParameter.forExecutable(method, -1);\r\n    MethodParameter m3 = MethodParameter.forExecutable(method, -1).nested();\r\n    assertThat(m1).isEqualTo(m2).isNotEqualTo(m3);\r\n    assertThat(m1.hashCode()).isEqualTo(m2.hashCode());\r\n}\n@Test\r\nvoid equalsAndHashCodeConsidersNesting() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter m1 = MethodParameter.forExecutable(method, -1).withContainingClass(StringList.class);\r\n    MethodParameter m2 = MethodParameter.forExecutable(method, -1).withContainingClass(StringList.class);\r\n    MethodParameter m3 = MethodParameter.forExecutable(method, -1).withContainingClass(IntegerList.class);\r\n    MethodParameter m4 = MethodParameter.forExecutable(method, -1);\r\n    assertThat(m1).isEqualTo(m2).isNotEqualTo(m3).isNotEqualTo(m4);\r\n    assertThat(m1.hashCode()).isEqualTo(m2.hashCode());\r\n}\n@Test\r\nvoid withContainingClassReturnsNewInstance() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter m1 = MethodParameter.forExecutable(method, -1);\r\n    MethodParameter m2 = m1.withContainingClass(StringList.class);\r\n    MethodParameter m3 = m1.withContainingClass(IntegerList.class);\r\n    assertThat(m1).isNotSameAs(m2).isNotSameAs(m3);\r\n    assertThat(m1.getParameterType()).isEqualTo(Object.class);\r\n    assertThat(m2.getParameterType()).isEqualTo(String.class);\r\n    assertThat(m3.getParameterType()).isEqualTo(Integer.class);\r\n}\n@Test\r\nvoid withTypeIndexReturnsNewInstance() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter m1 = MethodParameter.forExecutable(method, -1);\r\n    MethodParameter m2 = m1.withTypeIndex(2);\r\n    MethodParameter m3 = m1.withTypeIndex(3);\r\n    assertThat(m1).isNotSameAs(m2).isNotSameAs(m3);\r\n    assertThat(m1.getTypeIndexForCurrentLevel()).isNull();\r\n    assertThat(m2.getTypeIndexForCurrentLevel()).isEqualTo(2);\r\n    assertThat(m3.getTypeIndexForCurrentLevel()).isEqualTo(3);\r\n}\n@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid mutatingNestingLevelShouldNotChangeNewInstance() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter m1 = MethodParameter.forExecutable(method, -1);\r\n    MethodParameter m2 = m1.withTypeIndex(2);\r\n    assertThat(m2.getTypeIndexForCurrentLevel()).isEqualTo(2);\r\n    m1.setTypeIndexForCurrentLevel(1);\r\n    m2.decreaseNestingLevel();\r\n    assertThat(m2.getTypeIndexForCurrentLevel()).isNull();\r\n}\n@Test\r\nvoid nestedWithTypeIndexReturnsNewInstance() throws Exception {\r\n    Method method = ArrayList.class.getMethod(\"get\", int.class);\r\n    MethodParameter m1 = MethodParameter.forExecutable(method, -1);\r\n    MethodParameter m2 = m1.nested(2);\r\n    MethodParameter m3 = m1.nested(3);\r\n    assertThat(m1).isNotSameAs(m2).isNotSameAs(m3);\r\n    assertThat(m1.getTypeIndexForCurrentLevel()).isNull();\r\n    assertThat(m2.getTypeIndexForCurrentLevel()).isEqualTo(2);\r\n    assertThat(m3.getTypeIndexForCurrentLevel()).isEqualTo(3);\r\n}\n@Test\r\nvoid jspecifyNullableParameter() {\r\n    assertThat(jspecifyNullableParameter.isOptional()).isTrue();\r\n}\n@Test\r\nvoid jspecifyNonNullParameter() {\r\n    assertThat(jspecifyNonNullParameter.isOptional()).isFalse();\r\n}\n@Test\r\nvoid springNullableParameter() {\r\n    assertThat(springNullableParameter.isOptional()).isTrue();\r\n}\n@Test\r\nvoid springNonNullParameter() {\r\n    assertThat(springNonNullParameter.isOptional()).isFalse();\r\n}\npublic int method(String p1, long p2) {\r\n    return 42;\r\n}\n@org.jspecify.annotations.Nullable\r\npublic String jspecifyNullableMethod(@org.jspecify.annotations.Nullable String nullableParameter, String nonNullParameter) {\r\n    return nullableParameter;\r\n}\n@SuppressWarnings(\"deprecation\")\r\n@org.springframework.lang.Nullable\r\npublic String springNullableMethod(@org.springframework.lang.Nullable String nullableParameter, String nonNullParameter) {\r\n    return nullableParameter;\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate static class NestedClass {\r\n\r\n    NestedClass(@Param String s) {\r\n    }\r\n}\n@SuppressWarnings(\"unused\")\r\nprivate class InnerClass {\r\n\r\n    public InnerClass(@Param String s, Callable<Integer> i) {\r\n    }\r\n}\n@Retention(RetentionPolicy.RUNTIME)\r\n@Target(ElementType.PARAMETER)\r\nprivate @interface Param {\r\n}\n@SuppressWarnings(\"serial\")\r\nprivate static class StringList extends ArrayList<String> {\r\n}\n@SuppressWarnings(\"serial\")\r\nprivate static class IntegerList extends ArrayList<Integer> {\r\n}",
+    "comment": "\n * Tests for {@link MethodParameter}.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @author Phillip Webb\n * @author Sebastien Deleuze\n "
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#setup()",
+    "entityType": "method",
+    "code": "@BeforeEach\r\nvoid setup() throws NoSuchMethodException {\r\n    method = getClass().getMethod(\"method\", String.class, long.class);\r\n    stringParameter = new MethodParameter(method, 0);\r\n    longParameter = new MethodParameter(method, 1);\r\n    intReturnType = new MethodParameter(method, -1);\r\n    Method jspecifyNullableMethod = getClass().getMethod(\"jspecifyNullableMethod\", String.class, String.class);\r\n    jspecifyNullableParameter = new MethodParameter(jspecifyNullableMethod, 0);\r\n    jspecifyNonNullParameter = new MethodParameter(jspecifyNullableMethod, 1);\r\n    Method springNullableMethod = getClass().getMethod(\"springNullableMethod\", String.class, String.class);\r\n    springNullableParameter = new MethodParameter(springNullableMethod, 0);\r\n    springNonNullParameter = new MethodParameter(springNullableMethod, 1);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#equals()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equals() throws NoSuchMethodException {\r\n    assertThat(stringParameter).isEqualTo(stringParameter);\r\n    assertThat(longParameter).isEqualTo(longParameter);\r\n    assertThat(intReturnType).isEqualTo(intReturnType);\r\n    assertThat(stringParameter).isNotEqualTo(longParameter);\r\n    assertThat(stringParameter).isNotEqualTo(intReturnType);\r\n    assertThat(longParameter).isNotEqualTo(stringParameter);\r\n    assertThat(longParameter).isNotEqualTo(intReturnType);\r\n    assertThat(intReturnType).isNotEqualTo(stringParameter);\r\n    assertThat(intReturnType).isNotEqualTo(longParameter);\r\n    Method method = getClass().getMethod(\"method\", String.class, long.class);\r\n    MethodParameter methodParameter = new MethodParameter(method, 0);\r\n    assertThat(methodParameter).isEqualTo(stringParameter);\r\n    assertThat(stringParameter).isEqualTo(methodParameter);\r\n    assertThat(methodParameter).isNotEqualTo(longParameter);\r\n    assertThat(longParameter).isNotEqualTo(methodParameter);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#testHashCode()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid testHashCode() throws NoSuchMethodException {\r\n    assertThat(stringParameter.hashCode()).isEqualTo(stringParameter.hashCode());\r\n    assertThat(longParameter.hashCode()).isEqualTo(longParameter.hashCode());\r\n    assertThat(intReturnType.hashCode()).isEqualTo(intReturnType.hashCode());\r\n    Method method = getClass().getMethod(\"method\", String.class, long.class);\r\n    MethodParameter methodParameter = new MethodParameter(method, 0);\r\n    assertThat(methodParameter.hashCode()).isEqualTo(stringParameter.hashCode());\r\n    assertThat(methodParameter.hashCode()).isNotEqualTo(longParameter.hashCode());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#testFactoryMethods()",
+    "entityType": "method",
+    "code": "@Test\r\n@SuppressWarnings(\"deprecation\")\r\nvoid testFactoryMethods() {\r\n    assertThat(MethodParameter.forMethodOrConstructor(method, 0)).isEqualTo(stringParameter);\r\n    assertThat(MethodParameter.forMethodOrConstructor(method, 1)).isEqualTo(longParameter);\r\n    assertThat(MethodParameter.forExecutable(method, 0)).isEqualTo(stringParameter);\r\n    assertThat(MethodParameter.forExecutable(method, 1)).isEqualTo(longParameter);\r\n    assertThat(MethodParameter.forParameter(method.getParameters()[0])).isEqualTo(stringParameter);\r\n    assertThat(MethodParameter.forParameter(method.getParameters()[1])).isEqualTo(longParameter);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#indexValidation()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid indexValidation() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new MethodParameter(method, 2));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#annotatedConstructorParameterInStaticNestedClass()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid annotatedConstructorParameterInStaticNestedClass() throws Exception {\r\n    Constructor<?> constructor = NestedClass.class.getDeclaredConstructor(String.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(constructor, 0);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).as(\"Failed to find @Param annotation\").isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#annotatedConstructorParameterInInnerClass()",
+    "entityType": "method",
+    "code": "// SPR-16652\r\n@Test\r\nvoid annotatedConstructorParameterInInnerClass() throws Exception {\r\n    Constructor<?> constructor = InnerClass.class.getConstructor(getClass(), String.class, Callable.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(constructor, 0);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(getClass());\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).isNull();\r\n    methodParameter = MethodParameter.forExecutable(constructor, 1);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).as(\"Failed to find @Param annotation\").isNotNull();\r\n    methodParameter = MethodParameter.forExecutable(constructor, 2);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(Callable.class);\r\n    assertThat(methodParameter.getParameterAnnotation(Param.class)).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.MethodParameterTests#genericConstructorParameterInInnerClass()",
+    "entityType": "method",
+    "code": "// SPR-16734\r\n@Test\r\nvoid genericConstructorParameterInInnerClass() throws Exception {\r\n    Constructor<?> constructor = InnerClass.class.getConstructor(getClass(), String.class, Callable.class);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(constructor, 0);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(getClass());\r\n    assertThat(methodParameter.getGenericParameterType()).isEqualTo(getClass());\r\n    methodParameter = MethodParameter.forExecutable(constructor, 1);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(String.class);\r\n    assertThat(methodParameter.getGenericParameterType()).isEqualTo(String.class);\r\n    methodParameter = MethodParameter.forExecutable(constructor, 2);\r\n    assertThat(methodParameter.getParameterType()).isEqualTo(Callable.class);\r\n    assertThat(methodParameter.getGenericParameterType()).isEqualTo(ResolvableType.forClassWithGenerics(Callable.class, Integer.class).getType());\r\n}",
+    "comment": ""
+  }
+]

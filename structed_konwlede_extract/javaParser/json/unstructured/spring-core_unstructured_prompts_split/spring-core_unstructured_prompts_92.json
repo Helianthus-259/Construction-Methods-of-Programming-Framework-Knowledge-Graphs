@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#addResourceFileWithInputStreamSourceAddsFile()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addResourceFileWithInputStreamSourceAddsFile() throws IOException {\r\n    Resource resource = new ByteArrayResource(\"test\".getBytes(StandardCharsets.UTF_8));\r\n    this.generatedFiles.addResourceFile(\"META-INF/file\", resource);\r\n    assertThatFileAdded(Kind.RESOURCE, \"META-INF/file\").isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#addClassFileWithInputStreamSourceAddsFile()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addClassFileWithInputStreamSourceAddsFile() throws IOException {\r\n    Resource resource = new ByteArrayResource(\"test\".getBytes(StandardCharsets.UTF_8));\r\n    this.generatedFiles.addClassFile(\"com/example/HelloWorld.class\", resource);\r\n    assertThatFileAdded(Kind.CLASS, \"com/example/HelloWorld.class\").isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#addFileWithCharSequenceAddsFile()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addFileWithCharSequenceAddsFile() throws Exception {\r\n    this.generatedFiles.addFile(Kind.RESOURCE, \"META-INF/file\", \"test\");\r\n    assertThatFileAdded(Kind.RESOURCE, \"META-INF/file\").isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#addFileWithConsumedAppendableAddsFile()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addFileWithConsumedAppendableAddsFile() throws IOException {\r\n    this.generatedFiles.addFile(Kind.SOURCE, \"com/example/HelloWorld.java\", appendable -> appendable.append(\";\"));\r\n    assertThatFileAdded(Kind.SOURCE, \"com/example/HelloWorld.java\").isEqualTo(\";\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#handleFileWhenFileDoesNotExist()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid handleFileWhenFileDoesNotExist() throws IOException {\r\n    this.generatedFiles.setFileHandler(new TestFileHandler());\r\n    AtomicBoolean called = new AtomicBoolean(false);\r\n    this.generatedFiles.handleFile(Kind.RESOURCE, \"META-INF/test\", handler -> {\r\n        called.set(true);\r\n        handler.create(createSource(\"content\"));\r\n    });\r\n    assertThat(called).isTrue();\r\n    assertThatFileAdded(Kind.RESOURCE, \"META-INF/test\").isEqualTo(\"content\").hasOverride(false);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#handleFileWhenFileExistsCanOverride()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid handleFileWhenFileExistsCanOverride() throws IOException {\r\n    this.generatedFiles.setFileHandler(new TestFileHandler(createSource(\"existing\")));\r\n    AtomicBoolean called = new AtomicBoolean(false);\r\n    this.generatedFiles.handleFile(Kind.RESOURCE, \"META-INF/test\", handler -> {\r\n        called.set(true);\r\n        handler.override(createSource(\"overridden\"));\r\n    });\r\n    assertThat(called).isTrue();\r\n    assertThatFileAdded(Kind.RESOURCE, \"META-INF/test\").isEqualTo(\"overridden\").hasOverride(true);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#handleFileWhenFileExistsCanOverrideUsingExistingContent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid handleFileWhenFileExistsCanOverrideUsingExistingContent() throws IOException {\r\n    this.generatedFiles.setFileHandler(new TestFileHandler(createSource(\"existing\")));\r\n    AtomicBoolean called = new AtomicBoolean(false);\r\n    this.generatedFiles.handleFile(Kind.RESOURCE, \"META-INF/test\", handler -> {\r\n        called.set(true);\r\n        assertThat(handler.getContent()).isNotNull();\r\n        String existing = readSource(handler.getContent());\r\n        handler.override(createSource(existing + \"-override\"));\r\n    });\r\n    assertThat(called).isTrue();\r\n    assertThatFileAdded(Kind.RESOURCE, \"META-INF/test\").isEqualTo(\"existing-override\").hasOverride(true);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#handleFileWhenFileExistsFailedToCreate()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid handleFileWhenFileExistsFailedToCreate() {\r\n    TestFileHandler fileHandler = new TestFileHandler(createSource(\"existing\"));\r\n    this.generatedFiles.setFileHandler(fileHandler);\r\n    assertThatIllegalStateException().isThrownBy(() -> this.generatedFiles.handleFile(Kind.RESOURCE, \"META-INF/test\", handler -> handler.create(createSource(\"should fail\")))).withMessage(\"%s already exists\".formatted(fileHandler));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#createSource(String)",
+    "entityType": "method",
+    "code": "private static InputStreamSource createSource(String content) {\r\n    return new ByteArrayResource(content.getBytes(StandardCharsets.UTF_8));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#readSource(InputStreamSource)",
+    "entityType": "method",
+    "code": "private static String readSource(InputStreamSource content) throws IOException {\r\n    ByteArrayOutputStream out = new ByteArrayOutputStream();\r\n    content.getInputStream().transferTo(out);\r\n    return out.toString(StandardCharsets.UTF_8);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFilesTests#assertThatFileAdded(Kind,String)",
+    "entityType": "method",
+    "code": "private GeneratedFileAssert assertThatFileAdded(Kind kind, String path) throws IOException {\r\n    return this.generatedFiles.assertThatFileAdded(kind, path);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.TestGeneratedFiles",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate Kind kind;\n@Nullable\r\nprivate String path;\nprivate TestFileHandler fileHandler = new TestFileHandler();\nvoid setFileHandler(TestFileHandler fileHandler) {\r\n    this.fileHandler = fileHandler;\r\n}\n@Override\r\npublic void handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler) {\r\n    this.kind = kind;\r\n    this.path = path;\r\n    handler.accept(this.fileHandler);\r\n}\nGeneratedFileAssert assertThatFileAdded(Kind kind, String path) throws IOException {\r\n    assertThat(this.kind).as(\"kind\").isEqualTo(kind);\r\n    assertThat(this.path).as(\"path\").isEqualTo(path);\r\n    assertThat(this.fileHandler.content).as(\"content\").isNotNull();\r\n    return new GeneratedFileAssert(this.fileHandler.content, this.fileHandler.override);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.TestGeneratedFiles#setFileHandler(TestFileHandler)",
+    "entityType": "method",
+    "code": "void setFileHandler(TestFileHandler fileHandler) {\r\n    this.fileHandler = fileHandler;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.TestGeneratedFiles#handleFile(Kind,String,ThrowingConsumer<FileHandler>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic void handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler) {\r\n    this.kind = kind;\r\n    this.path = path;\r\n    handler.accept(this.fileHandler);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.TestGeneratedFiles#assertThatFileAdded(Kind,String)",
+    "entityType": "method",
+    "code": "GeneratedFileAssert assertThatFileAdded(Kind kind, String path) throws IOException {\r\n    assertThat(this.kind).as(\"kind\").isEqualTo(kind);\r\n    assertThat(this.path).as(\"path\").isEqualTo(path);\r\n    assertThat(this.fileHandler.content).as(\"content\").isNotNull();\r\n    return new GeneratedFileAssert(this.fileHandler.content, this.fileHandler.override);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFileAssert",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate final Boolean override;\nGeneratedFileAssert(InputStreamSource content, @Nullable Boolean override) throws IOException {\r\n    super(readSource(content), GeneratedFileAssert.class);\r\n    this.override = override;\r\n}\npublic GeneratedFileAssert hasOverride(boolean expected) {\r\n    assertThat(this.override).isEqualTo(expected);\r\n    return this.myself;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedFileAssert#hasOverride(boolean)",
+    "entityType": "method",
+    "code": "public GeneratedFileAssert hasOverride(boolean expected) {\r\n    assertThat(this.override).isEqualTo(expected);\r\n    return this.myself;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.TestFileHandler",
+    "entityType": "class",
+    "code": "@Nullable\r\nprivate InputStreamSource content;\n@Nullable\r\nprivate Boolean override;\nTestFileHandler(@Nullable InputStreamSource content) {\r\n    super(content != null, () -> content);\r\n    this.content = content;\r\n}\nTestFileHandler() {\r\n    this(null);\r\n}\n@Override\r\nprotected void copy(InputStreamSource content, boolean override) {\r\n    this.content = content;\r\n    this.override = override;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.TestFileHandler#copy(InputStreamSource,boolean)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected void copy(InputStreamSource content, boolean override) {\r\n    this.content = content;\r\n    this.override = override;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests",
+    "entityType": "class",
+    "code": "private static final ClassName TEST_CLASS_NAME = ClassName.get(\"com.example\", \"Test\");\nprivate static final Consumer<MethodSpec.Builder> methodSpecCustomizer = method -> {\r\n};\nprivate final GeneratedMethods methods = new GeneratedMethods(TEST_CLASS_NAME, MethodName::toString);\n@Test\r\nvoid createWhenClassNameIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new GeneratedMethods(null, MethodName::toString)).withMessage(\"'className' must not be null\");\r\n}\n@Test\r\nvoid createWhenMethodNameGeneratorIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new GeneratedMethods(TEST_CLASS_NAME, null)).withMessage(\"'methodNameGenerator' must not be null\");\r\n}\n@Test\r\nvoid createWithExistingGeneratorUsesGenerator() {\r\n    Function<MethodName, String> generator = name -> \"__\" + name.toString();\r\n    GeneratedMethods methods = new GeneratedMethods(TEST_CLASS_NAME, generator);\r\n    assertThat(methods.add(\"test\", methodSpecCustomizer).getName()).hasToString(\"__test\");\r\n}\n@Test\r\nvoid addWithStringNameWhenSuggestedMethodIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.methods.add((String) null, methodSpecCustomizer)).withMessage(\"'suggestedName' must not be null\");\r\n}\n@Test\r\nvoid addWithStringNameWhenMethodIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.methods.add(\"test\", null)).withMessage(\"'method' must not be null\");\r\n}\n@Test\r\nvoid addAddsMethod() {\r\n    this.methods.add(\"springBeans\", methodSpecCustomizer);\r\n    this.methods.add(\"springContext\", methodSpecCustomizer);\r\n    assertThat(this.methods.stream().map(GeneratedMethod::getName).map(Object::toString)).containsExactly(\"springBeans\", \"springContext\");\r\n}\n@Test\r\nvoid withPrefixWhenGeneratingGetMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"getTest\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"getMyBeanTest\");\r\n}\n@Test\r\nvoid withPrefixWhenGeneratingSetMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"setTest\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"setMyBeanTest\");\r\n}\n@Test\r\nvoid withPrefixWhenGeneratingIsMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"isTest\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"isMyBeanTest\");\r\n}\n@Test\r\nvoid withPrefixWhenGeneratingOtherMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"test\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"myBeanTest\");\r\n}\n@Test\r\nvoid doWithMethodSpecsAcceptsMethodSpecs() {\r\n    this.methods.add(\"springBeans\", methodSpecCustomizer);\r\n    this.methods.add(\"springContext\", methodSpecCustomizer);\r\n    List<String> names = new ArrayList<>();\r\n    this.methods.doWithMethodSpecs(methodSpec -> names.add(methodSpec.name));\r\n    assertThat(names).containsExactly(\"springBeans\", \"springContext\");\r\n}",
+    "comment": "\n * Tests for {@link GeneratedMethods}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#createWhenClassNameIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWhenClassNameIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new GeneratedMethods(null, MethodName::toString)).withMessage(\"'className' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#createWhenMethodNameGeneratorIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWhenMethodNameGeneratorIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new GeneratedMethods(TEST_CLASS_NAME, null)).withMessage(\"'methodNameGenerator' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#createWithExistingGeneratorUsesGenerator()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWithExistingGeneratorUsesGenerator() {\r\n    Function<MethodName, String> generator = name -> \"__\" + name.toString();\r\n    GeneratedMethods methods = new GeneratedMethods(TEST_CLASS_NAME, generator);\r\n    assertThat(methods.add(\"test\", methodSpecCustomizer).getName()).hasToString(\"__test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#addWithStringNameWhenSuggestedMethodIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addWithStringNameWhenSuggestedMethodIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.methods.add((String) null, methodSpecCustomizer)).withMessage(\"'suggestedName' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#addWithStringNameWhenMethodIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addWithStringNameWhenMethodIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> this.methods.add(\"test\", null)).withMessage(\"'method' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#addAddsMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addAddsMethod() {\r\n    this.methods.add(\"springBeans\", methodSpecCustomizer);\r\n    this.methods.add(\"springContext\", methodSpecCustomizer);\r\n    assertThat(this.methods.stream().map(GeneratedMethod::getName).map(Object::toString)).containsExactly(\"springBeans\", \"springContext\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#withPrefixWhenGeneratingGetMethodUsesPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withPrefixWhenGeneratingGetMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"getTest\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"getMyBeanTest\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#withPrefixWhenGeneratingSetMethodUsesPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withPrefixWhenGeneratingSetMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"setTest\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"setMyBeanTest\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#withPrefixWhenGeneratingIsMethodUsesPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withPrefixWhenGeneratingIsMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"isTest\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"isMyBeanTest\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#withPrefixWhenGeneratingOtherMethodUsesPrefix()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid withPrefixWhenGeneratingOtherMethodUsesPrefix() {\r\n    GeneratedMethod generateMethod = this.methods.withPrefix(\"myBean\").add(\"test\", methodSpecCustomizer);\r\n    assertThat(generateMethod.getName()).hasToString(\"myBeanTest\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodsTests#doWithMethodSpecsAcceptsMethodSpecs()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid doWithMethodSpecsAcceptsMethodSpecs() {\r\n    this.methods.add(\"springBeans\", methodSpecCustomizer);\r\n    this.methods.add(\"springContext\", methodSpecCustomizer);\r\n    List<String> names = new ArrayList<>();\r\n    this.methods.doWithMethodSpecs(methodSpec -> names.add(methodSpec.name));\r\n    assertThat(names).containsExactly(\"springBeans\", \"springContext\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests",
+    "entityType": "class",
+    "code": "private static final ClassName TEST_CLASS_NAME = ClassName.get(\"com.example\", \"Test\");\nprivate static final Consumer<MethodSpec.Builder> emptyMethod = method -> {\r\n};\nprivate static final String NAME = \"spring\";\n@Test\r\nvoid getNameReturnsName() {\r\n    GeneratedMethod generatedMethod = new GeneratedMethod(TEST_CLASS_NAME, NAME, emptyMethod);\r\n    assertThat(generatedMethod.getName()).isSameAs(NAME);\r\n}\n@Test\r\nvoid generateMethodSpecReturnsMethodSpec() {\r\n    GeneratedMethod generatedMethod = create(method -> method.addJavadoc(\"Test\"));\r\n    assertThat(generatedMethod.getMethodSpec().javadoc).asString().contains(\"Test\");\r\n}\n@Test\r\nvoid generateMethodSpecWhenMethodNameIsChangedThrowsException() {\r\n    assertThatIllegalStateException().isThrownBy(() -> create(method -> method.setName(\"badname\")).getMethodSpec()).withMessage(\"'method' consumer must not change the generated method name\");\r\n}\n@Test\r\nvoid toMethodReferenceWithInstanceMethod() {\r\n    GeneratedMethod generatedMethod = create(emptyMethod);\r\n    MethodReference methodReference = generatedMethod.toMethodReference();\r\n    assertThat(methodReference).isNotNull();\r\n    assertThat(methodReference.toInvokeCodeBlock(ArgumentCodeGenerator.none(), TEST_CLASS_NAME)).isEqualTo(CodeBlock.of(\"spring()\"));\r\n}\n@Test\r\nvoid toMethodReferenceWithStaticMethod() {\r\n    GeneratedMethod generatedMethod = create(method -> method.addModifiers(Modifier.STATIC));\r\n    MethodReference methodReference = generatedMethod.toMethodReference();\r\n    assertThat(methodReference).isNotNull();\r\n    ClassName anotherDeclaringClass = ClassName.get(\"com.example\", \"Another\");\r\n    assertThat(methodReference.toInvokeCodeBlock(ArgumentCodeGenerator.none(), anotherDeclaringClass)).isEqualTo(CodeBlock.of(\"com.example.Test.spring()\"));\r\n}\nprivate GeneratedMethod create(Consumer<MethodSpec.Builder> method) {\r\n    return new GeneratedMethod(TEST_CLASS_NAME, NAME, method);\r\n}",
+    "comment": "\n * Tests for {@link GeneratedMethod}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests#getNameReturnsName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getNameReturnsName() {\r\n    GeneratedMethod generatedMethod = new GeneratedMethod(TEST_CLASS_NAME, NAME, emptyMethod);\r\n    assertThat(generatedMethod.getName()).isSameAs(NAME);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests#generateMethodSpecReturnsMethodSpec()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateMethodSpecReturnsMethodSpec() {\r\n    GeneratedMethod generatedMethod = create(method -> method.addJavadoc(\"Test\"));\r\n    assertThat(generatedMethod.getMethodSpec().javadoc).asString().contains(\"Test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests#generateMethodSpecWhenMethodNameIsChangedThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateMethodSpecWhenMethodNameIsChangedThrowsException() {\r\n    assertThatIllegalStateException().isThrownBy(() -> create(method -> method.setName(\"badname\")).getMethodSpec()).withMessage(\"'method' consumer must not change the generated method name\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests#toMethodReferenceWithInstanceMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid toMethodReferenceWithInstanceMethod() {\r\n    GeneratedMethod generatedMethod = create(emptyMethod);\r\n    MethodReference methodReference = generatedMethod.toMethodReference();\r\n    assertThat(methodReference).isNotNull();\r\n    assertThat(methodReference.toInvokeCodeBlock(ArgumentCodeGenerator.none(), TEST_CLASS_NAME)).isEqualTo(CodeBlock.of(\"spring()\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests#toMethodReferenceWithStaticMethod()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid toMethodReferenceWithStaticMethod() {\r\n    GeneratedMethod generatedMethod = create(method -> method.addModifiers(Modifier.STATIC));\r\n    MethodReference methodReference = generatedMethod.toMethodReference();\r\n    assertThat(methodReference).isNotNull();\r\n    ClassName anotherDeclaringClass = ClassName.get(\"com.example\", \"Another\");\r\n    assertThat(methodReference.toInvokeCodeBlock(ArgumentCodeGenerator.none(), anotherDeclaringClass)).isEqualTo(CodeBlock.of(\"com.example.Test.spring()\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedMethodTests#create(Consumer<MethodSpec.Builder>)",
+    "entityType": "method",
+    "code": "private GeneratedMethod create(Consumer<MethodSpec.Builder> method) {\r\n    return new GeneratedMethod(TEST_CLASS_NAME, NAME, method);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests",
+    "entityType": "class",
+    "code": "@ParameterizedTest\r\n@MethodSource(\"reflectionTargetNames\")\r\nvoid hasSuitableReflectionTargetName(TypeReference typeReference, String binaryName) {\r\n    assertThat(typeReference.getName()).isEqualTo(binaryName);\r\n}\nstatic Stream<Arguments> reflectionTargetNames() {\r\n    return Stream.of(Arguments.of(GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\")), \"com.example.Test\"), Arguments.of(GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\", \"Inner\")), \"com.example.Test$Inner\"));\r\n}\n@Test\r\nvoid createWithClassName() {\r\n    GeneratedTypeReference typeReference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\"));\r\n    assertThat(typeReference.getPackageName()).isEqualTo(\"com.example\");\r\n    assertThat(typeReference.getSimpleName()).isEqualTo(\"Test\");\r\n    assertThat(typeReference.getCanonicalName()).isEqualTo(\"com.example.Test\");\r\n    assertThat(typeReference.getEnclosingType()).isNull();\r\n}\n@Test\r\nvoid createWithClassNameAndParent() {\r\n    GeneratedTypeReference typeReference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\").nestedClass(\"Nested\"));\r\n    assertThat(typeReference.getPackageName()).isEqualTo(\"com.example\");\r\n    assertThat(typeReference.getSimpleName()).isEqualTo(\"Nested\");\r\n    assertThat(typeReference.getCanonicalName()).isEqualTo(\"com.example.Test.Nested\");\r\n    assertThat(typeReference.getEnclosingType()).satisfies(parentTypeReference -> {\r\n        assertThat(parentTypeReference.getPackageName()).isEqualTo(\"com.example\");\r\n        assertThat(parentTypeReference.getSimpleName()).isEqualTo(\"Test\");\r\n        assertThat(parentTypeReference.getCanonicalName()).isEqualTo(\"com.example.Test\");\r\n        assertThat(parentTypeReference.getEnclosingType()).isNull();\r\n    });\r\n}\n@Test\r\nvoid nameOfCglibProxy() {\r\n    TypeReference reference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test$$SpringCGLIB$$0\"));\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Test$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNull();\r\n}\n@Test\r\nvoid nameOfNestedCglibProxy() {\r\n    TypeReference reference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\").nestedClass(\"Another$$SpringCGLIB$$0\"));\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Another$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNotNull();\r\n    assertThat(reference.getEnclosingType().getSimpleName()).isEqualTo(\"Test\");\r\n}\n@Test\r\nvoid equalsWithIdenticalCanonicalNameIsTrue() {\r\n    assertThat(GeneratedTypeReference.of(ClassName.get(\"java.lang\", \"String\"))).isEqualTo(TypeReference.of(String.class));\r\n}",
+    "comment": "\n * Tests for {@link GeneratedTypeReference}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#hasSuitableReflectionTargetName(TypeReference,String)",
+    "entityType": "method",
+    "code": "@ParameterizedTest\r\n@MethodSource(\"reflectionTargetNames\")\r\nvoid hasSuitableReflectionTargetName(TypeReference typeReference, String binaryName) {\r\n    assertThat(typeReference.getName()).isEqualTo(binaryName);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#reflectionTargetNames()",
+    "entityType": "method",
+    "code": "static Stream<Arguments> reflectionTargetNames() {\r\n    return Stream.of(Arguments.of(GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\")), \"com.example.Test\"), Arguments.of(GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\", \"Inner\")), \"com.example.Test$Inner\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#createWithClassName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWithClassName() {\r\n    GeneratedTypeReference typeReference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\"));\r\n    assertThat(typeReference.getPackageName()).isEqualTo(\"com.example\");\r\n    assertThat(typeReference.getSimpleName()).isEqualTo(\"Test\");\r\n    assertThat(typeReference.getCanonicalName()).isEqualTo(\"com.example.Test\");\r\n    assertThat(typeReference.getEnclosingType()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#createWithClassNameAndParent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWithClassNameAndParent() {\r\n    GeneratedTypeReference typeReference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\").nestedClass(\"Nested\"));\r\n    assertThat(typeReference.getPackageName()).isEqualTo(\"com.example\");\r\n    assertThat(typeReference.getSimpleName()).isEqualTo(\"Nested\");\r\n    assertThat(typeReference.getCanonicalName()).isEqualTo(\"com.example.Test.Nested\");\r\n    assertThat(typeReference.getEnclosingType()).satisfies(parentTypeReference -> {\r\n        assertThat(parentTypeReference.getPackageName()).isEqualTo(\"com.example\");\r\n        assertThat(parentTypeReference.getSimpleName()).isEqualTo(\"Test\");\r\n        assertThat(parentTypeReference.getCanonicalName()).isEqualTo(\"com.example.Test\");\r\n        assertThat(parentTypeReference.getEnclosingType()).isNull();\r\n    });\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#nameOfCglibProxy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nameOfCglibProxy() {\r\n    TypeReference reference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test$$SpringCGLIB$$0\"));\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Test$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#nameOfNestedCglibProxy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid nameOfNestedCglibProxy() {\r\n    TypeReference reference = GeneratedTypeReference.of(ClassName.get(\"com.example\", \"Test\").nestedClass(\"Another$$SpringCGLIB$$0\"));\r\n    assertThat(reference.getSimpleName()).isEqualTo(\"Another$$SpringCGLIB$$0\");\r\n    assertThat(reference.getEnclosingType()).isNotNull();\r\n    assertThat(reference.getEnclosingType().getSimpleName()).isEqualTo(\"Test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.GeneratedTypeReferenceTests#equalsWithIdenticalCanonicalNameIsTrue()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid equalsWithIdenticalCanonicalNameIsTrue() {\r\n    assertThat(GeneratedTypeReference.of(ClassName.get(\"java.lang\", \"String\"))).isEqualTo(TypeReference.of(String.class));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests",
+    "entityType": "class",
+    "code": "private final InMemoryGeneratedFiles generatedFiles = new InMemoryGeneratedFiles();\n@Test\r\nvoid addFileAddsInMemoryFile() throws Exception {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFileContent(Kind.RESOURCE, \"META-INF/test\")).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid addFileWhenFileAlreadyAddedThrowsException() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThatIllegalStateException().isThrownBy(() -> this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\")).withMessage(\"META-INF/test already exists\");\r\n}\n@Test\r\nvoid getGeneratedFilesReturnsFiles() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test1\", \"test1\");\r\n    this.generatedFiles.addResourceFile(\"META-INF/test2\", \"test2\");\r\n    assertThat(this.generatedFiles.getGeneratedFiles(Kind.RESOURCE)).containsKeys(\"META-INF/test1\", \"META-INF/test2\");\r\n}\n@Test\r\nvoid getGeneratedFileContentWhenFileExistsReturnsContent() throws Exception {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFileContent(Kind.RESOURCE, \"META-INF/test\")).isEqualTo(\"test\");\r\n}\n@Test\r\nvoid getGeneratedFileContentWhenFileIsMissingReturnsNull() throws Exception {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFileContent(Kind.RESOURCE, \"META-INF/missing\")).isNull();\r\n}\n@Test\r\nvoid getGeneratedFileWhenFileExistsReturnsInputStreamSource() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFile(Kind.RESOURCE, \"META-INF/test\")).isNotNull();\r\n}\n@Test\r\nvoid getGeneratedFileWhenFileIsMissingReturnsNull() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFile(Kind.RESOURCE, \"META-INF/missing\")).isNull();\r\n}",
+    "comment": "\n * Tests for {@link InMemoryGeneratedFiles}.\n *\n * @author Phillip Webb\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#addFileAddsInMemoryFile()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addFileAddsInMemoryFile() throws Exception {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFileContent(Kind.RESOURCE, \"META-INF/test\")).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#addFileWhenFileAlreadyAddedThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid addFileWhenFileAlreadyAddedThrowsException() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThatIllegalStateException().isThrownBy(() -> this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\")).withMessage(\"META-INF/test already exists\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#getGeneratedFilesReturnsFiles()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getGeneratedFilesReturnsFiles() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test1\", \"test1\");\r\n    this.generatedFiles.addResourceFile(\"META-INF/test2\", \"test2\");\r\n    assertThat(this.generatedFiles.getGeneratedFiles(Kind.RESOURCE)).containsKeys(\"META-INF/test1\", \"META-INF/test2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#getGeneratedFileContentWhenFileExistsReturnsContent()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getGeneratedFileContentWhenFileExistsReturnsContent() throws Exception {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFileContent(Kind.RESOURCE, \"META-INF/test\")).isEqualTo(\"test\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#getGeneratedFileContentWhenFileIsMissingReturnsNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getGeneratedFileContentWhenFileIsMissingReturnsNull() throws Exception {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFileContent(Kind.RESOURCE, \"META-INF/missing\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#getGeneratedFileWhenFileExistsReturnsInputStreamSource()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getGeneratedFileWhenFileExistsReturnsInputStreamSource() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFile(Kind.RESOURCE, \"META-INF/test\")).isNotNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.InMemoryGeneratedFilesTests#getGeneratedFileWhenFileIsMissingReturnsNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid getGeneratedFileWhenFileIsMissingReturnsNull() {\r\n    this.generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    assertThat(this.generatedFiles.getGeneratedFile(Kind.RESOURCE, \"META-INF/missing\")).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid ofWhenPartsIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MethodName.of((String[]) null)).withMessage(\"'parts' must not be null\");\r\n}\n@Test\r\nvoid ofReturnsMethodName() {\r\n    assertThat(MethodName.of(\"get\", \"bean\", \"factory\")).hasToString(\"getBeanFactory\");\r\n    assertThat(MethodName.of(\"get\", null, \"factory\")).hasToString(\"getFactory\");\r\n    assertThat(MethodName.of(null, null)).hasToString(\"$$aot\");\r\n    assertThat(MethodName.of(\"\", null)).hasToString(\"$$aot\");\r\n    assertThat(MethodName.of(\"get\", \"InputStream\")).hasToString(\"getInputStream\");\r\n    assertThat(MethodName.of(\"register\", \"myBean123\", \"bean\")).hasToString(\"registerMyBeanBean\");\r\n    assertThat(MethodName.of(\"register\", \"org.springframework.example.bean\")).hasToString(\"registerOrgSpringframeworkExampleBean\");\r\n}\n@Test\r\nvoid andPartsWhenPartsIsNullThrowsException() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> name.and(((String[]) null))).withMessage(\"'parts' must not be null\");\r\n}\n@Test\r\nvoid andPartsReturnsMethodName() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThat(name.and(\"test\")).hasToString(\"myBeanTest\");\r\n    assertThat(name.and(\"test\", null)).hasToString(\"myBeanTest\");\r\n    assertThat(name.and(\"getName\")).hasToString(\"getMyBeanName\");\r\n    assertThat(name.and(\"setName\")).hasToString(\"setMyBeanName\");\r\n    assertThat(name.and(\"isDoingOk\")).hasToString(\"isMyBeanDoingOk\");\r\n    assertThat(name.and(\"this\", \"that\", \"the\", \"other\")).hasToString(\"myBeanThisThatTheOther\");\r\n}\n@Test\r\nvoid andNameWhenPartsIsNullThrowsException() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> name.and(((MethodName) null))).withMessage(\"'name' must not be null\");\r\n}\n@Test\r\nvoid andNameReturnsMethodName() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThat(name.and(MethodName.of(\"test\"))).hasToString(\"myBeanTest\");\r\n}\n@Test\r\nvoid hashCodeAndEquals() {\r\n    MethodName name1 = MethodName.of(\"myBean\");\r\n    MethodName name2 = MethodName.of(\"my\", \"bean\");\r\n    MethodName name3 = MethodName.of(\"myOtherBean\");\r\n    assertThat(name1.hashCode()).isEqualTo(name2.hashCode());\r\n    assertThat(name1).isEqualTo(name1).isEqualTo(name2).isNotEqualTo(name3);\r\n}",
+    "comment": "\n * Tests for {@link MethodName}.\n *\n * @author Phillip Webb\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#ofWhenPartsIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofWhenPartsIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> MethodName.of((String[]) null)).withMessage(\"'parts' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#ofReturnsMethodName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid ofReturnsMethodName() {\r\n    assertThat(MethodName.of(\"get\", \"bean\", \"factory\")).hasToString(\"getBeanFactory\");\r\n    assertThat(MethodName.of(\"get\", null, \"factory\")).hasToString(\"getFactory\");\r\n    assertThat(MethodName.of(null, null)).hasToString(\"$$aot\");\r\n    assertThat(MethodName.of(\"\", null)).hasToString(\"$$aot\");\r\n    assertThat(MethodName.of(\"get\", \"InputStream\")).hasToString(\"getInputStream\");\r\n    assertThat(MethodName.of(\"register\", \"myBean123\", \"bean\")).hasToString(\"registerMyBeanBean\");\r\n    assertThat(MethodName.of(\"register\", \"org.springframework.example.bean\")).hasToString(\"registerOrgSpringframeworkExampleBean\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#andPartsWhenPartsIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andPartsWhenPartsIsNullThrowsException() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> name.and(((String[]) null))).withMessage(\"'parts' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#andPartsReturnsMethodName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andPartsReturnsMethodName() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThat(name.and(\"test\")).hasToString(\"myBeanTest\");\r\n    assertThat(name.and(\"test\", null)).hasToString(\"myBeanTest\");\r\n    assertThat(name.and(\"getName\")).hasToString(\"getMyBeanName\");\r\n    assertThat(name.and(\"setName\")).hasToString(\"setMyBeanName\");\r\n    assertThat(name.and(\"isDoingOk\")).hasToString(\"isMyBeanDoingOk\");\r\n    assertThat(name.and(\"this\", \"that\", \"the\", \"other\")).hasToString(\"myBeanThisThatTheOther\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#andNameWhenPartsIsNullThrowsException()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andNameWhenPartsIsNullThrowsException() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> name.and(((MethodName) null))).withMessage(\"'name' must not be null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#andNameReturnsMethodName()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid andNameReturnsMethodName() {\r\n    MethodName name = MethodName.of(\"myBean\");\r\n    assertThat(name.and(MethodName.of(\"test\"))).hasToString(\"myBeanTest\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.MethodNameTests#hashCodeAndEquals()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid hashCodeAndEquals() {\r\n    MethodName name1 = MethodName.of(\"myBean\");\r\n    MethodName name2 = MethodName.of(\"my\", \"bean\");\r\n    MethodName name3 = MethodName.of(\"myOtherBean\");\r\n    assertThat(name1.hashCode()).isEqualTo(name2.hashCode());\r\n    assertThat(name1).isEqualTo(name1).isEqualTo(name2).isNotEqualTo(name3);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PackagePrivateClass",
+    "entityType": "class",
+    "code": "public PackagePrivateClass() {\r\n}\npublic String stringBean() {\r\n    return \"public\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PackagePrivateClass#stringBean()",
+    "entityType": "method",
+    "code": "public String stringBean() {\r\n    return \"public\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ProtectedAccessor",
+    "entityType": "class",
+    "code": "ProtectedAccessor() {\r\n}\npublic String methodWithProtectedParameter(PackagePrivateClass type) {\r\n    return \"test\";\r\n}\npublic PackagePrivateClass methodWithProtectedReturnType() {\r\n    return new PackagePrivateClass();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ProtectedAccessor#methodWithProtectedParameter(PackagePrivateClass)",
+    "entityType": "method",
+    "code": "public String methodWithProtectedParameter(PackagePrivateClass type) {\r\n    return \"test\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ProtectedAccessor#methodWithProtectedReturnType()",
+    "entityType": "method",
+    "code": "public PackagePrivateClass methodWithProtectedReturnType() {\r\n    return new PackagePrivateClass();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PublicClass",
+    "entityType": "class",
+    "code": "private String privateField;\nString protectedField;\npublic PackagePrivateClass[] packagePrivateClasses;\npublic PackagePrivateClass protectedClassField;\nString getProtectedMethod() {\r\n    return this.protectedField;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PublicClass#getProtectedMethod()",
+    "entityType": "method",
+    "code": "String getProtectedMethod() {\r\n    return this.protectedField;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ValueCodeGeneratorTests",
+    "entityType": "class",
+    "code": "@Nested\r\nclass ConfigurationTests {\r\n\r\n    @Test\r\n    void createWithListOfDelegatesInvokeThemInOrder() {\r\n        Delegate first = mock(Delegate.class);\r\n        Delegate second = mock(Delegate.class);\r\n        Delegate third = mock(Delegate.class);\r\n        ValueCodeGenerator codeGenerator = ValueCodeGenerator.with(List.of(first, second, third));\r\n        Object value = \"\";\r\n        given(third.generateCode(codeGenerator, value)).willReturn(CodeBlock.of(\"test\"));\r\n        CodeBlock code = codeGenerator.generateCode(value);\r\n        assertThat(code).hasToString(\"test\");\r\n        InOrder ordered = inOrder(first, second, third);\r\n        ordered.verify(first).generateCode(codeGenerator, value);\r\n        ordered.verify(second).generateCode(codeGenerator, value);\r\n        ordered.verify(third).generateCode(codeGenerator, value);\r\n    }\r\n\r\n    @Test\r\n    void generateCodeWithMatchingDelegateStops() {\r\n        Delegate first = mock(Delegate.class);\r\n        Delegate second = mock(Delegate.class);\r\n        ValueCodeGenerator codeGenerator = ValueCodeGenerator.with(List.of(first, second));\r\n        Object value = \"\";\r\n        given(first.generateCode(codeGenerator, value)).willReturn(CodeBlock.of(\"test\"));\r\n        CodeBlock code = codeGenerator.generateCode(value);\r\n        assertThat(code).hasToString(\"test\");\r\n        verify(first).generateCode(codeGenerator, value);\r\n        verifyNoInteractions(second);\r\n    }\r\n\r\n    @Test\r\n    void scopedReturnsImmutableCopy() {\r\n        ValueCodeGenerator valueCodeGenerator = ValueCodeGenerator.withDefaults();\r\n        GeneratedMethods generatedMethods = new GeneratedMethods(ClassName.get(\"com.example\", \"Test\"), MethodName::toString);\r\n        ValueCodeGenerator scopedValueCodeGenerator = valueCodeGenerator.scoped(generatedMethods);\r\n        assertThat(scopedValueCodeGenerator).isNotSameAs(valueCodeGenerator);\r\n        assertThat(scopedValueCodeGenerator.getGeneratedMethods()).isSameAs(generatedMethods);\r\n        assertThat(valueCodeGenerator.getGeneratedMethods()).isNull();\r\n    }\r\n}\n@Nested\r\nclass NullTests {\r\n\r\n    @Test\r\n    void generateWhenNull() {\r\n        assertThat(generateCode(null)).hasToString(\"null\");\r\n    }\r\n}\n@Nested\r\nclass PrimitiveTests {\r\n\r\n    @Test\r\n    void generateWhenBoolean() {\r\n        assertThat(generateCode(true)).hasToString(\"true\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenByte() {\r\n        assertThat(generateCode((byte) 2)).hasToString(\"(byte) 2\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenShort() {\r\n        assertThat(generateCode((short) 3)).hasToString(\"(short) 3\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenInt() {\r\n        assertThat(generateCode(4)).hasToString(\"4\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenLong() {\r\n        assertThat(generateCode(5L)).hasToString(\"5L\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenFloat() {\r\n        assertThat(generateCode(0.1F)).hasToString(\"0.1F\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenDouble() {\r\n        assertThat(generateCode(0.2)).hasToString(\"(double) 0.2\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenChar() {\r\n        assertThat(generateCode('a')).hasToString(\"'a'\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenSimpleEscapedCharReturnsEscaped() {\r\n        testEscaped('\\b', \"'\\\\b'\");\r\n        testEscaped('\\t', \"'\\\\t'\");\r\n        testEscaped('\\n', \"'\\\\n'\");\r\n        testEscaped('\\f', \"'\\\\f'\");\r\n        testEscaped('\\r', \"'\\\\r'\");\r\n        testEscaped('\\\"', \"'\\\"'\");\r\n        testEscaped('\\'', \"'\\\\''\");\r\n        testEscaped('\\\\', \"'\\\\\\\\'\");\r\n    }\r\n\r\n    @Test\r\n    void generatedWhenUnicodeEscapedCharReturnsEscaped() {\r\n        testEscaped('\\u007f', \"'\\\\u007f'\");\r\n    }\r\n\r\n    private void testEscaped(char value, String expectedSourceContent) {\r\n        assertThat(generateCode(value)).hasToString(expectedSourceContent);\r\n    }\r\n}\n@Nested\r\nclass StringTests {\r\n\r\n    @Test\r\n    void generateWhenString() {\r\n        assertThat(generateCode(\"test\")).hasToString(\"\\\"test\\\"\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenStringWithCarriageReturn() {\r\n        assertThat(generateCode(\"test\\n\")).isEqualTo(CodeBlock.of(\"$S\", \"test\\n\"));\r\n    }\r\n}\n@Nested\r\nclass CharsetTests {\r\n\r\n    @Test\r\n    void generateWhenCharset() {\r\n        assertThat(resolve(generateCode(StandardCharsets.UTF_8))).hasImport(Charset.class).hasValueCode(\"Charset.forName(\\\"UTF-8\\\")\");\r\n    }\r\n}\n@Nested\r\nclass EnumTests {\r\n\r\n    @Test\r\n    void generateWhenEnum() {\r\n        assertThat(resolve(generateCode(ChronoUnit.DAYS))).hasImport(ChronoUnit.class).hasValueCode(\"ChronoUnit.DAYS\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenEnumWithClassBody() {\r\n        assertThat(resolve(generateCode(EnumWithClassBody.TWO))).hasImport(EnumWithClassBody.class).hasValueCode(\"EnumWithClassBody.TWO\");\r\n    }\r\n}\n@Nested\r\nclass ClassTests {\r\n\r\n    @Test\r\n    void generateWhenClass() {\r\n        assertThat(resolve(generateCode(InputStream.class))).hasImport(InputStream.class).hasValueCode(\"InputStream.class\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenCglibClass() {\r\n        assertThat(resolve(generateCode(ExampleClass$$GeneratedBy.class))).hasImport(ExampleClass.class).hasValueCode(\"ExampleClass.class\");\r\n    }\r\n}\n@Nested\r\nclass ResolvableTypeTests {\r\n\r\n    @Test\r\n    void generateWhenSimpleResolvableType() {\r\n        ResolvableType resolvableType = ResolvableType.forClass(String.class);\r\n        assertThat(resolve(generateCode(resolvableType))).hasImport(ResolvableType.class).hasValueCode(\"ResolvableType.forClass(String.class)\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenNoneResolvableType() {\r\n        ResolvableType resolvableType = ResolvableType.NONE;\r\n        assertThat(resolve(generateCode(resolvableType))).hasImport(ResolvableType.class).hasValueCode(\"ResolvableType.NONE\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenGenericResolvableType() {\r\n        ResolvableType resolvableType = ResolvableType.forClassWithGenerics(List.class, String.class);\r\n        assertThat(resolve(generateCode(resolvableType))).hasImport(ResolvableType.class, List.class).hasValueCode(\"ResolvableType.forClassWithGenerics(List.class, String.class)\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenNestedGenericResolvableType() {\r\n        ResolvableType stringList = ResolvableType.forClassWithGenerics(List.class, String.class);\r\n        ResolvableType resolvableType = ResolvableType.forClassWithGenerics(Map.class, ResolvableType.forClass(Integer.class), stringList);\r\n        assertThat(resolve(generateCode(resolvableType))).hasImport(ResolvableType.class, List.class, Map.class).hasValueCode(\"ResolvableType.forClassWithGenerics(Map.class, ResolvableType.forClass(Integer.class), \" + \"ResolvableType.forClassWithGenerics(List.class, String.class))\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenUnresolvedGenericType() throws NoSuchFieldException {\r\n        ResolvableType resolvableType = ResolvableType.forField(SampleTypes.class.getField(\"genericList\"));\r\n        assertThat(resolve(generateCode(resolvableType))).hasImport(ResolvableType.class, List.class).hasValueCode(\"ResolvableType.forClass(List.class)\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenUnresolvedNestedGenericType() throws NoSuchFieldException {\r\n        ResolvableType resolvableType = ResolvableType.forField(SampleTypes.class.getField(\"mapWithNestedGenericInValueType\"));\r\n        assertThat(resolve(generateCode(resolvableType))).hasImport(ResolvableType.class, List.class).hasValueCode(\"\"\"\r\n            ResolvableType.forClassWithGenerics(Map.class, ResolvableType.forClass(String.class), \\\r\n            ResolvableType.forClass(List.class))\"\"\");\r\n    }\r\n\r\n    static class SampleTypes<A> {\r\n\r\n        public List<A> genericList;\r\n\r\n        public Map<String, List<A>> mapWithNestedGenericInValueType;\r\n    }\r\n}\n@Nested\r\nclass ArrayTests {\r\n\r\n    @Test\r\n    void generateWhenPrimitiveArray() {\r\n        int[] array = { 0, 1, 2 };\r\n        assertThat(generateCode(array)).hasToString(\"new int[] {0, 1, 2}\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenWrapperArray() {\r\n        Integer[] array = { 0, 1, 2 };\r\n        assertThat(resolve(generateCode(array))).hasValueCode(\"new Integer[] {0, 1, 2}\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenClassArray() {\r\n        Class<?>[] array = new Class<?>[] { InputStream.class, OutputStream.class };\r\n        assertThat(resolve(generateCode(array))).hasImport(InputStream.class, OutputStream.class).hasValueCode(\"new Class[] {InputStream.class, OutputStream.class}\");\r\n    }\r\n}\n@Nested\r\nclass ListTests {\r\n\r\n    @Test\r\n    void generateWhenStringList() {\r\n        List<String> list = List.of(\"a\", \"b\", \"c\");\r\n        assertThat(resolve(generateCode(list))).hasImport(List.class).hasValueCode(\"List.of(\\\"a\\\", \\\"b\\\", \\\"c\\\")\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenEmptyList() {\r\n        List<String> list = List.of();\r\n        assertThat(resolve(generateCode(list))).hasImport(Collections.class).hasValueCode(\"Collections.emptyList()\");\r\n    }\r\n}\n@Nested\r\nclass SetTests {\r\n\r\n    @Test\r\n    void generateWhenStringSet() {\r\n        Set<String> set = Set.of(\"a\", \"b\", \"c\");\r\n        assertThat(resolve(generateCode(set))).hasImport(Set.class).hasValueCode(\"Set.of(\\\"a\\\", \\\"b\\\", \\\"c\\\")\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenEmptySet() {\r\n        Set<String> set = Set.of();\r\n        assertThat(resolve(generateCode(set))).hasImport(Collections.class).hasValueCode(\"Collections.emptySet()\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenLinkedHashSet() {\r\n        Set<String> set = new LinkedHashSet<>(List.of(\"a\", \"b\", \"c\"));\r\n        assertThat(resolve(generateCode(set))).hasImport(List.class, LinkedHashSet.class).hasValueCode(\"new LinkedHashSet(List.of(\\\"a\\\", \\\"b\\\", \\\"c\\\"))\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenSetOfClass() {\r\n        Set<Class<?>> set = Set.of(InputStream.class, OutputStream.class);\r\n        assertThat(resolve(generateCode(set))).hasImport(Set.class, InputStream.class, OutputStream.class).valueCode().contains(\"Set.of(\", \"InputStream.class\", \"OutputStream.class\");\r\n    }\r\n}\n@Nested\r\nclass MapTests {\r\n\r\n    @Test\r\n    void generateWhenSmallMap() {\r\n        Map<String, String> map = Map.of(\"k1\", \"v1\", \"k2\", \"v2\");\r\n        assertThat(resolve(generateCode(map))).hasImport(Map.class).hasValueCode(\"Map.of(\\\"k1\\\", \\\"v1\\\", \\\"k2\\\", \\\"v2\\\")\");\r\n    }\r\n\r\n    @Test\r\n    void generateWhenMapWithOverTenElements() {\r\n        Map<String, String> map = new HashMap<>();\r\n        for (int i = 1; i <= 11; i++) {\r\n            map.put(\"k\" + i, \"v\" + i);\r\n        }\r\n        assertThat(resolve(generateCode(map))).hasImport(Map.class).valueCode().startsWith(\"Map.ofEntries(\");\r\n    }\r\n}\n@Nested\r\nclass ExceptionTests {\r\n\r\n    @Test\r\n    void generateWhenUnsupportedValue() {\r\n        StringWriter sw = new StringWriter();\r\n        assertThatExceptionOfType(ValueCodeGenerationException.class).isThrownBy(() -> generateCode(sw)).withCauseInstanceOf(UnsupportedTypeValueCodeGenerationException.class).satisfies(ex -> assertThat(ex.getValue()).isEqualTo(sw));\r\n    }\r\n\r\n    @Test\r\n    void generateWhenUnsupportedDataTypeThrowsException() {\r\n        StringWriter sampleValue = new StringWriter();\r\n        assertThatExceptionOfType(ValueCodeGenerationException.class).isThrownBy(() -> generateCode(sampleValue)).withMessageContaining(\"Failed to generate code for\").withMessageContaining(sampleValue.toString()).withMessageContaining(StringWriter.class.getName()).havingCause().withMessageContaining(\"Code generation does not support\").withMessageContaining(StringWriter.class.getName());\r\n    }\r\n\r\n    @Test\r\n    void generateWhenListOfUnsupportedElement() {\r\n        StringWriter one = new StringWriter();\r\n        StringWriter two = new StringWriter();\r\n        List<StringWriter> list = List.of(one, two);\r\n        assertThatExceptionOfType(ValueCodeGenerationException.class).isThrownBy(() -> generateCode(list)).withMessageContaining(\"Failed to generate code for\").withMessageContaining(list.toString()).withMessageContaining(list.getClass().getName()).havingCause().withMessageContaining(\"Failed to generate code for\").withMessageContaining(one.toString()).withMessageContaining(StringWriter.class.getName()).havingCause().withMessageContaining(\"Code generation does not support \" + StringWriter.class.getName());\r\n    }\r\n}\nprivate static CodeBlock generateCode(@Nullable Object value) {\r\n    return ValueCodeGenerator.withDefaults().generateCode(value);\r\n}\nprivate static ValueCode resolve(CodeBlock valueCode) {\r\n    String code = writeCode(valueCode);\r\n    List<String> imports = code.lines().filter(candidate -> candidate.startsWith(\"import\") && candidate.endsWith(\";\")).map(line -> line.substring(\"import\".length(), line.length() - 1)).map(String::trim).toList();\r\n    int start = code.indexOf(\"value = \");\r\n    int end = code.indexOf(\";\", start);\r\n    return new ValueCode(code.substring(start + \"value = \".length(), end), imports);\r\n}\nprivate static String writeCode(CodeBlock valueCode) {\r\n    FieldSpec field = FieldSpec.builder(Object.class, \"value\").initializer(valueCode).build();\r\n    TypeSpec helloWorld = TypeSpec.classBuilder(\"Test\").addField(field).build();\r\n    JavaFile javaFile = JavaFile.builder(\"com.example\", helloWorld).build();\r\n    StringWriter out = new StringWriter();\r\n    try {\r\n        javaFile.writeTo(out);\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n    return out.toString();\r\n}\nstatic class ValueCodeAssert extends AbstractAssert<ValueCodeAssert, ValueCode> {\r\n\r\n    public ValueCodeAssert(ValueCode actual) {\r\n        super(actual, ValueCodeAssert.class);\r\n    }\r\n\r\n    ValueCodeAssert hasImport(Class<?>... imports) {\r\n        for (Class<?> anImport : imports) {\r\n            assertThat(this.actual.imports).contains(anImport.getName());\r\n        }\r\n        return this;\r\n    }\r\n\r\n    ValueCodeAssert hasValueCode(String code) {\r\n        assertThat(this.actual.code).isEqualTo(code);\r\n        return this;\r\n    }\r\n\r\n    StringAssert valueCode() {\r\n        return new StringAssert(this.actual.code);\r\n    }\r\n}\nrecord ValueCode(String code, List<String> imports) implements AssertProvider<ValueCodeAssert> {\r\n\r\n    @Override\r\n    public ValueCodeAssert assertThat() {\r\n        return new ValueCodeAssert(this);\r\n    }\r\n}",
+    "comment": "\n * Tests for {@link ValueCodeGenerator}.\n *\n * @author Stephane Nicoll\n "
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ValueCodeGeneratorTests#generateCode(Object)",
+    "entityType": "method",
+    "code": "private static CodeBlock generateCode(@Nullable Object value) {\r\n    return ValueCodeGenerator.withDefaults().generateCode(value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ValueCodeGeneratorTests#resolve(CodeBlock)",
+    "entityType": "method",
+    "code": "private static ValueCode resolve(CodeBlock valueCode) {\r\n    String code = writeCode(valueCode);\r\n    List<String> imports = code.lines().filter(candidate -> candidate.startsWith(\"import\") && candidate.endsWith(\";\")).map(line -> line.substring(\"import\".length(), line.length() - 1)).map(String::trim).toList();\r\n    int start = code.indexOf(\"value = \");\r\n    int end = code.indexOf(\";\", start);\r\n    return new ValueCode(code.substring(start + \"value = \".length(), end), imports);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ValueCodeGeneratorTests#writeCode(CodeBlock)",
+    "entityType": "method",
+    "code": "private static String writeCode(CodeBlock valueCode) {\r\n    FieldSpec field = FieldSpec.builder(Object.class, \"value\").initializer(valueCode).build();\r\n    TypeSpec helloWorld = TypeSpec.classBuilder(\"Test\").addField(field).build();\r\n    JavaFile javaFile = JavaFile.builder(\"com.example\", helloWorld).build();\r\n    StringWriter out = new StringWriter();\r\n    try {\r\n        javaFile.writeTo(out);\r\n    } catch (IOException ex) {\r\n        throw new IllegalStateException(ex);\r\n    }\r\n    return out.toString();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ConfigurationTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid createWithListOfDelegatesInvokeThemInOrder() {\r\n    Delegate first = mock(Delegate.class);\r\n    Delegate second = mock(Delegate.class);\r\n    Delegate third = mock(Delegate.class);\r\n    ValueCodeGenerator codeGenerator = ValueCodeGenerator.with(List.of(first, second, third));\r\n    Object value = \"\";\r\n    given(third.generateCode(codeGenerator, value)).willReturn(CodeBlock.of(\"test\"));\r\n    CodeBlock code = codeGenerator.generateCode(value);\r\n    assertThat(code).hasToString(\"test\");\r\n    InOrder ordered = inOrder(first, second, third);\r\n    ordered.verify(first).generateCode(codeGenerator, value);\r\n    ordered.verify(second).generateCode(codeGenerator, value);\r\n    ordered.verify(third).generateCode(codeGenerator, value);\r\n}\n@Test\r\nvoid generateCodeWithMatchingDelegateStops() {\r\n    Delegate first = mock(Delegate.class);\r\n    Delegate second = mock(Delegate.class);\r\n    ValueCodeGenerator codeGenerator = ValueCodeGenerator.with(List.of(first, second));\r\n    Object value = \"\";\r\n    given(first.generateCode(codeGenerator, value)).willReturn(CodeBlock.of(\"test\"));\r\n    CodeBlock code = codeGenerator.generateCode(value);\r\n    assertThat(code).hasToString(\"test\");\r\n    verify(first).generateCode(codeGenerator, value);\r\n    verifyNoInteractions(second);\r\n}\n@Test\r\nvoid scopedReturnsImmutableCopy() {\r\n    ValueCodeGenerator valueCodeGenerator = ValueCodeGenerator.withDefaults();\r\n    GeneratedMethods generatedMethods = new GeneratedMethods(ClassName.get(\"com.example\", \"Test\"), MethodName::toString);\r\n    ValueCodeGenerator scopedValueCodeGenerator = valueCodeGenerator.scoped(generatedMethods);\r\n    assertThat(scopedValueCodeGenerator).isNotSameAs(valueCodeGenerator);\r\n    assertThat(scopedValueCodeGenerator.getGeneratedMethods()).isSameAs(generatedMethods);\r\n    assertThat(valueCodeGenerator.getGeneratedMethods()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ConfigurationTests#createWithListOfDelegatesInvokeThemInOrder()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid createWithListOfDelegatesInvokeThemInOrder() {\r\n    Delegate first = mock(Delegate.class);\r\n    Delegate second = mock(Delegate.class);\r\n    Delegate third = mock(Delegate.class);\r\n    ValueCodeGenerator codeGenerator = ValueCodeGenerator.with(List.of(first, second, third));\r\n    Object value = \"\";\r\n    given(third.generateCode(codeGenerator, value)).willReturn(CodeBlock.of(\"test\"));\r\n    CodeBlock code = codeGenerator.generateCode(value);\r\n    assertThat(code).hasToString(\"test\");\r\n    InOrder ordered = inOrder(first, second, third);\r\n    ordered.verify(first).generateCode(codeGenerator, value);\r\n    ordered.verify(second).generateCode(codeGenerator, value);\r\n    ordered.verify(third).generateCode(codeGenerator, value);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ConfigurationTests#generateCodeWithMatchingDelegateStops()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateCodeWithMatchingDelegateStops() {\r\n    Delegate first = mock(Delegate.class);\r\n    Delegate second = mock(Delegate.class);\r\n    ValueCodeGenerator codeGenerator = ValueCodeGenerator.with(List.of(first, second));\r\n    Object value = \"\";\r\n    given(first.generateCode(codeGenerator, value)).willReturn(CodeBlock.of(\"test\"));\r\n    CodeBlock code = codeGenerator.generateCode(value);\r\n    assertThat(code).hasToString(\"test\");\r\n    verify(first).generateCode(codeGenerator, value);\r\n    verifyNoInteractions(second);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ConfigurationTests#scopedReturnsImmutableCopy()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid scopedReturnsImmutableCopy() {\r\n    ValueCodeGenerator valueCodeGenerator = ValueCodeGenerator.withDefaults();\r\n    GeneratedMethods generatedMethods = new GeneratedMethods(ClassName.get(\"com.example\", \"Test\"), MethodName::toString);\r\n    ValueCodeGenerator scopedValueCodeGenerator = valueCodeGenerator.scoped(generatedMethods);\r\n    assertThat(scopedValueCodeGenerator).isNotSameAs(valueCodeGenerator);\r\n    assertThat(scopedValueCodeGenerator.getGeneratedMethods()).isSameAs(generatedMethods);\r\n    assertThat(valueCodeGenerator.getGeneratedMethods()).isNull();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.NullTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid generateWhenNull() {\r\n    assertThat(generateCode(null)).hasToString(\"null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.NullTests#generateWhenNull()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenNull() {\r\n    assertThat(generateCode(null)).hasToString(\"null\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid generateWhenBoolean() {\r\n    assertThat(generateCode(true)).hasToString(\"true\");\r\n}\n@Test\r\nvoid generateWhenByte() {\r\n    assertThat(generateCode((byte) 2)).hasToString(\"(byte) 2\");\r\n}\n@Test\r\nvoid generateWhenShort() {\r\n    assertThat(generateCode((short) 3)).hasToString(\"(short) 3\");\r\n}\n@Test\r\nvoid generateWhenInt() {\r\n    assertThat(generateCode(4)).hasToString(\"4\");\r\n}\n@Test\r\nvoid generateWhenLong() {\r\n    assertThat(generateCode(5L)).hasToString(\"5L\");\r\n}\n@Test\r\nvoid generateWhenFloat() {\r\n    assertThat(generateCode(0.1F)).hasToString(\"0.1F\");\r\n}\n@Test\r\nvoid generateWhenDouble() {\r\n    assertThat(generateCode(0.2)).hasToString(\"(double) 0.2\");\r\n}\n@Test\r\nvoid generateWhenChar() {\r\n    assertThat(generateCode('a')).hasToString(\"'a'\");\r\n}\n@Test\r\nvoid generateWhenSimpleEscapedCharReturnsEscaped() {\r\n    testEscaped('\\b', \"'\\\\b'\");\r\n    testEscaped('\\t', \"'\\\\t'\");\r\n    testEscaped('\\n', \"'\\\\n'\");\r\n    testEscaped('\\f', \"'\\\\f'\");\r\n    testEscaped('\\r', \"'\\\\r'\");\r\n    testEscaped('\\\"', \"'\\\"'\");\r\n    testEscaped('\\'', \"'\\\\''\");\r\n    testEscaped('\\\\', \"'\\\\\\\\'\");\r\n}\n@Test\r\nvoid generatedWhenUnicodeEscapedCharReturnsEscaped() {\r\n    testEscaped('\\u007f', \"'\\\\u007f'\");\r\n}\nprivate void testEscaped(char value, String expectedSourceContent) {\r\n    assertThat(generateCode(value)).hasToString(expectedSourceContent);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenBoolean()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenBoolean() {\r\n    assertThat(generateCode(true)).hasToString(\"true\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenByte()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenByte() {\r\n    assertThat(generateCode((byte) 2)).hasToString(\"(byte) 2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenShort()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenShort() {\r\n    assertThat(generateCode((short) 3)).hasToString(\"(short) 3\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenInt()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenInt() {\r\n    assertThat(generateCode(4)).hasToString(\"4\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenLong()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenLong() {\r\n    assertThat(generateCode(5L)).hasToString(\"5L\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenFloat()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenFloat() {\r\n    assertThat(generateCode(0.1F)).hasToString(\"0.1F\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenDouble()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenDouble() {\r\n    assertThat(generateCode(0.2)).hasToString(\"(double) 0.2\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenChar()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenChar() {\r\n    assertThat(generateCode('a')).hasToString(\"'a'\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generateWhenSimpleEscapedCharReturnsEscaped()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenSimpleEscapedCharReturnsEscaped() {\r\n    testEscaped('\\b', \"'\\\\b'\");\r\n    testEscaped('\\t', \"'\\\\t'\");\r\n    testEscaped('\\n', \"'\\\\n'\");\r\n    testEscaped('\\f', \"'\\\\f'\");\r\n    testEscaped('\\r', \"'\\\\r'\");\r\n    testEscaped('\\\"', \"'\\\"'\");\r\n    testEscaped('\\'', \"'\\\\''\");\r\n    testEscaped('\\\\', \"'\\\\\\\\'\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#generatedWhenUnicodeEscapedCharReturnsEscaped()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generatedWhenUnicodeEscapedCharReturnsEscaped() {\r\n    testEscaped('\\u007f', \"'\\\\u007f'\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.PrimitiveTests#testEscaped(char,String)",
+    "entityType": "method",
+    "code": "private void testEscaped(char value, String expectedSourceContent) {\r\n    assertThat(generateCode(value)).hasToString(expectedSourceContent);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.StringTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid generateWhenString() {\r\n    assertThat(generateCode(\"test\")).hasToString(\"\\\"test\\\"\");\r\n}\n@Test\r\nvoid generateWhenStringWithCarriageReturn() {\r\n    assertThat(generateCode(\"test\\n\")).isEqualTo(CodeBlock.of(\"$S\", \"test\\n\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.StringTests#generateWhenString()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenString() {\r\n    assertThat(generateCode(\"test\")).hasToString(\"\\\"test\\\"\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.StringTests#generateWhenStringWithCarriageReturn()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenStringWithCarriageReturn() {\r\n    assertThat(generateCode(\"test\\n\")).isEqualTo(CodeBlock.of(\"$S\", \"test\\n\"));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.CharsetTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid generateWhenCharset() {\r\n    assertThat(resolve(generateCode(StandardCharsets.UTF_8))).hasImport(Charset.class).hasValueCode(\"Charset.forName(\\\"UTF-8\\\")\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.CharsetTests#generateWhenCharset()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenCharset() {\r\n    assertThat(resolve(generateCode(StandardCharsets.UTF_8))).hasImport(Charset.class).hasValueCode(\"Charset.forName(\\\"UTF-8\\\")\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.EnumTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid generateWhenEnum() {\r\n    assertThat(resolve(generateCode(ChronoUnit.DAYS))).hasImport(ChronoUnit.class).hasValueCode(\"ChronoUnit.DAYS\");\r\n}\n@Test\r\nvoid generateWhenEnumWithClassBody() {\r\n    assertThat(resolve(generateCode(EnumWithClassBody.TWO))).hasImport(EnumWithClassBody.class).hasValueCode(\"EnumWithClassBody.TWO\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.EnumTests#generateWhenEnum()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenEnum() {\r\n    assertThat(resolve(generateCode(ChronoUnit.DAYS))).hasImport(ChronoUnit.class).hasValueCode(\"ChronoUnit.DAYS\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.EnumTests#generateWhenEnumWithClassBody()",
+    "entityType": "method",
+    "code": "@Test\r\nvoid generateWhenEnumWithClassBody() {\r\n    assertThat(resolve(generateCode(EnumWithClassBody.TWO))).hasImport(EnumWithClassBody.class).hasValueCode(\"EnumWithClassBody.TWO\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.aot.generate.ClassTests",
+    "entityType": "class",
+    "code": "@Test\r\nvoid generateWhenClass() {\r\n    assertThat(resolve(generateCode(InputStream.class))).hasImport(InputStream.class).hasValueCode(\"InputStream.class\");\r\n}\n@Test\r\nvoid generateWhenCglibClass() {\r\n    assertThat(resolve(generateCode(ExampleClass$$GeneratedBy.class))).hasImport(ExampleClass.class).hasValueCode(\"ExampleClass.class\");\r\n}",
+    "comment": ""
+  }
+]

@@ -1,0 +1,602 @@
+[
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderApplicationStartup",
+    "entityType": "class",
+    "code": "private final AtomicLong currentSequenceId = new AtomicLong();\nprivate final Deque<Long> currentSteps;\npublic FlightRecorderApplicationStartup() {\r\n    this.currentSteps = new ConcurrentLinkedDeque<>();\r\n    this.currentSteps.offerFirst(this.currentSequenceId.get());\r\n}\n@Override\r\npublic StartupStep start(String name) {\r\n    Long parentId = this.currentSteps.getFirst();\r\n    long sequenceId = this.currentSequenceId.incrementAndGet();\r\n    this.currentSteps.offerFirst(sequenceId);\r\n    return new FlightRecorderStartupStep(sequenceId, name, parentId, committedStep -> this.currentSteps.removeFirstOccurrence(sequenceId));\r\n}",
+    "comment": "\n * {@link ApplicationStartup} implementation for the Java Flight Recorder.\n * <p>This variant records {@link StartupStep} as Flight Recorder events. Because\n * such events only support base types, the\n * {@link org.springframework.core.metrics.StartupStep.Tags} are serialized as a\n * single String attribute.\n * <p>Once this is configured on the application context, you can record data by\n * launching the application with recording enabled:\n * {@code java -XX:StartFlightRecording:filename=recording.jfr,duration=10s -jar app.jar}.\n *\n * @author Brian Clozel\n * @since 5.3\n "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderApplicationStartup#start(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic StartupStep start(String name) {\r\n    Long parentId = this.currentSteps.getFirst();\r\n    long sequenceId = this.currentSequenceId.incrementAndGet();\r\n    this.currentSteps.offerFirst(sequenceId);\r\n    return new FlightRecorderStartupStep(sequenceId, name, parentId, committedStep -> this.currentSteps.removeFirstOccurrence(sequenceId));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupEvent",
+    "entityType": "class",
+    "code": "public final long eventId;\npublic final long parentId;\n@Label(\"Name\")\r\npublic final String name;\n@Label(\"Tags\")\r\nString tags = \"\";\npublic FlightRecorderStartupEvent(long eventId, String name, long parentId) {\r\n    this.name = name;\r\n    this.eventId = eventId;\r\n    this.parentId = parentId;\r\n}\npublic void setTags(String tags) {\r\n    this.tags = tags;\r\n}",
+    "comment": "\n * {@link Event} extension for recording {@link FlightRecorderStartupStep}\n * in Java Flight Recorder.\n *\n * <p>{@link org.springframework.core.metrics.StartupStep.Tags} are serialized\n * as a single {@code String}, since Flight Recorder events do not support complex types.\n *\n * @author Brian Clozel\n * @since 5.3\n "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupEvent#setTags(String)",
+    "entityType": "method",
+    "code": "public void setTags(String tags) {\r\n    this.tags = tags;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep",
+    "entityType": "class",
+    "code": "private final FlightRecorderStartupEvent event;\nprivate final FlightRecorderTags tags = new FlightRecorderTags();\nprivate final Consumer<FlightRecorderStartupStep> recordingCallback;\npublic FlightRecorderStartupStep(long id, String name, long parentId, Consumer<FlightRecorderStartupStep> recordingCallback) {\r\n    this.event = new FlightRecorderStartupEvent(id, name, parentId);\r\n    this.event.begin();\r\n    this.recordingCallback = recordingCallback;\r\n}\n@Override\r\npublic String getName() {\r\n    return this.event.name;\r\n}\n@Override\r\npublic long getId() {\r\n    return this.event.eventId;\r\n}\n@Override\r\npublic Long getParentId() {\r\n    return this.event.parentId;\r\n}\n@Override\r\npublic StartupStep tag(String key, String value) {\r\n    this.tags.add(key, value);\r\n    return this;\r\n}\n@Override\r\npublic StartupStep tag(String key, Supplier<String> value) {\r\n    this.tags.add(key, value.get());\r\n    return this;\r\n}\n@Override\r\npublic Tags getTags() {\r\n    return this.tags;\r\n}\n@Override\r\npublic void end() {\r\n    this.event.end();\r\n    if (this.event.shouldCommit()) {\r\n        StringBuilder builder = new StringBuilder();\r\n        this.tags.forEach(tag -> builder.append(tag.getKey()).append('=').append(tag.getValue()).append(','));\r\n        this.event.setTags(builder.toString());\r\n    }\r\n    this.event.commit();\r\n    this.recordingCallback.accept(this);\r\n}\nprotected FlightRecorderStartupEvent getEvent() {\r\n    return this.event;\r\n}\nstatic class FlightRecorderTags implements Tags {\r\n\r\n    private Tag[] tags = new Tag[0];\r\n\r\n    public void add(String key, String value) {\r\n        Tag[] newTags = new Tag[this.tags.length + 1];\r\n        System.arraycopy(this.tags, 0, newTags, 0, this.tags.length);\r\n        newTags[newTags.length - 1] = new FlightRecorderTag(key, value);\r\n        this.tags = newTags;\r\n    }\r\n\r\n    public void add(String key, Supplier<String> value) {\r\n        add(key, value.get());\r\n    }\r\n\r\n    @Override\r\n    public Iterator<Tag> iterator() {\r\n        return new TagsIterator();\r\n    }\r\n\r\n    private class TagsIterator implements Iterator<Tag> {\r\n\r\n        private int idx = 0;\r\n\r\n        @Override\r\n        public boolean hasNext() {\r\n            return this.idx < tags.length;\r\n        }\r\n\r\n        @Override\r\n        public Tag next() {\r\n            return tags[this.idx++];\r\n        }\r\n\r\n        @Override\r\n        public void remove() {\r\n            throw new UnsupportedOperationException(\"tags are append only\");\r\n        }\r\n    }\r\n}\nstatic class FlightRecorderTag implements Tag {\r\n\r\n    private final String key;\r\n\r\n    private final String value;\r\n\r\n    public FlightRecorderTag(String key, String value) {\r\n        this.key = key;\r\n        this.value = value;\r\n    }\r\n\r\n    @Override\r\n    public String getKey() {\r\n        return this.key;\r\n    }\r\n\r\n    @Override\r\n    public String getValue() {\r\n        return this.value;\r\n    }\r\n}",
+    "comment": "\n * {@link StartupStep} implementation for the Java Flight Recorder.\n *\n * <p>This variant delegates to a {@link FlightRecorderStartupEvent JFR event extension}\n * to collect and record data in Java Flight Recorder.\n *\n * @author Brian Clozel\n "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#getName()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getName() {\r\n    return this.event.name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#getId()",
+    "entityType": "method",
+    "code": "@Override\r\npublic long getId() {\r\n    return this.event.eventId;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#getParentId()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Long getParentId() {\r\n    return this.event.parentId;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#tag(String,String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic StartupStep tag(String key, String value) {\r\n    this.tags.add(key, value);\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#tag(String,Supplier<String>)",
+    "entityType": "method",
+    "code": "@Override\r\npublic StartupStep tag(String key, Supplier<String> value) {\r\n    this.tags.add(key, value.get());\r\n    return this;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#getTags()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Tags getTags() {\r\n    return this.tags;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#end()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void end() {\r\n    this.event.end();\r\n    if (this.event.shouldCommit()) {\r\n        StringBuilder builder = new StringBuilder();\r\n        this.tags.forEach(tag -> builder.append(tag.getKey()).append('=').append(tag.getValue()).append(','));\r\n        this.event.setTags(builder.toString());\r\n    }\r\n    this.event.commit();\r\n    this.recordingCallback.accept(this);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderStartupStep#getEvent()",
+    "entityType": "method",
+    "code": "protected FlightRecorderStartupEvent getEvent() {\r\n    return this.event;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTags",
+    "entityType": "class",
+    "code": "private Tag[] tags = new Tag[0];\npublic void add(String key, String value) {\r\n    Tag[] newTags = new Tag[this.tags.length + 1];\r\n    System.arraycopy(this.tags, 0, newTags, 0, this.tags.length);\r\n    newTags[newTags.length - 1] = new FlightRecorderTag(key, value);\r\n    this.tags = newTags;\r\n}\npublic void add(String key, Supplier<String> value) {\r\n    add(key, value.get());\r\n}\n@Override\r\npublic Iterator<Tag> iterator() {\r\n    return new TagsIterator();\r\n}\nprivate class TagsIterator implements Iterator<Tag> {\r\n\r\n    private int idx = 0;\r\n\r\n    @Override\r\n    public boolean hasNext() {\r\n        return this.idx < tags.length;\r\n    }\r\n\r\n    @Override\r\n    public Tag next() {\r\n        return tags[this.idx++];\r\n    }\r\n\r\n    @Override\r\n    public void remove() {\r\n        throw new UnsupportedOperationException(\"tags are append only\");\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTags#add(String,String)",
+    "entityType": "method",
+    "code": "public void add(String key, String value) {\r\n    Tag[] newTags = new Tag[this.tags.length + 1];\r\n    System.arraycopy(this.tags, 0, newTags, 0, this.tags.length);\r\n    newTags[newTags.length - 1] = new FlightRecorderTag(key, value);\r\n    this.tags = newTags;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTags#add(String,Supplier<String>)",
+    "entityType": "method",
+    "code": "public void add(String key, Supplier<String> value) {\r\n    add(key, value.get());\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTags#iterator()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Iterator<Tag> iterator() {\r\n    return new TagsIterator();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.TagsIterator",
+    "entityType": "class",
+    "code": "private int idx = 0;\n@Override\r\npublic boolean hasNext() {\r\n    return this.idx < tags.length;\r\n}\n@Override\r\npublic Tag next() {\r\n    return tags[this.idx++];\r\n}\n@Override\r\npublic void remove() {\r\n    throw new UnsupportedOperationException(\"tags are append only\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.TagsIterator#hasNext()",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean hasNext() {\r\n    return this.idx < tags.length;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.TagsIterator#next()",
+    "entityType": "method",
+    "code": "@Override\r\npublic Tag next() {\r\n    return tags[this.idx++];\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.TagsIterator#remove()",
+    "entityType": "method",
+    "code": "@Override\r\npublic void remove() {\r\n    throw new UnsupportedOperationException(\"tags are append only\");\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTag",
+    "entityType": "class",
+    "code": "private final String key;\nprivate final String value;\npublic FlightRecorderTag(String key, String value) {\r\n    this.key = key;\r\n    this.value = value;\r\n}\n@Override\r\npublic String getKey() {\r\n    return this.key;\r\n}\n@Override\r\npublic String getValue() {\r\n    return this.value;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTag#getKey()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getKey() {\r\n    return this.key;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.jfr.FlightRecorderTag#getValue()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String getValue() {\r\n    return this.value;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep",
+    "entityType": "class",
+    "code": "/**\r\n * Return the name of the startup step.\r\n * <p>A step name describes the current action or phase. This technical\r\n * name should be \".\" namespaced and can be reused to describe other instances of\r\n * similar steps during application startup.\r\n */\r\nString getName();\n/**\r\n * Return the unique id for this step within the application startup.\r\n */\r\nlong getId();\n/**\r\n * Return, if available, the id of the parent step.\r\n * <p>The parent step is the step that was started the most recently\r\n * when the current step was created.\r\n */\r\n@Nullable\r\nLong getParentId();\n/**\r\n * Add a {@link Tag} to the step.\r\n * @param key tag key\r\n * @param value tag value\r\n */\r\nStartupStep tag(String key, String value);\n/**\r\n * Add a {@link Tag} to the step.\r\n * @param key tag key\r\n * @param value {@link Supplier} for the tag value\r\n */\r\nStartupStep tag(String key, Supplier<String> value);\n/**\r\n * Return the {@link Tag} collection for this step.\r\n */\r\nTags getTags();\n/**\r\n * Record the state of the step and possibly other metrics like execution time.\r\n * <p>Once ended, changes on the step state are not allowed.\r\n */\r\nvoid end();\n/**\r\n * Immutable collection of {@link Tag}.\r\n */\r\ninterface Tags extends Iterable<Tag> {\r\n}\n/**\r\n * Simple key/value association for storing step metadata.\r\n */\r\ninterface Tag {\r\n\r\n    /**\r\n     * Return the {@code Tag} name.\r\n     */\r\n    String getKey();\r\n\r\n    /**\r\n     * Return the {@code Tag} value.\r\n     */\r\n    String getValue();\r\n}",
+    "comment": "\n * Step recording metrics about a particular phase or action happening during the {@link ApplicationStartup}.\n *\n * <p>The lifecycle of a {@code StartupStep} goes as follows:\n * <ol>\n * <li>the step is created and starts by calling {@link ApplicationStartup#start(String) the application startup}\n * and is assigned a unique {@link StartupStep#getId() id}.\n * <li>we can then attach information with {@link Tags} during processing\n * <li>we then need to mark the {@link #end()} of the step\n * </ol>\n *\n * <p>Implementations can track the \"execution time\" or other metrics for steps.\n *\n * @author Brian Clozel\n * @since 5.3\n "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#getName()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the name of the startup step.\r\n * <p>A step name describes the current action or phase. This technical\r\n * name should be \".\" namespaced and can be reused to describe other instances of\r\n * similar steps during application startup.\r\n */\r\nString getName();",
+    "comment": "\n\t * Return the name of the startup step.\n\t * <p>A step name describes the current action or phase. This technical\n\t * name should be \".\" namespaced and can be reused to describe other instances of\n\t * similar steps during application startup.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#getId()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the unique id for this step within the application startup.\r\n */\r\nlong getId();",
+    "comment": "\n\t * Return the unique id for this step within the application startup.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#getParentId()",
+    "entityType": "method",
+    "code": "/**\r\n * Return, if available, the id of the parent step.\r\n * <p>The parent step is the step that was started the most recently\r\n * when the current step was created.\r\n */\r\n@Nullable\r\nLong getParentId();",
+    "comment": "\n\t * Return, if available, the id of the parent step.\n\t * <p>The parent step is the step that was started the most recently\n\t * when the current step was created.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#tag(String,String)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a {@link Tag} to the step.\r\n * @param key tag key\r\n * @param value tag value\r\n */\r\nStartupStep tag(String key, String value);",
+    "comment": "\n\t * Add a {@link Tag} to the step.\n\t * @param key tag key\n\t * @param value tag value\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#tag(String,Supplier<String>)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a {@link Tag} to the step.\r\n * @param key tag key\r\n * @param value {@link Supplier} for the tag value\r\n */\r\nStartupStep tag(String key, Supplier<String> value);",
+    "comment": "\n\t * Add a {@link Tag} to the step.\n\t * @param key tag key\n\t * @param value {@link Supplier} for the tag value\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#getTags()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@link Tag} collection for this step.\r\n */\r\nTags getTags();",
+    "comment": "\n\t * Return the {@link Tag} collection for this step.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.StartupStep#end()",
+    "entityType": "method",
+    "code": "/**\r\n * Record the state of the step and possibly other metrics like execution time.\r\n * <p>Once ended, changes on the step state are not allowed.\r\n */\r\nvoid end();",
+    "comment": "\n\t * Record the state of the step and possibly other metrics like execution time.\n\t * <p>Once ended, changes on the step state are not allowed.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.Tags",
+    "entityType": "class",
+    "code": "",
+    "comment": "\n\t * Immutable collection of {@link Tag}.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.Tag",
+    "entityType": "class",
+    "code": "/**\r\n * Return the {@code Tag} name.\r\n */\r\nString getKey();\n/**\r\n * Return the {@code Tag} value.\r\n */\r\nString getValue();",
+    "comment": "\n\t * Simple key/value association for storing step metadata.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.Tag#getKey()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@code Tag} name.\r\n */\r\nString getKey();",
+    "comment": "\n\t\t * Return the {@code Tag} name.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.metrics.Tag#getValue()",
+    "entityType": "method",
+    "code": "/**\r\n * Return the {@code Tag} value.\r\n */\r\nString getValue();",
+    "comment": "\n\t\t * Return the {@code Tag} value.\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.NamedInheritableThreadLocal",
+    "entityType": "class",
+    "code": "private final String name;\n/**\r\n * Create a new NamedInheritableThreadLocal with the given name.\r\n * @param name a descriptive name for this ThreadLocal\r\n */\r\npublic NamedInheritableThreadLocal(String name) {\r\n    Assert.hasText(name, \"Name must not be empty\");\r\n    this.name = name;\r\n}\n@Override\r\npublic String toString() {\r\n    return this.name;\r\n}",
+    "comment": "\n * {@link InheritableThreadLocal} subclass that exposes a specified name\n * as {@link #toString()} result (allowing for introspection).\n *\n * @author Juergen Hoeller\n * @since 2.5.2\n * @param <T> the value type\n * @see NamedThreadLocal\n "
+  },
+  {
+    "entityId": "org.springframework.core.NamedInheritableThreadLocal#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NamedThreadLocal",
+    "entityType": "class",
+    "code": "private final String name;\n/**\r\n * Create a new NamedThreadLocal with the given name.\r\n * @param name a descriptive name for this ThreadLocal\r\n */\r\npublic NamedThreadLocal(String name) {\r\n    Assert.hasText(name, \"Name must not be empty\");\r\n    this.name = name;\r\n}\n@Override\r\npublic String toString() {\r\n    return this.name;\r\n}\n/**\r\n * Create a named thread local variable. The initial value of the variable is\r\n * determined by invoking the {@code get} method on the {@code Supplier}.\r\n * @param <S> the type of the named thread local's value\r\n * @param name a descriptive name for the thread local\r\n * @param supplier the supplier to be used to determine the initial value\r\n * @return a new named thread local\r\n * @since 6.1\r\n */\r\npublic static <S> ThreadLocal<S> withInitial(String name, Supplier<? extends S> supplier) {\r\n    return new SuppliedNamedThreadLocal<>(name, supplier);\r\n}\n/**\r\n * An extension of NamedThreadLocal that obtains its initial value from\r\n * the specified {@code Supplier}.\r\n * @param <T> the type of the named thread local's value\r\n */\r\nprivate static final class SuppliedNamedThreadLocal<T> extends NamedThreadLocal<T> {\r\n\r\n    private final Supplier<? extends T> supplier;\r\n\r\n    SuppliedNamedThreadLocal(String name, Supplier<? extends T> supplier) {\r\n        super(name);\r\n        Assert.notNull(supplier, \"Supplier must not be null\");\r\n        this.supplier = supplier;\r\n    }\r\n\r\n    @Override\r\n    protected T initialValue() {\r\n        return this.supplier.get();\r\n    }\r\n}",
+    "comment": "\n * {@link ThreadLocal} subclass that exposes a specified name\n * as {@link #toString()} result (allowing for introspection).\n *\n * @author Juergen Hoeller\n * @author Qimiao Chen\n * @since 2.5.2\n * @param <T> the value type\n * @see NamedInheritableThreadLocal\n "
+  },
+  {
+    "entityId": "org.springframework.core.NamedThreadLocal#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return this.name;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NamedThreadLocal#withInitial(String,Supplier<? extends S>)",
+    "entityType": "method",
+    "code": "/**\r\n * Create a named thread local variable. The initial value of the variable is\r\n * determined by invoking the {@code get} method on the {@code Supplier}.\r\n * @param <S> the type of the named thread local's value\r\n * @param name a descriptive name for the thread local\r\n * @param supplier the supplier to be used to determine the initial value\r\n * @return a new named thread local\r\n * @since 6.1\r\n */\r\npublic static <S> ThreadLocal<S> withInitial(String name, Supplier<? extends S> supplier) {\r\n    return new SuppliedNamedThreadLocal<>(name, supplier);\r\n}",
+    "comment": "\n\t * Create a named thread local variable. The initial value of the variable is\n\t * determined by invoking the {@code get} method on the {@code Supplier}.\n\t * @param <S> the type of the named thread local's value\n\t * @param name a descriptive name for the thread local\n\t * @param supplier the supplier to be used to determine the initial value\n\t * @return a new named thread local\n\t * @since 6.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.SuppliedNamedThreadLocal",
+    "entityType": "class",
+    "code": "private final Supplier<? extends T> supplier;\nSuppliedNamedThreadLocal(String name, Supplier<? extends T> supplier) {\r\n    super(name);\r\n    Assert.notNull(supplier, \"Supplier must not be null\");\r\n    this.supplier = supplier;\r\n}\n@Override\r\nprotected T initialValue() {\r\n    return this.supplier.get();\r\n}",
+    "comment": "\n\t * An extension of NamedThreadLocal that obtains its initial value from\n\t * the specified {@code Supplier}.\n\t * @param <T> the type of the named thread local's value\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.SuppliedNamedThreadLocal#initialValue()",
+    "entityType": "method",
+    "code": "@Override\r\nprotected T initialValue() {\r\n    return this.supplier.get();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.NativeDetector",
+    "entityType": "class",
+    "code": "// See https://github.com/oracle/graal/blob/master/sdk/src/org.graalvm.nativeimage/src/org/graalvm/nativeimage/ImageInfo.java\r\n@Nullable\r\nprivate static final String imageCode = System.getProperty(\"org.graalvm.nativeimage.imagecode\");\nprivate static final boolean inNativeImage = (imageCode != null);\n/**\r\n * Returns {@code true} if running in a native image context (for example\r\n * {@code buildtime}, {@code runtime}, or {@code agent}) expressed by setting the\r\n * {@code org.graalvm.nativeimage.imagecode} system property to any value.\r\n */\r\npublic static boolean inNativeImage() {\r\n    return inNativeImage;\r\n}\n/**\r\n * Returns {@code true} if running in any of the specified native image context(s).\r\n * @param contexts the native image context(s)\r\n * @since 6.0.10\r\n */\r\npublic static boolean inNativeImage(Context... contexts) {\r\n    for (Context context : contexts) {\r\n        if (context.key.equals(imageCode)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}\n/**\r\n * Native image context as defined in GraalVM's\r\n * <a href=\"https://github.com/oracle/graal/blob/master/sdk/src/org.graalvm.nativeimage/src/org/graalvm/nativeimage/ImageInfo.java\">ImageInfo</a>.\r\n * @since 6.0.10\r\n */\r\npublic enum Context {\r\n\r\n    /**\r\n     * The code is executing in the context of image building.\r\n     */\r\n    BUILD(\"buildtime\"),\r\n    /**\r\n     * The code is executing at image runtime.\r\n     */\r\n    RUN(\"runtime\");\r\n\r\n    private final String key;\r\n\r\n    Context(final String key) {\r\n        this.key = key;\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return this.key;\r\n    }\r\n}",
+    "comment": "\n * A common delegate for detecting a GraalVM native image environment.\n *\n * @author Sebastien Deleuze\n * @since 5.3.4\n "
+  },
+  {
+    "entityId": "org.springframework.core.NativeDetector#inNativeImage()",
+    "entityType": "method",
+    "code": "/**\r\n * Returns {@code true} if running in a native image context (for example\r\n * {@code buildtime}, {@code runtime}, or {@code agent}) expressed by setting the\r\n * {@code org.graalvm.nativeimage.imagecode} system property to any value.\r\n */\r\npublic static boolean inNativeImage() {\r\n    return inNativeImage;\r\n}",
+    "comment": "\n\t * Returns {@code true} if running in a native image context (for example\n\t * {@code buildtime}, {@code runtime}, or {@code agent}) expressed by setting the\n\t * {@code org.graalvm.nativeimage.imagecode} system property to any value.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NativeDetector#inNativeImage(Context)",
+    "entityType": "method",
+    "code": "/**\r\n * Returns {@code true} if running in any of the specified native image context(s).\r\n * @param contexts the native image context(s)\r\n * @since 6.0.10\r\n */\r\npublic static boolean inNativeImage(Context... contexts) {\r\n    for (Context context : contexts) {\r\n        if (context.key.equals(imageCode)) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "comment": "\n\t * Returns {@code true} if running in any of the specified native image context(s).\n\t * @param contexts the native image context(s)\n\t * @since 6.0.10\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedCheckedException",
+    "entityType": "class",
+    "code": "/**\r\n * Use serialVersionUID from Spring 1.2 for interoperability.\r\n */\r\nprivate static final long serialVersionUID = 7100714597678207546L;\n/**\r\n * Construct a {@code NestedCheckedException} with the specified detail message.\r\n * @param msg the detail message\r\n */\r\npublic NestedCheckedException(String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Construct a {@code NestedCheckedException} with the specified detail message\r\n * and nested exception.\r\n * @param msg the detail message\r\n * @param cause the nested exception\r\n */\r\npublic NestedCheckedException(@Nullable String msg, @Nullable Throwable cause) {\r\n    super(msg, cause);\r\n}\n/**\r\n * Retrieve the innermost cause of this exception, if any.\r\n * @return the innermost exception, or {@code null} if none\r\n */\r\n@Nullable\r\npublic Throwable getRootCause() {\r\n    return NestedExceptionUtils.getRootCause(this);\r\n}\n/**\r\n * Retrieve the most specific cause of this exception, that is,\r\n * either the innermost cause (root cause) or this exception itself.\r\n * <p>Differs from {@link #getRootCause()} in that it falls back\r\n * to the present exception if there is no root cause.\r\n * @return the most specific cause (never {@code null})\r\n * @since 2.0.3\r\n */\r\npublic Throwable getMostSpecificCause() {\r\n    Throwable rootCause = getRootCause();\r\n    return (rootCause != null ? rootCause : this);\r\n}\n/**\r\n * Check whether this exception contains an exception of the given type:\r\n * either it is of the given class itself or it contains a nested cause\r\n * of the given type.\r\n * @param exType the exception type to look for\r\n * @return whether there is a nested exception of the specified type\r\n */\r\npublic boolean contains(@Nullable Class<?> exType) {\r\n    if (exType == null) {\r\n        return false;\r\n    }\r\n    if (exType.isInstance(this)) {\r\n        return true;\r\n    }\r\n    Throwable cause = getCause();\r\n    if (cause == this) {\r\n        return false;\r\n    }\r\n    if (cause instanceof NestedCheckedException exception) {\r\n        return exception.contains(exType);\r\n    } else {\r\n        while (cause != null) {\r\n            if (exType.isInstance(cause)) {\r\n                return true;\r\n            }\r\n            if (cause.getCause() == cause) {\r\n                break;\r\n            }\r\n            cause = cause.getCause();\r\n        }\r\n        return false;\r\n    }\r\n}",
+    "comment": "\n * Handy class for wrapping checked {@code Exceptions} with a root cause.\n * This class is {@code abstract} to force the programmer to extend the class.\n *\n * <p>The similarity between this class and the {@link NestedRuntimeException}\n * class is unavoidable, as Java forces these two classes to have different\n * superclasses (ah, the inflexibility of concrete inheritance!).\n *\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @see #getMessage\n * @see NestedRuntimeException\n "
+  },
+  {
+    "entityId": "org.springframework.core.NestedCheckedException#getRootCause()",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the innermost cause of this exception, if any.\r\n * @return the innermost exception, or {@code null} if none\r\n */\r\n@Nullable\r\npublic Throwable getRootCause() {\r\n    return NestedExceptionUtils.getRootCause(this);\r\n}",
+    "comment": "\n\t * Retrieve the innermost cause of this exception, if any.\n\t * @return the innermost exception, or {@code null} if none\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedCheckedException#getMostSpecificCause()",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the most specific cause of this exception, that is,\r\n * either the innermost cause (root cause) or this exception itself.\r\n * <p>Differs from {@link #getRootCause()} in that it falls back\r\n * to the present exception if there is no root cause.\r\n * @return the most specific cause (never {@code null})\r\n * @since 2.0.3\r\n */\r\npublic Throwable getMostSpecificCause() {\r\n    Throwable rootCause = getRootCause();\r\n    return (rootCause != null ? rootCause : this);\r\n}",
+    "comment": "\n\t * Retrieve the most specific cause of this exception, that is,\n\t * either the innermost cause (root cause) or this exception itself.\n\t * <p>Differs from {@link #getRootCause()} in that it falls back\n\t * to the present exception if there is no root cause.\n\t * @return the most specific cause (never {@code null})\n\t * @since 2.0.3\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedCheckedException#contains(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Check whether this exception contains an exception of the given type:\r\n * either it is of the given class itself or it contains a nested cause\r\n * of the given type.\r\n * @param exType the exception type to look for\r\n * @return whether there is a nested exception of the specified type\r\n */\r\npublic boolean contains(@Nullable Class<?> exType) {\r\n    if (exType == null) {\r\n        return false;\r\n    }\r\n    if (exType.isInstance(this)) {\r\n        return true;\r\n    }\r\n    Throwable cause = getCause();\r\n    if (cause == this) {\r\n        return false;\r\n    }\r\n    if (cause instanceof NestedCheckedException exception) {\r\n        return exception.contains(exType);\r\n    } else {\r\n        while (cause != null) {\r\n            if (exType.isInstance(cause)) {\r\n                return true;\r\n            }\r\n            if (cause.getCause() == cause) {\r\n                break;\r\n            }\r\n            cause = cause.getCause();\r\n        }\r\n        return false;\r\n    }\r\n}",
+    "comment": "\n\t * Check whether this exception contains an exception of the given type:\n\t * either it is of the given class itself or it contains a nested cause\n\t * of the given type.\n\t * @param exType the exception type to look for\n\t * @return whether there is a nested exception of the specified type\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedExceptionUtils",
+    "entityType": "class",
+    "code": "/**\r\n * Build a message for the given base message and root cause.\r\n * @param message the base message\r\n * @param cause the root cause\r\n * @return the full exception message\r\n * @deprecated as of 6.0, in favor of custom exception messages\r\n * with selective inclusion of cause messages\r\n */\r\n@Deprecated(since = \"6.0\")\r\n@Nullable\r\npublic static String buildMessage(@Nullable String message, @Nullable Throwable cause) {\r\n    if (cause == null) {\r\n        return message;\r\n    }\r\n    StringBuilder sb = new StringBuilder(64);\r\n    if (message != null) {\r\n        sb.append(message).append(\"; \");\r\n    }\r\n    sb.append(\"nested exception is \").append(cause);\r\n    return sb.toString();\r\n}\n/**\r\n * Retrieve the innermost cause of the given exception, if any.\r\n * @param original the original exception to introspect\r\n * @return the innermost exception, or {@code null} if none\r\n * @since 4.3.9\r\n */\r\n@Nullable\r\npublic static Throwable getRootCause(@Nullable Throwable original) {\r\n    if (original == null) {\r\n        return null;\r\n    }\r\n    Throwable rootCause = null;\r\n    Throwable cause = original.getCause();\r\n    while (cause != null && cause != rootCause) {\r\n        rootCause = cause;\r\n        cause = cause.getCause();\r\n    }\r\n    return rootCause;\r\n}\n/**\r\n * Retrieve the most specific cause of the given exception, that is,\r\n * either the innermost cause (root cause) or the exception itself.\r\n * <p>Differs from {@link #getRootCause} in that it falls back\r\n * to the original exception if there is no root cause.\r\n * @param original the original exception to introspect\r\n * @return the most specific cause (never {@code null})\r\n * @since 4.3.9\r\n */\r\npublic static Throwable getMostSpecificCause(Throwable original) {\r\n    Throwable rootCause = getRootCause(original);\r\n    return (rootCause != null ? rootCause : original);\r\n}",
+    "comment": "\n * Helper class for implementing exception classes which are capable of\n * holding nested exceptions. Necessary because we can't share a base\n * class among different exception types.\n *\n * <p>Mainly for use within the framework.\n *\n * @author Juergen Hoeller\n * @since 2.0\n * @see NestedRuntimeException\n * @see NestedCheckedException\n "
+  },
+  {
+    "entityId": "org.springframework.core.NestedExceptionUtils#buildMessage(String,Throwable)",
+    "entityType": "method",
+    "code": "/**\r\n * Build a message for the given base message and root cause.\r\n * @param message the base message\r\n * @param cause the root cause\r\n * @return the full exception message\r\n * @deprecated as of 6.0, in favor of custom exception messages\r\n * with selective inclusion of cause messages\r\n */\r\n@Deprecated(since = \"6.0\")\r\n@Nullable\r\npublic static String buildMessage(@Nullable String message, @Nullable Throwable cause) {\r\n    if (cause == null) {\r\n        return message;\r\n    }\r\n    StringBuilder sb = new StringBuilder(64);\r\n    if (message != null) {\r\n        sb.append(message).append(\"; \");\r\n    }\r\n    sb.append(\"nested exception is \").append(cause);\r\n    return sb.toString();\r\n}",
+    "comment": "\n\t * Build a message for the given base message and root cause.\n\t * @param message the base message\n\t * @param cause the root cause\n\t * @return the full exception message\n\t * @deprecated as of 6.0, in favor of custom exception messages\n\t * with selective inclusion of cause messages\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedExceptionUtils#getRootCause(Throwable)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the innermost cause of the given exception, if any.\r\n * @param original the original exception to introspect\r\n * @return the innermost exception, or {@code null} if none\r\n * @since 4.3.9\r\n */\r\n@Nullable\r\npublic static Throwable getRootCause(@Nullable Throwable original) {\r\n    if (original == null) {\r\n        return null;\r\n    }\r\n    Throwable rootCause = null;\r\n    Throwable cause = original.getCause();\r\n    while (cause != null && cause != rootCause) {\r\n        rootCause = cause;\r\n        cause = cause.getCause();\r\n    }\r\n    return rootCause;\r\n}",
+    "comment": "\n\t * Retrieve the innermost cause of the given exception, if any.\n\t * @param original the original exception to introspect\n\t * @return the innermost exception, or {@code null} if none\n\t * @since 4.3.9\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedExceptionUtils#getMostSpecificCause(Throwable)",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the most specific cause of the given exception, that is,\r\n * either the innermost cause (root cause) or the exception itself.\r\n * <p>Differs from {@link #getRootCause} in that it falls back\r\n * to the original exception if there is no root cause.\r\n * @param original the original exception to introspect\r\n * @return the most specific cause (never {@code null})\r\n * @since 4.3.9\r\n */\r\npublic static Throwable getMostSpecificCause(Throwable original) {\r\n    Throwable rootCause = getRootCause(original);\r\n    return (rootCause != null ? rootCause : original);\r\n}",
+    "comment": "\n\t * Retrieve the most specific cause of the given exception, that is,\n\t * either the innermost cause (root cause) or the exception itself.\n\t * <p>Differs from {@link #getRootCause} in that it falls back\n\t * to the original exception if there is no root cause.\n\t * @param original the original exception to introspect\n\t * @return the most specific cause (never {@code null})\n\t * @since 4.3.9\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedRuntimeException",
+    "entityType": "class",
+    "code": "/**\r\n * Use serialVersionUID from Spring 1.2 for interoperability.\r\n */\r\nprivate static final long serialVersionUID = 5439915454935047936L;\n/**\r\n * Construct a {@code NestedRuntimeException} with the specified detail message.\r\n * @param msg the detail message\r\n */\r\npublic NestedRuntimeException(@Nullable String msg) {\r\n    super(msg);\r\n}\n/**\r\n * Construct a {@code NestedRuntimeException} with the specified detail message\r\n * and nested exception.\r\n * @param msg the detail message\r\n * @param cause the nested exception\r\n */\r\npublic NestedRuntimeException(@Nullable String msg, @Nullable Throwable cause) {\r\n    super(msg, cause);\r\n}\n/**\r\n * Retrieve the innermost cause of this exception, if any.\r\n * @return the innermost exception, or {@code null} if none\r\n * @since 2.0\r\n */\r\n@Nullable\r\npublic Throwable getRootCause() {\r\n    return NestedExceptionUtils.getRootCause(this);\r\n}\n/**\r\n * Retrieve the most specific cause of this exception, that is,\r\n * either the innermost cause (root cause) or this exception itself.\r\n * <p>Differs from {@link #getRootCause()} in that it falls back\r\n * to the present exception if there is no root cause.\r\n * @return the most specific cause (never {@code null})\r\n * @since 2.0.3\r\n */\r\npublic Throwable getMostSpecificCause() {\r\n    Throwable rootCause = getRootCause();\r\n    return (rootCause != null ? rootCause : this);\r\n}\n/**\r\n * Check whether this exception contains an exception of the given type:\r\n * either it is of the given class itself or it contains a nested cause\r\n * of the given type.\r\n * @param exType the exception type to look for\r\n * @return whether there is a nested exception of the specified type\r\n */\r\npublic boolean contains(@Nullable Class<?> exType) {\r\n    if (exType == null) {\r\n        return false;\r\n    }\r\n    if (exType.isInstance(this)) {\r\n        return true;\r\n    }\r\n    Throwable cause = getCause();\r\n    if (cause == this) {\r\n        return false;\r\n    }\r\n    if (cause instanceof NestedRuntimeException exception) {\r\n        return exception.contains(exType);\r\n    } else {\r\n        while (cause != null) {\r\n            if (exType.isInstance(cause)) {\r\n                return true;\r\n            }\r\n            if (cause.getCause() == cause) {\r\n                break;\r\n            }\r\n            cause = cause.getCause();\r\n        }\r\n        return false;\r\n    }\r\n}",
+    "comment": "\n * Handy class for wrapping runtime {@code Exceptions} with a root cause.\n * This class is {@code abstract} to force the programmer to extend the class.\n *\n * <p>The similarity between this class and the {@link NestedCheckedException}\n * class is unavoidable, as Java forces these two classes to have different\n * superclasses (ah, the inflexibility of concrete inheritance!).\n *\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @see #getMessage\n * @see NestedCheckedException\n "
+  },
+  {
+    "entityId": "org.springframework.core.NestedRuntimeException#getRootCause()",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the innermost cause of this exception, if any.\r\n * @return the innermost exception, or {@code null} if none\r\n * @since 2.0\r\n */\r\n@Nullable\r\npublic Throwable getRootCause() {\r\n    return NestedExceptionUtils.getRootCause(this);\r\n}",
+    "comment": "\n\t * Retrieve the innermost cause of this exception, if any.\n\t * @return the innermost exception, or {@code null} if none\n\t * @since 2.0\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedRuntimeException#getMostSpecificCause()",
+    "entityType": "method",
+    "code": "/**\r\n * Retrieve the most specific cause of this exception, that is,\r\n * either the innermost cause (root cause) or this exception itself.\r\n * <p>Differs from {@link #getRootCause()} in that it falls back\r\n * to the present exception if there is no root cause.\r\n * @return the most specific cause (never {@code null})\r\n * @since 2.0.3\r\n */\r\npublic Throwable getMostSpecificCause() {\r\n    Throwable rootCause = getRootCause();\r\n    return (rootCause != null ? rootCause : this);\r\n}",
+    "comment": "\n\t * Retrieve the most specific cause of this exception, that is,\n\t * either the innermost cause (root cause) or this exception itself.\n\t * <p>Differs from {@link #getRootCause()} in that it falls back\n\t * to the present exception if there is no root cause.\n\t * @return the most specific cause (never {@code null})\n\t * @since 2.0.3\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.NestedRuntimeException#contains(Class<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Check whether this exception contains an exception of the given type:\r\n * either it is of the given class itself or it contains a nested cause\r\n * of the given type.\r\n * @param exType the exception type to look for\r\n * @return whether there is a nested exception of the specified type\r\n */\r\npublic boolean contains(@Nullable Class<?> exType) {\r\n    if (exType == null) {\r\n        return false;\r\n    }\r\n    if (exType.isInstance(this)) {\r\n        return true;\r\n    }\r\n    Throwable cause = getCause();\r\n    if (cause == this) {\r\n        return false;\r\n    }\r\n    if (cause instanceof NestedRuntimeException exception) {\r\n        return exception.contains(exType);\r\n    } else {\r\n        while (cause != null) {\r\n            if (exType.isInstance(cause)) {\r\n                return true;\r\n            }\r\n            if (cause.getCause() == cause) {\r\n                break;\r\n            }\r\n            cause = cause.getCause();\r\n        }\r\n        return false;\r\n    }\r\n}",
+    "comment": "\n\t * Check whether this exception contains an exception of the given type:\n\t * either it is of the given class itself or it contains a nested cause\n\t * of the given type.\n\t * @param exType the exception type to look for\n\t * @return whether there is a nested exception of the specified type\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDelegate",
+    "entityType": "class",
+    "code": "public static Nullness forMethodReturnType(Method method) {\r\n    KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\r\n    if (function != null && function.getReturnType().isMarkedNullable()) {\r\n        return Nullness.NULLABLE;\r\n    }\r\n    return Nullness.NON_NULL;\r\n}\npublic static Nullness forParameter(Executable executable, int parameterIndex) {\r\n    KFunction<?> function;\r\n    Predicate<KParameter> predicate;\r\n    if (executable instanceof Method method) {\r\n        function = ReflectJvmMapping.getKotlinFunction(method);\r\n        predicate = p -> KParameter.Kind.VALUE.equals(p.getKind());\r\n    } else {\r\n        function = ReflectJvmMapping.getKotlinFunction((Constructor<?>) executable);\r\n        predicate = p -> (KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.INSTANCE.equals(p.getKind()));\r\n    }\r\n    if (function == null) {\r\n        return Nullness.UNSPECIFIED;\r\n    }\r\n    int i = 0;\r\n    for (KParameter kParameter : function.getParameters()) {\r\n        if (predicate.test(kParameter) && parameterIndex == i++) {\r\n            return (kParameter.getType().isMarkedNullable() ? Nullness.NULLABLE : Nullness.NON_NULL);\r\n        }\r\n    }\r\n    return Nullness.UNSPECIFIED;\r\n}\npublic static Nullness forField(Field field) {\r\n    KProperty<?> property = ReflectJvmMapping.getKotlinProperty(field);\r\n    if (property != null && property.getReturnType().isMarkedNullable()) {\r\n        return Nullness.NULLABLE;\r\n    }\r\n    return Nullness.NON_NULL;\r\n}",
+    "comment": "\n\t * Inner class to avoid a hard dependency on Kotlin at runtime.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDelegate#forMethodReturnType(Method)",
+    "entityType": "method",
+    "code": "public static Nullness forMethodReturnType(Method method) {\r\n    KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\r\n    if (function != null && function.getReturnType().isMarkedNullable()) {\r\n        return Nullness.NULLABLE;\r\n    }\r\n    return Nullness.NON_NULL;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDelegate#forParameter(Executable,int)",
+    "entityType": "method",
+    "code": "public static Nullness forParameter(Executable executable, int parameterIndex) {\r\n    KFunction<?> function;\r\n    Predicate<KParameter> predicate;\r\n    if (executable instanceof Method method) {\r\n        function = ReflectJvmMapping.getKotlinFunction(method);\r\n        predicate = p -> KParameter.Kind.VALUE.equals(p.getKind());\r\n    } else {\r\n        function = ReflectJvmMapping.getKotlinFunction((Constructor<?>) executable);\r\n        predicate = p -> (KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.INSTANCE.equals(p.getKind()));\r\n    }\r\n    if (function == null) {\r\n        return Nullness.UNSPECIFIED;\r\n    }\r\n    int i = 0;\r\n    for (KParameter kParameter : function.getParameters()) {\r\n        if (predicate.test(kParameter) && parameterIndex == i++) {\r\n            return (kParameter.getType().isMarkedNullable() ? Nullness.NULLABLE : Nullness.NON_NULL);\r\n        }\r\n    }\r\n    return Nullness.UNSPECIFIED;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.KotlinDelegate#forField(Field)",
+    "entityType": "method",
+    "code": "public static Nullness forField(Field field) {\r\n    KProperty<?> property = ReflectJvmMapping.getKotlinProperty(field);\r\n    if (property != null && property.getReturnType().isMarkedNullable()) {\r\n        return Nullness.NULLABLE;\r\n    }\r\n    return Nullness.NON_NULL;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator",
+    "entityType": "class",
+    "code": "/**\r\n * Shared default instance of {@code OrderComparator}.\r\n */\r\npublic static final OrderComparator INSTANCE = new OrderComparator();\n/**\r\n * Build an adapted order comparator with the given source provider.\r\n * @param sourceProvider the order source provider to use\r\n * @return the adapted comparator\r\n * @since 4.1\r\n */\r\npublic Comparator<Object> withSourceProvider(OrderSourceProvider sourceProvider) {\r\n    return (o1, o2) -> doCompare(o1, o2, sourceProvider);\r\n}\n@Override\r\npublic int compare(@Nullable Object o1, @Nullable Object o2) {\r\n    return doCompare(o1, o2, null);\r\n}\nprivate int doCompare(@Nullable Object o1, @Nullable Object o2, @Nullable OrderSourceProvider sourceProvider) {\r\n    boolean p1 = (o1 instanceof PriorityOrdered);\r\n    boolean p2 = (o2 instanceof PriorityOrdered);\r\n    if (p1 && !p2) {\r\n        return -1;\r\n    } else if (p2 && !p1) {\r\n        return 1;\r\n    }\r\n    int i1 = getOrder(o1, sourceProvider);\r\n    int i2 = getOrder(o2, sourceProvider);\r\n    return Integer.compare(i1, i2);\r\n}\n/**\r\n * Determine the order value for the given object.\r\n * <p>The default implementation checks against the given {@link OrderSourceProvider}\r\n * using {@link #findOrder} and falls back to a regular {@link #getOrder(Object)} call.\r\n * @param obj the object to check\r\n * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback\r\n */\r\nprivate int getOrder(@Nullable Object obj, @Nullable OrderSourceProvider sourceProvider) {\r\n    Integer order = null;\r\n    if (obj != null && sourceProvider != null) {\r\n        Object orderSource = sourceProvider.getOrderSource(obj);\r\n        if (orderSource != null) {\r\n            if (orderSource.getClass().isArray()) {\r\n                for (Object source : ObjectUtils.toObjectArray(orderSource)) {\r\n                    order = findOrder(source);\r\n                    if (order != null) {\r\n                        break;\r\n                    }\r\n                }\r\n            } else {\r\n                order = findOrder(orderSource);\r\n            }\r\n        }\r\n    }\r\n    return (order != null ? order : getOrder(obj));\r\n}\n/**\r\n * Determine the order value for the given object.\r\n * <p>The default implementation checks against the {@link Ordered} interface\r\n * through delegating to {@link #findOrder}. Can be overridden in subclasses.\r\n * @param obj the object to check\r\n * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback\r\n */\r\nprotected int getOrder(@Nullable Object obj) {\r\n    if (obj != null) {\r\n        Integer order = findOrder(obj);\r\n        if (order != null) {\r\n            return order;\r\n        }\r\n    }\r\n    return Ordered.LOWEST_PRECEDENCE;\r\n}\n/**\r\n * Find an order value indicated by the given object.\r\n * <p>The default implementation checks against the {@link Ordered} interface.\r\n * Can be overridden in subclasses.\r\n * @param obj the object to check\r\n * @return the order value, or {@code null} if none found\r\n */\r\n@Nullable\r\nprotected Integer findOrder(Object obj) {\r\n    return (obj instanceof Ordered ordered ? ordered.getOrder() : null);\r\n}\n/**\r\n * Determine a priority value for the given object, if any.\r\n * <p>The default implementation always returns {@code null}.\r\n * Subclasses may override this to give specific kinds of values a\r\n * 'priority' characteristic, in addition to their 'order' semantics.\r\n * A priority indicates that it may be used for selecting one object over\r\n * another, in addition to serving for ordering purposes in a list/array.\r\n * @param obj the object to check\r\n * @return the priority value, or {@code null} if none\r\n * @since 4.1\r\n */\r\n@Nullable\r\npublic Integer getPriority(Object obj) {\r\n    return null;\r\n}\n/**\r\n * Sort the given List with a default OrderComparator.\r\n * <p>Optimized to skip sorting for lists with size 0 or 1,\r\n * in order to avoid unnecessary array extraction.\r\n * @param list the List to sort\r\n * @see java.util.List#sort(java.util.Comparator)\r\n */\r\npublic static void sort(List<?> list) {\r\n    if (list.size() > 1) {\r\n        list.sort(INSTANCE);\r\n    }\r\n}\n/**\r\n * Sort the given array with a default OrderComparator.\r\n * <p>Optimized to skip sorting for lists with size 0 or 1,\r\n * in order to avoid unnecessary array extraction.\r\n * @param array the array to sort\r\n * @see java.util.Arrays#sort(Object[], java.util.Comparator)\r\n */\r\npublic static void sort(Object[] array) {\r\n    if (array.length > 1) {\r\n        Arrays.sort(array, INSTANCE);\r\n    }\r\n}\n/**\r\n * Sort the given array or List with a default OrderComparator,\r\n * if necessary. Simply skips sorting when given any other value.\r\n * <p>Optimized to skip sorting for lists with size 0 or 1,\r\n * in order to avoid unnecessary array extraction.\r\n * @param value the array or List to sort\r\n * @see java.util.Arrays#sort(Object[], java.util.Comparator)\r\n */\r\npublic static void sortIfNecessary(Object value) {\r\n    if (value instanceof Object[] objects) {\r\n        sort(objects);\r\n    } else if (value instanceof List<?> list) {\r\n        sort(list);\r\n    }\r\n}\n/**\r\n * Strategy interface to provide an order source for a given object.\r\n * @since 4.1\r\n */\r\n@FunctionalInterface\r\npublic interface OrderSourceProvider {\r\n\r\n    /**\r\n     * Return an order source for the specified object, i.e. an object that\r\n     * should be checked for an order value as a replacement to the given object.\r\n     * <p>Can also be an array of order source objects.\r\n     * <p>If the returned object does not indicate any order, the comparator\r\n     * will fall back to checking the original object.\r\n     * @param obj the object to find an order source for\r\n     * @return the order source for that object, or {@code null} if none found\r\n     */\r\n    @Nullable\r\n    Object getOrderSource(Object obj);\r\n}",
+    "comment": "\n * {@link Comparator} implementation for {@link Ordered} objects, sorting\n * by order value ascending, respectively by priority descending.\n *\n * <h3>{@code PriorityOrdered} Objects</h3>\n * <p>{@link PriorityOrdered} objects will be sorted with higher priority than\n * <em>plain</em> {@code Ordered} objects.\n *\n * <h3>Same Order Objects</h3>\n * <p>Objects that have the same order value will be sorted with arbitrary\n * ordering with respect to other objects with the same order value.\n *\n * <h3>Non-ordered Objects</h3>\n * <p>Any object that does not provide its own order value is implicitly\n * assigned a value of {@link Ordered#LOWEST_PRECEDENCE}, thus ending up\n * at the end of a sorted collection in arbitrary order with respect to\n * other objects with the same order value.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 07.04.2003\n * @see Ordered\n * @see PriorityOrdered\n * @see org.springframework.core.annotation.AnnotationAwareOrderComparator\n * @see java.util.List#sort(java.util.Comparator)\n * @see java.util.Arrays#sort(Object[], java.util.Comparator)\n "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#withSourceProvider(OrderSourceProvider)",
+    "entityType": "method",
+    "code": "/**\r\n * Build an adapted order comparator with the given source provider.\r\n * @param sourceProvider the order source provider to use\r\n * @return the adapted comparator\r\n * @since 4.1\r\n */\r\npublic Comparator<Object> withSourceProvider(OrderSourceProvider sourceProvider) {\r\n    return (o1, o2) -> doCompare(o1, o2, sourceProvider);\r\n}",
+    "comment": "\n\t * Build an adapted order comparator with the given source provider.\n\t * @param sourceProvider the order source provider to use\n\t * @return the adapted comparator\n\t * @since 4.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#compare(Object,Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic int compare(@Nullable Object o1, @Nullable Object o2) {\r\n    return doCompare(o1, o2, null);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#doCompare(Object,Object,OrderSourceProvider)",
+    "entityType": "method",
+    "code": "private int doCompare(@Nullable Object o1, @Nullable Object o2, @Nullable OrderSourceProvider sourceProvider) {\r\n    boolean p1 = (o1 instanceof PriorityOrdered);\r\n    boolean p2 = (o2 instanceof PriorityOrdered);\r\n    if (p1 && !p2) {\r\n        return -1;\r\n    } else if (p2 && !p1) {\r\n        return 1;\r\n    }\r\n    int i1 = getOrder(o1, sourceProvider);\r\n    int i2 = getOrder(o2, sourceProvider);\r\n    return Integer.compare(i1, i2);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#getOrder(Object,OrderSourceProvider)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine the order value for the given object.\r\n * <p>The default implementation checks against the given {@link OrderSourceProvider}\r\n * using {@link #findOrder} and falls back to a regular {@link #getOrder(Object)} call.\r\n * @param obj the object to check\r\n * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback\r\n */\r\nprivate int getOrder(@Nullable Object obj, @Nullable OrderSourceProvider sourceProvider) {\r\n    Integer order = null;\r\n    if (obj != null && sourceProvider != null) {\r\n        Object orderSource = sourceProvider.getOrderSource(obj);\r\n        if (orderSource != null) {\r\n            if (orderSource.getClass().isArray()) {\r\n                for (Object source : ObjectUtils.toObjectArray(orderSource)) {\r\n                    order = findOrder(source);\r\n                    if (order != null) {\r\n                        break;\r\n                    }\r\n                }\r\n            } else {\r\n                order = findOrder(orderSource);\r\n            }\r\n        }\r\n    }\r\n    return (order != null ? order : getOrder(obj));\r\n}",
+    "comment": "\n\t * Determine the order value for the given object.\n\t * <p>The default implementation checks against the given {@link OrderSourceProvider}\n\t * using {@link #findOrder} and falls back to a regular {@link #getOrder(Object)} call.\n\t * @param obj the object to check\n\t * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#getOrder(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine the order value for the given object.\r\n * <p>The default implementation checks against the {@link Ordered} interface\r\n * through delegating to {@link #findOrder}. Can be overridden in subclasses.\r\n * @param obj the object to check\r\n * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback\r\n */\r\nprotected int getOrder(@Nullable Object obj) {\r\n    if (obj != null) {\r\n        Integer order = findOrder(obj);\r\n        if (order != null) {\r\n            return order;\r\n        }\r\n    }\r\n    return Ordered.LOWEST_PRECEDENCE;\r\n}",
+    "comment": "\n\t * Determine the order value for the given object.\n\t * <p>The default implementation checks against the {@link Ordered} interface\n\t * through delegating to {@link #findOrder}. Can be overridden in subclasses.\n\t * @param obj the object to check\n\t * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#findOrder(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Find an order value indicated by the given object.\r\n * <p>The default implementation checks against the {@link Ordered} interface.\r\n * Can be overridden in subclasses.\r\n * @param obj the object to check\r\n * @return the order value, or {@code null} if none found\r\n */\r\n@Nullable\r\nprotected Integer findOrder(Object obj) {\r\n    return (obj instanceof Ordered ordered ? ordered.getOrder() : null);\r\n}",
+    "comment": "\n\t * Find an order value indicated by the given object.\n\t * <p>The default implementation checks against the {@link Ordered} interface.\n\t * Can be overridden in subclasses.\n\t * @param obj the object to check\n\t * @return the order value, or {@code null} if none found\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#getPriority(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine a priority value for the given object, if any.\r\n * <p>The default implementation always returns {@code null}.\r\n * Subclasses may override this to give specific kinds of values a\r\n * 'priority' characteristic, in addition to their 'order' semantics.\r\n * A priority indicates that it may be used for selecting one object over\r\n * another, in addition to serving for ordering purposes in a list/array.\r\n * @param obj the object to check\r\n * @return the priority value, or {@code null} if none\r\n * @since 4.1\r\n */\r\n@Nullable\r\npublic Integer getPriority(Object obj) {\r\n    return null;\r\n}",
+    "comment": "\n\t * Determine a priority value for the given object, if any.\n\t * <p>The default implementation always returns {@code null}.\n\t * Subclasses may override this to give specific kinds of values a\n\t * 'priority' characteristic, in addition to their 'order' semantics.\n\t * A priority indicates that it may be used for selecting one object over\n\t * another, in addition to serving for ordering purposes in a list/array.\n\t * @param obj the object to check\n\t * @return the priority value, or {@code null} if none\n\t * @since 4.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#sort(List<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Sort the given List with a default OrderComparator.\r\n * <p>Optimized to skip sorting for lists with size 0 or 1,\r\n * in order to avoid unnecessary array extraction.\r\n * @param list the List to sort\r\n * @see java.util.List#sort(java.util.Comparator)\r\n */\r\npublic static void sort(List<?> list) {\r\n    if (list.size() > 1) {\r\n        list.sort(INSTANCE);\r\n    }\r\n}",
+    "comment": "\n\t * Sort the given List with a default OrderComparator.\n\t * <p>Optimized to skip sorting for lists with size 0 or 1,\n\t * in order to avoid unnecessary array extraction.\n\t * @param list the List to sort\n\t * @see java.util.List#sort(java.util.Comparator)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#sort(Object[])",
+    "entityType": "method",
+    "code": "/**\r\n * Sort the given array with a default OrderComparator.\r\n * <p>Optimized to skip sorting for lists with size 0 or 1,\r\n * in order to avoid unnecessary array extraction.\r\n * @param array the array to sort\r\n * @see java.util.Arrays#sort(Object[], java.util.Comparator)\r\n */\r\npublic static void sort(Object[] array) {\r\n    if (array.length > 1) {\r\n        Arrays.sort(array, INSTANCE);\r\n    }\r\n}",
+    "comment": "\n\t * Sort the given array with a default OrderComparator.\n\t * <p>Optimized to skip sorting for lists with size 0 or 1,\n\t * in order to avoid unnecessary array extraction.\n\t * @param array the array to sort\n\t * @see java.util.Arrays#sort(Object[], java.util.Comparator)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderComparator#sortIfNecessary(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Sort the given array or List with a default OrderComparator,\r\n * if necessary. Simply skips sorting when given any other value.\r\n * <p>Optimized to skip sorting for lists with size 0 or 1,\r\n * in order to avoid unnecessary array extraction.\r\n * @param value the array or List to sort\r\n * @see java.util.Arrays#sort(Object[], java.util.Comparator)\r\n */\r\npublic static void sortIfNecessary(Object value) {\r\n    if (value instanceof Object[] objects) {\r\n        sort(objects);\r\n    } else if (value instanceof List<?> list) {\r\n        sort(list);\r\n    }\r\n}",
+    "comment": "\n\t * Sort the given array or List with a default OrderComparator,\n\t * if necessary. Simply skips sorting when given any other value.\n\t * <p>Optimized to skip sorting for lists with size 0 or 1,\n\t * in order to avoid unnecessary array extraction.\n\t * @param value the array or List to sort\n\t * @see java.util.Arrays#sort(Object[], java.util.Comparator)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderSourceProvider",
+    "entityType": "class",
+    "code": "/**\r\n * Return an order source for the specified object, i.e. an object that\r\n * should be checked for an order value as a replacement to the given object.\r\n * <p>Can also be an array of order source objects.\r\n * <p>If the returned object does not indicate any order, the comparator\r\n * will fall back to checking the original object.\r\n * @param obj the object to find an order source for\r\n * @return the order source for that object, or {@code null} if none found\r\n */\r\n@Nullable\r\nObject getOrderSource(Object obj);",
+    "comment": "\n\t * Strategy interface to provide an order source for a given object.\n\t * @since 4.1\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OrderSourceProvider#getOrderSource(Object)",
+    "entityType": "method",
+    "code": "/**\r\n * Return an order source for the specified object, i.e. an object that\r\n * should be checked for an order value as a replacement to the given object.\r\n * <p>Can also be an array of order source objects.\r\n * <p>If the returned object does not indicate any order, the comparator\r\n * will fall back to checking the original object.\r\n * @param obj the object to find an order source for\r\n * @return the order source for that object, or {@code null} if none found\r\n */\r\n@Nullable\r\nObject getOrderSource(Object obj);",
+    "comment": "\n\t\t * Return an order source for the specified object, i.e. an object that\n\t\t * should be checked for an order value as a replacement to the given object.\n\t\t * <p>Can also be an array of order source objects.\n\t\t * <p>If the returned object does not indicate any order, the comparator\n\t\t * will fall back to checking the original object.\n\t\t * @param obj the object to find an order source for\n\t\t * @return the order source for that object, or {@code null} if none found\n\t\t "
+  },
+  {
+    "entityId": "org.springframework.core.Ordered",
+    "entityType": "class",
+    "code": "/**\r\n * Useful constant for the highest precedence value.\r\n * @see java.lang.Integer#MIN_VALUE\r\n */\r\nint HIGHEST_PRECEDENCE = Integer.MIN_VALUE;\n/**\r\n * Useful constant for the lowest precedence value.\r\n * @see java.lang.Integer#MAX_VALUE\r\n */\r\nint LOWEST_PRECEDENCE = Integer.MAX_VALUE;\n/**\r\n * Get the order value of this object.\r\n * <p>Higher values are interpreted as lower priority. As a consequence,\r\n * the object with the lowest value has the highest priority (somewhat\r\n * analogous to Servlet {@code load-on-startup} values).\r\n * <p>Same order values will result in arbitrary sort positions for the\r\n * affected objects.\r\n * @return the order value\r\n * @see #HIGHEST_PRECEDENCE\r\n * @see #LOWEST_PRECEDENCE\r\n */\r\nint getOrder();",
+    "comment": "\n * {@code Ordered} is an interface that can be implemented by objects that\n * should be <em>orderable</em>, for example in a {@code Collection}.\n *\n * <p>The actual {@link #getOrder() order} can be interpreted as prioritization,\n * with the first object (with the lowest order value) having the highest\n * priority.\n *\n * <p>Note that there is also a <em>priority</em> marker for this interface:\n * {@link PriorityOrdered}. Consult the Javadoc for {@code PriorityOrdered} for\n * details on how {@code PriorityOrdered} objects are ordered relative to\n * <em>plain</em> {@link Ordered} objects.\n *\n * <p>Consult the Javadoc for {@link OrderComparator} for details on the\n * sort semantics for non-ordered objects.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 07.04.2003\n * @see PriorityOrdered\n * @see OrderComparator\n * @see org.springframework.core.annotation.Order\n * @see org.springframework.core.annotation.AnnotationAwareOrderComparator\n "
+  },
+  {
+    "entityId": "org.springframework.core.Ordered#getOrder()",
+    "entityType": "method",
+    "code": "/**\r\n * Get the order value of this object.\r\n * <p>Higher values are interpreted as lower priority. As a consequence,\r\n * the object with the lowest value has the highest priority (somewhat\r\n * analogous to Servlet {@code load-on-startup} values).\r\n * <p>Same order values will result in arbitrary sort positions for the\r\n * affected objects.\r\n * @return the order value\r\n * @see #HIGHEST_PRECEDENCE\r\n * @see #LOWEST_PRECEDENCE\r\n */\r\nint getOrder();",
+    "comment": "\n\t * Get the order value of this object.\n\t * <p>Higher values are interpreted as lower priority. As a consequence,\n\t * the object with the lowest value has the highest priority (somewhat\n\t * analogous to Servlet {@code load-on-startup} values).\n\t * <p>Same order values will result in arbitrary sort positions for the\n\t * affected objects.\n\t * @return the order value\n\t * @see #HIGHEST_PRECEDENCE\n\t * @see #LOWEST_PRECEDENCE\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader",
+    "entityType": "class",
+    "code": "/**\r\n * Packages that are excluded by default.\r\n */\r\npublic static final String[] DEFAULT_EXCLUDED_PACKAGES = new String[] { \"java.\", \"javax.\", \"sun.\", \"oracle.\", \"javassist.\", \"org.aspectj.\", \"net.sf.cglib.\" };\nprivate static final String CLASS_FILE_SUFFIX = \".class\";\nstatic {\r\n    ClassLoader.registerAsParallelCapable();\r\n}\n@Nullable\r\nprivate final ClassLoader overrideDelegate;\n/**\r\n * Create a new OverridingClassLoader for the given ClassLoader.\r\n * @param parent the ClassLoader to build an overriding ClassLoader for\r\n */\r\npublic OverridingClassLoader(@Nullable ClassLoader parent) {\r\n    this(parent, null);\r\n}\n/**\r\n * Create a new OverridingClassLoader for the given ClassLoader.\r\n * @param parent the ClassLoader to build an overriding ClassLoader for\r\n * @param overrideDelegate the ClassLoader to delegate to for overriding\r\n * @since 4.3\r\n */\r\npublic OverridingClassLoader(@Nullable ClassLoader parent, @Nullable ClassLoader overrideDelegate) {\r\n    super(parent);\r\n    this.overrideDelegate = overrideDelegate;\r\n    for (String packageName : DEFAULT_EXCLUDED_PACKAGES) {\r\n        excludePackage(packageName);\r\n    }\r\n}\n@Override\r\npublic Class<?> loadClass(String name) throws ClassNotFoundException {\r\n    if (this.overrideDelegate != null && isEligibleForOverriding(name)) {\r\n        return this.overrideDelegate.loadClass(name);\r\n    }\r\n    return super.loadClass(name);\r\n}\n@Override\r\nprotected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {\r\n    if (isEligibleForOverriding(name)) {\r\n        Class<?> result = loadClassForOverriding(name);\r\n        if (result != null) {\r\n            if (resolve) {\r\n                resolveClass(result);\r\n            }\r\n            return result;\r\n        }\r\n    }\r\n    return super.loadClass(name, resolve);\r\n}\n/**\r\n * Determine whether the specified class is eligible for overriding\r\n * by this class loader.\r\n * @param className the class name to check\r\n * @return whether the specified class is eligible\r\n * @see #isExcluded\r\n */\r\nprotected boolean isEligibleForOverriding(String className) {\r\n    return !isExcluded(className);\r\n}\n/**\r\n * Load the specified class for overriding purposes in this ClassLoader.\r\n * <p>The default implementation delegates to {@link #findLoadedClass},\r\n * {@link #loadBytesForClass} and {@link #defineClass}.\r\n * @param name the name of the class\r\n * @return the Class object, or {@code null} if no class defined for that name\r\n * @throws ClassNotFoundException if the class for the given name couldn't be loaded\r\n */\r\n@Nullable\r\nprotected Class<?> loadClassForOverriding(String name) throws ClassNotFoundException {\r\n    Class<?> result = findLoadedClass(name);\r\n    if (result == null) {\r\n        byte[] bytes = loadBytesForClass(name);\r\n        if (bytes != null) {\r\n            result = defineClass(name, bytes, 0, bytes.length);\r\n        }\r\n    }\r\n    return result;\r\n}\n/**\r\n * Load the defining bytes for the given class,\r\n * to be turned into a Class object through a {@link #defineClass} call.\r\n * <p>The default implementation delegates to {@link #openStreamForClass}\r\n * and {@link #transformIfNecessary}.\r\n * @param name the name of the class\r\n * @return the byte content (with transformers already applied),\r\n * or {@code null} if no class defined for that name\r\n * @throws ClassNotFoundException if the class for the given name couldn't be loaded\r\n */\r\nprotected byte @Nullable [] loadBytesForClass(String name) throws ClassNotFoundException {\r\n    InputStream is = openStreamForClass(name);\r\n    if (is == null) {\r\n        return null;\r\n    }\r\n    try {\r\n        // Load the raw bytes.\r\n        byte[] bytes = FileCopyUtils.copyToByteArray(is);\r\n        // Transform if necessary and use the potentially transformed bytes.\r\n        return transformIfNecessary(name, bytes);\r\n    } catch (IOException ex) {\r\n        throw new ClassNotFoundException(\"Cannot load resource for class [\" + name + \"]\", ex);\r\n    }\r\n}\n/**\r\n * Open an InputStream for the specified class.\r\n * <p>The default implementation loads a standard class file through\r\n * the parent ClassLoader's {@code getResourceAsStream} method.\r\n * @param name the name of the class\r\n * @return the InputStream containing the byte code for the specified class\r\n */\r\n@Nullable\r\nprotected InputStream openStreamForClass(String name) {\r\n    String internalName = name.replace('.', '/') + CLASS_FILE_SUFFIX;\r\n    return getParent().getResourceAsStream(internalName);\r\n}\n/**\r\n * Transformation hook to be implemented by subclasses.\r\n * <p>The default implementation simply returns the given bytes as-is.\r\n * @param name the fully-qualified name of the class being transformed\r\n * @param bytes the raw bytes of the class\r\n * @return the transformed bytes (never {@code null};\r\n * same as the input bytes if the transformation produced no changes)\r\n */\r\nprotected byte[] transformIfNecessary(String name, byte[] bytes) {\r\n    return bytes;\r\n}",
+    "comment": "\n * {@code ClassLoader} that does <i>not</i> always delegate to the parent loader\n * as normal class loaders do. This enables, for example, instrumentation to be\n * forced in the overriding ClassLoader, or a \"throwaway\" class loading behavior\n * where selected application classes are temporarily loaded in the overriding\n * {@code ClassLoader} for introspection purposes before eventually loading an\n * instrumented version of the class in the given parent {@code ClassLoader}.\n *\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @since 2.0.1\n "
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#loadClass(String)",
+    "entityType": "method",
+    "code": "@Override\r\npublic Class<?> loadClass(String name) throws ClassNotFoundException {\r\n    if (this.overrideDelegate != null && isEligibleForOverriding(name)) {\r\n        return this.overrideDelegate.loadClass(name);\r\n    }\r\n    return super.loadClass(name);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#loadClass(String,boolean)",
+    "entityType": "method",
+    "code": "@Override\r\nprotected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {\r\n    if (isEligibleForOverriding(name)) {\r\n        Class<?> result = loadClassForOverriding(name);\r\n        if (result != null) {\r\n            if (resolve) {\r\n                resolveClass(result);\r\n            }\r\n            return result;\r\n        }\r\n    }\r\n    return super.loadClass(name, resolve);\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#isEligibleForOverriding(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Determine whether the specified class is eligible for overriding\r\n * by this class loader.\r\n * @param className the class name to check\r\n * @return whether the specified class is eligible\r\n * @see #isExcluded\r\n */\r\nprotected boolean isEligibleForOverriding(String className) {\r\n    return !isExcluded(className);\r\n}",
+    "comment": "\n\t * Determine whether the specified class is eligible for overriding\n\t * by this class loader.\n\t * @param className the class name to check\n\t * @return whether the specified class is eligible\n\t * @see #isExcluded\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#loadClassForOverriding(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Load the specified class for overriding purposes in this ClassLoader.\r\n * <p>The default implementation delegates to {@link #findLoadedClass},\r\n * {@link #loadBytesForClass} and {@link #defineClass}.\r\n * @param name the name of the class\r\n * @return the Class object, or {@code null} if no class defined for that name\r\n * @throws ClassNotFoundException if the class for the given name couldn't be loaded\r\n */\r\n@Nullable\r\nprotected Class<?> loadClassForOverriding(String name) throws ClassNotFoundException {\r\n    Class<?> result = findLoadedClass(name);\r\n    if (result == null) {\r\n        byte[] bytes = loadBytesForClass(name);\r\n        if (bytes != null) {\r\n            result = defineClass(name, bytes, 0, bytes.length);\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "comment": "\n\t * Load the specified class for overriding purposes in this ClassLoader.\n\t * <p>The default implementation delegates to {@link #findLoadedClass},\n\t * {@link #loadBytesForClass} and {@link #defineClass}.\n\t * @param name the name of the class\n\t * @return the Class object, or {@code null} if no class defined for that name\n\t * @throws ClassNotFoundException if the class for the given name couldn't be loaded\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#loadBytesForClass(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Load the defining bytes for the given class,\r\n * to be turned into a Class object through a {@link #defineClass} call.\r\n * <p>The default implementation delegates to {@link #openStreamForClass}\r\n * and {@link #transformIfNecessary}.\r\n * @param name the name of the class\r\n * @return the byte content (with transformers already applied),\r\n * or {@code null} if no class defined for that name\r\n * @throws ClassNotFoundException if the class for the given name couldn't be loaded\r\n */\r\nprotected byte @Nullable [] loadBytesForClass(String name) throws ClassNotFoundException {\r\n    InputStream is = openStreamForClass(name);\r\n    if (is == null) {\r\n        return null;\r\n    }\r\n    try {\r\n        // Load the raw bytes.\r\n        byte[] bytes = FileCopyUtils.copyToByteArray(is);\r\n        // Transform if necessary and use the potentially transformed bytes.\r\n        return transformIfNecessary(name, bytes);\r\n    } catch (IOException ex) {\r\n        throw new ClassNotFoundException(\"Cannot load resource for class [\" + name + \"]\", ex);\r\n    }\r\n}",
+    "comment": "\n\t * Load the defining bytes for the given class,\n\t * to be turned into a Class object through a {@link #defineClass} call.\n\t * <p>The default implementation delegates to {@link #openStreamForClass}\n\t * and {@link #transformIfNecessary}.\n\t * @param name the name of the class\n\t * @return the byte content (with transformers already applied),\n\t * or {@code null} if no class defined for that name\n\t * @throws ClassNotFoundException if the class for the given name couldn't be loaded\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#openStreamForClass(String)",
+    "entityType": "method",
+    "code": "/**\r\n * Open an InputStream for the specified class.\r\n * <p>The default implementation loads a standard class file through\r\n * the parent ClassLoader's {@code getResourceAsStream} method.\r\n * @param name the name of the class\r\n * @return the InputStream containing the byte code for the specified class\r\n */\r\n@Nullable\r\nprotected InputStream openStreamForClass(String name) {\r\n    String internalName = name.replace('.', '/') + CLASS_FILE_SUFFIX;\r\n    return getParent().getResourceAsStream(internalName);\r\n}",
+    "comment": "\n\t * Open an InputStream for the specified class.\n\t * <p>The default implementation loads a standard class file through\n\t * the parent ClassLoader's {@code getResourceAsStream} method.\n\t * @param name the name of the class\n\t * @return the InputStream containing the byte code for the specified class\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.OverridingClassLoader#transformIfNecessary(String,byte[])",
+    "entityType": "method",
+    "code": "/**\r\n * Transformation hook to be implemented by subclasses.\r\n * <p>The default implementation simply returns the given bytes as-is.\r\n * @param name the fully-qualified name of the class being transformed\r\n * @param bytes the raw bytes of the class\r\n * @return the transformed bytes (never {@code null};\r\n * same as the input bytes if the transformation produced no changes)\r\n */\r\nprotected byte[] transformIfNecessary(String name, byte[] bytes) {\r\n    return bytes;\r\n}",
+    "comment": "\n\t * Transformation hook to be implemented by subclasses.\n\t * <p>The default implementation simply returns the given bytes as-is.\n\t * @param name the fully-qualified name of the class being transformed\n\t * @param bytes the raw bytes of the class\n\t * @return the transformed bytes (never {@code null};\n\t * same as the input bytes if the transformation produced no changes)\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference",
+    "entityType": "class",
+    "code": "private final Type type;\nprotected ParameterizedTypeReference() {\r\n    Class<?> parameterizedTypeReferenceSubclass = findParameterizedTypeReferenceSubclass(getClass());\r\n    Type type = parameterizedTypeReferenceSubclass.getGenericSuperclass();\r\n    Assert.isInstanceOf(ParameterizedType.class, type, \"Type must be a parameterized type\");\r\n    ParameterizedType parameterizedType = (ParameterizedType) type;\r\n    Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();\r\n    Assert.isTrue(actualTypeArguments.length == 1, \"Number of type arguments must be 1\");\r\n    this.type = actualTypeArguments[0];\r\n}\nprivate ParameterizedTypeReference(Type type) {\r\n    this.type = type;\r\n}\npublic Type getType() {\r\n    return this.type;\r\n}\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ParameterizedTypeReference<?> that && this.type.equals(that.type)));\r\n}\n@Override\r\npublic int hashCode() {\r\n    return this.type.hashCode();\r\n}\n@Override\r\npublic String toString() {\r\n    return \"ParameterizedTypeReference<\" + this.type + \">\";\r\n}\n/**\r\n * Build a {@code ParameterizedTypeReference} wrapping the given type.\r\n * @param type a generic type (possibly obtained via reflection,\r\n * for example, from {@link java.lang.reflect.Method#getGenericReturnType()})\r\n * @return a corresponding reference which may be passed into\r\n * {@code ParameterizedTypeReference}-accepting methods\r\n * @since 4.3.12\r\n */\r\npublic static <T> ParameterizedTypeReference<T> forType(Type type) {\r\n    return new ParameterizedTypeReference<>(type) ;;\r\n}\nprivate static Class<?> findParameterizedTypeReferenceSubclass(Class<?> child) {\r\n    Class<?> parent = child.getSuperclass();\r\n    if (Object.class == parent) {\r\n        throw new IllegalStateException(\"Expected ParameterizedTypeReference superclass\");\r\n    } else if (ParameterizedTypeReference.class == parent) {\r\n        return child;\r\n    } else {\r\n        return findParameterizedTypeReferenceSubclass(parent);\r\n    }\r\n}",
+    "comment": "\n * The purpose of this class is to enable capturing and passing a generic\n * {@link Type}. In order to capture the generic type and retain it at runtime,\n * you need to create a subclass (ideally as anonymous inline class) as follows:\n *\n * <pre class=\"code\">\n * ParameterizedTypeReference&lt;List&lt;String&gt;&gt; typeRef = new ParameterizedTypeReference&lt;List&lt;String&gt;&gt;() {};\n * </pre>\n *\n * <p>The resulting {@code typeRef} instance can then be used to obtain a {@link Type}\n * instance that carries the captured parameterized type information at runtime.\n * For more information on \"super type tokens\" see the link to Neal Gafter's blog post.\n *\n * @author Arjen Poutsma\n * @author Rossen Stoyanchev\n * @since 3.2\n * @param <T> the referenced type\n * @see <a href=\"https://gafter.blogspot.nl/2006/12/super-type-tokens.html\">Neal Gafter on Super Type Tokens</a>\n "
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference#getType()",
+    "entityType": "method",
+    "code": "public Type getType() {\r\n    return this.type;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference#equals(Object)",
+    "entityType": "method",
+    "code": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ParameterizedTypeReference<?> that && this.type.equals(that.type)));\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference#hashCode()",
+    "entityType": "method",
+    "code": "@Override\r\npublic int hashCode() {\r\n    return this.type.hashCode();\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference#toString()",
+    "entityType": "method",
+    "code": "@Override\r\npublic String toString() {\r\n    return \"ParameterizedTypeReference<\" + this.type + \">\";\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference#forType(Type)",
+    "entityType": "method",
+    "code": "/**\r\n * Build a {@code ParameterizedTypeReference} wrapping the given type.\r\n * @param type a generic type (possibly obtained via reflection,\r\n * for example, from {@link java.lang.reflect.Method#getGenericReturnType()})\r\n * @return a corresponding reference which may be passed into\r\n * {@code ParameterizedTypeReference}-accepting methods\r\n * @since 4.3.12\r\n */\r\npublic static <T> ParameterizedTypeReference<T> forType(Type type) {\r\n    return new ParameterizedTypeReference<>(type) ;;\r\n}",
+    "comment": "\n\t * Build a {@code ParameterizedTypeReference} wrapping the given type.\n\t * @param type a generic type (possibly obtained via reflection,\n\t * for example, from {@link java.lang.reflect.Method#getGenericReturnType()})\n\t * @return a corresponding reference which may be passed into\n\t * {@code ParameterizedTypeReference}-accepting methods\n\t * @since 4.3.12\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.ParameterizedTypeReference#findParameterizedTypeReferenceSubclass(Class<?>)",
+    "entityType": "method",
+    "code": "private static Class<?> findParameterizedTypeReferenceSubclass(Class<?> child) {\r\n    Class<?> parent = child.getSuperclass();\r\n    if (Object.class == parent) {\r\n        throw new IllegalStateException(\"Expected ParameterizedTypeReference superclass\");\r\n    } else if (ParameterizedTypeReference.class == parent) {\r\n        return child;\r\n    } else {\r\n        return findParameterizedTypeReferenceSubclass(parent);\r\n    }\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.ParameterNameDiscoverer",
+    "entityType": "class",
+    "code": "/**\r\n * Return parameter names for a method, or {@code null} if they cannot be determined.\r\n * <p>Individual entries in the array may be {@code null} if parameter names are only\r\n * available for some parameters of the given method but not for others. However,\r\n * it is recommended to use stub parameter names instead wherever feasible.\r\n * @param method the method to find parameter names for\r\n * @return an array of parameter names if the names can be resolved,\r\n * or {@code null} if they cannot\r\n */\r\n@Nullable\r\nString @Nullable [] getParameterNames(Method method);\n/**\r\n * Return parameter names for a constructor, or {@code null} if they cannot be determined.\r\n * <p>Individual entries in the array may be {@code null} if parameter names are only\r\n * available for some parameters of the given constructor but not for others. However,\r\n * it is recommended to use stub parameter names instead wherever feasible.\r\n * @param ctor the constructor to find parameter names for\r\n * @return an array of parameter names if the names can be resolved,\r\n * or {@code null} if they cannot\r\n */\r\n@Nullable\r\nString @Nullable [] getParameterNames(Constructor<?> ctor);",
+    "comment": "\n * Interface to discover parameter names for methods and constructors.\n *\n * <p>Parameter name discovery is not always possible, but various strategies exist\n * &mdash; for example, using the JDK's reflection facilities for introspecting\n * parameter names (based on the \"-parameters\" compiler flag), looking for\n * {@code argNames} annotation attributes optionally configured for AspectJ\n * annotated methods, etc.\n *\n * @author Rod Johnson\n * @author Adrian Colyer\n * @since 2.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.ParameterNameDiscoverer#getParameterNames(Method)",
+    "entityType": "method",
+    "code": "/**\r\n * Return parameter names for a method, or {@code null} if they cannot be determined.\r\n * <p>Individual entries in the array may be {@code null} if parameter names are only\r\n * available for some parameters of the given method but not for others. However,\r\n * it is recommended to use stub parameter names instead wherever feasible.\r\n * @param method the method to find parameter names for\r\n * @return an array of parameter names if the names can be resolved,\r\n * or {@code null} if they cannot\r\n */\r\n@Nullable\r\nString @Nullable [] getParameterNames(Method method);",
+    "comment": "\n\t * Return parameter names for a method, or {@code null} if they cannot be determined.\n\t * <p>Individual entries in the array may be {@code null} if parameter names are only\n\t * available for some parameters of the given method but not for others. However,\n\t * it is recommended to use stub parameter names instead wherever feasible.\n\t * @param method the method to find parameter names for\n\t * @return an array of parameter names if the names can be resolved,\n\t * or {@code null} if they cannot\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.ParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "entityType": "method",
+    "code": "/**\r\n * Return parameter names for a constructor, or {@code null} if they cannot be determined.\r\n * <p>Individual entries in the array may be {@code null} if parameter names are only\r\n * available for some parameters of the given constructor but not for others. However,\r\n * it is recommended to use stub parameter names instead wherever feasible.\r\n * @param ctor the constructor to find parameter names for\r\n * @return an array of parameter names if the names can be resolved,\r\n * or {@code null} if they cannot\r\n */\r\n@Nullable\r\nString @Nullable [] getParameterNames(Constructor<?> ctor);",
+    "comment": "\n\t * Return parameter names for a constructor, or {@code null} if they cannot be determined.\n\t * <p>Individual entries in the array may be {@code null} if parameter names are only\n\t * available for some parameters of the given constructor but not for others. However,\n\t * it is recommended to use stub parameter names instead wherever feasible.\n\t * @param ctor the constructor to find parameter names for\n\t * @return an array of parameter names if the names can be resolved,\n\t * or {@code null} if they cannot\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.PrioritizedParameterNameDiscoverer",
+    "entityType": "class",
+    "code": "private final List<ParameterNameDiscoverer> parameterNameDiscoverers = new ArrayList<>(2);\n/**\r\n * Add a further {@link ParameterNameDiscoverer} delegate to the list of\r\n * discoverers that this {@code PrioritizedParameterNameDiscoverer} checks.\r\n */\r\npublic void addDiscoverer(ParameterNameDiscoverer pnd) {\r\n    this.parameterNameDiscoverers.add(pnd);\r\n}\n@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Method method) {\r\n    for (ParameterNameDiscoverer pnd : this.parameterNameDiscoverers) {\r\n        @Nullable\r\n        String[] result = pnd.getParameterNames(method);\r\n        if (result != null) {\r\n            return result;\r\n        }\r\n    }\r\n    return null;\r\n}\n@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Constructor<?> ctor) {\r\n    for (ParameterNameDiscoverer pnd : this.parameterNameDiscoverers) {\r\n        @Nullable\r\n        String[] result = pnd.getParameterNames(ctor);\r\n        if (result != null) {\r\n            return result;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": "\n * {@link ParameterNameDiscoverer} implementation that tries several discoverer\n * delegates in succession. Those added first in the {@code addDiscoverer} method\n * have the highest priority. If one returns {@code null}, the next will be tried.\n *\n * <p>The default behavior is to return {@code null} if no discoverer matches.\n *\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @since 2.0\n "
+  },
+  {
+    "entityId": "org.springframework.core.PrioritizedParameterNameDiscoverer#addDiscoverer(ParameterNameDiscoverer)",
+    "entityType": "method",
+    "code": "/**\r\n * Add a further {@link ParameterNameDiscoverer} delegate to the list of\r\n * discoverers that this {@code PrioritizedParameterNameDiscoverer} checks.\r\n */\r\npublic void addDiscoverer(ParameterNameDiscoverer pnd) {\r\n    this.parameterNameDiscoverers.add(pnd);\r\n}",
+    "comment": "\n\t * Add a further {@link ParameterNameDiscoverer} delegate to the list of\n\t * discoverers that this {@code PrioritizedParameterNameDiscoverer} checks.\n\t "
+  },
+  {
+    "entityId": "org.springframework.core.PrioritizedParameterNameDiscoverer#getParameterNames(Method)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Method method) {\r\n    for (ParameterNameDiscoverer pnd : this.parameterNameDiscoverers) {\r\n        @Nullable\r\n        String[] result = pnd.getParameterNames(method);\r\n        if (result != null) {\r\n            return result;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.PrioritizedParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "entityType": "method",
+    "code": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Constructor<?> ctor) {\r\n    for (ParameterNameDiscoverer pnd : this.parameterNameDiscoverers) {\r\n        @Nullable\r\n        String[] result = pnd.getParameterNames(ctor);\r\n        if (result != null) {\r\n            return result;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "comment": ""
+  },
+  {
+    "entityId": "org.springframework.core.PriorityOrdered",
+    "entityType": "class",
+    "code": "",
+    "comment": "\n * Extension of the {@link Ordered} interface, expressing a <em>priority</em>\n * ordering: {@code PriorityOrdered} objects are always applied before\n * <em>plain</em> {@link Ordered} objects regardless of their order values.\n *\n * <p>When sorting a set of {@code Ordered} objects, {@code PriorityOrdered}\n * objects and <em>plain</em> {@code Ordered} objects are effectively treated as\n * two separate subsets, with the set of {@code PriorityOrdered} objects preceding\n * the set of <em>plain</em> {@code Ordered} objects and with relative\n * ordering applied within those subsets.\n *\n * <p>This is primarily a special-purpose interface, used within the framework\n * itself for objects where it is particularly important to recognize\n * <em>prioritized</em> objects first, potentially without even obtaining the\n * remaining objects. A typical example: prioritized post-processors in a Spring\n * {@link org.springframework.context.ApplicationContext}.\n *\n * <p>Note: {@code PriorityOrdered} post-processor beans are initialized in\n * a special phase, ahead of other post-processor beans. This subtly\n * affects their autowiring behavior: they will only be autowired against\n * beans which do not require eager initialization for type matching.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 2.5\n * @see org.springframework.beans.factory.config.PropertyOverrideConfigurer\n "
+  }
+]
