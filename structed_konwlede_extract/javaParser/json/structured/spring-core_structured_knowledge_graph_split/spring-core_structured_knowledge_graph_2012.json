@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#join(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid join(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz);\r\n    Mono<DataBuffer> result = DataBufferUtils.join(flux);\r\n    StepVerifier.create(result).consumeNextWith(buf -> {\r\n        assertThat(buf.toString(StandardCharsets.UTF_8)).isEqualTo(\"foobarbaz\");\r\n        release(buf);\r\n    }).verifyComplete();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#join(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#join(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimit(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid joinWithLimit(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz);\r\n    Mono<DataBuffer> result = DataBufferUtils.join(flux, 8);\r\n    StepVerifier.create(result).verifyError(DataBufferLimitException.class);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimit(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimit(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimitDoesNotOverRelease()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// gh-26060\r\n@Test\r\nvoid joinWithLimitDoesNotOverRelease() {\r\n    NettyDataBufferFactory bufferFactory = new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT);\r\n    byte[] bytes = \"foo-bar-baz\".getBytes(StandardCharsets.UTF_8);\r\n    NettyDataBuffer buffer = bufferFactory.allocateBuffer(bytes.length);\r\n    // should be at 2 now\r\n    buffer.getNativeBuffer().retain();\r\n    buffer.write(bytes);\r\n    Mono<DataBuffer> result = DataBufferUtils.join(Flux.just(buffer), 8);\r\n    StepVerifier.create(result).verifyError(DataBufferLimitException.class);\r\n    assertThat(buffer.getNativeBuffer().refCnt()).isEqualTo(1);\r\n    buffer.release();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimitDoesNotOverRelease()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinWithLimitDoesNotOverRelease()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinErrors(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid joinErrors(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar).concatWith(Flux.error(new RuntimeException()));\r\n    Mono<DataBuffer> result = DataBufferUtils.join(flux);\r\n    StepVerifier.create(result).expectError(RuntimeException.class).verify();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinErrors(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinErrors(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinCanceled(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid joinCanceled(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"), deferStringBuffer(\"baz\"));\r\n    Mono<DataBuffer> result = DataBufferUtils.join(source);\r\n    StepVerifier.create(result).thenCancel().verify();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinCanceled(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#joinCanceled(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid matcher(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    byte[] delims = \"ooba\".getBytes(StandardCharsets.UTF_8);\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delims);\r\n    int result = matcher.match(foo);\r\n    assertThat(result).isEqualTo(-1);\r\n    result = matcher.match(bar);\r\n    assertThat(result).isEqualTo(1);\r\n    release(foo, bar);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher2(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid matcher2(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foooobar\");\r\n    byte[] delims = \"oo\".getBytes(StandardCharsets.UTF_8);\r\n    DataBufferUtils.Matcher matcher = DataBufferUtils.matcher(delims);\r\n    int endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(2);\r\n    foo.readPosition(endIndex + 1);\r\n    endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(4);\r\n    foo.readPosition(endIndex + 1);\r\n    endIndex = matcher.match(foo);\r\n    assertThat(endIndex).isEqualTo(-1);\r\n    release(foo);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#matcher2(DataBufferFactory)",
+    "tailType": "method"
+  }
+]

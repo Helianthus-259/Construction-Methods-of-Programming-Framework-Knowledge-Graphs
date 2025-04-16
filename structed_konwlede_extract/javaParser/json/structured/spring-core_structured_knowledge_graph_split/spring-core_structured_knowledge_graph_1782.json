@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.StringGenericParameter#getFor(Class<String>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@BarCache",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StringGenericParameter#getFor(Class<String>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StringGenericParameter#getFor(Integer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public String getFor(Integer integer) {\r\n    return \"foo\";\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StringGenericParameter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StringGenericParameter#getFor(Integer)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.NestedRepeatableAnnotationsTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.NestedRepeatableAnnotationsTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.NestedRepeatableAnnotationsTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.ElementType;\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.annotation.Target;\nimport java.lang.reflect.Method;\nimport java.util.Set;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.MergedAnnotations.SearchStrategy;\nimport org.springframework.util.ReflectionUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for various ways to search for repeatable annotations that are\n * nested (i.e., repeatable annotations used as meta-annotations on other\n * repeatable annotations).\n *\n * @author Sam Brannen\n * @since 5.3.24\n */\n@SuppressWarnings(\"unused\")\nclass NestedRepeatableAnnotationsTests {\n\n\t@Nested\n\tclass SingleRepeatableAnnotationTests {\n\n\t\tprivate final Method method = ReflectionUtils.findMethod(getClass(), \"annotatedMethod\");\n\n\t\t@Test\n\t\tvoid streamRepeatableAnnotations_MergedAnnotationsApi() {\n\t\t\tSet<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY)\n\t\t\t\t\t.stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\tvoid findMergedRepeatableAnnotations_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithExplicitContainer_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class, A.Container.class);\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid getRepeatableAnnotations_AnnotationUtils() {\n\t\t\tSet<A> annotations = AnnotationUtils.getRepeatableAnnotations(method, A.class);\n\t\t\t// Not merged, so we expect to find @A once with the default value of 0.\n\t\t\t// @A will actually be found twice, but we have Set semantics here.\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(0);\n\t\t}\n\n\t\t@B(5)\n\t\tvoid annotatedMethod() {\n\t\t}\n\n\t}\n\n\t@Nested\n\tclass MultipleRepeatableAnnotationsTests {\n\n\t\tprivate final Method method = ReflectionUtils.findMethod(getClass(), \"annotatedMethod\");\n\n\t\t@Test\n\t\tvoid streamRepeatableAnnotationsWithStandardRepeatables_MergedAnnotationsApi() {\n\t\t\tRepeatableContainers repeatableContainers = RepeatableContainers.standardRepeatables();\n\t\t\tSet<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY, repeatableContainers)\n\t\t\t\t\t.stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid streamRepeatableAnnotationsWithExplicitRepeatables_MergedAnnotationsApi() {\n\t\t\tRepeatableContainers repeatableContainers =\n\t\t\t\t\tRepeatableContainers.of(A.class, A.Container.class).and(B.Container.class, B.class);\n\t\t\tSet<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY, repeatableContainers)\n\t\t\t\t\t.stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid findMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid findMergedRepeatableAnnotationsWithExplicitContainer_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class, A.Container.class);\n\t\t\t// When findMergedRepeatableAnnotations(...) is invoked with an explicit container\n\t\t\t// type, it uses RepeatableContainers.of(...) which limits the repeatable annotation\n\t\t\t// support to a single container type.\n\t\t\t//\n\t\t\t// In this test case, we are therefore limiting the support to @A.Container, which\n\t\t\t// means that @B.Container is unsupported and effectively ignored as a repeatable\n\t\t\t// container type.\n\t\t\t//\n\t\t\t// Long story, short: the search doesn't find anything.\n\t\t\tassertThat(annotations).isEmpty();\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithExplicitContainer_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class, A.Container.class);\n\t\t\t// When getMergedRepeatableAnnotations(...) is invoked with an explicit container\n\t\t\t// type, it uses RepeatableContainers.of(...) which limits the repeatable annotation\n\t\t\t// support to a single container type.\n\t\t\t//\n\t\t\t// In this test case, we are therefore limiting the support to @A.Container, which\n\t\t\t// means that @B.Container is unsupported and effectively ignored as a repeatable\n\t\t\t// container type.\n\t\t\t//\n\t\t\t// Long story, short: the search doesn't find anything.\n\t\t\tassertThat(annotations).isEmpty();\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid getRepeatableAnnotations_AnnotationUtils() {\n\t\t\tSet<A> annotations = AnnotationUtils.getRepeatableAnnotations(method, A.class);\n\t\t\t// Not merged, so we expect to find a single @A with default value of 0.\n\t\t\t// @A will actually be found twice, but we have Set semantics here.\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(0);\n\t\t}\n\n\t\t@B(5)\n\t\t@B(10)\n\t\tvoid annotatedMethod() {\n\t\t}\n\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t@Repeatable(A.Container.class)\n\t@interface A {\n\n\t\tint value() default 0;\n\n\t\t@Retention(RetentionPolicy.RUNTIME)\n\t\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t\t@interface Container {\n\t\t\tA[] value();\n\t\t}\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t@Repeatable(B.Container.class)\n\t@A\n\t@A\n\t@interface B {\n\n\t\t@AliasFor(annotation = A.class)\n\t\tint value();\n\n\t\t@Retention(RetentionPolicy.RUNTIME)\n\t\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t\t@interface Container {\n\t\t\tB[] value();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.SingleRepeatableAnnotationTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Nested",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.ElementType;\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.annotation.Target;\nimport java.lang.reflect.Method;\nimport java.util.Set;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.MergedAnnotations.SearchStrategy;\nimport org.springframework.util.ReflectionUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for various ways to search for repeatable annotations that are\n * nested (i.e., repeatable annotations used as meta-annotations on other\n * repeatable annotations).\n *\n * @author Sam Brannen\n * @since 5.3.24\n */\n@SuppressWarnings(\"unused\")\nclass NestedRepeatableAnnotationsTests {\n\n\t@Nested\n\tclass SingleRepeatableAnnotationTests {\n\n\t\tprivate final Method method = ReflectionUtils.findMethod(getClass(), \"annotatedMethod\");\n\n\t\t@Test\n\t\tvoid streamRepeatableAnnotations_MergedAnnotationsApi() {\n\t\t\tSet<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY)\n\t\t\t\t\t.stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\tvoid findMergedRepeatableAnnotations_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithExplicitContainer_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class, A.Container.class);\n\t\t\t// Merged, so we expect to find @A once with its value coming from @B(5).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5);\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid getRepeatableAnnotations_AnnotationUtils() {\n\t\t\tSet<A> annotations = AnnotationUtils.getRepeatableAnnotations(method, A.class);\n\t\t\t// Not merged, so we expect to find @A once with the default value of 0.\n\t\t\t// @A will actually be found twice, but we have Set semantics here.\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(0);\n\t\t}\n\n\t\t@B(5)\n\t\tvoid annotatedMethod() {\n\t\t}\n\n\t}\n\n\t@Nested\n\tclass MultipleRepeatableAnnotationsTests {\n\n\t\tprivate final Method method = ReflectionUtils.findMethod(getClass(), \"annotatedMethod\");\n\n\t\t@Test\n\t\tvoid streamRepeatableAnnotationsWithStandardRepeatables_MergedAnnotationsApi() {\n\t\t\tRepeatableContainers repeatableContainers = RepeatableContainers.standardRepeatables();\n\t\t\tSet<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY, repeatableContainers)\n\t\t\t\t\t.stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid streamRepeatableAnnotationsWithExplicitRepeatables_MergedAnnotationsApi() {\n\t\t\tRepeatableContainers repeatableContainers =\n\t\t\t\t\tRepeatableContainers.of(A.class, A.Container.class).and(B.Container.class, B.class);\n\t\t\tSet<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY, repeatableContainers)\n\t\t\t\t\t.stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid findMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid findMergedRepeatableAnnotationsWithExplicitContainer_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class, A.Container.class);\n\t\t\t// When findMergedRepeatableAnnotations(...) is invoked with an explicit container\n\t\t\t// type, it uses RepeatableContainers.of(...) which limits the repeatable annotation\n\t\t\t// support to a single container type.\n\t\t\t//\n\t\t\t// In this test case, we are therefore limiting the support to @A.Container, which\n\t\t\t// means that @B.Container is unsupported and effectively ignored as a repeatable\n\t\t\t// container type.\n\t\t\t//\n\t\t\t// Long story, short: the search doesn't find anything.\n\t\t\tassertThat(annotations).isEmpty();\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class);\n\t\t\t// Merged, so we expect to find @A twice with values coming from @B(5) and @B(10).\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(5, 10);\n\t\t}\n\n\t\t@Test\n\t\tvoid getMergedRepeatableAnnotationsWithExplicitContainer_AnnotatedElementUtils() {\n\t\t\tSet<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class, A.Container.class);\n\t\t\t// When getMergedRepeatableAnnotations(...) is invoked with an explicit container\n\t\t\t// type, it uses RepeatableContainers.of(...) which limits the repeatable annotation\n\t\t\t// support to a single container type.\n\t\t\t//\n\t\t\t// In this test case, we are therefore limiting the support to @A.Container, which\n\t\t\t// means that @B.Container is unsupported and effectively ignored as a repeatable\n\t\t\t// container type.\n\t\t\t//\n\t\t\t// Long story, short: the search doesn't find anything.\n\t\t\tassertThat(annotations).isEmpty();\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid getRepeatableAnnotations_AnnotationUtils() {\n\t\t\tSet<A> annotations = AnnotationUtils.getRepeatableAnnotations(method, A.class);\n\t\t\t// Not merged, so we expect to find a single @A with default value of 0.\n\t\t\t// @A will actually be found twice, but we have Set semantics here.\n\t\t\tassertThat(annotations).extracting(A::value).containsExactly(0);\n\t\t}\n\n\t\t@B(5)\n\t\t@B(10)\n\t\tvoid annotatedMethod() {\n\t\t}\n\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t@Repeatable(A.Container.class)\n\t@interface A {\n\n\t\tint value() default 0;\n\n\t\t@Retention(RetentionPolicy.RUNTIME)\n\t\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t\t@interface Container {\n\t\t\tA[] value();\n\t\t}\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t@Repeatable(B.Container.class)\n\t@A\n\t@A\n\t@interface B {\n\n\t\t@AliasFor(annotation = A.class)\n\t\tint value();\n\n\t\t@Retention(RetentionPolicy.RUNTIME)\n\t\t@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })\n\t\t@interface Container {\n\t\t\tB[] value();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#method",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#method",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Method",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#streamRepeatableAnnotations_MergedAnnotationsApi()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid streamRepeatableAnnotations_MergedAnnotationsApi() {\r\n    Set<A> annotations = MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY).stream(A.class).collect(MergedAnnotationCollectors.toAnnotationSet());\r\n    // Merged, so we expect to find @A once with its value coming from @B(5).\r\n    assertThat(annotations).extracting(A::value).containsExactly(5);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#streamRepeatableAnnotations_MergedAnnotationsApi()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#streamRepeatableAnnotations_MergedAnnotationsApi()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#findMergedRepeatableAnnotations_AnnotatedElementUtils()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid findMergedRepeatableAnnotations_AnnotatedElementUtils() {\r\n    Set<A> annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, A.class);\r\n    // Merged, so we expect to find @A once with its value coming from @B(5).\r\n    assertThat(annotations).extracting(A::value).containsExactly(5);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#findMergedRepeatableAnnotations_AnnotatedElementUtils()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#findMergedRepeatableAnnotations_AnnotatedElementUtils()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.SingleRepeatableAnnotationTests#getMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getMergedRepeatableAnnotationsWithStandardRepeatables_AnnotatedElementUtils() {\r\n    Set<A> annotations = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, A.class);\r\n    // Merged, so we expect to find @A once with its value coming from @B(5).\r\n    assertThat(annotations).extracting(A::value).containsExactly(5);\r\n}",
+    "tailType": "method_code"
+  }
+]

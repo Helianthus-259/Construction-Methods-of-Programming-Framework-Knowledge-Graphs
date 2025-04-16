@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.C",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2020 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.Ordered;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * @author Stephane Nicoll\n * @author Juergen Hoeller\n */\nclass OrderSourceProviderTests {\n\n\tprivate final AnnotationAwareOrderComparator comparator = AnnotationAwareOrderComparator.INSTANCE;\n\n\n\t@Test\n\tvoid plainComparator() {\n\t\tList<Object> items = new ArrayList<>();\n\t\tC c = new C(5);\n\t\tC c2 = new C(-5);\n\t\titems.add(c);\n\t\titems.add(c2);\n\t\titems.sort(comparator);\n\t\tassertOrder(items, c2, c);\n\t}\n\n\t@Test\n\tvoid listNoFactoryMethod() {\n\t\tA a = new A();\n\t\tC c = new C(-50);\n\t\tB b = new B();\n\n\t\tList<?> items = Arrays.asList(a, c, b);\n\t\titems.sort(comparator.withSourceProvider(obj -> null));\n\t\tassertOrder(items, c, a, b);\n\t}\n\n\t@Test\n\tvoid listFactoryMethod() {\n\t\tA a = new A();\n\t\tC c = new C(3);\n\t\tB b = new B();\n\n\t\tList<?> items = Arrays.asList(a, c, b);\n\t\titems.sort(comparator.withSourceProvider(obj -> {\n\t\t\tif (obj == a) {\n\t\t\t\treturn new C(4);\n\t\t\t}\n\t\t\tif (obj == b) {\n\t\t\t\treturn new C(2);\n\t\t\t}\n\t\t\treturn null;\n\t\t}));\n\t\tassertOrder(items, b, c, a);\n\t}\n\n\t@Test\n\tvoid listFactoryMethodOverridesStaticOrder() {\n\t\tA a = new A();\n\t\tC c = new C(5);\n\t\tC c2 = new C(-5);\n\n\t\tList<?> items = Arrays.asList(a, c, c2);\n\t\titems.sort(comparator.withSourceProvider(obj -> {\n\t\t\tif (obj == a) {\n\t\t\t\treturn 4;\n\t\t\t}\n\t\t\tif (obj == c2) {\n\t\t\t\treturn 2;\n\t\t\t}\n\t\t\treturn null;\n\t\t}));\n\t\tassertOrder(items, c2, a, c);\n\t}\n\n\t@Test\n\tvoid arrayNoFactoryMethod() {\n\t\tA a = new A();\n\t\tC c = new C(-50);\n\t\tB b = new B();\n\n\t\tObject[] items = new Object[] {a, c, b};\n\t\tArrays.sort(items, comparator.withSourceProvider(obj -> null));\n\t\tassertOrder(items, c, a, b);\n\t}\n\n\t@Test\n\tvoid arrayFactoryMethod() {\n\t\tA a = new A();\n\t\tC c = new C(3);\n\t\tB b = new B();\n\n\t\tObject[] items = new Object[] {a, c, b};\n\t\tArrays.sort(items, comparator.withSourceProvider(obj -> {\n\t\t\tif (obj == a) {\n\t\t\t\treturn new C(4);\n\t\t\t}\n\t\t\tif (obj == b) {\n\t\t\t\treturn new C(2);\n\t\t\t}\n\t\t\treturn null;\n\t\t}));\n\t\tassertOrder(items, b, c, a);\n\t}\n\n\t@Test\n\tvoid arrayFactoryMethodOverridesStaticOrder() {\n\t\tA a = new A();\n\t\tC c = new C(5);\n\t\tC c2 = new C(-5);\n\n\t\tObject[] items = new Object[] {a, c, c2};\n\t\tArrays.sort(items, comparator.withSourceProvider(obj -> {\n\t\t\tif (obj == a) {\n\t\t\t\treturn 4;\n\t\t\t}\n\t\t\tif (obj == c2) {\n\t\t\t\treturn 2;\n\t\t\t}\n\t\t\treturn null;\n\t\t}));\n\t\tassertOrder(items, c2, a, c);\n\t}\n\n\n\tprivate void assertOrder(List<?> actual, Object... expected) {\n\t\tfor (int i = 0; i < actual.size(); i++) {\n\t\t\tassertThat(actual.get(i)).as(\"Wrong instance at index '\" + i + \"'\").isSameAs(expected[i]);\n\t\t}\n\t\tassertThat(actual.size()).as(\"Wrong number of items\").isEqualTo(expected.length);\n\t}\n\n\tprivate void assertOrder(Object[] actual, Object... expected) {\n\t\tfor (int i = 0; i < actual.length; i++) {\n\t\t\tassertThat(actual[i]).as(\"Wrong instance at index '\" + i + \"'\").isSameAs(expected[i]);\n\t\t}\n\t\tassertThat(expected.length).as(\"Wrong number of items\").isEqualTo(expected.length);\n\t}\n\n\n\t@Order(1)\n\tprivate static class A {\n\t}\n\n\n\t@Order(2)\n\tprivate static class B {\n\t}\n\n\n\tprivate static class C implements Ordered {\n\n\t\tprivate final int order;\n\n\t\tprivate C(int order) {\n\t\t\tthis.order = order;\n\t\t}\n\n\t\t@Override\n\t\tpublic int getOrder() {\n\t\t\treturn order;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.C",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.annotation.C#order",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.annotation.C#order",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.annotation.C#getOrder()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int getOrder() {\r\n    return order;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.C",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.C#getOrder()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.C#getOrder()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.OrderUtilsTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport jakarta.annotation.Priority;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * @author Stephane Nicoll\n * @author Juergen Hoeller\n */\nclass OrderUtilsTests {\n\n\t@Test\n\tvoid getSimpleOrder() {\n\t\tassertThat(OrderUtils.getOrder(SimpleOrder.class, null)).isEqualTo(Integer.valueOf(50));\n\t\tassertThat(OrderUtils.getOrder(SimpleOrder.class, null)).isEqualTo(Integer.valueOf(50));\n\t}\n\n\t@Test\n\tvoid getPriorityOrder() {\n\t\tassertThat(OrderUtils.getOrder(SimplePriority.class, null)).isEqualTo(Integer.valueOf(55));\n\t\tassertThat(OrderUtils.getOrder(SimplePriority.class, null)).isEqualTo(Integer.valueOf(55));\n\t}\n\n\t@Test\n\tvoid getOrderWithBoth() {\n\t\tassertThat(OrderUtils.getOrder(OrderAndPriority.class, null)).isEqualTo(Integer.valueOf(50));\n\t\tassertThat(OrderUtils.getOrder(OrderAndPriority.class, null)).isEqualTo(Integer.valueOf(50));\n\t}\n\n\t@Test\n\tvoid getDefaultOrder() {\n\t\tassertThat(OrderUtils.getOrder(NoOrder.class, 33)).isEqualTo(33);\n\t\tassertThat(OrderUtils.getOrder(NoOrder.class, 33)).isEqualTo(33);\n\t}\n\n\t@Test\n\tvoid getPriorityValueNoAnnotation() {\n\t\tassertThat(OrderUtils.getPriority(SimpleOrder.class)).isNull();\n\t\tassertThat(OrderUtils.getPriority(SimpleOrder.class)).isNull();\n\t}\n\n\t@Test\n\tvoid getPriorityValue() {\n\t\tassertThat(OrderUtils.getPriority(OrderAndPriority.class)).isEqualTo(Integer.valueOf(55));\n\t\tassertThat(OrderUtils.getPriority(OrderAndPriority.class)).isEqualTo(Integer.valueOf(55));\n\t}\n\n\n\t@Order(50)\n\tprivate static class SimpleOrder {}\n\n\t@Priority(55)\n\tprivate static class SimplePriority {}\n\n\t@Order(50)\n\t@Priority(55)\n\tprivate static class OrderAndPriority {}\n\n\tprivate static class NoOrder {}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getSimpleOrder()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getSimpleOrder() {\r\n    assertThat(OrderUtils.getOrder(SimpleOrder.class, null)).isEqualTo(Integer.valueOf(50));\r\n    assertThat(OrderUtils.getOrder(SimpleOrder.class, null)).isEqualTo(Integer.valueOf(50));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.OrderUtilsTests#getSimpleOrder()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getSimpleOrder()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getPriorityOrder()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getPriorityOrder() {\r\n    assertThat(OrderUtils.getOrder(SimplePriority.class, null)).isEqualTo(Integer.valueOf(55));\r\n    assertThat(OrderUtils.getOrder(SimplePriority.class, null)).isEqualTo(Integer.valueOf(55));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.OrderUtilsTests#getPriorityOrder()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getPriorityOrder()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getOrderWithBoth()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getOrderWithBoth() {\r\n    assertThat(OrderUtils.getOrder(OrderAndPriority.class, null)).isEqualTo(Integer.valueOf(50));\r\n    assertThat(OrderUtils.getOrder(OrderAndPriority.class, null)).isEqualTo(Integer.valueOf(50));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.OrderUtilsTests#getOrderWithBoth()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getOrderWithBoth()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests#getDefaultOrder()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getDefaultOrder() {\r\n    assertThat(OrderUtils.getOrder(NoOrder.class, 33)).isEqualTo(33);\r\n    assertThat(OrderUtils.getOrder(NoOrder.class, 33)).isEqualTo(33);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.OrderUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.OrderUtilsTests#getDefaultOrder()",
+    "tailType": "method"
+  }
+]

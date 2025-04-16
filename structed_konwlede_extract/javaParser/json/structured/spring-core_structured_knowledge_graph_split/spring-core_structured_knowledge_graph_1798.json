@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.WithConventionAliasToMetaAnnotation",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@ConventionAliasToMetaAnnotation",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.WithConventionAliasToMetaAnnotation",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.io.InputStream;\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.Map;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link TypeMappedAnnotation}. See also {@link MergedAnnotationsTests}\n * for a much more extensive collection of tests.\n *\n * @author Phillip Webb\n */\nclass TypeMappedAnnotationTests {\n\n\t@Test\n\tvoid mappingWhenMirroredReturnsMirroredValues() {\n\t\ttestExplicitMirror(WithExplicitMirrorA.class);\n\t\ttestExplicitMirror(WithExplicitMirrorB.class);\n\t}\n\n\tprivate void testExplicitMirror(Class<?> annotatedClass) {\n\t\tTypeMappedAnnotation<ExplicitMirror> annotation = getTypeMappedAnnotation(\n\t\t\t\tannotatedClass, ExplicitMirror.class);\n\t\tassertThat(annotation.getString(\"a\")).isEqualTo(\"test\");\n\t\tassertThat(annotation.getString(\"b\")).isEqualTo(\"test\");\n\t}\n\n\t@Test\n\tvoid mappingExplicitAliasToMetaAnnotationReturnsMappedValues() {\n\t\tTypeMappedAnnotation<?> annotation = getTypeMappedAnnotation(\n\t\t\t\tWithExplicitAliasToMetaAnnotation.class,\n\t\t\t\tExplicitAliasToMetaAnnotation.class,\n\t\t\t\tExplicitAliasMetaAnnotationTarget.class);\n\t\tassertThat(annotation.getString(\"aliased\")).isEqualTo(\"aliased\");\n\t\tassertThat(annotation.getString(\"nonAliased\")).isEqualTo(\"nonAliased\");\n\t}\n\n\t@Test\n\tvoid mappingConventionAliasToMetaAnnotationReturnsMappedValues() {\n\t\tTypeMappedAnnotation<?> annotation = getTypeMappedAnnotation(\n\t\t\t\tWithConventionAliasToMetaAnnotation.class,\n\t\t\t\tConventionAliasToMetaAnnotation.class,\n\t\t\t\tConventionAliasMetaAnnotationTarget.class);\n\t\tassertThat(annotation.getString(\"value\")).isEmpty();\n\t\tassertThat(annotation.getString(\"convention\")).isEqualTo(\"convention\");\n\t}\n\n\t@Test\n\tvoid adaptFromEmptyArrayToAnyComponentType() {\n\t\tAttributeMethods methods = AttributeMethods.forAnnotationType(ArrayTypes.class);\n\t\tMap<String, Object> attributes = new HashMap<>();\n\t\tfor (int i = 0; i < methods.size(); i++) {\n\t\t\tattributes.put(methods.get(i).getName(), new Object[] {});\n\t\t}\n\t\tMergedAnnotation<ArrayTypes> annotation = TypeMappedAnnotation.of(null, null,\n\t\t\t\tArrayTypes.class, attributes);\n\t\tassertThat(annotation.getValue(\"stringValue\")).contains(new String[] {});\n\t\tassertThat(annotation.getValue(\"byteValue\")).contains(new byte[] {});\n\t\tassertThat(annotation.getValue(\"shortValue\")).contains(new short[] {});\n\t\tassertThat(annotation.getValue(\"intValue\")).contains(new int[] {});\n\t\tassertThat(annotation.getValue(\"longValue\")).contains(new long[] {});\n\t\tassertThat(annotation.getValue(\"booleanValue\")).contains(new boolean[] {});\n\t\tassertThat(annotation.getValue(\"charValue\")).contains(new char[] {});\n\t\tassertThat(annotation.getValue(\"doubleValue\")).contains(new double[] {});\n\t\tassertThat(annotation.getValue(\"floatValue\")).contains(new float[] {});\n\t\tassertThat(annotation.getValue(\"classValue\")).contains(new Class<?>[] {});\n\t\tassertThat(annotation.getValue(\"annotationValue\")).contains(new MergedAnnotation<?>[] {});\n\t\tassertThat(annotation.getValue(\"enumValue\")).contains(new ExampleEnum[] {});\n\t}\n\n\t@Test\n\tvoid adaptFromNestedMergedAnnotation() {\n\t\tMergedAnnotation<Nested> nested = MergedAnnotation.of(Nested.class);\n\t\tMergedAnnotation<?> annotation = TypeMappedAnnotation.of(null, null,\n\t\t\t\tNestedContainer.class, Collections.singletonMap(\"value\", nested));\n\t\tassertThat(annotation.getAnnotation(\"value\", Nested.class)).isSameAs(nested);\n\t}\n\n\t@Test\n\tvoid adaptFromStringToClass() {\n\t\tMergedAnnotation<?> annotation = TypeMappedAnnotation.of(null, null,\n\t\t\t\tClassAttributes.class,\n\t\t\t\tCollections.singletonMap(\"classValue\", InputStream.class.getName()));\n\t\tassertThat(annotation.getString(\"classValue\")).isEqualTo(InputStream.class.getName());\n\t\tassertThat(annotation.getClass(\"classValue\")).isEqualTo(InputStream.class);\n\t}\n\n\t@Test\n\tvoid adaptFromStringArrayToClassArray() {\n\t\tMergedAnnotation<?> annotation = TypeMappedAnnotation.of(null, null, ClassAttributes.class,\n\t\t\t\tCollections.singletonMap(\"classArrayValue\", new String[] { InputStream.class.getName() }));\n\t\tassertThat(annotation.getStringArray(\"classArrayValue\")).containsExactly(InputStream.class.getName());\n\t\tassertThat(annotation.getClassArray(\"classArrayValue\")).containsExactly(InputStream.class);\n\t}\n\n\tprivate <A extends Annotation> TypeMappedAnnotation<A> getTypeMappedAnnotation(\n\t\t\tClass<?> source, Class<A> annotationType) {\n\t\treturn getTypeMappedAnnotation(source, annotationType, annotationType);\n\t}\n\n\tprivate <A extends Annotation> TypeMappedAnnotation<A> getTypeMappedAnnotation(\n\t\t\tClass<?> source, Class<? extends Annotation> rootAnnotationType,\n\t\t\tClass<A> annotationType) {\n\t\tAnnotation rootAnnotation = source.getAnnotation(rootAnnotationType);\n\t\tAnnotationTypeMapping mapping = getMapping(rootAnnotation, annotationType);\n\t\treturn TypeMappedAnnotation.createIfPossible(mapping, source, rootAnnotation, 0, IntrospectionFailureLogger.INFO);\n\t}\n\n\tprivate AnnotationTypeMapping getMapping(Annotation annotation,\n\t\t\tClass<? extends Annotation> mappedAnnotationType) {\n\t\tAnnotationTypeMappings mappings = AnnotationTypeMappings.forAnnotationType(annotation.annotationType());\n\t\tfor (int i = 0; i < mappings.size(); i++) {\n\t\t\tAnnotationTypeMapping candidate = mappings.get(i);\n\t\t\tif (candidate.getAnnotationType().equals(mappedAnnotationType)) {\n\t\t\t\treturn candidate;\n\t\t\t}\n\t\t}\n\t\tthrow new IllegalStateException(\n\t\t\t\t\"No mapping from \" + annotation + \" to \" + mappedAnnotationType);\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ExplicitMirror {\n\n\t\t@AliasFor(\"b\")\n\t\tString a() default \"\";\n\n\t\t@AliasFor(\"a\")\n\t\tString b() default \"\";\n\t}\n\n\t@ExplicitMirror(a = \"test\")\n\tstatic class WithExplicitMirrorA {\n\t}\n\n\t@ExplicitMirror(b = \"test\")\n\tstatic class WithExplicitMirrorB {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@ExplicitAliasMetaAnnotationTarget(nonAliased = \"nonAliased\")\n\t@interface ExplicitAliasToMetaAnnotation {\n\n\t\t@AliasFor(annotation = ExplicitAliasMetaAnnotationTarget.class)\n\t\tString aliased() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ExplicitAliasMetaAnnotationTarget {\n\n\t\tString aliased() default \"\";\n\n\t\tString nonAliased() default \"\";\n\t}\n\n\t@ExplicitAliasToMetaAnnotation(aliased = \"aliased\")\n\tprivate static class WithExplicitAliasToMetaAnnotation {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ConventionAliasMetaAnnotationTarget {\n\n\t\tString value() default \"\";\n\n\t\tString convention() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@ConventionAliasMetaAnnotationTarget\n\t@interface ConventionAliasToMetaAnnotation {\n\n\t\tString value() default \"\";\n\n\t\t// Do NOT use @AliasFor here until Spring 6.1\n\t\t// @AliasFor(annotation = ConventionAliasMetaAnnotationTarget.class)\n\t\tString convention() default \"\";\n\t}\n\n\t@ConventionAliasToMetaAnnotation(value = \"value\", convention = \"convention\")\n\tprivate static class WithConventionAliasToMetaAnnotation {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ArrayTypes {\n\n\t\tString[] stringValue();\n\n\t\tbyte[] byteValue();\n\n\t\tshort[] shortValue();\n\n\t\tint[] intValue();\n\n\t\tlong[] longValue();\n\n\t\tboolean[] booleanValue();\n\n\t\tchar[] charValue();\n\n\t\tdouble[] doubleValue();\n\n\t\tfloat[] floatValue();\n\n\t\tClass<?>[] classValue();\n\n\t\tExplicitMirror[] annotationValue();\n\n\t\tExampleEnum[] enumValue();\n\t}\n\n\tenum ExampleEnum {\n\t\tONE, TWO, THREE\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface NestedContainer {\n\n\t\tNested value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface Nested {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ClassAttributes {\n\n\t\tClass<?> classValue();\n\n\t\tClass<?>[] classArrayValue();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.util.concurrent.atomic.AtomicInteger;\nimport java.util.function.Function;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link AttributeAccessorSupport}.\n *\n * @author Rob Harrop\n * @author Sam Brannen\n * @since 2.0\n */\nclass AttributeAccessorSupportTests {\n\n\tprivate static final String NAME = \"name\";\n\n\tprivate static final String VALUE = \"value\";\n\n\tprivate final AttributeAccessor attributeAccessor = new SimpleAttributeAccessorSupport();\n\n\n\t@Test\n\tvoid setAndGet() {\n\t\tthis.attributeAccessor.setAttribute(NAME, VALUE);\n\t\tassertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(VALUE);\n\t}\n\n\t@Test\n\tvoid setAndHas() {\n\t\tassertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\n\t\tthis.attributeAccessor.setAttribute(NAME, VALUE);\n\t\tassertThat(this.attributeAccessor.hasAttribute(NAME)).isTrue();\n\t}\n\n\t@Test\n\tvoid computeAttribute() {\n\t\tAtomicInteger atomicInteger = new AtomicInteger();\n\t\tFunction<String, String> computeFunction = name -> \"computed-\" + atomicInteger.incrementAndGet();\n\n\t\tassertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\n\t\tthis.attributeAccessor.computeAttribute(NAME, computeFunction);\n\t\tassertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(\"computed-1\");\n\t\tthis.attributeAccessor.computeAttribute(NAME, computeFunction);\n\t\tassertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(\"computed-1\");\n\n\t\tthis.attributeAccessor.removeAttribute(NAME);\n\t\tassertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\n\t\tthis.attributeAccessor.computeAttribute(NAME, computeFunction);\n\t\tassertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(\"computed-2\");\n\t}\n\n\t@Test\n\tvoid remove() {\n\t\tassertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\n\t\tthis.attributeAccessor.setAttribute(NAME, VALUE);\n\t\tassertThat(this.attributeAccessor.removeAttribute(NAME)).isEqualTo(VALUE);\n\t\tassertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\n\t}\n\n\t@Test\n\tvoid attributeNames() {\n\t\tthis.attributeAccessor.setAttribute(NAME, VALUE);\n\t\tthis.attributeAccessor.setAttribute(\"abc\", \"123\");\n\t\tassertThat(this.attributeAccessor.attributeNames()).contains(\"abc\", NAME);\n\t}\n\n\t@SuppressWarnings(\"serial\")\n\tprivate static class SimpleAttributeAccessorSupport extends AttributeAccessorSupport {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests#NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests#VALUE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#VALUE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests#attributeAccessor",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#attributeAccessor",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AttributeAccessor",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#setAndGet()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid setAndGet() {\r\n    this.attributeAccessor.setAttribute(NAME, VALUE);\r\n    assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(VALUE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests#setAndGet()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#setAndGet()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#setAndHas()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid setAndHas() {\r\n    assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\r\n    this.attributeAccessor.setAttribute(NAME, VALUE);\r\n    assertThat(this.attributeAccessor.hasAttribute(NAME)).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests#setAndHas()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#setAndHas()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#computeAttribute()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid computeAttribute() {\r\n    AtomicInteger atomicInteger = new AtomicInteger();\r\n    Function<String, String> computeFunction = name -> \"computed-\" + atomicInteger.incrementAndGet();\r\n    assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\r\n    this.attributeAccessor.computeAttribute(NAME, computeFunction);\r\n    assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(\"computed-1\");\r\n    this.attributeAccessor.computeAttribute(NAME, computeFunction);\r\n    assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(\"computed-1\");\r\n    this.attributeAccessor.removeAttribute(NAME);\r\n    assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();\r\n    this.attributeAccessor.computeAttribute(NAME, computeFunction);\r\n    assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(\"computed-2\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.AttributeAccessorSupportTests#computeAttribute()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.AttributeAccessorSupportTests#computeAttribute()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

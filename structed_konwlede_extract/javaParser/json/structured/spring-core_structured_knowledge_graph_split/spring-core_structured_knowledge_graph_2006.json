@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#readByteArrayResourcePositionAndTakeUntil(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeOutputStream(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeOutputStream(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    DataBuffer qux = stringBuffer(\"qux\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz, qux);\r\n    OutputStream os = Files.newOutputStream(tempFile);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, os);\r\n    verifyWrittenData(writeResult);\r\n    os.close();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeOutputStream(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeOutputStream(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    DataBuffer qux = stringBuffer(\"qux\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz, qux);\r\n    WritableByteChannel channel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    verifyWrittenData(writeResult);\r\n    channel.close();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannel(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInFlux(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannelErrorInFlux(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar).concatWith(Flux.error(new RuntimeException()));\r\n    WritableByteChannel channel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectError().verify(Duration.ofSeconds(5));\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foobar\");\r\n    channel.close();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInFlux(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInFlux(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInWrite(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannelErrorInWrite(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    WritableByteChannel channel = mock();\r\n    given(channel.write(any())).willAnswer(invocation -> {\r\n        ByteBuffer buffer = invocation.getArgument(0);\r\n        int written = buffer.remaining();\r\n        buffer.position(buffer.limit());\r\n        return written;\r\n    }).willThrow(new IOException());\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectError(IOException.class).verify(Duration.ofSeconds(3));\r\n    channel.close();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInWrite(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelErrorInWrite(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelCancel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeWritableByteChannelCancel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar);\r\n    WritableByteChannel channel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    StepVerifier.create(writeResult, 1).consumeNextWith(stringConsumer(\"foo\")).thenCancel().verify(Duration.ofSeconds(5));\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foo\");\r\n    channel.close();\r\n    flux.subscribe(DataBufferUtils::release);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelCancel(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeWritableByteChannelCancel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid writeAsynchronousFileChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    DataBuffer foo = stringBuffer(\"foo\");\r\n    DataBuffer bar = stringBuffer(\"bar\");\r\n    DataBuffer baz = stringBuffer(\"baz\");\r\n    DataBuffer qux = stringBuffer(\"qux\");\r\n    Flux<DataBuffer> flux = Flux.just(foo, bar, baz, qux);\r\n    AsynchronousFileChannel channel = AsynchronousFileChannel.open(tempFile, StandardOpenOption.WRITE);\r\n    Flux<DataBuffer> writeResult = DataBufferUtils.write(flux, channel);\r\n    verifyWrittenData(writeResult);\r\n    channel.close();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannel(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#writeAsynchronousFileChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#verifyWrittenData(Flux<DataBuffer>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void verifyWrittenData(Flux<DataBuffer> writeResult) throws IOException {\r\n    StepVerifier.create(writeResult).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).consumeNextWith(stringConsumer(\"baz\")).consumeNextWith(stringConsumer(\"qux\")).expectComplete().verify(Duration.ofSeconds(3));\r\n    String result = String.join(\"\", Files.readAllLines(tempFile));\r\n    assertThat(result).isEqualTo(\"foobarbazqux\");\r\n}",
+    "tailType": "method_code"
+  }
+]

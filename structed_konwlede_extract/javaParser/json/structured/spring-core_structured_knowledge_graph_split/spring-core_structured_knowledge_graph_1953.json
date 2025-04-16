@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Arrays;\n\nimport joptsimple.OptionParser;\nimport joptsimple.OptionSet;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link JOptCommandLinePropertySource}.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @since 3.1\n */\n@SuppressWarnings(\"deprecation\")\nclass JOptCommandLinePropertySourceTests {\n\n\t@Test\n\tvoid withRequiredArg_andArgIsPresent() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"foo\").withRequiredArg();\n\t\tOptionSet options = parser.parse(\"--foo=bar\");\n\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\n\t}\n\n\t@Test\n\tvoid withOptionalArg_andArgIsMissing() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"foo\").withOptionalArg();\n\t\tOptionSet options = parser.parse(\"--foo\");\n\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.containsProperty(\"foo\")).isTrue();\n\t\tassertThat(ps.getProperty(\"foo\")).isEqualTo(\"\");\n\t}\n\n\t@Test // gh-24464\n\tvoid withOptionalArg_andArgIsEmpty() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"foo\").withOptionalArg();\n\t\tOptionSet options = parser.parse(\"--foo=\");\n\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.containsProperty(\"foo\")).isTrue();\n\t\tassertThat(ps.getProperty(\"foo\")).isEqualTo(\"\");\n\t}\n\n\t@Test\n\tvoid withNoArg() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"o1\");\n\t\tparser.accepts(\"o2\");\n\t\tOptionSet options = parser.parse(\"--o1\");\n\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.containsProperty(\"o1\")).isTrue();\n\t\tassertThat(ps.containsProperty(\"o2\")).isFalse();\n\t\tassertThat(ps.getProperty(\"o1\")).isEqualTo(\"\");\n\t\tassertThat(ps.getProperty(\"o2\")).isNull();\n\t}\n\n\t@Test\n\tvoid withRequiredArg_andMultipleArgsPresent_usingDelimiter() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"foo\").withRequiredArg().withValuesSeparatedBy(',');\n\t\tOptionSet options = parser.parse(\"--foo=bar,baz,biz\");\n\n\t\tCommandLinePropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.getOptionValues(\"foo\")).containsExactly(\"bar\", \"baz\", \"biz\");\n\t\tassertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar,baz,biz\");\n\t}\n\n\t@Test\n\tvoid withRequiredArg_andMultipleArgsPresent_usingRepeatedOption() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"foo\").withRequiredArg().withValuesSeparatedBy(',');\n\t\tOptionSet options = parser.parse(\"--foo=bar\", \"--foo=baz\", \"--foo=biz\");\n\n\t\tCommandLinePropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.getOptionValues(\"foo\")).containsExactly(\"bar\", \"baz\", \"biz\");\n\t\tassertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar,baz,biz\");\n\t}\n\n\t@Test\n\tvoid withMissingOption() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"foo\").withRequiredArg().withValuesSeparatedBy(',');\n\t\tOptionSet options = parser.parse(); // <-- no options whatsoever\n\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.getProperty(\"foo\")).isNull();\n\t}\n\n\t@Test\n\tvoid withDottedOptionName() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"spring.profiles.active\").withRequiredArg();\n\t\tOptionSet options = parser.parse(\"--spring.profiles.active=p1\");\n\n\t\tCommandLinePropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.getProperty(\"spring.profiles.active\")).isEqualTo(\"p1\");\n\t}\n\n\t@Test\n\tvoid withDefaultNonOptionArgsNameAndNoNonOptionArgsPresent() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.acceptsAll(Arrays.asList(\"o1\",\"option1\")).withRequiredArg();\n\t\tparser.accepts(\"o2\");\n\t\tOptionSet optionSet = parser.parse(\"--o1=v1\", \"--o2\");\n\t\tEnumerablePropertySource<?> ps = new JOptCommandLinePropertySource(optionSet);\n\n\t\tassertThat(ps.containsProperty(\"nonOptionArgs\")).isFalse();\n\t\tassertThat(ps.containsProperty(\"o1\")).isTrue();\n\t\tassertThat(ps.containsProperty(\"o2\")).isTrue();\n\n\t\tassertThat(ps.containsProperty(\"nonOptionArgs\")).isFalse();\n\t\tassertThat(ps.getProperty(\"nonOptionArgs\")).isNull();\n\t\tassertThat(ps.getPropertyNames()).hasSize(2);\n\t}\n\n\t@Test\n\tvoid withDefaultNonOptionArgsNameAndNonOptionArgsPresent() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"o1\").withRequiredArg();\n\t\tparser.accepts(\"o2\");\n\t\tOptionSet optionSet = parser.parse(\"--o1=v1\", \"noa1\", \"--o2\", \"noa2\");\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(optionSet);\n\n\t\tassertThat(ps.containsProperty(\"nonOptionArgs\")).isTrue();\n\t\tassertThat(ps.containsProperty(\"o1\")).isTrue();\n\t\tassertThat(ps.containsProperty(\"o2\")).isTrue();\n\n\t\tassertThat(ps.getProperty(\"nonOptionArgs\")).isEqualTo(\"noa1,noa2\");\n\t}\n\n\t@Test\n\tvoid withCustomNonOptionArgsNameAndNoNonOptionArgsPresent() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"o1\").withRequiredArg();\n\t\tparser.accepts(\"o2\");\n\t\tOptionSet optionSet = parser.parse(\"--o1=v1\", \"noa1\", \"--o2\", \"noa2\");\n\t\tCommandLinePropertySource<?> ps = new JOptCommandLinePropertySource(optionSet);\n\t\tps.setNonOptionArgsPropertyName(\"NOA\");\n\n\t\tassertThat(ps.containsProperty(\"nonOptionArgs\")).isFalse();\n\t\tassertThat(ps.containsProperty(\"NOA\")).isTrue();\n\t\tassertThat(ps.containsProperty(\"o1\")).isTrue();\n\t\tassertThat(ps.containsProperty(\"o2\")).isTrue();\n\t\tString nonOptionArgs = ps.getProperty(\"NOA\");\n\t\tassertThat(nonOptionArgs).isEqualTo(\"noa1,noa2\");\n\t}\n\n\t@Test\n\tvoid withRequiredArg_ofTypeEnum() {\n\t\tOptionParser parser = new OptionParser();\n\t\tparser.accepts(\"o1\").withRequiredArg().ofType(OptionEnum.class);\n\t\tOptionSet options = parser.parse(\"--o1=VAL_1\");\n\n\t\tPropertySource<?> ps = new JOptCommandLinePropertySource(options);\n\t\tassertThat(ps.getProperty(\"o1\")).isEqualTo(\"VAL_1\");\n\t}\n\n\tpublic enum OptionEnum {\n\t\tVAL_1\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andArgIsPresent()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withRequiredArg_andArgIsPresent() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"foo\").withRequiredArg();\r\n    OptionSet options = parser.parse(\"--foo=bar\");\r\n    PropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andArgIsPresent()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andArgIsPresent()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withOptionalArg_andArgIsMissing()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withOptionalArg_andArgIsMissing() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"foo\").withOptionalArg();\r\n    OptionSet options = parser.parse(\"--foo\");\r\n    PropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.containsProperty(\"foo\")).isTrue();\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withOptionalArg_andArgIsMissing()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withOptionalArg_andArgIsMissing()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withOptionalArg_andArgIsEmpty()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// gh-24464\r\n@Test\r\nvoid withOptionalArg_andArgIsEmpty() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"foo\").withOptionalArg();\r\n    OptionSet options = parser.parse(\"--foo=\");\r\n    PropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.containsProperty(\"foo\")).isTrue();\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withOptionalArg_andArgIsEmpty()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withOptionalArg_andArgIsEmpty()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withNoArg()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withNoArg() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"o1\");\r\n    parser.accepts(\"o2\");\r\n    OptionSet options = parser.parse(\"--o1\");\r\n    PropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.containsProperty(\"o1\")).isTrue();\r\n    assertThat(ps.containsProperty(\"o2\")).isFalse();\r\n    assertThat(ps.getProperty(\"o1\")).isEqualTo(\"\");\r\n    assertThat(ps.getProperty(\"o2\")).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withNoArg()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withNoArg()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andMultipleArgsPresent_usingDelimiter()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withRequiredArg_andMultipleArgsPresent_usingDelimiter() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"foo\").withRequiredArg().withValuesSeparatedBy(',');\r\n    OptionSet options = parser.parse(\"--foo=bar,baz,biz\");\r\n    CommandLinePropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.getOptionValues(\"foo\")).containsExactly(\"bar\", \"baz\", \"biz\");\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar,baz,biz\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andMultipleArgsPresent_usingDelimiter()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andMultipleArgsPresent_usingDelimiter()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andMultipleArgsPresent_usingRepeatedOption()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withRequiredArg_andMultipleArgsPresent_usingRepeatedOption() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"foo\").withRequiredArg().withValuesSeparatedBy(',');\r\n    OptionSet options = parser.parse(\"--foo=bar\", \"--foo=baz\", \"--foo=biz\");\r\n    CommandLinePropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.getOptionValues(\"foo\")).containsExactly(\"bar\", \"baz\", \"biz\");\r\n    assertThat(ps.getProperty(\"foo\")).isEqualTo(\"bar,baz,biz\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andMultipleArgsPresent_usingRepeatedOption()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withRequiredArg_andMultipleArgsPresent_usingRepeatedOption()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.JOptCommandLinePropertySourceTests#withMissingOption()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withMissingOption() {\r\n    OptionParser parser = new OptionParser();\r\n    parser.accepts(\"foo\").withRequiredArg().withValuesSeparatedBy(',');\r\n    // <-- no options whatsoever\r\n    OptionSet options = parser.parse();\r\n    PropertySource<?> ps = new JOptCommandLinePropertySource(options);\r\n    assertThat(ps.getProperty(\"foo\")).isNull();\r\n}",
+    "tailType": "method_code"
+  }
+]

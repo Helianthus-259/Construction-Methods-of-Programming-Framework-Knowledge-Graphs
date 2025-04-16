@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#equalsAndHashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid equalsAndHashCode() {\r\n    Resource resource1 = new ModuleResource(Introspector.class.getModule(), existingPath);\r\n    Resource resource2 = new ModuleResource(Introspector.class.getModule(), existingPath);\r\n    Resource resource3 = new ModuleResource(Introspector.class.getModule(), nonExistingPath);\r\n    assertThat(resource1).isEqualTo(resource1);\r\n    assertThat(resource1).isEqualTo(resource2);\r\n    assertThat(resource2).isEqualTo(resource1);\r\n    assertThat(resource1).isNotEqualTo(resource3);\r\n    assertThat(resource1).hasSameHashCodeAs(resource2);\r\n    assertThat(resource1).doesNotHaveSameHashCodeAs(resource3);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.ModuleResourceTests#equalsAndHashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#equalsAndHashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#assertExistingResource(Resource)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static void assertExistingResource(Resource resource) {\r\n    assertThat(resource.exists()).isTrue();\r\n    assertThat(resource.isReadable()).isTrue();\r\n    assertThat(resource.isOpen()).isFalse();\r\n    assertThat(resource.isFile()).isFalse();\r\n    assertThat(resource.getFilename()).isEqualTo(\"Introspector.class\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.ModuleResourceTests#assertExistingResource(Resource)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.PathResourceTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.FileNotFoundException;\nimport java.io.IOException;\nimport java.net.URI;\nimport java.nio.ByteBuffer;\nimport java.nio.channels.ReadableByteChannel;\nimport java.nio.channels.WritableByteChannel;\nimport java.nio.charset.StandardCharsets;\nimport java.nio.file.AccessDeniedException;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.Paths;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.io.TempDir;\n\nimport org.springframework.util.FileCopyUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.mockito.BDDMockito.given;\nimport static org.mockito.Mockito.mock;\n\n/**\n * Tests for {@link PathResource}.\n *\n * @author Philippe Marschall\n * @author Phillip Webb\n * @author Nicholas Williams\n * @author Stephane Nicoll\n * @author Juergen Hoeller\n * @author Arjen Poutsma\n */\n@SuppressWarnings(\"removal\")\nclass PathResourceTests {\n\n\tprivate static final String TEST_DIR =\n\t\t\tplatformPath(\"src/test/resources/org/springframework/core/io\");\n\n\tprivate static final String TEST_FILE =\n\t\t\tplatformPath(\"src/test/resources/org/springframework/core/io/example.properties\");\n\n\tprivate static final String NON_EXISTING_FILE =\n\t\t\tplatformPath(\"src/test/resources/org/springframework/core/io/doesnotexist.properties\");\n\n\n\tprivate static String platformPath(String string) {\n\t\treturn string.replace('/', File.separatorChar);\n\t}\n\n\n\t@Test\n\tvoid nullPath() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> new PathResource((Path) null))\n\t\t\t\t.withMessageContaining(\"Path must not be null\");\n\t}\n\n\t@Test\n\tvoid nullPathString() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> new PathResource((String) null))\n\t\t\t\t.withMessageContaining(\"Path must not be null\");\n\t}\n\n\t@Test\n\tvoid nullUri() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> new PathResource((URI) null))\n\t\t\t\t.withMessageContaining(\"URI must not be null\");\n\t}\n\n\t@Test\n\tvoid createFromPath() {\n\t\tPath path = Paths.get(TEST_FILE);\n\t\tPathResource resource = new PathResource(path);\n\t\tassertThat(resource.getPath()).isEqualTo(TEST_FILE);\n\t}\n\n\t@Test\n\tvoid createFromString() {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.getPath()).isEqualTo(TEST_FILE);\n\t}\n\n\t@Test\n\tvoid createFromUri() {\n\t\tFile file = new File(TEST_FILE);\n\t\tPathResource resource = new PathResource(file.toURI());\n\t\tassertThat(resource.getPath()).isEqualTo(file.getAbsoluteFile().toString());\n\t}\n\n\t@Test\n\tvoid getPathForFile() {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.getPath()).isEqualTo(TEST_FILE);\n\t}\n\n\t@Test\n\tvoid getPathForDir() {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tassertThat(resource.getPath()).isEqualTo(TEST_DIR);\n\t}\n\n\t@Test\n\tvoid fileExists() {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.exists()).isTrue();\n\t}\n\n\t@Test\n\tvoid dirExists() {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tassertThat(resource.exists()).isTrue();\n\t}\n\n\t@Test\n\tvoid fileDoesNotExist() {\n\t\tPathResource resource = new PathResource(NON_EXISTING_FILE);\n\t\tassertThat(resource.exists()).isFalse();\n\t}\n\n\t@Test\n\tvoid fileIsReadable() {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.isReadable()).isTrue();\n\t}\n\n\t@Test\n\tvoid nonExistingFileIsNotReadable() {\n\t\tPathResource resource = new PathResource(NON_EXISTING_FILE);\n\t\tassertThat(resource.isReadable()).isFalse();\n\t}\n\n\t@Test\n\tvoid directoryIsNotReadable() {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tassertThat(resource.isReadable()).isFalse();\n\t}\n\n\t@Test\n\tvoid getInputStream() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tbyte[] bytes = FileCopyUtils.copyToByteArray(resource.getInputStream());\n\t\tassertThat(bytes).hasSizeGreaterThan(0);\n\t}\n\n\t@Test\n\tvoid getInputStreamForDir() {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getInputStream);\n\t}\n\n\t@Test\n\tvoid getInputStreamForNonExistingFile() {\n\t\tPathResource resource = new PathResource(NON_EXISTING_FILE);\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getInputStream);\n\t}\n\n\t@Test\n\tvoid getUrl() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.getURL().toString()).endsWith(\"core/io/example.properties\");\n\t}\n\n\t@Test\n\tvoid getUri() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.getURI().toString()).endsWith(\"core/io/example.properties\");\n\t}\n\n\t@Test\n\tvoid getFile() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tFile file = new File(TEST_FILE);\n\t\tassertThat(resource.getFile().getAbsoluteFile()).isEqualTo(file.getAbsoluteFile());\n\t}\n\n\t@Test\n\tvoid getFileUnsupported() {\n\t\tPath path = mock();\n\t\tgiven(path.normalize()).willReturn(path);\n\t\tgiven(path.toFile()).willThrow(new UnsupportedOperationException());\n\t\tPathResource resource = new PathResource(path);\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getFile);\n\t}\n\n\t@Test\n\tvoid contentLength() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tFile file = new File(TEST_FILE);\n\t\tassertThat(resource.contentLength()).isEqualTo(file.length());\n\t}\n\n\t@Test\n\tvoid contentLengthForDirectory() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tFile file = new File(TEST_DIR);\n\t\tassertThat(resource.contentLength()).isEqualTo(file.length());\n\t}\n\n\t@Test\n\tvoid lastModified() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tFile file = new File(TEST_FILE);\n\t\tassertThat(resource.lastModified() / 1000).isEqualTo(file.lastModified() / 1000);\n\t}\n\n\t@Test\n\tvoid createRelativeFromDir() {\n\t\tResource resource = new PathResource(TEST_DIR).createRelative(\"example.properties\");\n\t\tassertThat(resource).isEqualTo(new PathResource(TEST_FILE));\n\t}\n\n\t@Test\n\tvoid createRelativeFromFile() {\n\t\tResource resource = new PathResource(TEST_FILE).createRelative(\"../example.properties\");\n\t\tassertThat(resource).isEqualTo(new PathResource(TEST_FILE));\n\t}\n\n\t@Test\n\tvoid filename() {\n\t\tResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.getFilename()).isEqualTo(\"example.properties\");\n\t}\n\n\t@Test\n\tvoid description() {\n\t\tResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.getDescription()).contains(\"path [\");\n\t\tassertThat(resource.getDescription()).contains(TEST_FILE);\n\t}\n\n\t@Test\n\tvoid fileIsWritable() {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\tassertThat(resource.isWritable()).isTrue();\n\t}\n\n\t@Test\n\tvoid directoryIsNotWritable() {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tassertThat(resource.isWritable()).isFalse();\n\t}\n\n\t@Test\n\tvoid equalsAndHashCode() {\n\t\tResource resource1 = new PathResource(TEST_FILE);\n\t\tResource resource2 = new PathResource(TEST_FILE);\n\t\tResource resource3 = new PathResource(TEST_DIR);\n\t\tassertThat(resource1).isEqualTo(resource1);\n\t\tassertThat(resource1).isEqualTo(resource2);\n\t\tassertThat(resource2).isEqualTo(resource1);\n\t\tassertThat(resource1).isNotEqualTo(resource3);\n\t\tassertThat(resource1).hasSameHashCodeAs(resource2);\n\t\tassertThat(resource1).doesNotHaveSameHashCodeAs(resource3);\n\t}\n\n\t@Test\n\tvoid getOutputStreamForExistingFile(@TempDir Path temporaryFolder) throws IOException {\n\t\tPathResource resource = new PathResource(temporaryFolder.resolve(\"test\"));\n\t\tFileCopyUtils.copy(\"test\".getBytes(StandardCharsets.UTF_8), resource.getOutputStream());\n\t\tassertThat(resource.contentLength()).isEqualTo(4L);\n\t}\n\n\t@Test\n\tvoid getOutputStreamForNonExistingFile(@TempDir Path temporaryFolder) throws IOException {\n\t\tFile file = temporaryFolder.resolve(\"test\").toFile();\n\t\tfile.delete();\n\t\tPathResource resource = new PathResource(file.toPath());\n\t\tFileCopyUtils.copy(\"test\".getBytes(), resource.getOutputStream());\n\t\tassertThat(resource.contentLength()).isEqualTo(4L);\n\t}\n\n\t@Test\n\tvoid getOutputStreamForDirectory() {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getOutputStream);\n\t}\n\n\t@Test\n\tvoid getReadableByteChannel() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_FILE);\n\t\ttry (ReadableByteChannel channel = resource.readableChannel()) {\n\t\t\tByteBuffer buffer = ByteBuffer.allocate((int) resource.contentLength());\n\t\t\tchannel.read(buffer);\n\t\t\tbuffer.rewind();\n\t\t\tassertThat(buffer.limit()).isGreaterThan(0);\n\t\t}\n\t}\n\n\t@Test\n\tvoid getReadableByteChannelForDir() throws IOException {\n\t\tPathResource resource = new PathResource(TEST_DIR);\n\t\ttry {\n\t\t\tresource.readableChannel();\n\t\t}\n\t\tcatch (AccessDeniedException ex) {\n\t\t\t// on Windows\n\t\t}\n\t}\n\n\t@Test\n\tvoid getReadableByteChannelForNonExistingFile() {\n\t\tPathResource resource = new PathResource(NON_EXISTING_FILE);\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::readableChannel);\n\t}\n\n\t@Test\n\tvoid getWritableChannel(@TempDir Path temporaryFolder) throws IOException {\n\t\tPath testPath = temporaryFolder.resolve(\"test\");\n\t\tFiles.createFile(testPath);\n\t\tPathResource resource = new PathResource(testPath);\n\t\tByteBuffer buffer = ByteBuffer.wrap(\"test\".getBytes(StandardCharsets.UTF_8));\n\t\ttry (WritableByteChannel channel = resource.writableChannel()) {\n\t\t\tchannel.write(buffer);\n\t\t}\n\t\tassertThat(resource.contentLength()).isEqualTo(4L);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.PathResourceTests#TEST_DIR",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests#TEST_DIR",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.PathResourceTests#TEST_FILE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests#TEST_FILE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.PathResourceTests#NON_EXISTING_FILE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests#NON_EXISTING_FILE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests#platformPath(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static String platformPath(String string) {\r\n    return string.replace('/', File.separatorChar);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.PathResourceTests#platformPath(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests#nullPath()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid nullPath() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new PathResource((Path) null)).withMessageContaining(\"Path must not be null\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.PathResourceTests#nullPath()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.PathResourceTests#nullPath()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

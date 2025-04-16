@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceInRootPackage()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceWithInvalidClassName(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedTest(name = \"{0}\")\r\n@ValueSource(strings = { \"com.example.Tes(t\", \"com.example..Test\" })\r\nvoid typeReferenceWithInvalidClassName(String invalidClassName) {\r\n    assertThatIllegalStateException().isThrownBy(() -> SimpleTypeReference.of(invalidClassName)).withMessageContaining(\"Invalid class name\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.SimpleTypeReferenceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceWithInvalidClassName(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceWithInvalidClassName(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.SimpleTypeReferenceTests#typeReferenceWithInvalidClassName(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ValueSource",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint.support;\n\nimport java.util.function.Consumer;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.aot.hint.ResourceHints;\nimport org.springframework.aot.hint.ResourcePatternHint;\nimport org.springframework.aot.hint.ResourcePatternHints;\nimport org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar.Builder;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link FilePatternResourceHintsRegistrar}.\n *\n * @author Stephane Nicoll\n */\nclass FilePatternResourceHintsRegistrarTests {\n\n\tprivate final ResourceHints hints = new ResourceHints();\n\n\t@Test\n\tvoid configureWithNoClasspathLocation() {\n\t\tassertThatIllegalArgumentException().isThrownBy(FilePatternResourceHintsRegistrar::forClassPathLocations)\n\t\t\t\t.withMessageContaining(\"At least one classpath location must be specified\");\n\t}\n\n\t@Test\n\tvoid configureWithInvalidFilePrefix() {\n\t\tBuilder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> builder.withFilePrefixes(\"test*\"))\n\t\t\t\t.withMessageContaining(\"cannot contain '*'\");\n\t}\n\n\t@Test\n\tvoid configureWithInvalidFileExtension() {\n\t\tBuilder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> builder.withFileExtensions(\"txt\"))\n\t\t\t\t.withMessageContaining(\"must start with '.'\");\n\t}\n\n\t@Test\n\tvoid registerWithSinglePattern() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"test*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithMultipleFilePrefixes() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"\")\n\t\t\t\t.withFilePrefixes(\"test\").withFilePrefixes(\"another\")\n\t\t\t\t.withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"test*.txt\", \"another*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithMultipleClasspathLocations() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withClassPathLocations(\"META-INF\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"test*.txt\", \"META-INF\", \"META-INF/test*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithMultipleFileExtensions() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\").withFileExtensions(\".conf\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"test*.txt\", \"test*.conf\"));\n\t}\n\n\t@Test\n\tvoid registerWithClasspathLocationWithoutTrailingSlash() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"META-INF\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithClasspathLocationWithLeadingSlash() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"/\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"test*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithClasspathLocationUsingResourceClasspathPrefix() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"classpath:META-INF\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithClasspathLocationUsingResourceClasspathPrefixAndTrailingSlash() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"classpath:/META-INF\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).singleElement()\n\t\t\t\t.satisfies(includes(\"/\", \"META-INF\", \"META-INF/test*.txt\"));\n\t}\n\n\t@Test\n\tvoid registerWithNonExistingLocationDoesNotRegisterHint() {\n\t\tFilePatternResourceHintsRegistrar.forClassPathLocations(\"does-not-exist/\")\n\t\t\t\t.withClassPathLocations(\"another-does-not-exist/\")\n\t\t\t\t.withFilePrefixes(\"test\").withFileExtensions(\".txt\")\n\t\t\t\t.registerHints(this.hints, null);\n\t\tassertThat(this.hints.resourcePatternHints()).isEmpty();\n\t}\n\n\tprivate Consumer<ResourcePatternHints> includes(String... patterns) {\n\t\treturn hint -> assertThat(hint.getIncludes().stream().map(ResourcePatternHint::getPattern))\n\t\t\t\t.containsExactlyInAnyOrder(patterns);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#hints",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#hints",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ResourceHints",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithNoClasspathLocation()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid configureWithNoClasspathLocation() {\r\n    assertThatIllegalArgumentException().isThrownBy(FilePatternResourceHintsRegistrar::forClassPathLocations).withMessageContaining(\"At least one classpath location must be specified\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithNoClasspathLocation()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithNoClasspathLocation()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFilePrefix()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid configureWithInvalidFilePrefix() {\r\n    Builder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> builder.withFilePrefixes(\"test*\")).withMessageContaining(\"cannot contain '*'\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFilePrefix()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFilePrefix()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFileExtension()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid configureWithInvalidFileExtension() {\r\n    Builder builder = FilePatternResourceHintsRegistrar.forClassPathLocations(\"\");\r\n    assertThatIllegalArgumentException().isThrownBy(() -> builder.withFileExtensions(\"txt\")).withMessageContaining(\"must start with '.'\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFileExtension()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#configureWithInvalidFileExtension()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrarTests#registerWithSinglePattern()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerWithSinglePattern() {\r\n    FilePatternResourceHintsRegistrar.forClassPathLocations(\"\").withFilePrefixes(\"test\").withFileExtensions(\".txt\").registerHints(this.hints, null);\r\n    assertThat(this.hints.resourcePatternHints()).singleElement().satisfies(includes(\"/\", \"test*.txt\"));\r\n}",
+    "tailType": "method_code"
+  }
+]

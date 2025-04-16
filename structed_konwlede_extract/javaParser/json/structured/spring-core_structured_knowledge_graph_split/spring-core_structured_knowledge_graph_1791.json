@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Nested",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.util.Arrays;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.AnnotatedElementUtilsTests.StandardContainerWithMultipleAttributes;\nimport org.springframework.core.annotation.AnnotatedElementUtilsTests.StandardRepeatablesWithContainerWithMultipleAttributesTestCase;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link RepeatableContainers}.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n */\nclass RepeatableContainersTests {\n\n\t@Nested\n\tclass StandardRepeatableContainersTests {\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenNonRepeatableReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tNonRepeatableTestCase.class, NonRepeatable.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenSingleReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tSingleStandardRepeatableTestCase.class, StandardRepeatable.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenContainerButNotRepeatableReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tExplicitRepeatablesTestCase.class, ExplicitContainer.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenContainerReturnsRepeats() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tStandardRepeatablesTestCase.class, StandardContainer.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWithContainerWithMultipleAttributes() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tStandardRepeatablesWithContainerWithMultipleAttributesTestCase.class,\n\t\t\t\tStandardContainerWithMultipleAttributes.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t}\n\n\t@Nested\n\tclass ExplicitRepeatableContainerTests {\n\n\t\t@Test\n\t\tvoid ofExplicitWhenNonRepeatableReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(\n\t\t\t\tRepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class),\n\t\t\t\tNonRepeatableTestCase.class, NonRepeatable.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenStandardRepeatableContainerReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(\n\t\t\t\tRepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class),\n\t\t\t\tStandardRepeatablesTestCase.class, StandardContainer.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenContainerReturnsRepeats() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(\n\t\t\t\tRepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class),\n\t\t\t\tExplicitRepeatablesTestCase.class, ExplicitContainer.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenContainerIsNullDeducesContainer() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.of(StandardRepeatable.class, null),\n\t\t\t\tStandardRepeatablesTestCase.class, StandardContainer.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenHasNoValueThrowsException() {\n\t\t\tassertThatExceptionOfType(AnnotationConfigurationException.class)\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, InvalidNoValue.class))\n\t\t\t\t.withMessageContaining(\"Invalid declaration of container type [%s] for repeatable annotation [%s]\",\n\t\t\t\t\tInvalidNoValue.class.getName(), ExplicitRepeatable.class.getName());\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenValueIsNotArrayThrowsException() {\n\t\t\tassertThatExceptionOfType(AnnotationConfigurationException.class)\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, InvalidNotArray.class))\n\t\t\t\t.withMessage(\"Container type [%s] must declare a 'value' attribute for an array of type [%s]\",\n\t\t\t\t\tInvalidNotArray.class.getName(), ExplicitRepeatable.class.getName());\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenValueIsArrayOfWrongTypeThrowsException() {\n\t\t\tassertThatExceptionOfType(AnnotationConfigurationException.class)\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, InvalidWrongArrayType.class))\n\t\t\t\t.withMessage(\"Container type [%s] must declare a 'value' attribute for an array of type [%s]\",\n\t\t\t\t\tInvalidWrongArrayType.class.getName(), ExplicitRepeatable.class.getName());\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenAnnotationIsNullThrowsException() {\n\t\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(null, null))\n\t\t\t\t.withMessage(\"Repeatable must not be null\");\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenContainerIsNullAndNotRepeatableThrowsException() {\n\t\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, null))\n\t\t\t\t.withMessage(\"Annotation type must be a repeatable annotation: failed to resolve container type for %s\",\n\t\t\t\t\tExplicitRepeatable.class.getName());\n\t\t}\n\n\t}\n\n\t@Test\n\tvoid standardAndExplicitReturnsRepeats() {\n\t\tRepeatableContainers repeatableContainers = RepeatableContainers.standardRepeatables()\n\t\t\t.and(ExplicitContainer.class, ExplicitRepeatable.class);\n\t\tassertThat(findRepeatedAnnotationValues(repeatableContainers, StandardRepeatablesTestCase.class, StandardContainer.class))\n\t\t\t.containsExactly(\"a\", \"b\");\n\t\tassertThat(findRepeatedAnnotationValues(repeatableContainers, ExplicitRepeatablesTestCase.class, ExplicitContainer.class))\n\t\t\t.containsExactly(\"a\", \"b\");\n\t}\n\n\t@Test\n\tvoid noneAlwaysReturnsNull() {\n\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.none(), StandardRepeatablesTestCase.class,\n\t\t\tStandardContainer.class);\n\t\tassertThat(values).isNull();\n\t}\n\n\t@Test\n\tvoid equalsAndHashcode() {\n\t\tRepeatableContainers c1 = RepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class);\n\t\tRepeatableContainers c2 = RepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class);\n\t\tRepeatableContainers c3 = RepeatableContainers.standardRepeatables();\n\t\tRepeatableContainers c4 = RepeatableContainers.standardRepeatables().and(ExplicitContainer.class, ExplicitRepeatable.class);\n\t\tassertThat(c1).hasSameHashCodeAs(c2);\n\t\tassertThat(c1).isEqualTo(c1).isEqualTo(c2);\n\t\tassertThat(c1).isNotEqualTo(c3).isNotEqualTo(c4);\n\t}\n\n\n\tprivate static Object[] findRepeatedAnnotationValues(RepeatableContainers containers,\n\t\t\tClass<?> element, Class<? extends Annotation> annotationType) {\n\t\tAnnotation[] annotations = containers.findRepeatedAnnotations(element.getAnnotation(annotationType));\n\t\treturn extractValues(annotations);\n\t}\n\n\tprivate static Object[] extractValues(Annotation[] annotations) {\n\t\tif (annotations == null) {\n\t\t\treturn null;\n\t\t}\n\t\treturn Arrays.stream(annotations).map(AnnotationUtils::getValue).toArray(Object[]::new);\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface NonRepeatable {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface StandardContainer {\n\n\t\tStandardRepeatable[] value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Repeatable(StandardContainer.class)\n\t@interface StandardRepeatable {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ExplicitContainer {\n\n\t\tExplicitRepeatable[] value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ExplicitRepeatable {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface InvalidNoValue {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface InvalidNotArray {\n\n\t\tint value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface InvalidWrongArrayType {\n\n\t\tStandardRepeatable[] value();\n\t}\n\n\t@NonRepeatable(\"a\")\n\tstatic class NonRepeatableTestCase {\n\t}\n\n\t@StandardRepeatable(\"a\")\n\tstatic class SingleStandardRepeatableTestCase {\n\t}\n\n\t@StandardRepeatable(\"a\")\n\t@StandardRepeatable(\"b\")\n\tstatic class StandardRepeatablesTestCase {\n\t}\n\n\t@ExplicitContainer({ @ExplicitRepeatable(\"a\"), @ExplicitRepeatable(\"b\") })\n\tstatic class ExplicitRepeatablesTestCase {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenNonRepeatableReturnsNull()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid standardRepeatablesWhenNonRepeatableReturnsNull() {\r\n    Object[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(), NonRepeatableTestCase.class, NonRepeatable.class);\r\n    assertThat(values).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenNonRepeatableReturnsNull()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenNonRepeatableReturnsNull()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenSingleReturnsNull()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid standardRepeatablesWhenSingleReturnsNull() {\r\n    Object[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(), SingleStandardRepeatableTestCase.class, StandardRepeatable.class);\r\n    assertThat(values).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenSingleReturnsNull()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenSingleReturnsNull()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenContainerButNotRepeatableReturnsNull()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid standardRepeatablesWhenContainerButNotRepeatableReturnsNull() {\r\n    Object[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(), ExplicitRepeatablesTestCase.class, ExplicitContainer.class);\r\n    assertThat(values).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenContainerButNotRepeatableReturnsNull()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenContainerButNotRepeatableReturnsNull()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenContainerReturnsRepeats()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid standardRepeatablesWhenContainerReturnsRepeats() {\r\n    Object[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(), StandardRepeatablesTestCase.class, StandardContainer.class);\r\n    assertThat(values).containsExactly(\"a\", \"b\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenContainerReturnsRepeats()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWhenContainerReturnsRepeats()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWithContainerWithMultipleAttributes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid standardRepeatablesWithContainerWithMultipleAttributes() {\r\n    Object[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(), StandardRepeatablesWithContainerWithMultipleAttributesTestCase.class, StandardContainerWithMultipleAttributes.class);\r\n    assertThat(values).containsExactly(\"a\", \"b\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWithContainerWithMultipleAttributes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.StandardRepeatableContainersTests#standardRepeatablesWithContainerWithMultipleAttributes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.ExplicitRepeatableContainerTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.ExplicitRepeatableContainerTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Nested",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.ExplicitRepeatableContainerTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.util.Arrays;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.AnnotatedElementUtilsTests.StandardContainerWithMultipleAttributes;\nimport org.springframework.core.annotation.AnnotatedElementUtilsTests.StandardRepeatablesWithContainerWithMultipleAttributesTestCase;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link RepeatableContainers}.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n */\nclass RepeatableContainersTests {\n\n\t@Nested\n\tclass StandardRepeatableContainersTests {\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenNonRepeatableReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tNonRepeatableTestCase.class, NonRepeatable.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenSingleReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tSingleStandardRepeatableTestCase.class, StandardRepeatable.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenContainerButNotRepeatableReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tExplicitRepeatablesTestCase.class, ExplicitContainer.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWhenContainerReturnsRepeats() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tStandardRepeatablesTestCase.class, StandardContainer.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t\t@Test\n\t\tvoid standardRepeatablesWithContainerWithMultipleAttributes() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.standardRepeatables(),\n\t\t\t\tStandardRepeatablesWithContainerWithMultipleAttributesTestCase.class,\n\t\t\t\tStandardContainerWithMultipleAttributes.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t}\n\n\t@Nested\n\tclass ExplicitRepeatableContainerTests {\n\n\t\t@Test\n\t\tvoid ofExplicitWhenNonRepeatableReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(\n\t\t\t\tRepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class),\n\t\t\t\tNonRepeatableTestCase.class, NonRepeatable.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenStandardRepeatableContainerReturnsNull() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(\n\t\t\t\tRepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class),\n\t\t\t\tStandardRepeatablesTestCase.class, StandardContainer.class);\n\t\t\tassertThat(values).isNull();\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenContainerReturnsRepeats() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(\n\t\t\t\tRepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class),\n\t\t\t\tExplicitRepeatablesTestCase.class, ExplicitContainer.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenContainerIsNullDeducesContainer() {\n\t\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.of(StandardRepeatable.class, null),\n\t\t\t\tStandardRepeatablesTestCase.class, StandardContainer.class);\n\t\t\tassertThat(values).containsExactly(\"a\", \"b\");\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenHasNoValueThrowsException() {\n\t\t\tassertThatExceptionOfType(AnnotationConfigurationException.class)\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, InvalidNoValue.class))\n\t\t\t\t.withMessageContaining(\"Invalid declaration of container type [%s] for repeatable annotation [%s]\",\n\t\t\t\t\tInvalidNoValue.class.getName(), ExplicitRepeatable.class.getName());\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenValueIsNotArrayThrowsException() {\n\t\t\tassertThatExceptionOfType(AnnotationConfigurationException.class)\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, InvalidNotArray.class))\n\t\t\t\t.withMessage(\"Container type [%s] must declare a 'value' attribute for an array of type [%s]\",\n\t\t\t\t\tInvalidNotArray.class.getName(), ExplicitRepeatable.class.getName());\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenValueIsArrayOfWrongTypeThrowsException() {\n\t\t\tassertThatExceptionOfType(AnnotationConfigurationException.class)\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, InvalidWrongArrayType.class))\n\t\t\t\t.withMessage(\"Container type [%s] must declare a 'value' attribute for an array of type [%s]\",\n\t\t\t\t\tInvalidWrongArrayType.class.getName(), ExplicitRepeatable.class.getName());\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenAnnotationIsNullThrowsException() {\n\t\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(null, null))\n\t\t\t\t.withMessage(\"Repeatable must not be null\");\n\t\t}\n\n\t\t@Test\n\t\tvoid ofExplicitWhenContainerIsNullAndNotRepeatableThrowsException() {\n\t\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> RepeatableContainers.of(ExplicitRepeatable.class, null))\n\t\t\t\t.withMessage(\"Annotation type must be a repeatable annotation: failed to resolve container type for %s\",\n\t\t\t\t\tExplicitRepeatable.class.getName());\n\t\t}\n\n\t}\n\n\t@Test\n\tvoid standardAndExplicitReturnsRepeats() {\n\t\tRepeatableContainers repeatableContainers = RepeatableContainers.standardRepeatables()\n\t\t\t.and(ExplicitContainer.class, ExplicitRepeatable.class);\n\t\tassertThat(findRepeatedAnnotationValues(repeatableContainers, StandardRepeatablesTestCase.class, StandardContainer.class))\n\t\t\t.containsExactly(\"a\", \"b\");\n\t\tassertThat(findRepeatedAnnotationValues(repeatableContainers, ExplicitRepeatablesTestCase.class, ExplicitContainer.class))\n\t\t\t.containsExactly(\"a\", \"b\");\n\t}\n\n\t@Test\n\tvoid noneAlwaysReturnsNull() {\n\t\tObject[] values = findRepeatedAnnotationValues(RepeatableContainers.none(), StandardRepeatablesTestCase.class,\n\t\t\tStandardContainer.class);\n\t\tassertThat(values).isNull();\n\t}\n\n\t@Test\n\tvoid equalsAndHashcode() {\n\t\tRepeatableContainers c1 = RepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class);\n\t\tRepeatableContainers c2 = RepeatableContainers.of(ExplicitRepeatable.class, ExplicitContainer.class);\n\t\tRepeatableContainers c3 = RepeatableContainers.standardRepeatables();\n\t\tRepeatableContainers c4 = RepeatableContainers.standardRepeatables().and(ExplicitContainer.class, ExplicitRepeatable.class);\n\t\tassertThat(c1).hasSameHashCodeAs(c2);\n\t\tassertThat(c1).isEqualTo(c1).isEqualTo(c2);\n\t\tassertThat(c1).isNotEqualTo(c3).isNotEqualTo(c4);\n\t}\n\n\n\tprivate static Object[] findRepeatedAnnotationValues(RepeatableContainers containers,\n\t\t\tClass<?> element, Class<? extends Annotation> annotationType) {\n\t\tAnnotation[] annotations = containers.findRepeatedAnnotations(element.getAnnotation(annotationType));\n\t\treturn extractValues(annotations);\n\t}\n\n\tprivate static Object[] extractValues(Annotation[] annotations) {\n\t\tif (annotations == null) {\n\t\t\treturn null;\n\t\t}\n\t\treturn Arrays.stream(annotations).map(AnnotationUtils::getValue).toArray(Object[]::new);\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface NonRepeatable {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface StandardContainer {\n\n\t\tStandardRepeatable[] value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Repeatable(StandardContainer.class)\n\t@interface StandardRepeatable {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ExplicitContainer {\n\n\t\tExplicitRepeatable[] value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface ExplicitRepeatable {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface InvalidNoValue {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface InvalidNotArray {\n\n\t\tint value();\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface InvalidWrongArrayType {\n\n\t\tStandardRepeatable[] value();\n\t}\n\n\t@NonRepeatable(\"a\")\n\tstatic class NonRepeatableTestCase {\n\t}\n\n\t@StandardRepeatable(\"a\")\n\tstatic class SingleStandardRepeatableTestCase {\n\t}\n\n\t@StandardRepeatable(\"a\")\n\t@StandardRepeatable(\"b\")\n\tstatic class StandardRepeatablesTestCase {\n\t}\n\n\t@ExplicitContainer({ @ExplicitRepeatable(\"a\"), @ExplicitRepeatable(\"b\") })\n\tstatic class ExplicitRepeatablesTestCase {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  }
+]

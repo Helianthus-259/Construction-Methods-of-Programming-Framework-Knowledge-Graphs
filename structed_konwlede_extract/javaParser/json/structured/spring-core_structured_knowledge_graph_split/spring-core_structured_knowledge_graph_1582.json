@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.hint.TypeHintTests#typeHintHasAppropriateToString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeHintTests#builtWithAppliesMemberCategories()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid builtWithAppliesMemberCategories() {\r\n    TypeHint.Builder builder = new TypeHint.Builder(TypeReference.of(String.class));\r\n    assertThat(builder.build().getMemberCategories()).isEmpty();\r\n    TypeHint.builtWith(MemberCategory.DECLARED_FIELDS).accept(builder);\r\n    assertThat(builder.build().getMemberCategories()).containsExactly(MemberCategory.DECLARED_FIELDS);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeHintTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.TypeHintTests#builtWithAppliesMemberCategories()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeHintTests#builtWithAppliesMemberCategories()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.TypeReferenceTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link TypeReference}.\n *\n * @author Stephane Nicoll\n */\nclass TypeReferenceTests {\n\n\t@Test\n\tvoid typeReferenceWithClassName() {\n\t\tTypeReference type = TypeReference.of(\"java.lang.String\");\n\t\tassertThat(type.getName()).isEqualTo(\"java.lang.String\");\n\t\tassertThat(type.getCanonicalName()).isEqualTo(\"java.lang.String\");\n\t\tassertThat(type.getPackageName()).isEqualTo(\"java.lang\");\n\t\tassertThat(type.getSimpleName()).isEqualTo(\"String\");\n\t\tassertThat(type.getEnclosingType()).isNull();\n\t}\n\n\t@Test\n\tvoid typeReferenceWithInnerClassName() {\n\t\tTypeReference type = TypeReference.of(\"com.example.Example$Inner\");\n\t\tassertThat(type.getName()).isEqualTo(\"com.example.Example$Inner\");\n\t\tassertThat(type.getCanonicalName()).isEqualTo(\"com.example.Example.Inner\");\n\t\tassertThat(type.getPackageName()).isEqualTo(\"com.example\");\n\t\tassertThat(type.getSimpleName()).isEqualTo(\"Inner\");\n\t\tassertThat(type.getEnclosingType()).satisfies(enclosingType -> {\n\t\t\tassertThat(enclosingType.getCanonicalName()).isEqualTo(\"com.example.Example\");\n\t\t\tassertThat(enclosingType.getPackageName()).isEqualTo(\"com.example\");\n\t\t\tassertThat(enclosingType.getSimpleName()).isEqualTo(\"Example\");\n\t\t\tassertThat(enclosingType.getEnclosingType()).isNull();\n\t\t});\n\t}\n\n\t@Test\n\tvoid typeReferenceWithNestedInnerClassName() {\n\t\tTypeReference type = TypeReference.of(\"com.example.Example$Inner$Nested\");\n\t\tassertThat(type.getName()).isEqualTo(\"com.example.Example$Inner$Nested\");\n\t\tassertThat(type.getCanonicalName()).isEqualTo(\"com.example.Example.Inner.Nested\");\n\t\tassertThat(type.getPackageName()).isEqualTo(\"com.example\");\n\t\tassertThat(type.getSimpleName()).isEqualTo(\"Nested\");\n\t\tassertThat(type.getEnclosingType()).satisfies(enclosingType -> {\n\t\t\tassertThat(enclosingType.getCanonicalName()).isEqualTo(\"com.example.Example.Inner\");\n\t\t\tassertThat(enclosingType.getPackageName()).isEqualTo(\"com.example\");\n\t\t\tassertThat(enclosingType.getSimpleName()).isEqualTo(\"Inner\");\n\t\t\tassertThat(enclosingType.getEnclosingType()).satisfies(parentEnclosingType -> {\n\t\t\t\tassertThat(parentEnclosingType.getCanonicalName()).isEqualTo(\"com.example.Example\");\n\t\t\t\tassertThat(parentEnclosingType.getPackageName()).isEqualTo(\"com.example\");\n\t\t\t\tassertThat(parentEnclosingType.getSimpleName()).isEqualTo(\"Example\");\n\t\t\t\tassertThat(parentEnclosingType.getEnclosingType()).isNull();\n\t\t\t});\n\t\t});\n\t}\n\n\t@Test\n\tvoid equalsWithIdenticalNameIsTrue() {\n\t\tassertThat(TypeReference.of(String.class)).isEqualTo(\n\t\t\t\tTypeReference.of(\"java.lang.String\"));\n\t}\n\n\t@Test\n\tvoid equalsWithNonTypeReferenceIsFalse() {\n\t\tassertThat(TypeReference.of(String.class)).isNotEqualTo(\"java.lang.String\");\n\t}\n\n\t@Test\n\tvoid toStringUsesCanonicalName() {\n\t\tassertThat(TypeReference.of(String.class)).hasToString(\"java.lang.String\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid typeReferenceWithClassName() {\r\n    TypeReference type = TypeReference.of(\"java.lang.String\");\r\n    assertThat(type.getName()).isEqualTo(\"java.lang.String\");\r\n    assertThat(type.getCanonicalName()).isEqualTo(\"java.lang.String\");\r\n    assertThat(type.getPackageName()).isEqualTo(\"java.lang\");\r\n    assertThat(type.getSimpleName()).isEqualTo(\"String\");\r\n    assertThat(type.getEnclosingType()).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithClassName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithInnerClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid typeReferenceWithInnerClassName() {\r\n    TypeReference type = TypeReference.of(\"com.example.Example$Inner\");\r\n    assertThat(type.getName()).isEqualTo(\"com.example.Example$Inner\");\r\n    assertThat(type.getCanonicalName()).isEqualTo(\"com.example.Example.Inner\");\r\n    assertThat(type.getPackageName()).isEqualTo(\"com.example\");\r\n    assertThat(type.getSimpleName()).isEqualTo(\"Inner\");\r\n    assertThat(type.getEnclosingType()).satisfies(enclosingType -> {\r\n        assertThat(enclosingType.getCanonicalName()).isEqualTo(\"com.example.Example\");\r\n        assertThat(enclosingType.getPackageName()).isEqualTo(\"com.example\");\r\n        assertThat(enclosingType.getSimpleName()).isEqualTo(\"Example\");\r\n        assertThat(enclosingType.getEnclosingType()).isNull();\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithInnerClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithInnerClassName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithNestedInnerClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid typeReferenceWithNestedInnerClassName() {\r\n    TypeReference type = TypeReference.of(\"com.example.Example$Inner$Nested\");\r\n    assertThat(type.getName()).isEqualTo(\"com.example.Example$Inner$Nested\");\r\n    assertThat(type.getCanonicalName()).isEqualTo(\"com.example.Example.Inner.Nested\");\r\n    assertThat(type.getPackageName()).isEqualTo(\"com.example\");\r\n    assertThat(type.getSimpleName()).isEqualTo(\"Nested\");\r\n    assertThat(type.getEnclosingType()).satisfies(enclosingType -> {\r\n        assertThat(enclosingType.getCanonicalName()).isEqualTo(\"com.example.Example.Inner\");\r\n        assertThat(enclosingType.getPackageName()).isEqualTo(\"com.example\");\r\n        assertThat(enclosingType.getSimpleName()).isEqualTo(\"Inner\");\r\n        assertThat(enclosingType.getEnclosingType()).satisfies(parentEnclosingType -> {\r\n            assertThat(parentEnclosingType.getCanonicalName()).isEqualTo(\"com.example.Example\");\r\n            assertThat(parentEnclosingType.getPackageName()).isEqualTo(\"com.example\");\r\n            assertThat(parentEnclosingType.getSimpleName()).isEqualTo(\"Example\");\r\n            assertThat(parentEnclosingType.getEnclosingType()).isNull();\r\n        });\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithNestedInnerClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#typeReferenceWithNestedInnerClassName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#equalsWithIdenticalNameIsTrue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid equalsWithIdenticalNameIsTrue() {\r\n    assertThat(TypeReference.of(String.class)).isEqualTo(TypeReference.of(\"java.lang.String\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.TypeReferenceTests#equalsWithIdenticalNameIsTrue()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#equalsWithIdenticalNameIsTrue()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.TypeReferenceTests#equalsWithNonTypeReferenceIsFalse()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid equalsWithNonTypeReferenceIsFalse() {\r\n    assertThat(TypeReference.of(String.class)).isNotEqualTo(\"java.lang.String\");\r\n}",
+    "tailType": "method_code"
+  }
+]

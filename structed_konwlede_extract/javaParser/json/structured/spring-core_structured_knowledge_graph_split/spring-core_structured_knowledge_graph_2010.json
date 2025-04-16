@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteByteChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid readAndWriteByteChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    Path source = Paths.get(DataBufferUtilsTests.class.getResource(\"DataBufferUtilsTests.txt\").toURI());\r\n    Flux<DataBuffer> sourceFlux = DataBufferUtils.readByteChannel(() -> FileChannel.open(source, StandardOpenOption.READ), super.bufferFactory, 3);\r\n    Path destination = Files.createTempFile(\"DataBufferUtilsTests\", null);\r\n    WritableByteChannel channel = Files.newByteChannel(destination, StandardOpenOption.WRITE);\r\n    DataBufferUtils.write(sourceFlux, channel).subscribe(DataBufferUtils.releaseConsumer(), throwable -> {\r\n        throw new AssertionError(throwable.getMessage(), throwable);\r\n    }, () -> {\r\n        try {\r\n            String expected = String.join(\"\", Files.readAllLines(source));\r\n            String result = String.join(\"\", Files.readAllLines(destination));\r\n            assertThat(result).isEqualTo(expected);\r\n        } catch (IOException e) {\r\n            throw new AssertionError(e.getMessage(), e);\r\n        } finally {\r\n            DataBufferUtils.closeChannel(channel);\r\n        }\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteByteChannel(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteByteChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteAsynchronousFileChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid readAndWriteAsynchronousFileChannel(DataBufferFactory bufferFactory) throws Exception {\r\n    super.bufferFactory = bufferFactory;\r\n    Path source = Paths.get(DataBufferUtilsTests.class.getResource(\"DataBufferUtilsTests.txt\").toURI());\r\n    Flux<DataBuffer> sourceFlux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(source, StandardOpenOption.READ), super.bufferFactory, 3);\r\n    Path destination = Files.createTempFile(\"DataBufferUtilsTests\", null);\r\n    AsynchronousFileChannel channel = AsynchronousFileChannel.open(destination, StandardOpenOption.WRITE);\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    DataBufferUtils.write(sourceFlux, channel).subscribe(DataBufferUtils::release, throwable -> {\r\n        throw new AssertionError(throwable.getMessage(), throwable);\r\n    }, () -> {\r\n        try {\r\n            String expected = String.join(\"\", Files.readAllLines(source));\r\n            String result = String.join(\"\", Files.readAllLines(destination));\r\n            assertThat(result).isEqualTo(expected);\r\n            latch.countDown();\r\n        } catch (IOException e) {\r\n            throw new AssertionError(e.getMessage(), e);\r\n        } finally {\r\n            DataBufferUtils.closeChannel(channel);\r\n        }\r\n    });\r\n    latch.await();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteAsynchronousFileChannel(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#readAndWriteAsynchronousFileChannel(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCount(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCount(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(Flux.just(stringBuffer(\"foo\"), stringBuffer(\"bar\")), 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"ba\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCount(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCount(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountCanceled(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCountCanceled(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).thenCancel().verify(Duration.ofSeconds(5));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountCanceled(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountCanceled(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountError(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCountError(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(Mono.defer(() -> Mono.just(stringBuffer(\"foo\"))), Mono.error(new RuntimeException()));\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).expectError(RuntimeException.class).verify(Duration.ofSeconds(5));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountError(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountError(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountExact(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid takeUntilByteCountExact(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"), deferStringBuffer(\"baz\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.takeUntilByteCount(source, 6L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"foo\")).consumeNextWith(stringConsumer(\"bar\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountExact(DataBufferFactory)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#takeUntilByteCountExact(DataBufferFactory)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedDataBufferAllocatingTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests#skipUntilByteCount(DataBufferFactory)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedDataBufferAllocatingTest\r\nvoid skipUntilByteCount(DataBufferFactory bufferFactory) {\r\n    super.bufferFactory = bufferFactory;\r\n    Flux<DataBuffer> source = Flux.concat(deferStringBuffer(\"foo\"), deferStringBuffer(\"bar\"), deferStringBuffer(\"baz\"));\r\n    Flux<DataBuffer> result = DataBufferUtils.skipUntilByteCount(source, 5L);\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"r\")).consumeNextWith(stringConsumer(\"baz\")).expectComplete().verify(Duration.ofSeconds(5));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.DataBufferUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.DataBufferUtilsTests#skipUntilByteCount(DataBufferFactory)",
+    "tailType": "method"
+  }
+]

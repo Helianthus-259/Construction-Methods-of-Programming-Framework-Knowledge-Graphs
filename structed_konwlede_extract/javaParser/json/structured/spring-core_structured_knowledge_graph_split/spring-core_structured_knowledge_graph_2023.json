@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.GetPath",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.FileNotFoundException;\nimport java.io.FileOutputStream;\nimport java.io.IOException;\nimport java.net.URL;\nimport java.net.URLClassLoader;\nimport java.util.HashSet;\nimport java.util.zip.ZipEntry;\nimport java.util.zip.ZipOutputStream;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.io.TempDir;\n\nimport org.springframework.core.OverridingClassLoader;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.junit.jupiter.api.io.CleanupMode.NEVER;\n\n/**\n * Tests for {@link ClassPathResource}.\n *\n * <p>These also originally served as regression tests for the bugs described in\n * SPR-6888 and SPR-9413.\n *\n * @author Chris Beams\n * @author Sam Brannen\n */\nclass ClassPathResourceTests {\n\n\tprivate static final String PACKAGE_PATH = \"org/springframework/core/io\";\n\tprivate static final String NONEXISTENT_RESOURCE_NAME = \"nonexistent.xml\";\n\tprivate static final String ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE = PACKAGE_PATH + '/' + NONEXISTENT_RESOURCE_NAME;\n\tprivate static final String ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH = '/' + ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE;\n\n\n\t@Nested\n\tclass EqualsAndHashCode {\n\n\t\t@Test\n\t\tvoid equalsAndHashCode() {\n\t\t\tResource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\");\n\t\t\tResource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\");\n\t\t\tResource resource3 = new ClassPathResource(\"org/springframework/core/\").createRelative(\"../core/io/./Resource.class\");\n\n\t\t\tassertThat(resource2).isEqualTo(resource1);\n\t\t\tassertThat(resource3).isEqualTo(resource1);\n\t\t\tassertThat(resource2).hasSameHashCodeAs(resource1);\n\t\t\tassertThat(resource3).hasSameHashCodeAs(resource1);\n\n\t\t\t// Check whether equal/hashCode works in a HashSet.\n\t\t\tHashSet<Resource> resources = new HashSet<>();\n\t\t\tresources.add(resource1);\n\t\t\tresources.add(resource2);\n\t\t\tassertThat(resources).hasSize(1);\n\t\t}\n\n\t\t@Test\n\t\tvoid resourcesWithDifferentInputPathsAreEqual() {\n\t\t\tResource resource1 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\n\t\t\tClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/../core/io/./Resource.class\", getClass().getClassLoader());\n\t\t\tassertThat(resource2).isEqualTo(resource1);\n\t\t}\n\n\t\t@Test\n\t\tvoid resourcesWithEquivalentAbsolutePathsFromTheSameClassLoaderAreEqual() {\n\t\t\tClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\n\t\t\tClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\n\t\t\tassertThat(resource1.getPath()).isEqualTo(resource2.getPath());\n\t\t\tassertThat(resource1).isEqualTo(resource2);\n\t\t\tassertThat(resource2).isEqualTo(resource1);\n\t\t}\n\n\t\t@Test\n\t\tvoid resourcesWithEquivalentAbsolutePathsHaveSameHashCode() {\n\t\t\tClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\n\t\t\tClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\", getClass().getClassLoader());\n\t\t\tassertThat(resource1.getPath()).isEqualTo(resource2.getPath());\n\t\t\tassertThat(resource1).hasSameHashCodeAs(resource2);\n\t\t}\n\n\t\t@Test\n\t\tvoid resourcesWithEquivalentAbsolutePathsFromDifferentClassLoadersAreNotEqual() {\n\t\t\tclass SimpleThrowawayClassLoader extends OverridingClassLoader {\n\t\t\t\tSimpleThrowawayClassLoader(ClassLoader parent) {\n\t\t\t\t\tsuper(parent);\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tClassPathResource resource1 = new ClassPathResource(\"Resource.class\", getClass());\n\t\t\tClassPathResource resource2 = new ClassPathResource(\"org/springframework/core/io/Resource.class\",\n\t\t\t\t\tnew SimpleThrowawayClassLoader(getClass().getClassLoader()));\n\t\t\tassertThat(resource1.getPath()).isEqualTo(resource2.getPath());\n\t\t\tassertThat(resource1).isNotEqualTo(resource2);\n\t\t\tassertThat(resource2).isNotEqualTo(resource1);\n\t\t}\n\n\t\t@Test\n\t\tvoid relativeResourcesAreEqual() throws Exception {\n\t\t\tResource resource = new ClassPathResource(\"dir/\");\n\t\t\tResource relative = resource.createRelative(\"subdir\");\n\t\t\tassertThat(relative).isEqualTo(new ClassPathResource(\"dir/subdir\"));\n\t\t}\n\t}\n\n\n\t@Nested\n\tclass GetInputStream {\n\n\t\t@Test\n\t\tvoid withStringConstructorRaisesExceptionForNonexistentResource() {\n\t\t\tassertExceptionContainsAbsolutePath(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLoaderConstructorRaisesExceptionForNonexistentResource() {\n\t\t\tassertExceptionContainsAbsolutePath(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE, getClass().getClassLoader()));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLiteralConstructorRaisesExceptionForNonexistentRelativeResource() {\n\t\t\tassertExceptionContainsAbsolutePath(new ClassPathResource(NONEXISTENT_RESOURCE_NAME, getClass()));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLiteralConstructorRaisesExceptionForNonexistentAbsoluteResource() {\n\t\t\tassertExceptionContainsAbsolutePath(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE, getClass()));\n\t\t}\n\n\t\tprivate static void assertExceptionContainsAbsolutePath(ClassPathResource resource) {\n\t\t\tassertThatExceptionOfType(FileNotFoundException.class)\n\t\t\t\t.isThrownBy(resource::getInputStream)\n\t\t\t\t.withMessageContaining(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE);\n\t\t}\n\t}\n\n\n\t@Nested\n\tclass GetDescription {\n\n\t\t@Test\n\t\tvoid withStringConstructor() {\n\t\t\tassertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE));\n\t\t}\n\n\t\t@Test\n\t\tvoid withStringConstructorAndLeadingSlash() {\n\t\t\tassertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLiteralConstructor() {\n\t\t\tassertDescription(new ClassPathResource(NONEXISTENT_RESOURCE_NAME, getClass()));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLiteralConstructorAndLeadingSlash() {\n\t\t\tassertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH, getClass()));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLoaderConstructor() {\n\t\t\tassertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE, getClass().getClassLoader()));\n\t\t}\n\n\t\t@Test\n\t\tvoid withClassLoaderConstructorAndLeadingSlash() {\n\t\t\tassertDescription(new ClassPathResource(ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE_WITH_LEADING_SLASH, getClass().getClassLoader()));\n\t\t}\n\n\t\tprivate static void assertDescription(ClassPathResource resource) {\n\t\t\tassertThat(resource.getDescription()).isEqualTo(\"class path resource [%s]\", ABSOLUTE_PATH_TO_NONEXISTENT_RESOURCE);\n\t\t}\n\t}\n\n\n\t@Nested\n\tclass GetPath {\n\n\t\t@Test\n\t\tvoid dropsLeadingSlashForClassLoaderAccess() {\n\t\t\tassertThat(new ClassPathResource(\"/test.html\").getPath()).isEqualTo(\"test.html\");\n\t\t\tassertThat(((ClassPathResource) new ClassPathResource(\"\").createRelative(\"/test.html\")).getPath()).isEqualTo(\"test.html\");\n\t\t}\n\n\t\t@Test\n\t\tvoid convertsToAbsolutePathForClassRelativeAccess() {\n\t\t\tassertThat(new ClassPathResource(\"/test.html\", getClass()).getPath()).isEqualTo(\"test.html\");\n\t\t\tassertThat(new ClassPathResource(\"\", getClass()).getPath()).isEqualTo(PACKAGE_PATH + \"/\");\n\t\t\tassertThat(((ClassPathResource) new ClassPathResource(\"\", getClass()).createRelative(\"/test.html\")).getPath()).isEqualTo(\"test.html\");\n\t\t\tassertThat(((ClassPathResource) new ClassPathResource(\"\", getClass()).createRelative(\"test.html\")).getPath()).isEqualTo(PACKAGE_PATH + \"/test.html\");\n\t\t}\n\t}\n\n\n\t@Test\n\tvoid directoryNotReadable() throws Exception {\n\t\tResource fileDir = new ClassPathResource(\"example/type\");\n\t\tassertThat(fileDir.getURL()).asString().startsWith(\"file:\");\n\t\tassertThat(fileDir.exists()).isTrue();\n\t\tassertThat(fileDir.isReadable()).isFalse();\n\n\t\tResource jarDir = new ClassPathResource(\"reactor/core\");\n\t\tassertThat(jarDir.getURL()).asString().startsWith(\"jar:\");\n\t\tassertThat(jarDir.exists()).isTrue();\n\t\tassertThat(jarDir.isReadable()).isFalse();\n\t}\n\n\t@Test\n\t// Since the JAR file created in this test cannot be deleted on MS windows,\n\t// we use `cleanup = NEVER`.\n\tvoid emptyFileReadable(@TempDir(cleanup = NEVER) File tempDir) throws IOException {\n\t\tFile file = new File(tempDir, \"empty.txt\");\n\t\tassertThat(file.createNewFile()).isTrue();\n\t\tassertThat(file.isFile()).isTrue();\n\n\t\ttry (URLClassLoader fileClassLoader = new URLClassLoader(new URL[]{tempDir.toURI().toURL()})) {\n\t\t\tResource emptyFile = new ClassPathResource(\"empty.txt\", fileClassLoader);\n\t\t\tassertThat(emptyFile.exists()).isTrue();\n\t\t\tassertThat(emptyFile.isReadable()).isTrue();\n\t\t\tassertThat(emptyFile.contentLength()).isEqualTo(0);\n\t\t\tfile.delete();\n\t\t}\n\n\t\tFile jarFile = new File(tempDir, \"test.jar\");\n\t\ttry (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(jarFile))) {\n\t\t\tzipOut.putNextEntry(new ZipEntry(\"empty2.txt\"));\n\t\t\tzipOut.closeEntry();\n\t\t}\n\t\tassertThat(jarFile.isFile()).isTrue();\n\n\t\ttry (URLClassLoader jarClassLoader = new URLClassLoader(new URL[]{jarFile.toURI().toURL()})) {\n\t\t\tResource emptyJarEntry = new ClassPathResource(\"empty2.txt\", jarClassLoader);\n\t\t\tassertThat(emptyJarEntry.exists()).isTrue();\n\t\t\tassertThat(emptyJarEntry.isReadable()).isTrue();\n\t\t\tassertThat(emptyJarEntry.contentLength()).isEqualTo(0);\n\t\t}\n\n\t\tjarFile.deleteOnExit();\n\t\ttempDir.deleteOnExit();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.GetPath#dropsLeadingSlashForClassLoaderAccess()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid dropsLeadingSlashForClassLoaderAccess() {\r\n    assertThat(new ClassPathResource(\"/test.html\").getPath()).isEqualTo(\"test.html\");\r\n    assertThat(((ClassPathResource) new ClassPathResource(\"\").createRelative(\"/test.html\")).getPath()).isEqualTo(\"test.html\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.GetPath",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.GetPath#dropsLeadingSlashForClassLoaderAccess()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.GetPath#dropsLeadingSlashForClassLoaderAccess()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.GetPath#convertsToAbsolutePathForClassRelativeAccess()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid convertsToAbsolutePathForClassRelativeAccess() {\r\n    assertThat(new ClassPathResource(\"/test.html\", getClass()).getPath()).isEqualTo(\"test.html\");\r\n    assertThat(new ClassPathResource(\"\", getClass()).getPath()).isEqualTo(PACKAGE_PATH + \"/\");\r\n    assertThat(((ClassPathResource) new ClassPathResource(\"\", getClass()).createRelative(\"/test.html\")).getPath()).isEqualTo(\"test.html\");\r\n    assertThat(((ClassPathResource) new ClassPathResource(\"\", getClass()).createRelative(\"test.html\")).getPath()).isEqualTo(PACKAGE_PATH + \"/test.html\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.GetPath",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.GetPath#convertsToAbsolutePathForClassRelativeAccess()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.GetPath#convertsToAbsolutePathForClassRelativeAccess()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.ModuleResourceTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.beans.Introspector;\nimport java.io.FileNotFoundException;\nimport java.io.IOException;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n\n/**\n * Tests for {@link ModuleResource}.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 6.1\n */\nclass ModuleResourceTests {\n\n\tprivate static final String existingPath = \"java/beans/Introspector.class\";\n\n\tprivate static final String nonExistingPath = \"org/example/NonExistingClass.class\";\n\n\n\t@Test\n\tvoid existingClassFileResource() throws IOException {\n\t\t// Check expected behavior of ClassPathResource first.\n\t\tClassPathResource cpr = new ClassPathResource(existingPath);\n\t\tassertExistingResource(cpr);\n\t\tassertThat(cpr.getDescription()).startsWith(\"class path resource\").contains(cpr.getPath());\n\n\t\tModuleResource mr = new ModuleResource(Introspector.class.getModule(), existingPath);\n\t\tassertExistingResource(mr);\n\t\tassertThat(mr.getDescription()).startsWith(\"module resource\").contains(mr.getModule().getName(), mr.getPath());\n\t\tassertThat(mr.getContentAsByteArray()).isEqualTo(cpr.getContentAsByteArray());\n\t\tassertThat(mr.contentLength()).isEqualTo(cpr.contentLength());\n\t}\n\n\t@Test\n\tvoid nonExistingResource() {\n\t\tModuleResource mr = new ModuleResource(Introspector.class.getModule(), nonExistingPath);\n\t\tassertThat(mr.exists()).isFalse();\n\t\tassertThat(mr.isReadable()).isFalse();\n\t\tassertThat(mr.isOpen()).isFalse();\n\t\tassertThat(mr.isFile()).isFalse();\n\t\tassertThat(mr.getFilename()).isEqualTo(\"NonExistingClass.class\");\n\t\tassertThat(mr.getDescription()).startsWith(\"module resource\").contains(mr.getModule().getName(), mr.getPath());\n\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(mr::getContentAsByteArray);\n\t\tassertThatExceptionOfType(FileNotFoundException.class).isThrownBy(mr::contentLength);\n\t}\n\n\t@Test\n\tvoid equalsAndHashCode() {\n\t\tResource resource1 = new ModuleResource(Introspector.class.getModule(), existingPath);\n\t\tResource resource2 = new ModuleResource(Introspector.class.getModule(), existingPath);\n\t\tResource resource3 = new ModuleResource(Introspector.class.getModule(), nonExistingPath);\n\n\t\tassertThat(resource1).isEqualTo(resource1);\n\t\tassertThat(resource1).isEqualTo(resource2);\n\t\tassertThat(resource2).isEqualTo(resource1);\n\t\tassertThat(resource1).isNotEqualTo(resource3);\n\t\tassertThat(resource1).hasSameHashCodeAs(resource2);\n\t\tassertThat(resource1).doesNotHaveSameHashCodeAs(resource3);\n\t}\n\n\n\tprivate static void assertExistingResource(Resource resource) {\n\t\tassertThat(resource.exists()).isTrue();\n\t\tassertThat(resource.isReadable()).isTrue();\n\t\tassertThat(resource.isOpen()).isFalse();\n\t\tassertThat(resource.isFile()).isFalse();\n\t\tassertThat(resource.getFilename()).isEqualTo(\"Introspector.class\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.ModuleResourceTests#existingPath",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#existingPath",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.ModuleResourceTests#nonExistingPath",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#nonExistingPath",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#existingClassFileResource()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid existingClassFileResource() throws IOException {\r\n    // Check expected behavior of ClassPathResource first.\r\n    ClassPathResource cpr = new ClassPathResource(existingPath);\r\n    assertExistingResource(cpr);\r\n    assertThat(cpr.getDescription()).startsWith(\"class path resource\").contains(cpr.getPath());\r\n    ModuleResource mr = new ModuleResource(Introspector.class.getModule(), existingPath);\r\n    assertExistingResource(mr);\r\n    assertThat(mr.getDescription()).startsWith(\"module resource\").contains(mr.getModule().getName(), mr.getPath());\r\n    assertThat(mr.getContentAsByteArray()).isEqualTo(cpr.getContentAsByteArray());\r\n    assertThat(mr.contentLength()).isEqualTo(cpr.contentLength());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.ModuleResourceTests#existingClassFileResource()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#existingClassFileResource()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#nonExistingResource()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid nonExistingResource() {\r\n    ModuleResource mr = new ModuleResource(Introspector.class.getModule(), nonExistingPath);\r\n    assertThat(mr.exists()).isFalse();\r\n    assertThat(mr.isReadable()).isFalse();\r\n    assertThat(mr.isOpen()).isFalse();\r\n    assertThat(mr.isFile()).isFalse();\r\n    assertThat(mr.getFilename()).isEqualTo(\"NonExistingClass.class\");\r\n    assertThat(mr.getDescription()).startsWith(\"module resource\").contains(mr.getModule().getName(), mr.getPath());\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(mr::getContentAsByteArray);\r\n    assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(mr::contentLength);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.ModuleResourceTests#nonExistingResource()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.ModuleResourceTests#nonExistingResource()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

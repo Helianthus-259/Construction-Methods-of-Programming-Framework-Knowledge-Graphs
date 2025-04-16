@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toFinishedMultiValueMapCollectsMultiValueMap()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toFinishedMultiValueMapCollectsMultiValueMap()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#stream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Stream<MergedAnnotation<TestAnnotation>> stream() {\r\n    return MergedAnnotations.from(WithTestAnnotations.class).stream(TestAnnotation.class);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#stream()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.WithTestAnnotations",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.WithTestAnnotations",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@TestAnnotation",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.WithTestAnnotations",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@TestAnnotation",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.WithTestAnnotations",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@TestAnnotation",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.WithTestAnnotations",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.util.Arrays;\nimport java.util.LinkedHashSet;\nimport java.util.Set;\nimport java.util.stream.Stream;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.MergedAnnotation.Adapt;\nimport org.springframework.util.MultiValueMap;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link MergedAnnotationCollectors}.\n *\n * @author Phillip Webb\n */\nclass MergedAnnotationCollectorsTests {\n\n\t@Test\n\tvoid toAnnotationSetCollectsLinkedHashSetWithSynthesizedAnnotations() {\n\t\tSet<TestAnnotation> set = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toAnnotationSet());\n\t\tassertThat(set).isInstanceOf(LinkedHashSet.class).flatExtracting(\n\t\t\t\tTestAnnotation::value).containsExactly(\"a\", \"b\", \"c\");\n\t\tassertThat(set).allMatch(AnnotationUtils::isSynthesizedAnnotation);\n\t}\n\n\t@Test\n\tvoid toAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations() {\n\t\tAnnotation[] array = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toAnnotationArray());\n\t\tassertThat(Arrays.stream(array).map(\n\t\t\t\tannotation -> ((TestAnnotation) annotation).value())).containsExactly(\"a\",\n\t\t\t\t\t\t\"b\", \"c\");\n\t\tassertThat(array).allMatch(AnnotationUtils::isSynthesizedAnnotation);\n\t}\n\n\t@Test\n\tvoid toSuppliedAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations() {\n\t\tTestAnnotation[] array = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toAnnotationArray(TestAnnotation[]::new));\n\t\tassertThat(Arrays.stream(array).map(TestAnnotation::value)).containsExactly(\"a\",\n\t\t\t\t\"b\", \"c\");\n\t\tassertThat(array).allMatch(AnnotationUtils::isSynthesizedAnnotation);\n\t}\n\n\t@Test\n\tvoid toMultiValueMapCollectsMultiValueMap() {\n\t\tMultiValueMap<String, Object> map = stream().map(\n\t\t\t\tMergedAnnotation::filterDefaultValues).collect(\n\t\t\t\t\t\tMergedAnnotationCollectors.toMultiValueMap(\n\t\t\t\t\t\t\t\tAdapt.CLASS_TO_STRING));\n\t\tassertThat(map.get(\"value\")).containsExactly(\"a\", \"b\", \"c\");\n\t\tassertThat(map.get(\"extra\")).containsExactly(\"java.lang.String\",\n\t\t\t\t\"java.lang.Integer\");\n\t}\n\n\t@Test\n\tvoid toFinishedMultiValueMapCollectsMultiValueMap() {\n\t\tMultiValueMap<String, Object> map = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toMultiValueMap(result -> {\n\t\t\t\t\tresult.add(\"finished\", true);\n\t\t\t\t\treturn result;\n\t\t\t\t}));\n\t\tassertThat(map.get(\"value\")).containsExactly(\"a\", \"b\", \"c\");\n\t\tassertThat(map.get(\"extra\")).containsExactly(void.class, String.class,\n\t\t\t\tInteger.class);\n\t\tassertThat(map.get(\"finished\")).containsExactly(true);\n\t}\n\n\tprivate Stream<MergedAnnotation<TestAnnotation>> stream() {\n\t\treturn MergedAnnotations.from(WithTestAnnotations.class).stream(TestAnnotation.class);\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Repeatable(TestAnnotations.class)\n\t@interface TestAnnotation {\n\n\t\t@AliasFor(\"name\")\n\t\tString value() default \"\";\n\n\t\t@AliasFor(\"value\")\n\t\tString name() default \"\";\n\n\t\tClass<?> extra() default void.class;\n\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestAnnotations {\n\n\t\tTestAnnotation[] value();\n\t}\n\n\t@TestAnnotation(\"a\")\n\t@TestAnnotation(name = \"b\", extra = String.class)\n\t@TestAnnotation(name = \"c\", extra = Integer.class)\n\tstatic class WithTestAnnotations {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.MergedAnnotationPredicatesTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.util.Arrays;\nimport java.util.Collections;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link MergedAnnotationPredicates}.\n *\n * @author Phillip Webb\n */\nclass MergedAnnotationPredicatesTests {\n\n\t@Test\n\tvoid typeInStringArrayWhenNameMatchesAccepts() {\n\t\tMergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(\n\t\t\t\tWithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(\n\t\t\t\tTestAnnotation.class.getName())).accepts(annotation);\n\t}\n\n\t@Test\n\tvoid typeInStringArrayWhenNameDoesNotMatchRejects() {\n\t\tMergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(\n\t\t\t\tWithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(\n\t\t\t\tMissingAnnotation.class.getName())).rejects(annotation);\n\t}\n\n\t@Test\n\tvoid typeInClassArrayWhenNameMatchesAccepts() {\n\t\tMergedAnnotation<TestAnnotation> annotation =\n\t\t\t\tMergedAnnotations.from(WithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(TestAnnotation.class)).accepts(annotation);\n\t}\n\n\t@Test\n\tvoid typeInClassArrayWhenNameDoesNotMatchRejects() {\n\t\tMergedAnnotation<TestAnnotation> annotation =\n\t\t\t\tMergedAnnotations.from(WithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(MissingAnnotation.class)).rejects(annotation);\n\t}\n\n\t@Test\n\tvoid typeInCollectionWhenMatchesStringInCollectionAccepts() {\n\t\tMergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(\n\t\t\t\tWithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(\n\t\t\t\tCollections.singleton(TestAnnotation.class.getName()))).accepts(annotation);\n\t}\n\n\t@Test\n\tvoid typeInCollectionWhenMatchesClassInCollectionAccepts() {\n\t\tMergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(\n\t\t\t\tWithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(\n\t\t\t\tCollections.singleton(TestAnnotation.class))).accepts(annotation);\n\t}\n\n\t@Test\n\tvoid typeInCollectionWhenDoesNotMatchAnyRejects() {\n\t\tMergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(\n\t\t\t\tWithTestAnnotation.class).get(TestAnnotation.class);\n\t\tassertThat(MergedAnnotationPredicates.typeIn(Arrays.asList(\n\t\t\t\tMissingAnnotation.class.getName(), MissingAnnotation.class))).rejects(annotation);\n\t}\n\n\t@Test\n\tvoid firstRunOfAcceptsOnlyFirstRun() {\n\t\tList<MergedAnnotation<TestAnnotation>> filtered = MergedAnnotations.from(\n\t\t\t\tWithMultipleTestAnnotation.class).stream(TestAnnotation.class).filter(\n\t\t\t\t\t\tMergedAnnotationPredicates.firstRunOf(\n\t\t\t\t\t\t\t\tthis::firstCharOfValue)).toList();\n\t\tassertThat(filtered.stream().map(\n\t\t\t\tannotation -> annotation.getString(\"value\"))).containsExactly(\"a1\", \"a2\", \"a3\");\n\t}\n\n\t@Test\n\tvoid firstRunOfWhenValueExtractorIsNullThrowsException() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tMergedAnnotationPredicates.firstRunOf(null));\n\t}\n\n\t@Test\n\tvoid uniqueAcceptsUniquely() {\n\t\tList<MergedAnnotation<TestAnnotation>> filtered = MergedAnnotations.from(\n\t\t\t\tWithMultipleTestAnnotation.class).stream(TestAnnotation.class).filter(\n\t\t\t\t\t\tMergedAnnotationPredicates.unique(\n\t\t\t\t\t\t\t\tthis::firstCharOfValue)).toList();\n\t\tassertThat(filtered.stream().map(\n\t\t\t\tannotation -> annotation.getString(\"value\"))).containsExactly(\"a1\", \"b1\", \"c1\");\n\t}\n\n\t@Test\n\tvoid uniqueWhenKeyExtractorIsNullThrowsException() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tMergedAnnotationPredicates.unique(null));\n\t}\n\n\tprivate char firstCharOfValue(MergedAnnotation<TestAnnotation> annotation) {\n\t\treturn annotation.getString(\"value\").charAt(0);\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Repeatable(TestAnnotations.class)\n\t@interface TestAnnotation {\n\n\t\tString value() default \"\";\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestAnnotations {\n\n\t\tTestAnnotation[] value();\n\t}\n\n\t@interface MissingAnnotation {\n\t}\n\n\t@TestAnnotation(\"test\")\n\tstatic class WithTestAnnotation {\n\t}\n\n\t@TestAnnotation(\"a1\")\n\t@TestAnnotation(\"a2\")\n\t@TestAnnotation(\"a3\")\n\t@TestAnnotation(\"b1\")\n\t@TestAnnotation(\"b2\")\n\t@TestAnnotation(\"b3\")\n\t@TestAnnotation(\"c1\")\n\t@TestAnnotation(\"c2\")\n\t@TestAnnotation(\"c3\")\n\tstatic class WithMultipleTestAnnotation {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInStringArrayWhenNameMatchesAccepts()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid typeInStringArrayWhenNameMatchesAccepts() {\r\n    MergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(WithTestAnnotation.class).get(TestAnnotation.class);\r\n    assertThat(MergedAnnotationPredicates.typeIn(TestAnnotation.class.getName())).accepts(annotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInStringArrayWhenNameMatchesAccepts()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInStringArrayWhenNameMatchesAccepts()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInStringArrayWhenNameDoesNotMatchRejects()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid typeInStringArrayWhenNameDoesNotMatchRejects() {\r\n    MergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(WithTestAnnotation.class).get(TestAnnotation.class);\r\n    assertThat(MergedAnnotationPredicates.typeIn(MissingAnnotation.class.getName())).rejects(annotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInStringArrayWhenNameDoesNotMatchRejects()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInStringArrayWhenNameDoesNotMatchRejects()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInClassArrayWhenNameMatchesAccepts()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid typeInClassArrayWhenNameMatchesAccepts() {\r\n    MergedAnnotation<TestAnnotation> annotation = MergedAnnotations.from(WithTestAnnotation.class).get(TestAnnotation.class);\r\n    assertThat(MergedAnnotationPredicates.typeIn(TestAnnotation.class)).accepts(annotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationPredicatesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationPredicatesTests#typeInClassArrayWhenNameMatchesAccepts()",
+    "tailType": "method"
+  }
+]

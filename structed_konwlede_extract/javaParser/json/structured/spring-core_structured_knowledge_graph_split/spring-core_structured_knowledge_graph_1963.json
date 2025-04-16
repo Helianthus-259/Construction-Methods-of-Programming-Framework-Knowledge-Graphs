@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.env",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.HashMap;\nimport java.util.Map;\nimport java.util.Properties;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConverterNotFoundException;\nimport org.springframework.core.testfixture.env.MockPropertySource;\nimport org.springframework.util.PlaceholderResolutionException;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.assertj.core.api.Assertions.assertThatIllegalStateException;\n\n/**\n * @author Chris Beams\n * @since 3.1\n */\nclass PropertySourcesPropertyResolverTests {\n\n\tprivate Properties testProperties;\n\n\tprivate MutablePropertySources propertySources;\n\n\tprivate ConfigurablePropertyResolver propertyResolver;\n\n\n\t@BeforeEach\n\tvoid setUp() {\n\t\tpropertySources = new MutablePropertySources();\n\t\tpropertyResolver = new PropertySourcesPropertyResolver(propertySources);\n\t\ttestProperties = new Properties();\n\t\tpropertySources.addFirst(new PropertiesPropertySource(\"testProperties\", testProperties));\n\t}\n\n\n\t@Test\n\tvoid containsProperty() {\n\t\tassertThat(propertyResolver.containsProperty(\"foo\")).isFalse();\n\t\ttestProperties.put(\"foo\", \"bar\");\n\t\tassertThat(propertyResolver.containsProperty(\"foo\")).isTrue();\n\t}\n\n\t@Test\n\tvoid getProperty() {\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isNull();\n\t\ttestProperties.put(\"foo\", \"bar\");\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"bar\");\n\t}\n\n\t@Test\n\tvoid getProperty_withDefaultValue() {\n\t\tassertThat(propertyResolver.getProperty(\"foo\", \"myDefault\")).isEqualTo(\"myDefault\");\n\t\ttestProperties.put(\"foo\", \"bar\");\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"bar\");\n\t}\n\n\t@Test\n\tvoid getProperty_propertySourceSearchOrderIsFIFO() {\n\t\tMutablePropertySources sources = new MutablePropertySources();\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(sources);\n\t\tsources.addFirst(new MockPropertySource(\"ps1\").withProperty(\"pName\", \"ps1Value\"));\n\t\tassertThat(resolver.getProperty(\"pName\")).isEqualTo(\"ps1Value\");\n\t\tsources.addFirst(new MockPropertySource(\"ps2\").withProperty(\"pName\", \"ps2Value\"));\n\t\tassertThat(resolver.getProperty(\"pName\")).isEqualTo(\"ps2Value\");\n\t\tsources.addFirst(new MockPropertySource(\"ps3\").withProperty(\"pName\", \"ps3Value\"));\n\t\tassertThat(resolver.getProperty(\"pName\")).isEqualTo(\"ps3Value\");\n\t}\n\n\t@Test\n\tvoid getProperty_withExplicitNullValue() {\n\t\t// java.util.Properties does not allow null values (because Hashtable does not)\n\t\tMap<String, Object> nullableProperties = new HashMap<>();\n\t\tpropertySources.addLast(new MapPropertySource(\"nullableProperties\", nullableProperties));\n\t\tnullableProperties.put(\"foo\", null);\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isNull();\n\t}\n\n\t@Test\n\tvoid getProperty_withTargetType_andDefaultValue() {\n\t\tassertThat(propertyResolver.getProperty(\"foo\", Integer.class, 42)).isEqualTo(42);\n\t\ttestProperties.put(\"foo\", 13);\n\t\tassertThat(propertyResolver.getProperty(\"foo\", Integer.class, 42)).isEqualTo(13);\n\t}\n\n\t@Test\n\tvoid getProperty_withStringArrayConversion() {\n\t\ttestProperties.put(\"foo\", \"bar,baz\");\n\t\tassertThat(propertyResolver.getProperty(\"foo\", String[].class)).isEqualTo(new String[] { \"bar\", \"baz\" });\n\t}\n\n\t@Test\n\tvoid getProperty_withNonConvertibleTargetType() {\n\t\ttestProperties.put(\"foo\", \"bar\");\n\n\t\tclass TestType { }\n\n\t\tassertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() ->\n\t\t\t\tpropertyResolver.getProperty(\"foo\", TestType.class));\n\t}\n\n\t@Test\n\tvoid getProperty_doesNotCache_replaceExistingKeyPostConstruction() {\n\t\tString key = \"foo\";\n\t\tString value1 = \"bar\";\n\t\tString value2 = \"biz\";\n\n\t\tHashMap<String, Object> map = new HashMap<>();\n\t\tmap.put(key, value1); // before construction\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MapPropertySource(\"testProperties\", map));\n\t\tPropertyResolver propertyResolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(propertyResolver.getProperty(key)).isEqualTo(value1);\n\t\tmap.put(key, value2); // after construction and first resolution\n\t\tassertThat(propertyResolver.getProperty(key)).isEqualTo(value2);\n\t}\n\n\t@Test\n\tvoid getProperty_doesNotCache_addNewKeyPostConstruction() {\n\t\tHashMap<String, Object> map = new HashMap<>();\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MapPropertySource(\"testProperties\", map));\n\t\tPropertyResolver propertyResolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isNull();\n\t\tmap.put(\"foo\", \"42\");\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"42\");\n\t}\n\n\t@Test\n\tvoid getPropertySources_replacePropertySource() {\n\t\tpropertySources = new MutablePropertySources();\n\t\tpropertyResolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tpropertySources.addLast(new MockPropertySource(\"local\").withProperty(\"foo\", \"localValue\"));\n\t\tpropertySources.addLast(new MockPropertySource(\"system\").withProperty(\"foo\", \"systemValue\"));\n\n\t\t// 'local' was added first so has precedence\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"localValue\");\n\n\t\t// replace 'local' with new property source\n\t\tpropertySources.replace(\"local\", new MockPropertySource(\"new\").withProperty(\"foo\", \"newValue\"));\n\n\t\t// 'system' now has precedence\n\t\tassertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"newValue\");\n\n\t\tassertThat(propertySources).hasSize(2);\n\t}\n\n\t@Test\n\tvoid getRequiredProperty() {\n\t\ttestProperties.put(\"exists\", \"xyz\");\n\t\tassertThat(propertyResolver.getRequiredProperty(\"exists\")).isEqualTo(\"xyz\");\n\n\t\tassertThatIllegalStateException().isThrownBy(() ->\n\t\t\t\tpropertyResolver.getRequiredProperty(\"bogus\"));\n\t}\n\n\t@Test\n\tvoid getRequiredProperty_withStringArrayConversion() {\n\t\ttestProperties.put(\"exists\", \"abc,123\");\n\t\tassertThat(propertyResolver.getRequiredProperty(\"exists\", String[].class)).isEqualTo(new String[] { \"abc\", \"123\" });\n\n\t\tassertThatIllegalStateException().isThrownBy(() ->\n\t\t\t\tpropertyResolver.getRequiredProperty(\"bogus\", String[].class));\n\t}\n\n\t@Test\n\tvoid resolvePlaceholders() {\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MockPropertySource().withProperty(\"key\", \"value\"));\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(resolver.resolvePlaceholders(\"Replace this ${key}\")).isEqualTo(\"Replace this value\");\n\t}\n\n\t@Test\n\tvoid resolvePlaceholders_withUnresolvable() {\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MockPropertySource().withProperty(\"key\", \"value\"));\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(resolver.resolvePlaceholders(\"Replace this ${key} plus ${unknown}\"))\n\t\t\t\t.isEqualTo(\"Replace this value plus ${unknown}\");\n\t}\n\n\t@Test\n\tvoid resolvePlaceholders_withDefaultValue() {\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MockPropertySource().withProperty(\"key\", \"value\"));\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(resolver.resolvePlaceholders(\"Replace this ${key} plus ${unknown:defaultValue}\"))\n\t\t\t\t.isEqualTo(\"Replace this value plus defaultValue\");\n\t}\n\n\t@Test\n\tvoid resolvePlaceholders_withNullInput() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew PropertySourcesPropertyResolver(new MutablePropertySources()).resolvePlaceholders(null));\n\t}\n\n\t@Test\n\tvoid resolveRequiredPlaceholders() {\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MockPropertySource().withProperty(\"key\", \"value\"));\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(resolver.resolveRequiredPlaceholders(\"Replace this ${key}\")).isEqualTo(\"Replace this value\");\n\t}\n\n\t@Test\n\tvoid resolveRequiredPlaceholders_withUnresolvable() {\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MockPropertySource().withProperty(\"key\", \"value\"));\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() ->\n\t\t\t\tresolver.resolveRequiredPlaceholders(\"Replace this ${key} plus ${unknown}\"));\n\t}\n\n\t@Test\n\tvoid resolveRequiredPlaceholders_withDefaultValue() {\n\t\tMutablePropertySources propertySources = new MutablePropertySources();\n\t\tpropertySources.addFirst(new MockPropertySource().withProperty(\"key\", \"value\"));\n\t\tPropertyResolver resolver = new PropertySourcesPropertyResolver(propertySources);\n\t\tassertThat(resolver.resolveRequiredPlaceholders(\"Replace this ${key} plus ${unknown:defaultValue}\"))\n\t\t\t\t.isEqualTo(\"Replace this value plus defaultValue\");\n\t}\n\n\t@Test\n\tvoid resolveRequiredPlaceholders_withNullInput() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew PropertySourcesPropertyResolver(new MutablePropertySources()).resolveRequiredPlaceholders(null));\n\t}\n\n\t@Test\n\tvoid setRequiredProperties_andValidateRequiredProperties() {\n\t\t// no properties have been marked as required -> validation should pass\n\t\tpropertyResolver.validateRequiredProperties();\n\n\t\t// mark which properties are required\n\t\tpropertyResolver.setRequiredProperties(\"foo\", \"bar\");\n\n\t\t// neither foo nor bar properties are present -> validating should throw\n\t\tassertThatExceptionOfType(MissingRequiredPropertiesException.class).isThrownBy(\n\t\t\t\tpropertyResolver::validateRequiredProperties)\n\t\t\t.withMessage(\"The following properties were declared as required \" +\n\t\t\t\t\t\"but could not be resolved: [foo, bar]\");\n\n\t\t// add foo property -> validation should fail only on missing 'bar' property\n\t\ttestProperties.put(\"foo\", \"fooValue\");\n\t\tassertThatExceptionOfType(MissingRequiredPropertiesException.class).isThrownBy(\n\t\t\t\tpropertyResolver::validateRequiredProperties)\n\t\t\t.withMessage(\"The following properties were declared as required \" +\n\t\t\t\t\t\"but could not be resolved: [bar]\");\n\n\t\t// add bar property -> validation should pass, even with an empty string value\n\t\ttestProperties.put(\"bar\", \"\");\n\t\tpropertyResolver.validateRequiredProperties();\n\t}\n\n\t@Test\n\tvoid resolveNestedPropertyPlaceholders() {\n\t\tMutablePropertySources ps = new MutablePropertySources();\n\t\tps.addFirst(new MockPropertySource()\n\t\t\t.withProperty(\"p1\", \"v1\")\n\t\t\t.withProperty(\"p2\", \"v2\")\n\t\t\t.withProperty(\"p3\", \"${p1}:${p2}\")              // nested placeholders\n\t\t\t.withProperty(\"p4\", \"${p3}\")                    // deeply nested placeholders\n\t\t\t.withProperty(\"p5\", \"${p1}:${p2}:${bogus}\")     // unresolvable placeholder\n\t\t\t.withProperty(\"p6\", \"${p1}:${p2}:${bogus:def}\") // unresolvable w/ default\n\t\t\t.withProperty(\"pL\", \"${pR}\")                    // cyclic reference left\n\t\t\t.withProperty(\"pR\", \"${pL}\")                    // cyclic reference right\n\t\t);\n\t\tConfigurablePropertyResolver pr = new PropertySourcesPropertyResolver(ps);\n\t\tassertThat(pr.getProperty(\"p1\")).isEqualTo(\"v1\");\n\t\tassertThat(pr.getProperty(\"p2\")).isEqualTo(\"v2\");\n\t\tassertThat(pr.getProperty(\"p3\")).isEqualTo(\"v1:v2\");\n\t\tassertThat(pr.getProperty(\"p4\")).isEqualTo(\"v1:v2\");\n\t\tassertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() ->\n\t\t\t\tpr.getProperty(\"p5\"))\n\t\t\t.withMessageContaining(\"Could not resolve placeholder 'bogus' in value \\\"${p1}:${p2}:${bogus}\\\"\");\n\t\tassertThat(pr.getProperty(\"p6\")).isEqualTo(\"v1:v2:def\");\n\t\tassertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() ->\n\t\t\t\tpr.getProperty(\"pL\"))\n\t\t\t.withMessageContaining(\"Circular\");\n\t}\n\n\t@Test\n\tvoid resolveNestedPlaceholdersIfValueIsCharSequence() {\n\t\tMutablePropertySources ps = new MutablePropertySources();\n\t\tps.addFirst(new MockPropertySource()\n\t\t\t\t.withProperty(\"p1\", \"v1\")\n\t\t\t\t.withProperty(\"p2\", \"v2\")\n\t\t\t\t.withProperty(\"p3\", new StringBuilder(\"${p1}:${p2}\")));\n\t\tConfigurablePropertyResolver pr = new PropertySourcesPropertyResolver(ps);\n\t\tassertThat(pr.getProperty(\"p1\")).isEqualTo(\"v1\");\n\t\tassertThat(pr.getProperty(\"p2\")).isEqualTo(\"v2\");\n\t\tassertThat(pr.getProperty(\"p3\")).isEqualTo(\"v1:v2\");\n\t}\n\n\t@Test\n\tvoid resolveNestedPlaceholdersIfValueIsCharSequenceAndStringBuilderIsRequested() {\n\t\tMutablePropertySources ps = new MutablePropertySources();\n\t\tps.addFirst(new MockPropertySource()\n\t\t\t\t.withProperty(\"p1\", \"v1\")\n\t\t\t\t.withProperty(\"p2\", \"v2\")\n\t\t\t\t.withProperty(\"p3\", new StringBuilder(\"${p1}:${p2}\")));\n\t\tConfigurablePropertyResolver pr = new PropertySourcesPropertyResolver(ps);\n\t\tassertThat(pr.getProperty(\"p3\", StringBuilder.class)).isInstanceOf(StringBuilder.class)\n\t\t\t\t.hasToString(\"${p1}:${p2}\");\n\t}\n\n\t@Test // gh-33727\n\tvoid resolveNestedPlaceHolderIfValueShouldConvertToOtherTypes() {\n\t\tMutablePropertySources ps = new MutablePropertySources();\n\t\tps.addFirst(new MockPropertySource().withProperty(\"new.enabled\", \"${old.enabled:true}\"));\n\t\tConfigurablePropertyResolver pr = new PropertySourcesPropertyResolver(ps);\n\t\tassertThat(pr.getProperty(\"new.enabled\", Boolean.class, false)).isTrue();\n\t}\n\n\t@Test\n\tvoid ignoreUnresolvableNestedPlaceholdersIsConfigurable() {\n\t\tMutablePropertySources ps = new MutablePropertySources();\n\t\tps.addFirst(new MockPropertySource()\n\t\t\t.withProperty(\"p1\", \"v1\")\n\t\t\t.withProperty(\"p2\", \"v2\")\n\t\t\t.withProperty(\"p3\", \"${p1}:${p2}:${bogus:def}\") // unresolvable w/ default\n\t\t\t.withProperty(\"p4\", \"${p1}:${p2}:${bogus}\")     // unresolvable placeholder\n\t\t);\n\t\tConfigurablePropertyResolver pr = new PropertySourcesPropertyResolver(ps);\n\t\tassertThat(pr.getProperty(\"p1\")).isEqualTo(\"v1\");\n\t\tassertThat(pr.getProperty(\"p2\")).isEqualTo(\"v2\");\n\t\tassertThat(pr.getProperty(\"p3\")).isEqualTo(\"v1:v2:def\");\n\n\t\t// placeholders nested within the value of \"p4\" are unresolvable and cause an\n\t\t// exception by default\n\t\tassertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() ->\n\t\t\t\tpr.getProperty(\"p4\"))\n\t\t\t.withMessageContaining(\"Could not resolve placeholder 'bogus' in value \\\"${p1}:${p2}:${bogus}\\\"\");\n\n\t\t// relax the treatment of unresolvable nested placeholders\n\t\tpr.setIgnoreUnresolvableNestedPlaceholders(true);\n\t\t// and observe they now pass through unresolved\n\t\tassertThat(pr.getProperty(\"p4\")).isEqualTo(\"v1:v2:${bogus}\");\n\n\t\t// resolve[Nested]Placeholders methods behave as usual regardless the value of\n\t\t// ignoreUnresolvableNestedPlaceholders\n\t\tassertThat(pr.resolvePlaceholders(\"${p1}:${p2}:${bogus}\")).isEqualTo(\"v1:v2:${bogus}\");\n\t\tassertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() ->\n\t\t\t\tpr.resolveRequiredPlaceholders(\"${p1}:${p2}:${bogus}\"))\n\t\t\t.withMessageContaining(\"Could not resolve placeholder 'bogus' in value \\\"${p1}:${p2}:${bogus}\\\"\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#testProperties",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#testProperties",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Properties",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#propertySources",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#propertySources",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MutablePropertySources",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#propertyResolver",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#propertyResolver",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConfigurablePropertyResolver",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#setUp()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@BeforeEach\r\nvoid setUp() {\r\n    propertySources = new MutablePropertySources();\r\n    propertyResolver = new PropertySourcesPropertyResolver(propertySources);\r\n    testProperties = new Properties();\r\n    propertySources.addFirst(new PropertiesPropertySource(\"testProperties\", testProperties));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#setUp()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#setUp()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@BeforeEach",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#containsProperty()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid containsProperty() {\r\n    assertThat(propertyResolver.containsProperty(\"foo\")).isFalse();\r\n    testProperties.put(\"foo\", \"bar\");\r\n    assertThat(propertyResolver.containsProperty(\"foo\")).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#containsProperty()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#containsProperty()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#getProperty()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getProperty() {\r\n    assertThat(propertyResolver.getProperty(\"foo\")).isNull();\r\n    testProperties.put(\"foo\", \"bar\");\r\n    assertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#getProperty()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#getProperty()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests#getProperty_withDefaultValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getProperty_withDefaultValue() {\r\n    assertThat(propertyResolver.getProperty(\"foo\", \"myDefault\")).isEqualTo(\"myDefault\");\r\n    testProperties.put(\"foo\", \"bar\");\r\n    assertThat(propertyResolver.getProperty(\"foo\")).isEqualTo(\"bar\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourcesPropertyResolverTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.PropertySourcesPropertyResolverTests#getProperty_withDefaultValue()",
+    "tailType": "method"
+  }
+]

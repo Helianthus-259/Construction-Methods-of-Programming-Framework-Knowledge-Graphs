@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.annotation.WithTestAnnotation",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@TestAnnotation",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.WithTestAnnotation",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.reflect.Method;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.OverridingClassLoader;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link MergedAnnotation} to ensure the correct class loader is\n * used.\n *\n * @author Phillip Webb\n * @since 5.2\n */\nclass MergedAnnotationClassLoaderTests {\n\n\tprivate static final String TEST_ANNOTATION = TestAnnotation.class.getName();\n\n\tprivate static final String TEST_META_ANNOTATION = TestMetaAnnotation.class.getName();\n\n\tprivate static final String WITH_TEST_ANNOTATION = WithTestAnnotation.class.getName();\n\n\tprivate static final String TEST_REFERENCE = TestReference.class.getName();\n\n\t@Test\n\tvoid synthesizedUsesCorrectClassLoader() throws Exception {\n\t\tClassLoader parent = getClass().getClassLoader();\n\t\tTestClassLoader child = new TestClassLoader(parent);\n\t\tClass<?> source = child.loadClass(WITH_TEST_ANNOTATION);\n\t\tAnnotation annotation = getDeclaredAnnotation(source, TEST_ANNOTATION);\n\t\tAnnotation metaAnnotation = getDeclaredAnnotation(annotation.annotationType(),\n\t\t\t\tTEST_META_ANNOTATION);\n\t\t// We should have loaded the source and initial annotation from child\n\t\tassertThat(source.getClassLoader()).isEqualTo(child);\n\t\tassertThat(annotation.getClass().getClassLoader()).isEqualTo(child);\n\t\tassertThat(annotation.annotationType().getClassLoader()).isEqualTo(child);\n\t\t// The meta-annotation should have been loaded by the parent\n\t\tassertThat(metaAnnotation.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(metaAnnotation.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(\n\t\t\t\tgetEnumAttribute(metaAnnotation).getClass().getClassLoader()).isEqualTo(\n\t\t\t\t\t\tparent);\n\t\tassertThat(getClassAttribute(metaAnnotation).getClassLoader()).isEqualTo(child);\n\t\t// MergedAnnotation should follow the same class loader logic\n\t\tMergedAnnotations mergedAnnotations = MergedAnnotations.from(source);\n\t\tAnnotation synthesized = mergedAnnotations.get(TEST_ANNOTATION).synthesize();\n\t\tAnnotation synthesizedMeta = mergedAnnotations.get(\n\t\t\t\tTEST_META_ANNOTATION).synthesize();\n\t\tassertThat(synthesized.getClass().getClassLoader()).isEqualTo(child);\n\t\tassertThat(synthesized.annotationType().getClassLoader()).isEqualTo(child);\n\t\tassertThat(synthesizedMeta.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(synthesizedMeta.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(getClassAttribute(synthesizedMeta).getClassLoader()).isEqualTo(child);\n\t\tassertThat(\n\t\t\t\tgetEnumAttribute(synthesizedMeta).getClass().getClassLoader()).isEqualTo(\n\t\t\t\t\t\tparent);\n\t\tassertThat(synthesized).isEqualTo(annotation);\n\t\tassertThat(synthesizedMeta).isEqualTo(metaAnnotation);\n\t\t// Also check utils version\n\t\tAnnotation utilsMeta = AnnotatedElementUtils.getMergedAnnotation(source,\n\t\t\t\tTestMetaAnnotation.class);\n\t\tassertThat(utilsMeta.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(getClassAttribute(utilsMeta).getClassLoader()).isEqualTo(child);\n\t\tassertThat(getEnumAttribute(utilsMeta).getClass().getClassLoader()).isEqualTo(\n\t\t\t\tparent);\n\t\tassertThat(utilsMeta).isEqualTo(metaAnnotation);\n\t}\n\n\tprivate Class<?> getClassAttribute(Annotation annotation) throws Exception {\n\t\treturn (Class<?>) getAttributeValue(annotation, \"classValue\");\n\t}\n\n\tprivate Enum<?> getEnumAttribute(Annotation annotation) throws Exception {\n\t\treturn (Enum<?>) getAttributeValue(annotation, \"enumValue\");\n\t}\n\n\tprivate Object getAttributeValue(Annotation annotation, String name)\n\t\t\tthrows Exception {\n\t\tMethod classValueMethod = annotation.annotationType().getDeclaredMethod(name);\n\t\tclassValueMethod.setAccessible(true);\n\t\treturn classValueMethod.invoke(annotation);\n\t}\n\n\tprivate Annotation getDeclaredAnnotation(Class<?> element, String annotationType) {\n\t\tfor (Annotation annotation : element.getDeclaredAnnotations()) {\n\t\t\tif (annotation.annotationType().getName().equals(annotationType)) {\n\t\t\t\treturn annotation;\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\tprivate static class TestClassLoader extends OverridingClassLoader {\n\n\t\tpublic TestClassLoader(ClassLoader parent) {\n\t\t\tsuper(parent);\n\t\t}\n\n\t\t@Override\n\t\tprotected boolean isEligibleForOverriding(String className) {\n\t\t\treturn WITH_TEST_ANNOTATION.equals(className)\n\t\t\t\t\t|| TEST_ANNOTATION.equals(className)\n\t\t\t\t\t|| TEST_REFERENCE.equals(className);\n\t\t}\n\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestMetaAnnotation {\n\n\t\t@AliasFor(\"d\")\n\t\tString c() default \"\";\n\n\t\t@AliasFor(\"c\")\n\t\tString d() default \"\";\n\n\t\tClass<?> classValue();\n\n\t\tTestEnum enumValue();\n\n\t}\n\n\t@TestMetaAnnotation(classValue = TestReference.class, enumValue = TestEnum.TWO)\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestAnnotation {\n\n\t\t@AliasFor(\"b\")\n\t\tString a() default \"\";\n\n\t\t@AliasFor(\"a\")\n\t\tString b() default \"\";\n\n\t}\n\n\t@TestAnnotation\n\tstatic class WithTestAnnotation {\n\t}\n\n\tstatic class TestReference {\n\t}\n\n\tenum TestEnum {\n\t\tONE, TWO, THREE\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.TestReference",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.TestReference",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.reflect.Method;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.OverridingClassLoader;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link MergedAnnotation} to ensure the correct class loader is\n * used.\n *\n * @author Phillip Webb\n * @since 5.2\n */\nclass MergedAnnotationClassLoaderTests {\n\n\tprivate static final String TEST_ANNOTATION = TestAnnotation.class.getName();\n\n\tprivate static final String TEST_META_ANNOTATION = TestMetaAnnotation.class.getName();\n\n\tprivate static final String WITH_TEST_ANNOTATION = WithTestAnnotation.class.getName();\n\n\tprivate static final String TEST_REFERENCE = TestReference.class.getName();\n\n\t@Test\n\tvoid synthesizedUsesCorrectClassLoader() throws Exception {\n\t\tClassLoader parent = getClass().getClassLoader();\n\t\tTestClassLoader child = new TestClassLoader(parent);\n\t\tClass<?> source = child.loadClass(WITH_TEST_ANNOTATION);\n\t\tAnnotation annotation = getDeclaredAnnotation(source, TEST_ANNOTATION);\n\t\tAnnotation metaAnnotation = getDeclaredAnnotation(annotation.annotationType(),\n\t\t\t\tTEST_META_ANNOTATION);\n\t\t// We should have loaded the source and initial annotation from child\n\t\tassertThat(source.getClassLoader()).isEqualTo(child);\n\t\tassertThat(annotation.getClass().getClassLoader()).isEqualTo(child);\n\t\tassertThat(annotation.annotationType().getClassLoader()).isEqualTo(child);\n\t\t// The meta-annotation should have been loaded by the parent\n\t\tassertThat(metaAnnotation.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(metaAnnotation.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(\n\t\t\t\tgetEnumAttribute(metaAnnotation).getClass().getClassLoader()).isEqualTo(\n\t\t\t\t\t\tparent);\n\t\tassertThat(getClassAttribute(metaAnnotation).getClassLoader()).isEqualTo(child);\n\t\t// MergedAnnotation should follow the same class loader logic\n\t\tMergedAnnotations mergedAnnotations = MergedAnnotations.from(source);\n\t\tAnnotation synthesized = mergedAnnotations.get(TEST_ANNOTATION).synthesize();\n\t\tAnnotation synthesizedMeta = mergedAnnotations.get(\n\t\t\t\tTEST_META_ANNOTATION).synthesize();\n\t\tassertThat(synthesized.getClass().getClassLoader()).isEqualTo(child);\n\t\tassertThat(synthesized.annotationType().getClassLoader()).isEqualTo(child);\n\t\tassertThat(synthesizedMeta.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(synthesizedMeta.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(getClassAttribute(synthesizedMeta).getClassLoader()).isEqualTo(child);\n\t\tassertThat(\n\t\t\t\tgetEnumAttribute(synthesizedMeta).getClass().getClassLoader()).isEqualTo(\n\t\t\t\t\t\tparent);\n\t\tassertThat(synthesized).isEqualTo(annotation);\n\t\tassertThat(synthesizedMeta).isEqualTo(metaAnnotation);\n\t\t// Also check utils version\n\t\tAnnotation utilsMeta = AnnotatedElementUtils.getMergedAnnotation(source,\n\t\t\t\tTestMetaAnnotation.class);\n\t\tassertThat(utilsMeta.getClass().getClassLoader()).isEqualTo(parent);\n\t\tassertThat(getClassAttribute(utilsMeta).getClassLoader()).isEqualTo(child);\n\t\tassertThat(getEnumAttribute(utilsMeta).getClass().getClassLoader()).isEqualTo(\n\t\t\t\tparent);\n\t\tassertThat(utilsMeta).isEqualTo(metaAnnotation);\n\t}\n\n\tprivate Class<?> getClassAttribute(Annotation annotation) throws Exception {\n\t\treturn (Class<?>) getAttributeValue(annotation, \"classValue\");\n\t}\n\n\tprivate Enum<?> getEnumAttribute(Annotation annotation) throws Exception {\n\t\treturn (Enum<?>) getAttributeValue(annotation, \"enumValue\");\n\t}\n\n\tprivate Object getAttributeValue(Annotation annotation, String name)\n\t\t\tthrows Exception {\n\t\tMethod classValueMethod = annotation.annotationType().getDeclaredMethod(name);\n\t\tclassValueMethod.setAccessible(true);\n\t\treturn classValueMethod.invoke(annotation);\n\t}\n\n\tprivate Annotation getDeclaredAnnotation(Class<?> element, String annotationType) {\n\t\tfor (Annotation annotation : element.getDeclaredAnnotations()) {\n\t\t\tif (annotation.annotationType().getName().equals(annotationType)) {\n\t\t\t\treturn annotation;\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\tprivate static class TestClassLoader extends OverridingClassLoader {\n\n\t\tpublic TestClassLoader(ClassLoader parent) {\n\t\t\tsuper(parent);\n\t\t}\n\n\t\t@Override\n\t\tprotected boolean isEligibleForOverriding(String className) {\n\t\t\treturn WITH_TEST_ANNOTATION.equals(className)\n\t\t\t\t\t|| TEST_ANNOTATION.equals(className)\n\t\t\t\t\t|| TEST_REFERENCE.equals(className);\n\t\t}\n\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestMetaAnnotation {\n\n\t\t@AliasFor(\"d\")\n\t\tString c() default \"\";\n\n\t\t@AliasFor(\"c\")\n\t\tString d() default \"\";\n\n\t\tClass<?> classValue();\n\n\t\tTestEnum enumValue();\n\n\t}\n\n\t@TestMetaAnnotation(classValue = TestReference.class, enumValue = TestEnum.TWO)\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestAnnotation {\n\n\t\t@AliasFor(\"b\")\n\t\tString a() default \"\";\n\n\t\t@AliasFor(\"a\")\n\t\tString b() default \"\";\n\n\t}\n\n\t@TestAnnotation\n\tstatic class WithTestAnnotation {\n\t}\n\n\tstatic class TestReference {\n\t}\n\n\tenum TestEnum {\n\t\tONE, TWO, THREE\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.annotation;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Repeatable;\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.util.Arrays;\nimport java.util.LinkedHashSet;\nimport java.util.Set;\nimport java.util.stream.Stream;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.MergedAnnotation.Adapt;\nimport org.springframework.util.MultiValueMap;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link MergedAnnotationCollectors}.\n *\n * @author Phillip Webb\n */\nclass MergedAnnotationCollectorsTests {\n\n\t@Test\n\tvoid toAnnotationSetCollectsLinkedHashSetWithSynthesizedAnnotations() {\n\t\tSet<TestAnnotation> set = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toAnnotationSet());\n\t\tassertThat(set).isInstanceOf(LinkedHashSet.class).flatExtracting(\n\t\t\t\tTestAnnotation::value).containsExactly(\"a\", \"b\", \"c\");\n\t\tassertThat(set).allMatch(AnnotationUtils::isSynthesizedAnnotation);\n\t}\n\n\t@Test\n\tvoid toAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations() {\n\t\tAnnotation[] array = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toAnnotationArray());\n\t\tassertThat(Arrays.stream(array).map(\n\t\t\t\tannotation -> ((TestAnnotation) annotation).value())).containsExactly(\"a\",\n\t\t\t\t\t\t\"b\", \"c\");\n\t\tassertThat(array).allMatch(AnnotationUtils::isSynthesizedAnnotation);\n\t}\n\n\t@Test\n\tvoid toSuppliedAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations() {\n\t\tTestAnnotation[] array = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toAnnotationArray(TestAnnotation[]::new));\n\t\tassertThat(Arrays.stream(array).map(TestAnnotation::value)).containsExactly(\"a\",\n\t\t\t\t\"b\", \"c\");\n\t\tassertThat(array).allMatch(AnnotationUtils::isSynthesizedAnnotation);\n\t}\n\n\t@Test\n\tvoid toMultiValueMapCollectsMultiValueMap() {\n\t\tMultiValueMap<String, Object> map = stream().map(\n\t\t\t\tMergedAnnotation::filterDefaultValues).collect(\n\t\t\t\t\t\tMergedAnnotationCollectors.toMultiValueMap(\n\t\t\t\t\t\t\t\tAdapt.CLASS_TO_STRING));\n\t\tassertThat(map.get(\"value\")).containsExactly(\"a\", \"b\", \"c\");\n\t\tassertThat(map.get(\"extra\")).containsExactly(\"java.lang.String\",\n\t\t\t\t\"java.lang.Integer\");\n\t}\n\n\t@Test\n\tvoid toFinishedMultiValueMapCollectsMultiValueMap() {\n\t\tMultiValueMap<String, Object> map = stream().collect(\n\t\t\t\tMergedAnnotationCollectors.toMultiValueMap(result -> {\n\t\t\t\t\tresult.add(\"finished\", true);\n\t\t\t\t\treturn result;\n\t\t\t\t}));\n\t\tassertThat(map.get(\"value\")).containsExactly(\"a\", \"b\", \"c\");\n\t\tassertThat(map.get(\"extra\")).containsExactly(void.class, String.class,\n\t\t\t\tInteger.class);\n\t\tassertThat(map.get(\"finished\")).containsExactly(true);\n\t}\n\n\tprivate Stream<MergedAnnotation<TestAnnotation>> stream() {\n\t\treturn MergedAnnotations.from(WithTestAnnotations.class).stream(TestAnnotation.class);\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@Repeatable(TestAnnotations.class)\n\t@interface TestAnnotation {\n\n\t\t@AliasFor(\"name\")\n\t\tString value() default \"\";\n\n\t\t@AliasFor(\"value\")\n\t\tString name() default \"\";\n\n\t\tClass<?> extra() default void.class;\n\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface TestAnnotations {\n\n\t\tTestAnnotation[] value();\n\t}\n\n\t@TestAnnotation(\"a\")\n\t@TestAnnotation(name = \"b\", extra = String.class)\n\t@TestAnnotation(name = \"c\", extra = Integer.class)\n\tstatic class WithTestAnnotations {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toAnnotationSetCollectsLinkedHashSetWithSynthesizedAnnotations()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid toAnnotationSetCollectsLinkedHashSetWithSynthesizedAnnotations() {\r\n    Set<TestAnnotation> set = stream().collect(MergedAnnotationCollectors.toAnnotationSet());\r\n    assertThat(set).isInstanceOf(LinkedHashSet.class).flatExtracting(TestAnnotation::value).containsExactly(\"a\", \"b\", \"c\");\r\n    assertThat(set).allMatch(AnnotationUtils::isSynthesizedAnnotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toAnnotationSetCollectsLinkedHashSetWithSynthesizedAnnotations()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toAnnotationSetCollectsLinkedHashSetWithSynthesizedAnnotations()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid toAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations() {\r\n    Annotation[] array = stream().collect(MergedAnnotationCollectors.toAnnotationArray());\r\n    assertThat(Arrays.stream(array).map(annotation -> ((TestAnnotation) annotation).value())).containsExactly(\"a\", \"b\", \"c\");\r\n    assertThat(array).allMatch(AnnotationUtils::isSynthesizedAnnotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toSuppliedAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid toSuppliedAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations() {\r\n    TestAnnotation[] array = stream().collect(MergedAnnotationCollectors.toAnnotationArray(TestAnnotation[]::new));\r\n    assertThat(Arrays.stream(array).map(TestAnnotation::value)).containsExactly(\"a\", \"b\", \"c\");\r\n    assertThat(array).allMatch(AnnotationUtils::isSynthesizedAnnotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toSuppliedAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toSuppliedAnnotationArrayCollectsAnnotationArrayWithSynthesizedAnnotations()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toMultiValueMapCollectsMultiValueMap()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid toMultiValueMapCollectsMultiValueMap() {\r\n    MultiValueMap<String, Object> map = stream().map(MergedAnnotation::filterDefaultValues).collect(MergedAnnotationCollectors.toMultiValueMap(Adapt.CLASS_TO_STRING));\r\n    assertThat(map.get(\"value\")).containsExactly(\"a\", \"b\", \"c\");\r\n    assertThat(map.get(\"extra\")).containsExactly(\"java.lang.String\", \"java.lang.Integer\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toMultiValueMapCollectsMultiValueMap()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toMultiValueMapCollectsMultiValueMap()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.annotation.MergedAnnotationCollectorsTests#toFinishedMultiValueMapCollectsMultiValueMap()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid toFinishedMultiValueMapCollectsMultiValueMap() {\r\n    MultiValueMap<String, Object> map = stream().collect(MergedAnnotationCollectors.toMultiValueMap(result -> {\r\n        result.add(\"finished\", true);\r\n        return result;\r\n    }));\r\n    assertThat(map.get(\"value\")).containsExactly(\"a\", \"b\", \"c\");\r\n    assertThat(map.get(\"extra\")).containsExactly(void.class, String.class, Integer.class);\r\n    assertThat(map.get(\"finished\")).containsExactly(true);\r\n}",
+    "tailType": "method_code"
+  }
+]

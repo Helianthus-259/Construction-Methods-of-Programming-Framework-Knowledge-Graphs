@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.hint",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint;\n\nimport java.util.Arrays;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.function.Consumer;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.aot.hint.ResourceHintsTests.Nested.Inner;\nimport org.springframework.core.io.ClassPathResource;\nimport org.springframework.core.io.DescriptiveResource;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.mockito.Mockito.mock;\nimport static org.mockito.Mockito.verifyNoInteractions;\n\n/**\n * Tests for {@link ResourceHints}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n */\nclass ResourceHintsTests {\n\n\tprivate final ResourceHints resourceHints = new ResourceHints();\n\n\t@Test\n\tvoid registerType() {\n\t\tthis.resourceHints.registerType(String.class);\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\n\t}\n\n\t@Test\n\tvoid registerTypeWithNestedType() {\n\t\tthis.resourceHints.registerType(TypeReference.of(Nested.class));\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\",\n\t\t\t\t\t\t\"org/springframework/aot/hint/ResourceHintsTests$Nested.class\"));\n\t}\n\n\t@Test\n\tvoid registerTypeWithInnerNestedType() {\n\t\tthis.resourceHints.registerType(TypeReference.of(Inner.class));\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\",\n\t\t\t\t\t\t\"org/springframework/aot/hint/ResourceHintsTests$Nested$Inner.class\"));\n\t}\n\n\t@Test\n\tvoid registerTypeSeveralTimesAddsOnlyOneEntry() {\n\t\tthis.resourceHints.registerType(String.class);\n\t\tthis.resourceHints.registerType(TypeReference.of(String.class));\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\n\t}\n\n\t@Test\n\tvoid registerExactMatches() {\n\t\tthis.resourceHints.registerPattern(\"com/example/test.properties\");\n\t\tthis.resourceHints.registerPattern(\"com/example/another.properties\");\n\t\tassertThat(this.resourceHints.resourcePatternHints())\n\t\t\t\t.anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/test.properties\"))\n\t\t\t\t.anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/another.properties\"))\n\t\t\t\t.hasSize(2);\n\t}\n\n\t@Test\n\tvoid registerExactMatchesInRootDirectory() {\n\t\tthis.resourceHints.registerPattern(\"test.properties\");\n\t\tthis.resourceHints.registerPattern(\"another.properties\");\n\t\tassertThat(this.resourceHints.resourcePatternHints())\n\t\t\t\t.anySatisfy(patternOf(\"/\", \"test.properties\"))\n\t\t\t\t.anySatisfy(patternOf(\"/\", \"another.properties\"))\n\t\t\t\t.hasSize(2);\n\t}\n\n\t@Test\n\tvoid registerRootDirectory() {\n\t\tthis.resourceHints.registerPattern(\"/\");\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\"));\n\t}\n\n\t@Test\n\tvoid registerRootPattern() {\n\t\tthis.resourceHints.registerPattern(\"*.properties\");\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"*.properties\"));\n\t}\n\n\t@Test\n\tvoid registerPattern() {\n\t\tthis.resourceHints.registerPattern(\"com/example/*.properties\");\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"));\n\t}\n\n\t@Test\n\tvoid registerPatternWithIncludesAndExcludes() {\n\t\tthis.resourceHints.registerPattern(resourceHint ->\n\t\t\t\tresourceHint.includes(\"com/example/*.properties\"));\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\n\t\t\t\tList.of(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"),\n\t\t\t\tList.of(\"com/example/to-ignore.properties\")));\n\t}\n\n\t@Test\n\tvoid registerIfPresentRegisterExistingLocation() {\n\t\tthis.resourceHints.registerPatternIfPresent(null, \"META-INF/\",\n\t\t\t\tresourceHint -> resourceHint.includes(\"com/example/*.properties\"));\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"com\", \"com/example\", \"com/example/*.properties\"));\n\t}\n\n\t@Test\n\tvoid registerIfPresentIgnoreMissingLocation() {\n\t\tConsumer<ResourcePatternHints.Builder> hintBuilder = mock();\n\t\tthis.resourceHints.registerPatternIfPresent(null, \"location/does-not-exist/\", hintBuilder);\n\t\tassertThat(this.resourceHints.resourcePatternHints()).isEmpty();\n\t\tverifyNoInteractions(hintBuilder);\n\t}\n\n\t@Test\n\tvoid registerResourceWithUnsupportedResourceType() {\n\t\tDescriptiveResource resource = new DescriptiveResource(\"bogus\");\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> this.resourceHints.registerResource(resource))\n\t\t\t.withMessage(\"Resource must be a ClassPathResource that exists: %s\", resource);\n\t}\n\n\t@Test\n\tvoid registerResourceWithNonexistentClassPathResource() {\n\t\tClassPathResource resource = new ClassPathResource(\"bogus\", getClass());\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> this.resourceHints.registerResource(resource))\n\t\t\t.withMessage(\"Resource must be a ClassPathResource that exists: %s\", resource);\n\t}\n\n\t@Test\n\tvoid registerResourceWithExistingClassPathResource() {\n\t\tString path = \"org/springframework/aot/hint/support\";\n\t\tClassPathResource resource = new ClassPathResource(path);\n\t\tthis.resourceHints.registerResource(resource);\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", path));\n\t}\n\n\t@Test\n\tvoid registerResourceWithExistingRelativeClassPathResource() {\n\t\tString path = \"org/springframework/aot/hint/support\";\n\t\tClassPathResource resource = new ClassPathResource(\"support\", RuntimeHints.class);\n\t\tthis.resourceHints.registerResource(resource);\n\t\tassertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(\n\t\t\t\tpatternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", path));\n\t}\n\n\t@Test\n\tvoid registerResourceBundle() {\n\t\tthis.resourceHints.registerResourceBundle(\"com.example.message\");\n\t\tassertThat(this.resourceHints.resourceBundleHints()).singleElement()\n\t\t\t\t.satisfies(resourceBundle(\"com.example.message\"));\n\t}\n\n\t@Test\n\tvoid registerResourceBundleSeveralTimesAddsOneEntry() {\n\t\tthis.resourceHints.registerResourceBundle(\"com.example.message\")\n\t\t\t\t.registerResourceBundle(\"com.example.message\");\n\t\tassertThat(this.resourceHints.resourceBundleHints()).singleElement()\n\t\t\t\t.satisfies(resourceBundle(\"com.example.message\"));\n\t}\n\n\n\tprivate Consumer<ResourcePatternHints> patternOf(String... includes) {\n\t\treturn patternOf(Arrays.asList(includes), Collections.emptyList());\n\t}\n\n\tprivate Consumer<ResourceBundleHint> resourceBundle(String baseName) {\n\t\treturn resourceBundleHint -> assertThat(resourceBundleHint.getBaseName()).isEqualTo(baseName);\n\t}\n\n\tprivate Consumer<ResourcePatternHints> patternOf(List<String> includes, List<String> excludes) {\n\t\treturn pattern -> assertThat(pattern.getIncludes()).map(ResourcePatternHint::getPattern).containsExactlyInAnyOrderElementsOf(includes);\n\t}\n\n\tstatic class Nested {\n\n\t\tclass Inner {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests#resourceHints",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#resourceHints",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ResourceHints",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerType() {\r\n    this.resourceHints.registerType(String.class);\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests#registerType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerType()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithNestedType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerTypeWithNestedType() {\r\n    this.resourceHints.registerType(TypeReference.of(Nested.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", \"org/springframework/aot/hint/ResourceHintsTests$Nested.class\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithNestedType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithNestedType()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithInnerNestedType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerTypeWithInnerNestedType() {\r\n    this.resourceHints.registerType(TypeReference.of(Inner.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"org\", \"org/springframework\", \"org/springframework/aot\", \"org/springframework/aot/hint\", \"org/springframework/aot/hint/ResourceHintsTests$Nested$Inner.class\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithInnerNestedType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerTypeWithInnerNestedType()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerTypeSeveralTimesAddsOnlyOneEntry()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerTypeSeveralTimesAddsOnlyOneEntry() {\r\n    this.resourceHints.registerType(String.class);\r\n    this.resourceHints.registerType(TypeReference.of(String.class));\r\n    assertThat(this.resourceHints.resourcePatternHints()).singleElement().satisfies(patternOf(\"/\", \"java\", \"java/lang\", \"java/lang/String.class\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests#registerTypeSeveralTimesAddsOnlyOneEntry()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerTypeSeveralTimesAddsOnlyOneEntry()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerExactMatches()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerExactMatches() {\r\n    this.resourceHints.registerPattern(\"com/example/test.properties\");\r\n    this.resourceHints.registerPattern(\"com/example/another.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/test.properties\")).anySatisfy(patternOf(\"/\", \"com\", \"com/example\", \"com/example/another.properties\")).hasSize(2);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourceHintsTests#registerExactMatches()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerExactMatches()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourceHintsTests#registerExactMatchesInRootDirectory()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerExactMatchesInRootDirectory() {\r\n    this.resourceHints.registerPattern(\"test.properties\");\r\n    this.resourceHints.registerPattern(\"another.properties\");\r\n    assertThat(this.resourceHints.resourcePatternHints()).anySatisfy(patternOf(\"/\", \"test.properties\")).anySatisfy(patternOf(\"/\", \"another.properties\")).hasSize(2);\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support.StringListToBListConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StringListToBListConverter#convert(List<String>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StringListToBListConverter#convert(List<String>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.util.Arrays;\nimport java.util.Collections;\nimport java.util.EnumMap;\nimport java.util.HashMap;\nimport java.util.LinkedHashMap;\nimport java.util.List;\nimport java.util.Map;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConversionFailedException;\nimport org.springframework.core.convert.ConverterNotFoundException;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.util.LinkedMultiValueMap;\nimport org.springframework.util.MultiValueMap;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n\n/**\n * @author Keith Donald\n * @author Phillip Webb\n * @author Juergen Hoeller\n */\nclass MapToMapConverterTests {\n\n\tprivate final GenericConversionService conversionService = new GenericConversionService();\n\n\n\t@BeforeEach\n\tvoid setup() {\n\t\tconversionService.addConverter(new MapToMapConverter(conversionService));\n\t}\n\n\n\t@Test\n\tvoid scalarMap() throws Exception {\n\t\tMap<String, String> map = new HashMap<>();\n\t\tmap.put(\"1\", \"9\");\n\t\tmap.put(\"2\", \"37\");\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(map);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"scalarMapTarget\"));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\ttry {\n\t\t\tconversionService.convert(map, sourceType, targetType);\n\t\t}\n\t\tcatch (ConversionFailedException ex) {\n\t\t\tassertThat(ex.getCause()).isInstanceOf(ConverterNotFoundException.class);\n\t\t}\n\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tMap<Integer, Integer> result = (Map<Integer, Integer>) conversionService.convert(map, sourceType, targetType);\n\t\tassertThat(map).isNotEqualTo(result);\n\t\tassertThat((int) result.get(1)).isEqualTo(9);\n\t\tassertThat((int) result.get(2)).isEqualTo(37);\n\t}\n\n\t@Test\n\tvoid scalarMapNotGenericTarget() {\n\t\tMap<String, String> map = new HashMap<>();\n\t\tmap.put(\"1\", \"9\");\n\t\tmap.put(\"2\", \"37\");\n\n\t\tassertThat(conversionService.canConvert(Map.class, Map.class)).isTrue();\n\t\tassertThat((Map<?, ?>) conversionService.convert(map, Map.class)).isSameAs(map);\n\t}\n\n\t@Test\n\tvoid scalarMapNotGenericSourceField() throws Exception {\n\t\tMap<String, String> map = new HashMap<>();\n\t\tmap.put(\"1\", \"9\");\n\t\tmap.put(\"2\", \"37\");\n\t\tTypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"notGenericMapSource\"));\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"scalarMapTarget\"));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\ttry {\n\t\t\tconversionService.convert(map, sourceType, targetType);\n\t\t}\n\t\tcatch (ConversionFailedException ex) {\n\t\t\tassertThat(ex.getCause()).isInstanceOf(ConverterNotFoundException.class);\n\t\t}\n\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tMap<Integer, Integer> result = (Map<Integer, Integer>) conversionService.convert(map, sourceType, targetType);\n\t\tassertThat(map).isNotEqualTo(result);\n\t\tassertThat((int) result.get(1)).isEqualTo(9);\n\t\tassertThat((int) result.get(2)).isEqualTo(37);\n\t}\n\n\t@Test\n\tvoid collectionMap() throws Exception {\n\t\tMap<String, List<String>> map = new HashMap<>();\n\t\tmap.put(\"1\", Arrays.asList(\"9\", \"12\"));\n\t\tmap.put(\"2\", Arrays.asList(\"37\", \"23\"));\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(map);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"collectionMapTarget\"));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\ttry {\n\t\t\tconversionService.convert(map, sourceType, targetType);\n\t\t}\n\t\tcatch (ConversionFailedException ex) {\n\t\t\tassertThat(ex.getCause()).isInstanceOf(ConverterNotFoundException.class);\n\t\t}\n\n\t\tconversionService.addConverter(new CollectionToCollectionConverter(conversionService));\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tMap<Integer, List<Integer>> result = (Map<Integer, List<Integer>>) conversionService.convert(map, sourceType, targetType);\n\t\tassertThat(map).isNotEqualTo(result);\n\t\tassertThat(result.get(1)).isEqualTo(Arrays.asList(9, 12));\n\t\tassertThat(result.get(2)).isEqualTo(Arrays.asList(37, 23));\n\t}\n\n\t@Test\n\tvoid collectionMapSourceTarget() throws Exception {\n\t\tMap<String, List<String>> map = new HashMap<>();\n\t\tmap.put(\"1\", Arrays.asList(\"9\", \"12\"));\n\t\tmap.put(\"2\", Arrays.asList(\"37\", \"23\"));\n\t\tTypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"sourceCollectionMapTarget\"));\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"collectionMapTarget\"));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isFalse();\n\t\tassertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() ->\n\t\t\t\tconversionService.convert(map, sourceType, targetType));\n\n\t\tconversionService.addConverter(new CollectionToCollectionConverter(conversionService));\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tMap<Integer, List<Integer>> result = (Map<Integer, List<Integer>>) conversionService.convert(map, sourceType, targetType);\n\t\tassertThat(map).isNotEqualTo(result);\n\t\tassertThat(result.get(1)).isEqualTo(Arrays.asList(9, 12));\n\t\tassertThat(result.get(2)).isEqualTo(Arrays.asList(37, 23));\n\t}\n\n\t@Test\n\tvoid collectionMapNotGenericTarget() {\n\t\tMap<String, List<String>> map = new HashMap<>();\n\t\tmap.put(\"1\", Arrays.asList(\"9\", \"12\"));\n\t\tmap.put(\"2\", Arrays.asList(\"37\", \"23\"));\n\n\t\tassertThat(conversionService.canConvert(Map.class, Map.class)).isTrue();\n\t\tassertThat((Map<?, ?>) conversionService.convert(map, Map.class)).isSameAs(map);\n\t}\n\n\t@Test\n\tvoid collectionMapNotGenericTargetCollectionToObjectInteraction() {\n\t\tMap<String, List<String>> map = new HashMap<>();\n\t\tmap.put(\"1\", Arrays.asList(\"9\", \"12\"));\n\t\tmap.put(\"2\", Arrays.asList(\"37\", \"23\"));\n\t\tconversionService.addConverter(new CollectionToCollectionConverter(conversionService));\n\t\tconversionService.addConverter(new CollectionToObjectConverter(conversionService));\n\n\t\tassertThat(conversionService.canConvert(Map.class, Map.class)).isTrue();\n\t\tassertThat((Map<?, ?>) conversionService.convert(map, Map.class)).isSameAs(map);\n\t}\n\n\t@Test\n\tvoid emptyMap() throws Exception {\n\t\tMap<String, String> map = new HashMap<>();\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(map);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyMapTarget\"));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\tassertThat(conversionService.convert(map, sourceType, targetType)).isSameAs(map);\n\t}\n\n\t@Test\n\tvoid emptyMapNoTargetGenericInfo() {\n\t\tMap<String, String> map = new HashMap<>();\n\n\t\tassertThat(conversionService.canConvert(Map.class, Map.class)).isTrue();\n\t\tassertThat((Map<?, ?>) conversionService.convert(map, Map.class)).isSameAs(map);\n\t}\n\n\t@Test\n\tvoid emptyMapDifferentTargetImplType() throws Exception {\n\t\tMap<String, String> map = new HashMap<>();\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(map);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyMapDifferentTarget\"));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tLinkedHashMap<String, String> result = (LinkedHashMap<String, String>) conversionService.convert(map, sourceType, targetType);\n\t\tassertThat(result).isEqualTo(map);\n\t\tassertThat(result.getClass()).isEqualTo(LinkedHashMap.class);\n\t}\n\n\t@Test\n\tvoid noDefaultConstructorCopyNotRequired() {\n\t\t// SPR-9284\n\t\tNoDefaultConstructorMap<String, Integer> map = new NoDefaultConstructorMap<>(\n\t\t\t\tCollections.<String, Integer>singletonMap(\"1\", 1));\n\t\tTypeDescriptor sourceType = TypeDescriptor.map(NoDefaultConstructorMap.class,\n\t\t\t\tTypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class));\n\t\tTypeDescriptor targetType = TypeDescriptor.map(NoDefaultConstructorMap.class,\n\t\t\t\tTypeDescriptor.valueOf(String.class), TypeDescriptor.valueOf(Integer.class));\n\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tMap<String, Integer> result = (Map<String, Integer>) conversionService.convert(map, sourceType, targetType);\n\t\tassertThat(result).isEqualTo(map);\n\t\tassertThat(result.getClass()).isEqualTo(NoDefaultConstructorMap.class);\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid multiValueMapToMultiValueMap() throws Exception {\n\t\tDefaultConversionService.addDefaultConverters(conversionService);\n\t\tMultiValueMap<String, Integer> source = new LinkedMultiValueMap<>();\n\t\tsource.put(\"a\", Arrays.asList(1, 2, 3));\n\t\tsource.put(\"b\", Arrays.asList(4, 5, 6));\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"multiValueMapTarget\"));\n\n\t\tMultiValueMap<String, String> converted = (MultiValueMap<String, String>) conversionService.convert(source, targetType);\n\t\tassertThat(converted).hasSize(2);\n\t\tassertThat(converted.get(\"a\")).isEqualTo(Arrays.asList(\"1\", \"2\", \"3\"));\n\t\tassertThat(converted.get(\"b\")).isEqualTo(Arrays.asList(\"4\", \"5\", \"6\"));\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid mapToMultiValueMap() throws Exception {\n\t\tDefaultConversionService.addDefaultConverters(conversionService);\n\t\tMap<String, Integer> source = new HashMap<>();\n\t\tsource.put(\"a\", 1);\n\t\tsource.put(\"b\", 2);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"multiValueMapTarget\"));\n\n\t\tMultiValueMap<String, String> converted = (MultiValueMap<String, String>) conversionService.convert(source, targetType);\n\t\tassertThat(converted).hasSize(2);\n\t\tassertThat(converted.get(\"a\")).isEqualTo(List.of(\"1\"));\n\t\tassertThat(converted.get(\"b\")).isEqualTo(List.of(\"2\"));\n\t}\n\n\t@Test\n\tvoid stringToEnumMap() throws Exception {\n\t\tconversionService.addConverterFactory(new StringToEnumConverterFactory());\n\t\tMap<String, Integer> source = new HashMap<>();\n\t\tsource.put(\"A\", 1);\n\t\tsource.put(\"C\", 2);\n\t\tEnumMap<MyEnum, Integer> result = new EnumMap<>(MyEnum.class);\n\t\tresult.put(MyEnum.A, 1);\n\t\tresult.put(MyEnum.C, 2);\n\n\t\tassertThat(conversionService.convert(source,\n\t\t\t\tTypeDescriptor.forObject(source), new TypeDescriptor(getClass().getField(\"enumMap\")))).isEqualTo(result);\n\t}\n\n\n\tpublic Map<Integer, Integer> scalarMapTarget;\n\n\tpublic Map<Integer, List<Integer>> collectionMapTarget;\n\n\tpublic Map<String, List<String>> sourceCollectionMapTarget;\n\n\tpublic Map<String, String> emptyMapTarget;\n\n\tpublic LinkedHashMap<String, String> emptyMapDifferentTarget;\n\n\tpublic MultiValueMap<String, String> multiValueMapTarget;\n\n\t@SuppressWarnings(\"rawtypes\")\n\tpublic Map notGenericMapSource;\n\n\tpublic EnumMap<MyEnum, Integer> enumMap;\n\n\n\t@SuppressWarnings(\"serial\")\n\tpublic static class NoDefaultConstructorMap<K, V> extends HashMap<K, V> {\n\n\t\tpublic NoDefaultConstructorMap(Map<? extends K, ? extends V> map) {\n\t\t\tsuper(map);\n\t\t}\n\t}\n\n\n\tpublic enum MyEnum {A, B, C}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#conversionService",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#conversionService",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "GenericConversionService",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#scalarMapTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#scalarMapTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Integer, Integer>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#collectionMapTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#collectionMapTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Integer, List<Integer>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#sourceCollectionMapTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#sourceCollectionMapTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, List<String>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#emptyMapTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#emptyMapTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#emptyMapDifferentTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#emptyMapDifferentTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "LinkedHashMap<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#multiValueMapTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests#multiValueMapTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MultiValueMap<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.MapToMapConverterTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.MapToMapConverterTests#notGenericMapSource",
+    "tailType": "field"
+  }
+]

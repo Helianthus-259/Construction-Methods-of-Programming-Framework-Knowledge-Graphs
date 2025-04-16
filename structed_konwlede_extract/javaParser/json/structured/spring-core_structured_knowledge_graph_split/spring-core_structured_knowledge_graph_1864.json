@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.ConventionsTests#getQualifiedAttributeName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getQualifiedAttributeName() {\r\n    String baseName = \"foo\";\r\n    Class<String> cls = String.class;\r\n    String desiredResult = \"java.lang.String.foo\";\r\n    assertThat(Conventions.getQualifiedAttributeName(cls, baseName)).isEqualTo(desiredResult);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ConventionsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ConventionsTests#getQualifiedAttributeName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ConventionsTests#getQualifiedAttributeName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.ConventionsTests#getMethodParameter(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static MethodParameter getMethodParameter(Class<?> parameterType) {\r\n    Method method = ClassUtils.getMethod(TestBean.class, \"handle\", (Class<?>[]) null);\r\n    for (int i = 0; i < method.getParameterCount(); i++) {\r\n        if (parameterType.equals(method.getParameterTypes()[i])) {\r\n            return new MethodParameter(method, i);\r\n        }\r\n    }\r\n    throw new IllegalArgumentException(\"Parameter type not found: \" + parameterType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ConventionsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ConventionsTests#getMethodParameter(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ConventionsTests#getMethodForReturnType(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Method getMethodForReturnType(Class<?> returnType) {\r\n    return Arrays.stream(TestBean.class.getMethods()).filter(method -> method.getReturnType().equals(returnType)).findFirst().orElseThrow(() -> new IllegalArgumentException(\"Unique return type not found: \" + returnType));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ConventionsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ConventionsTests#getMethodForReturnType(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.TestBean",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.Method;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\n\nimport io.reactivex.rxjava3.core.Observable;\nimport io.reactivex.rxjava3.core.Single;\nimport org.junit.jupiter.api.Test;\nimport reactor.core.publisher.Flux;\nimport reactor.core.publisher.Mono;\n\nimport org.springframework.tests.sample.objects.TestObject;\nimport org.springframework.util.ClassUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link Conventions}.\n *\n * @author Rob Harrop\n * @author Sam Brannen\n */\nclass ConventionsTests {\n\n\t@Test\n\tvoid simpleObject() {\n\t\tassertThat(Conventions.getVariableName(new TestObject())).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(TestObject.class))).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(TestObject.class))).as(\"Incorrect singular variable name\").isEqualTo(\"testObject\");\n\t}\n\n\t@Test\n\tvoid array() {\n\t\tObject actual = Conventions.getVariableName(new TestObject[0]);\n\t\tassertThat(actual).as(\"Incorrect plural array form\").isEqualTo(\"testObjectList\");\n\t}\n\n\t@Test\n\tvoid list() {\n\t\tassertThat(Conventions.getVariableName(Collections.singletonList(new TestObject()))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(List.class))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(List.class))).as(\"Incorrect plural List form\").isEqualTo(\"testObjectList\");\n\t}\n\n\t@Test\n\tvoid emptyList() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tConventions.getVariableName(new ArrayList<>()));\n\t}\n\n\t@Test\n\tvoid set() {\n\t\tassertThat(Conventions.getVariableName(Collections.singleton(new TestObject()))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(Set.class))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Set.class))).as(\"Incorrect plural Set form\").isEqualTo(\"testObjectList\");\n\t}\n\n\t@Test\n\tvoid reactiveParameters() {\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(Mono.class))).isEqualTo(\"testObjectMono\");\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(Flux.class))).isEqualTo(\"testObjectFlux\");\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(Single.class))).isEqualTo(\"testObjectSingle\");\n\t\tassertThat(Conventions.getVariableNameForParameter(getMethodParameter(Observable.class))).isEqualTo(\"testObjectObservable\");\n\t}\n\n\t@Test\n\tvoid reactiveReturnTypes() {\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Mono.class))).isEqualTo(\"testObjectMono\");\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Flux.class))).isEqualTo(\"testObjectFlux\");\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Single.class))).isEqualTo(\"testObjectSingle\");\n\t\tassertThat(Conventions.getVariableNameForReturnType(getMethodForReturnType(Observable.class))).isEqualTo(\"testObjectObservable\");\n\t}\n\n\t@Test\n\tvoid attributeNameToPropertyName() {\n\t\tassertThat(Conventions.attributeNameToPropertyName(\"transaction-manager\")).isEqualTo(\"transactionManager\");\n\t\tassertThat(Conventions.attributeNameToPropertyName(\"pointcut-ref\")).isEqualTo(\"pointcutRef\");\n\t\tassertThat(Conventions.attributeNameToPropertyName(\"lookup-on-startup\")).isEqualTo(\"lookupOnStartup\");\n\t}\n\n\t@Test\n\tvoid getQualifiedAttributeName() {\n\t\tString baseName = \"foo\";\n\t\tClass<String> cls = String.class;\n\t\tString desiredResult = \"java.lang.String.foo\";\n\t\tassertThat(Conventions.getQualifiedAttributeName(cls, baseName)).isEqualTo(desiredResult);\n\t}\n\n\n\tprivate static MethodParameter getMethodParameter(Class<?> parameterType) {\n\t\tMethod method = ClassUtils.getMethod(TestBean.class, \"handle\", (Class<?>[]) null);\n\t\tfor (int i=0; i < method.getParameterCount(); i++) {\n\t\t\tif (parameterType.equals(method.getParameterTypes()[i])) {\n\t\t\t\treturn new MethodParameter(method, i);\n\t\t\t}\n\t\t}\n\t\tthrow new IllegalArgumentException(\"Parameter type not found: \" + parameterType);\n\t}\n\n\tprivate static Method getMethodForReturnType(Class<?> returnType) {\n\t\treturn Arrays.stream(TestBean.class.getMethods())\n\t\t\t\t.filter(method -> method.getReturnType().equals(returnType))\n\t\t\t\t.findFirst()\n\t\t\t\t.orElseThrow(() ->\n\t\t\t\t\t\tnew IllegalArgumentException(\"Unique return type not found: \" + returnType));\n\t}\n\n\n\t@SuppressWarnings(\"unused\")\n\tprivate static class TestBean {\n\n\t\tpublic void handle(TestObject to,\n\t\t\t\tList<TestObject> toList, Set<TestObject> toSet,\n\t\t\t\tMono<TestObject> toMono, Flux<TestObject> toFlux,\n\t\t\t\tSingle<TestObject> toSingle, Observable<TestObject> toObservable) { }\n\n\t\tpublic TestObject handleTo() { return null; }\n\n\t\tpublic List<TestObject> handleToList() { return null; }\n\n\t\tpublic Set<TestObject> handleToSet() { return null; }\n\n\t\tpublic Mono<TestObject> handleToMono() { return null; }\n\n\t\tpublic Flux<TestObject> handleToFlux() { return null; }\n\n\t\tpublic Single<TestObject> handleToSingle() { return null; }\n\n\t\tpublic Observable<TestObject> handleToObservable() { return null; }\n\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.TestBean#handle(TestObject,List<TestObject>,Set<TestObject>,Mono<TestObject>,Flux<TestObject>,Single<TestObject>,Observable<TestObject>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void handle(TestObject to, List<TestObject> toList, Set<TestObject> toSet, Mono<TestObject> toMono, Flux<TestObject> toFlux, Single<TestObject> toSingle, Observable<TestObject> toObservable) ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.TestBean#handle(TestObject,List<TestObject>,Set<TestObject>,Mono<TestObject>,Flux<TestObject>,Single<TestObject>,Observable<TestObject>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.TestBean#handleTo()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public TestObject handleTo() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.TestBean#handleTo()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.TestBean#handleToList()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public List<TestObject> handleToList() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.TestBean#handleToList()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.TestBean#handleToSet()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Set<TestObject> handleToSet() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.TestBean#handleToSet()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.TestBean#handleToMono()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public Mono<TestObject> handleToMono() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.TestBean",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.TestBean#handleToMono()",
+    "tailType": "method"
+  }
+]

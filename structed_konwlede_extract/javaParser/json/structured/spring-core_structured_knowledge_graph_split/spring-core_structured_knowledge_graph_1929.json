@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests#convertFromListToRawStream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid convertFromListToRawStream() throws NoSuchFieldException {\r\n    List<String> list = Arrays.asList(\"1\", \"2\", \"3\");\r\n    TypeDescriptor streamOfInteger = new TypeDescriptor(Types.class.getField(\"rawStream\"));\r\n    Object result = this.conversionService.convert(list, streamOfInteger);\r\n    assertThat(result).as(\"Converted object must be a stream\").isInstanceOf(Stream.class);\r\n    @SuppressWarnings(\"unchecked\")\r\n    Stream<Object> content = (Stream<Object>) result;\r\n    assertThat(content).containsExactly(\"1\", \"2\", \"3\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StreamConverterTests#convertFromListToRawStream()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests#convertFromListToRawStream()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests#doesNotMatchIfNoStream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid doesNotMatchIfNoStream() throws NoSuchFieldException {\r\n    assertThat(this.streamConverter.matches(new TypeDescriptor(Types.class.getField(\"listOfStrings\")), new TypeDescriptor(Types.class.getField(\"arrayOfLongs\")))).as(\"Should not match non stream type\").isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StreamConverterTests#doesNotMatchIfNoStream()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests#doesNotMatchIfNoStream()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests#shouldFailToConvertIfNoStream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid shouldFailToConvertIfNoStream() throws NoSuchFieldException {\r\n    TypeDescriptor sourceType = new TypeDescriptor(Types.class.getField(\"listOfStrings\"));\r\n    TypeDescriptor targetType = new TypeDescriptor(Types.class.getField(\"arrayOfLongs\"));\r\n    assertThatIllegalStateException().isThrownBy(() -> this.streamConverter.convert(new Object(), sourceType, targetType));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.StreamConverterTests#shouldFailToConvertIfNoStream()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.StreamConverterTests#shouldFailToConvertIfNoStream()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.support.Types",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.util.Arrays;\nimport java.util.List;\nimport java.util.stream.Stream;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConversionFailedException;\nimport org.springframework.core.convert.ConverterNotFoundException;\nimport org.springframework.core.convert.TypeDescriptor;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalStateException;\nimport static org.assertj.core.api.InstanceOfAssertFactories.list;\nimport static org.assertj.core.api.InstanceOfAssertFactories.stream;\n\n/**\n * Tests for {@link StreamConverter}.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n * @since 4.2\n */\nclass StreamConverterTests {\n\n\tprivate final GenericConversionService conversionService = new GenericConversionService();\n\n\tprivate final StreamConverter streamConverter = new StreamConverter(this.conversionService);\n\n\n\t@BeforeEach\n\tvoid setup() {\n\t\tthis.conversionService.addConverter(new CollectionToCollectionConverter(this.conversionService));\n\t\tthis.conversionService.addConverter(new ArrayToCollectionConverter(this.conversionService));\n\t\tthis.conversionService.addConverter(new CollectionToArrayConverter(this.conversionService));\n\t\tthis.conversionService.addConverter(this.streamConverter);\n\t}\n\n\n\t@Test\n\tvoid convertFromStreamToList() throws NoSuchFieldException {\n\t\tthis.conversionService.addConverter(Number.class, String.class, new ObjectToStringConverter());\n\t\tStream<Integer> stream = Stream.of(1, 2, 3);\n\t\tTypeDescriptor listOfStrings = new TypeDescriptor(Types.class.getField(\"listOfStrings\"));\n\t\tObject result = this.conversionService.convert(stream, listOfStrings);\n\n\t\tassertThat(result).asInstanceOf(list(String.class)).containsExactly(\"1\", \"2\", \"3\");\n\t}\n\n\t@Test\n\tvoid convertFromStreamToArray() throws NoSuchFieldException {\n\t\tthis.conversionService.addConverterFactory(new NumberToNumberConverterFactory());\n\t\tStream<Integer> stream = Stream.of(1, 2, 3);\n\t\tTypeDescriptor arrayOfLongs = new TypeDescriptor(Types.class.getField(\"arrayOfLongs\"));\n\t\tObject result = this.conversionService.convert(stream, arrayOfLongs);\n\n\t\tassertThat(result).as(\"Converted object must not be null\").isNotNull();\n\t\tassertThat(result.getClass().isArray()).as(\"Converted object must be an array\").isTrue();\n\t\tLong[] content = (Long[]) result;\n\t\tassertThat(content).containsExactly(1L, 2L, 3L);\n\t}\n\n\t@Test\n\tvoid convertFromStreamToRawList() throws NoSuchFieldException {\n\t\tStream<Integer> stream = Stream.of(1, 2, 3);\n\t\tTypeDescriptor listOfStrings = new TypeDescriptor(Types.class.getField(\"rawList\"));\n\t\tObject result = this.conversionService.convert(stream, listOfStrings);\n\n\t\tassertThat(result).asInstanceOf(list(Object.class)).containsExactly(1, 2, 3);\n\t}\n\n\t@Test\n\tvoid convertFromStreamToArrayNoConverter() throws NoSuchFieldException {\n\t\tStream<Integer> stream = Stream.of(1, 2, 3);\n\t\tTypeDescriptor arrayOfLongs = new TypeDescriptor(Types.class.getField(\"arrayOfLongs\"));\n\t\tassertThatExceptionOfType(ConversionFailedException.class)\n\t\t\t.isThrownBy(() -> this.conversionService.convert(stream, arrayOfLongs))\n\t\t\t.withCauseInstanceOf(ConverterNotFoundException.class);\n\t}\n\n\t@Test\n\tvoid convertFromListToStream() throws NoSuchFieldException {\n\t\tthis.conversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tList<String> list = Arrays.asList(\"1\", \"2\", \"3\");\n\t\tTypeDescriptor streamOfInteger = new TypeDescriptor(Types.class.getField(\"streamOfIntegers\"));\n\t\tObject result = this.conversionService.convert(list, streamOfInteger);\n\n\t\tassertThat(result).as(\"Converted object must be a stream\").isInstanceOf(Stream.class);\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tStream<Integer> content = (Stream<Integer>) result;\n\t\tassertThat(content.mapToInt(x -> x).sum()).isEqualTo(6);\n\t}\n\n\t@Test\n\tvoid convertFromArrayToStream() throws NoSuchFieldException {\n\t\tInteger[] array = new Integer[] {1, 0, 1};\n\t\tthis.conversionService.addConverter(Integer.class, Boolean.class, source -> source == 1);\n\t\tTypeDescriptor streamOfBoolean = new TypeDescriptor(Types.class.getField(\"streamOfBooleans\"));\n\t\tObject result = this.conversionService.convert(array, streamOfBoolean);\n\n\t\tassertThat(result).asInstanceOf(stream(Boolean.class)).filteredOn(x -> x).hasSize(2);\n\t}\n\n\t@Test\n\tvoid convertFromListToRawStream() throws NoSuchFieldException {\n\t\tList<String> list = Arrays.asList(\"1\", \"2\", \"3\");\n\t\tTypeDescriptor streamOfInteger = new TypeDescriptor(Types.class.getField(\"rawStream\"));\n\t\tObject result = this.conversionService.convert(list, streamOfInteger);\n\n\t\tassertThat(result).as(\"Converted object must be a stream\").isInstanceOf(Stream.class);\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tStream<Object> content = (Stream<Object>) result;\n\t\tassertThat(content).containsExactly(\"1\", \"2\", \"3\");\n\t}\n\n\t@Test\n\tvoid doesNotMatchIfNoStream() throws NoSuchFieldException {\n\t\tassertThat(this.streamConverter.matches(\n\t\t\t\tnew TypeDescriptor(Types.class.getField(\"listOfStrings\")),\n\t\t\t\tnew TypeDescriptor(Types.class.getField(\"arrayOfLongs\")))).as(\"Should not match non stream type\").isFalse();\n\t}\n\n\t@Test\n\tvoid shouldFailToConvertIfNoStream() throws NoSuchFieldException {\n\t\tTypeDescriptor sourceType = new TypeDescriptor(Types.class.getField(\"listOfStrings\"));\n\t\tTypeDescriptor targetType = new TypeDescriptor(Types.class.getField(\"arrayOfLongs\"));\n\t\tassertThatIllegalStateException().isThrownBy(() ->\n\t\t\tthis.streamConverter.convert(new Object(), sourceType, targetType));\n\t}\n\n\n\t@SuppressWarnings({ \"rawtypes\" })\n\tstatic class Types {\n\n\t\tpublic List<String> listOfStrings;\n\n\t\tpublic Long[] arrayOfLongs;\n\n\t\tpublic Stream<Integer> streamOfIntegers;\n\n\t\tpublic Stream<Boolean> streamOfBooleans;\n\n\t\tpublic Stream rawStream;\n\n\t\tpublic List rawList;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.Types#listOfStrings",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types#listOfStrings",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.Types#arrayOfLongs",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types#arrayOfLongs",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Long",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.Types#streamOfIntegers",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types#streamOfIntegers",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Stream<Integer>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.support.Types#streamOfBooleans",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.support.Types#streamOfBooleans",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Stream<Boolean>",
+    "tailType": "type"
+  }
+]

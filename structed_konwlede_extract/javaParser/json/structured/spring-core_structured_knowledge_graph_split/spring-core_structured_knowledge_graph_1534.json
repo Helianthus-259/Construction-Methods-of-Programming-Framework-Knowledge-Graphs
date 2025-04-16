@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.hint.annotation.AnnotatedSimplePojo",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint.annotation;\n\nimport java.lang.reflect.AnnotatedElement;\nimport java.lang.reflect.Method;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.function.Consumer;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.aot.hint.ExecutableHint;\nimport org.springframework.aot.hint.MemberCategory;\nimport org.springframework.aot.hint.RuntimeHints;\nimport org.springframework.aot.hint.TypeHint;\nimport org.springframework.aot.hint.TypeReference;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalStateException;\n\n/**\n * Tests for {@link RegisterReflectionReflectiveProcessor}.\n *\n * @author Stephane Nicoll\n * @since 6.2\n */\nclass RegisterReflectionReflectiveProcessorTests {\n\n\tprivate static final List<String> NO_METHODS = Collections.emptyList();\n\n\tprivate final RegisterReflectionReflectiveProcessor processor = new RegisterReflectionReflectiveProcessor();\n\n\tprivate final RuntimeHints hints = new RuntimeHints();\n\n\n\t@Nested\n\tclass AnnotatedTypeTests {\n\n\t\t@Test\n\t\tvoid registerReflectionWithMemberCategory() {\n\t\t\tregisterReflectionHints(RegistrationSimple.class);\n\t\t\tassertBasicTypeHint(SimplePojo.class, NO_METHODS, List.of(MemberCategory.INVOKE_PUBLIC_METHODS));\n\t\t}\n\n\t\t@Test\n\t\tvoid registerReflectionForMultipleTargets() {\n\t\t\tregisterReflectionHints(RegistrationMultipleTargets.class);\n\t\t\tassertThat(hints.reflection().typeHints()).allSatisfy(\n\t\t\t\t\thasOnlyMemberCategories(MemberCategory.INVOKE_PUBLIC_METHODS));\n\t\t\tassertThat(hints.reflection().typeHints().map(TypeHint::getType))\n\t\t\t\t\t.hasSameElementsAs(TypeReference.listOf(Number.class, Double.class, Integer.class, Float.class));\n\t\t}\n\n\t\t@Test\n\t\tvoid registerReflectionOnTargetClass() {\n\t\t\tregisterReflectionHints(AnnotatedSimplePojo.class);\n\t\t\tassertBasicTypeHint(AnnotatedSimplePojo.class, NO_METHODS,\n\t\t\t\t\tList.of(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));\n\t\t}\n\t}\n\n\n\t@Nested\n\tclass AnnotatedMethodTests {\n\n\t\t@Test\n\t\tvoid registerReflectionForStaticField() throws NoSuchMethodException {\n\t\t\tMethod method = RegistrationMethod.class.getDeclaredMethod(\"doReflection\");\n\t\t\tregisterReflectionHints(method);\n\t\t\tassertBasicTypeHint(SimplePojo.class, NO_METHODS, List.of(MemberCategory.INVOKE_DECLARED_METHODS));\n\t\t}\n\n\t\t@Test\n\t\tvoid registerReflectionWithoutTarget() throws NoSuchMethodException {\n\t\t\tMethod method = RegistrationMethodWithoutTarget.class.getDeclaredMethod(\"doReflection\");\n\t\t\tassertThatIllegalStateException()\n\t\t\t\t\t.isThrownBy(() -> registerReflectionHints(method))\n\t\t\t\t\t.withMessageContaining(\"At least one class must be specified\")\n\t\t\t\t\t.withMessageContaining(method.toString());\n\t\t}\n\t}\n\n\n\tprivate void assertBasicTypeHint(Class<?> type, List<String> methodNames, List<MemberCategory> memberCategories) {\n\t\tTypeHint typeHint = getTypeHint(type);\n\t\tassertThat(typeHint.methods()).map(ExecutableHint::getName).hasSameElementsAs(methodNames);\n\t\tassertThat(typeHint.getMemberCategories()).hasSameElementsAs(memberCategories);\n\t\tassertThat(typeHint.fields()).isEmpty();\n\t\tassertThat(typeHint.constructors()).isEmpty();\n\t}\n\n\tprivate Consumer<TypeHint> hasOnlyMemberCategories(MemberCategory... categories) {\n\t\treturn typeHint -> {\n\t\t\tassertThat(typeHint.fields()).isEmpty();\n\t\t\tassertThat(typeHint.methods()).isEmpty();\n\t\t\tassertThat(typeHint.constructors()).isEmpty();\n\t\t\tassertThat(typeHint.getMemberCategories()).containsOnly(categories);\n\t\t};\n\t}\n\n\tprivate TypeHint getTypeHint(Class<?> target) {\n\t\tTypeHint typeHint = hints.reflection().getTypeHint(target);\n\t\tassertThat(typeHint).isNotNull();\n\t\treturn typeHint;\n\t}\n\n\tprivate void registerReflectionHints(AnnotatedElement annotatedElement) {\n\t\tthis.processor.registerReflectionHints(this.hints.reflection(), annotatedElement);\n\t}\n\n\n\t@RegisterReflection(classes = SimplePojo.class, memberCategories = MemberCategory.INVOKE_PUBLIC_METHODS)\n\tstatic class RegistrationSimple {\n\t}\n\n\n\t@RegisterReflection(classes = { Number.class, Double.class },\n\t\t\tclassNames = { \"java.lang.Integer\", \"java.lang.Float\" }, memberCategories = MemberCategory.INVOKE_PUBLIC_METHODS)\n\tstatic class RegistrationMultipleTargets {\n\t}\n\n\n\tstatic class RegistrationMethod {\n\n\t\t@RegisterReflection(classes = SimplePojo.class, memberCategories = MemberCategory.INVOKE_DECLARED_METHODS)\n\t\tprivate void doReflection() {\n\n\t\t}\n\t}\n\n\n\tstatic class RegistrationMethodWithoutTarget {\n\n\t\t@RegisterReflection(memberCategories = MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)\n\t\tprivate void doReflection() {\n\t\t}\n\t}\n\n\n\tstatic class SimplePojo {\n\n\t\tprivate String name;\n\n\t\tprivate String description;\n\n\t\tpublic String getName() {\n\t\t\treturn this.name;\n\t\t}\n\n\t\tpublic void setName(String name) {\n\t\t\tthis.name = name;\n\t\t}\n\n\t\tpublic String getDescription() {\n\t\t\treturn this.description;\n\t\t}\n\n\t\tpublic void setDescription(String description) {\n\t\t\tthis.description = description;\n\t\t}\n\t}\n\n\n\t@RegisterReflection(memberCategories = MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)\n\tstatic class AnnotatedSimplePojo {\n\n\t\tAnnotatedSimplePojo(String test) {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint.annotation",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint.annotation;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Field;\nimport java.lang.reflect.Method;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.aot.hint.ExecutableMode;\nimport org.springframework.aot.hint.ReflectionHints;\nimport org.springframework.aot.hint.TypeReference;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link SimpleReflectiveProcessor}.\n *\n * @author Stephane Nicoll\n */\nclass SimpleReflectiveProcessorTests {\n\n\tprivate final SimpleReflectiveProcessor processor = new SimpleReflectiveProcessor();\n\n\tprivate final ReflectionHints hints = new ReflectionHints();\n\n\t@Test\n\tvoid registerReflectiveHintsForClass() {\n\t\tprocessor.registerReflectionHints(hints, SampleBean.class);\n\t\tassertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\n\t\t\tassertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\n\t\t\tassertThat(typeHint.getMemberCategories()).isEmpty();\n\t\t\tassertThat(typeHint.constructors()).isEmpty();\n\t\t\tassertThat(typeHint.fields()).isEmpty();\n\t\t\tassertThat(typeHint.methods()).isEmpty();\n\t\t});\n\t}\n\n\t@Test\n\tvoid registerReflectiveHintsForConstructor() {\n\t\tConstructor<?> constructor = SampleBean.class.getDeclaredConstructors()[0];\n\t\tprocessor.registerReflectionHints(hints, constructor);\n\t\tassertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\n\t\t\tassertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\n\t\t\tassertThat(typeHint.getMemberCategories()).isEmpty();\n\t\t\tassertThat(typeHint.constructors()).singleElement().satisfies(constructorHint -> {\n\t\t\t\tassertThat(constructorHint.getName()).isEqualTo(\"<init>\");\n\t\t\t\tassertThat(constructorHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\n\t\t\t\tassertThat(constructorHint.getParameterTypes()).containsExactly(TypeReference.of(String.class));\n\t\t\t});\n\t\t\tassertThat(typeHint.fields()).isEmpty();\n\t\t\tassertThat(typeHint.methods()).isEmpty();\n\t\t});\n\t}\n\n\t@Test\n\tvoid registerReflectiveHintsForField() throws NoSuchFieldException {\n\t\tField field = SampleBean.class.getDeclaredField(\"name\");\n\t\tprocessor.registerReflectionHints(hints, field);\n\t\tassertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\n\t\t\tassertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\n\t\t\tassertThat(typeHint.getMemberCategories()).isEmpty();\n\t\t\tassertThat(typeHint.constructors()).isEmpty();\n\t\t\tassertThat(typeHint.fields()).singleElement().satisfies(fieldHint ->\n\t\t\t\t\tassertThat(fieldHint.getName()).isEqualTo(\"name\"));\n\t\t\tassertThat(typeHint.methods()).isEmpty();\n\t\t});\n\t}\n\n\t@Test\n\tvoid registerReflectiveHintsForMethod() throws NoSuchMethodException {\n\t\tMethod method = SampleBean.class.getDeclaredMethod(\"setName\", String.class);\n\t\tprocessor.registerReflectionHints(hints, method);\n\t\tassertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\n\t\t\tassertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\n\t\t\tassertThat(typeHint.getMemberCategories()).isEmpty();\n\t\t\tassertThat(typeHint.constructors()).isEmpty();\n\t\t\tassertThat(typeHint.fields()).isEmpty();\n\t\t\tassertThat(typeHint.methods()).singleElement().satisfies(methodHint -> {\n\t\t\t\tassertThat(methodHint.getName()).isEqualTo(\"setName\");\n\t\t\t\tassertThat(methodHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\n\t\t\t\tassertThat(methodHint.getParameterTypes()).containsExactly(TypeReference.of(String.class));\n\t\t\t});\n\t\t});\n\t}\n\n\tstatic class SampleBean {\n\n\t\t@SuppressWarnings(\"unused\")\n\t\tprivate String name;\n\n\t\tSampleBean(String name) {\n\t\t\tthis.name = name;\n\t\t}\n\n\t\tpublic void setName(String name) {\n\t\t\tthis.name = name;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#processor",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#processor",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "SimpleReflectiveProcessor",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#hints",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#hints",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ReflectionHints",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForClass()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerReflectiveHintsForClass() {\r\n    processor.registerReflectionHints(hints, SampleBean.class);\r\n    assertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForClass()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForClass()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForConstructor()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerReflectiveHintsForConstructor() {\r\n    Constructor<?> constructor = SampleBean.class.getDeclaredConstructors()[0];\r\n    processor.registerReflectionHints(hints, constructor);\r\n    assertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n        assertThat(typeHint.constructors()).singleElement().satisfies(constructorHint -> {\r\n            assertThat(constructorHint.getName()).isEqualTo(\"<init>\");\r\n            assertThat(constructorHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\r\n            assertThat(constructorHint.getParameterTypes()).containsExactly(TypeReference.of(String.class));\r\n        });\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.methods()).isEmpty();\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForConstructor()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForConstructor()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForField()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerReflectiveHintsForField() throws NoSuchFieldException {\r\n    Field field = SampleBean.class.getDeclaredField(\"name\");\r\n    processor.registerReflectionHints(hints, field);\r\n    assertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.fields()).singleElement().satisfies(fieldHint -> assertThat(fieldHint.getName()).isEqualTo(\"name\"));\r\n        assertThat(typeHint.methods()).isEmpty();\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForField()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForField()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForMethod()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid registerReflectiveHintsForMethod() throws NoSuchMethodException {\r\n    Method method = SampleBean.class.getDeclaredMethod(\"setName\", String.class);\r\n    processor.registerReflectionHints(hints, method);\r\n    assertThat(hints.typeHints()).singleElement().satisfies(typeHint -> {\r\n        assertThat(typeHint.getType()).isEqualTo(TypeReference.of(SampleBean.class));\r\n        assertThat(typeHint.getMemberCategories()).isEmpty();\r\n        assertThat(typeHint.constructors()).isEmpty();\r\n        assertThat(typeHint.fields()).isEmpty();\r\n        assertThat(typeHint.methods()).singleElement().satisfies(methodHint -> {\r\n            assertThat(methodHint.getName()).isEqualTo(\"setName\");\r\n            assertThat(methodHint.getMode()).isEqualTo(ExecutableMode.INVOKE);\r\n            assertThat(methodHint.getParameterTypes()).containsExactly(TypeReference.of(String.class));\r\n        });\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForMethod()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.annotation.SimpleReflectiveProcessorTests#registerReflectiveHintsForMethod()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

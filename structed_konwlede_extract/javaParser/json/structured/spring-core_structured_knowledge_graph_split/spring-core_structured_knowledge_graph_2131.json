@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.Methods",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.io.ByteArrayInputStream;\nimport java.io.ByteArrayOutputStream;\nimport java.io.ObjectInputStream;\nimport java.io.ObjectOutputStream;\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.GenericArrayType;\nimport java.lang.reflect.Method;\nimport java.lang.reflect.ParameterizedType;\nimport java.lang.reflect.Type;\nimport java.lang.reflect.TypeVariable;\nimport java.lang.reflect.WildcardType;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link SerializableTypeWrapper}.\n *\n * @author Phillip Webb\n */\nclass SerializableTypeWrapperTests {\n\n\t@Test\n\tvoid forField() throws Exception {\n\t\tType type = SerializableTypeWrapper.forField(Fields.class.getField(\"parameterizedType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid forMethodParameter() throws Exception {\n\t\tMethod method = Methods.class.getDeclaredMethod(\"method\", Class.class, Object.class);\n\t\tType type = SerializableTypeWrapper.forMethodParameter(MethodParameter.forExecutable(method, 0));\n\t\tassertThat(type.toString()).isEqualTo(\"java.lang.Class<T>\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid forConstructor() throws Exception {\n\t\tConstructor<?> constructor = Constructors.class.getDeclaredConstructor(List.class);\n\t\tType type = SerializableTypeWrapper.forMethodParameter(MethodParameter.forExecutable(constructor, 0));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid classType() throws Exception {\n\t\tType type = SerializableTypeWrapper.forField(Fields.class.getField(\"classType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"class java.lang.String\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid genericArrayType() throws Exception {\n\t\tGenericArrayType type = (GenericArrayType) SerializableTypeWrapper.forField(Fields.class.getField(\"genericArrayType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>[]\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getGenericComponentType());\n\t}\n\n\t@Test\n\tvoid parameterizedType() throws Exception {\n\t\tParameterizedType type = (ParameterizedType) SerializableTypeWrapper.forField(Fields.class.getField(\"parameterizedType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getOwnerType());\n\t\tassertSerializable(type.getRawType());\n\t\tassertSerializable(type.getActualTypeArguments());\n\t\tassertSerializable(type.getActualTypeArguments()[0]);\n\t}\n\n\t@Test\n\tvoid typeVariableType() throws Exception {\n\t\tTypeVariable<?> type = (TypeVariable<?>) SerializableTypeWrapper.forField(Fields.class.getField(\"typeVariableType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"T\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getBounds());\n\t}\n\n\t@Test\n\tvoid wildcardType() throws Exception {\n\t\tParameterizedType typeSource = (ParameterizedType) SerializableTypeWrapper.forField(Fields.class.getField(\"wildcardType\"));\n\t\tWildcardType type = (WildcardType) typeSource.getActualTypeArguments()[0];\n\t\tassertThat(type.toString()).isEqualTo(\"? extends java.lang.CharSequence\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getLowerBounds());\n\t\tassertSerializable(type.getUpperBounds());\n\t}\n\n\n\tprivate void assertSerializable(Object source) throws Exception {\n\t\tByteArrayOutputStream bos = new ByteArrayOutputStream();\n\t\tObjectOutputStream oos = new ObjectOutputStream(bos);\n\t\toos.writeObject(source);\n\t\toos.close();\n\t\tObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));\n\t\tassertThat(ois.readObject()).isEqualTo(source);\n\t}\n\n\n\tstatic class Fields<T> {\n\n\t\tpublic String classType;\n\n\t\tpublic List<String>[] genericArrayType;\n\n\t\tpublic List<String> parameterizedType;\n\n\t\tpublic T typeVariableType;\n\n\t\tpublic List<? extends CharSequence> wildcardType;\n\t}\n\n\n\tinterface Methods {\n\n\t\t<T> List<T> method(Class<T> p1, T p2);\n\t}\n\n\n\tstatic class Constructors {\n\n\t\tpublic Constructors(List<String> p) {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.Methods#method(Class<T>,T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "<T> List<T> method(Class<T> p1, T p2);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Methods",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Methods#method(Class<T>,T)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.Constructors",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.Constructors",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.io.ByteArrayInputStream;\nimport java.io.ByteArrayOutputStream;\nimport java.io.ObjectInputStream;\nimport java.io.ObjectOutputStream;\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.GenericArrayType;\nimport java.lang.reflect.Method;\nimport java.lang.reflect.ParameterizedType;\nimport java.lang.reflect.Type;\nimport java.lang.reflect.TypeVariable;\nimport java.lang.reflect.WildcardType;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link SerializableTypeWrapper}.\n *\n * @author Phillip Webb\n */\nclass SerializableTypeWrapperTests {\n\n\t@Test\n\tvoid forField() throws Exception {\n\t\tType type = SerializableTypeWrapper.forField(Fields.class.getField(\"parameterizedType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid forMethodParameter() throws Exception {\n\t\tMethod method = Methods.class.getDeclaredMethod(\"method\", Class.class, Object.class);\n\t\tType type = SerializableTypeWrapper.forMethodParameter(MethodParameter.forExecutable(method, 0));\n\t\tassertThat(type.toString()).isEqualTo(\"java.lang.Class<T>\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid forConstructor() throws Exception {\n\t\tConstructor<?> constructor = Constructors.class.getDeclaredConstructor(List.class);\n\t\tType type = SerializableTypeWrapper.forMethodParameter(MethodParameter.forExecutable(constructor, 0));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid classType() throws Exception {\n\t\tType type = SerializableTypeWrapper.forField(Fields.class.getField(\"classType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"class java.lang.String\");\n\t\tassertSerializable(type);\n\t}\n\n\t@Test\n\tvoid genericArrayType() throws Exception {\n\t\tGenericArrayType type = (GenericArrayType) SerializableTypeWrapper.forField(Fields.class.getField(\"genericArrayType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>[]\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getGenericComponentType());\n\t}\n\n\t@Test\n\tvoid parameterizedType() throws Exception {\n\t\tParameterizedType type = (ParameterizedType) SerializableTypeWrapper.forField(Fields.class.getField(\"parameterizedType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"java.util.List<java.lang.String>\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getOwnerType());\n\t\tassertSerializable(type.getRawType());\n\t\tassertSerializable(type.getActualTypeArguments());\n\t\tassertSerializable(type.getActualTypeArguments()[0]);\n\t}\n\n\t@Test\n\tvoid typeVariableType() throws Exception {\n\t\tTypeVariable<?> type = (TypeVariable<?>) SerializableTypeWrapper.forField(Fields.class.getField(\"typeVariableType\"));\n\t\tassertThat(type.toString()).isEqualTo(\"T\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getBounds());\n\t}\n\n\t@Test\n\tvoid wildcardType() throws Exception {\n\t\tParameterizedType typeSource = (ParameterizedType) SerializableTypeWrapper.forField(Fields.class.getField(\"wildcardType\"));\n\t\tWildcardType type = (WildcardType) typeSource.getActualTypeArguments()[0];\n\t\tassertThat(type.toString()).isEqualTo(\"? extends java.lang.CharSequence\");\n\t\tassertSerializable(type);\n\t\tassertSerializable(type.getLowerBounds());\n\t\tassertSerializable(type.getUpperBounds());\n\t}\n\n\n\tprivate void assertSerializable(Object source) throws Exception {\n\t\tByteArrayOutputStream bos = new ByteArrayOutputStream();\n\t\tObjectOutputStream oos = new ObjectOutputStream(bos);\n\t\toos.writeObject(source);\n\t\toos.close();\n\t\tObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));\n\t\tassertThat(ois.readObject()).isEqualTo(source);\n\t}\n\n\n\tstatic class Fields<T> {\n\n\t\tpublic String classType;\n\n\t\tpublic List<String>[] genericArrayType;\n\n\t\tpublic List<String> parameterizedType;\n\n\t\tpublic T typeVariableType;\n\n\t\tpublic List<? extends CharSequence> wildcardType;\n\t}\n\n\n\tinterface Methods {\n\n\t\t<T> List<T> method(Class<T> p1, T p2);\n\t}\n\n\n\tstatic class Constructors {\n\n\t\tpublic Constructors(List<String> p) {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.serializer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.serializer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.serializer.SerializationConverterTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.serializer;\n\nimport java.io.ByteArrayInputStream;\nimport java.io.NotSerializableException;\nimport java.io.Serializable;\n\nimport org.junit.jupiter.api.Test;\nimport org.mockito.MockedConstruction;\nimport org.mockito.Mockito;\n\nimport org.springframework.core.ConfigurableObjectInputStream;\nimport org.springframework.core.serializer.support.DeserializingConverter;\nimport org.springframework.core.serializer.support.SerializationFailedException;\nimport org.springframework.core.serializer.support.SerializingConverter;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIOException;\nimport static org.mockito.BDDMockito.given;\n\n/**\n * Tests for {@link SerializingConverter} and {@link DeserializingConverter}.\n *\n * @author Gary Russell\n * @author Mark Fisher\n * @since 3.0.5\n */\nclass SerializationConverterTests {\n\n\t@Test\n\tvoid serializeAndDeserializeStringWithDefaultSerializer() {\n\t\tSerializingConverter toBytes = new SerializingConverter();\n\t\tbyte[] bytes = toBytes.convert(\"Testing\");\n\t\tDeserializingConverter fromBytes = new DeserializingConverter();\n\t\tassertThat(fromBytes.convert(bytes)).isEqualTo(\"Testing\");\n\t}\n\n\t@Test\n\tvoid serializeAndDeserializeStringWithExplicitSerializer() {\n\t\tSerializingConverter toBytes = new SerializingConverter(new DefaultSerializer());\n\t\tbyte[] bytes = toBytes.convert(\"Testing\");\n\t\tDeserializingConverter fromBytes = new DeserializingConverter();\n\t\tassertThat(fromBytes.convert(bytes)).isEqualTo(\"Testing\");\n\t}\n\n\t@Test\n\tvoid nonSerializableObject() {\n\t\tSerializingConverter toBytes = new SerializingConverter();\n\t\tassertThatExceptionOfType(SerializationFailedException.class)\n\t\t\t\t.isThrownBy(() -> toBytes.convert(new Object()))\n\t\t\t\t.havingCause()\n\t\t\t\t\t.isInstanceOf(IllegalArgumentException.class)\n\t\t\t\t\t.withMessageContaining(\"requires a Serializable payload\");\n\t}\n\n\t@Test\n\tvoid nonSerializableField() {\n\t\tSerializingConverter toBytes = new SerializingConverter();\n\t\tassertThatExceptionOfType(SerializationFailedException.class)\n\t\t\t\t.isThrownBy(() -> toBytes.convert(new UnSerializable()))\n\t\t\t\t.withCauseInstanceOf(NotSerializableException.class);\n\t}\n\n\t@Test\n\tvoid deserializationFailure() {\n\t\tDeserializingConverter fromBytes = new DeserializingConverter();\n\t\tassertThatExceptionOfType(SerializationFailedException.class)\n\t\t\t\t.isThrownBy(() -> fromBytes.convert(\"Junk\".getBytes()));\n\t}\n\n\t@Test\n\tvoid deserializationWithExplicitClassLoader() {\n\t\tDeserializingConverter fromBytes = new DeserializingConverter(getClass().getClassLoader());\n\t\tSerializingConverter toBytes = new SerializingConverter();\n\t\tString expected = \"SPRING FRAMEWORK\";\n\t\tassertThat(fromBytes.convert(toBytes.convert(expected))).isEqualTo(expected);\n\t}\n\n\t@Test\n\tvoid deserializationWithExplicitDeserializer() {\n\t\tDeserializingConverter fromBytes = new DeserializingConverter(new DefaultDeserializer());\n\t\tSerializingConverter toBytes = new SerializingConverter();\n\t\tString expected = \"SPRING FRAMEWORK\";\n\t\tassertThat(fromBytes.convert(toBytes.convert(expected))).isEqualTo(expected);\n\t}\n\n\t@Test\n\tvoid deserializationIOException() {\n\t\tClassNotFoundException classNotFoundException = new ClassNotFoundException();\n\t\ttry (MockedConstruction<ConfigurableObjectInputStream> mocked =\n\t\t\t\tMockito.mockConstruction(ConfigurableObjectInputStream.class,\n\t\t\t\t\t(mock, context) -> given(mock.readObject()).willThrow(classNotFoundException))) {\n\t\t\tDefaultDeserializer defaultSerializer = new DefaultDeserializer(getClass().getClassLoader());\n\t\t\tassertThat(mocked).isNotNull();\n\t\t\tassertThatIOException()\n\t\t\t\t\t.isThrownBy(() -> defaultSerializer.deserialize(new ByteArrayInputStream(\"test\".getBytes())))\n\t\t\t\t\t.withMessage(\"Failed to deserialize object type\")\n\t\t\t\t\t.havingCause().isSameAs(classNotFoundException);\n\t\t}\n\t}\n\n\n\tstatic class UnSerializable implements Serializable {\n\n\t\tprivate static final long serialVersionUID = 1L;\n\n\t\t@SuppressWarnings({\"unused\", \"serial\"})\n\t\tprivate Object object = new Object();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#serializeAndDeserializeStringWithDefaultSerializer()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid serializeAndDeserializeStringWithDefaultSerializer() {\r\n    SerializingConverter toBytes = new SerializingConverter();\r\n    byte[] bytes = toBytes.convert(\"Testing\");\r\n    DeserializingConverter fromBytes = new DeserializingConverter();\r\n    assertThat(fromBytes.convert(bytes)).isEqualTo(\"Testing\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.SerializationConverterTests#serializeAndDeserializeStringWithDefaultSerializer()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#serializeAndDeserializeStringWithDefaultSerializer()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#serializeAndDeserializeStringWithExplicitSerializer()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid serializeAndDeserializeStringWithExplicitSerializer() {\r\n    SerializingConverter toBytes = new SerializingConverter(new DefaultSerializer());\r\n    byte[] bytes = toBytes.convert(\"Testing\");\r\n    DeserializingConverter fromBytes = new DeserializingConverter();\r\n    assertThat(fromBytes.convert(bytes)).isEqualTo(\"Testing\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.SerializationConverterTests#serializeAndDeserializeStringWithExplicitSerializer()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#serializeAndDeserializeStringWithExplicitSerializer()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#nonSerializableObject()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid nonSerializableObject() {\r\n    SerializingConverter toBytes = new SerializingConverter();\r\n    assertThatExceptionOfType(SerializationFailedException.class).isThrownBy(() -> toBytes.convert(new Object())).havingCause().isInstanceOf(IllegalArgumentException.class).withMessageContaining(\"requires a Serializable payload\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.SerializationConverterTests#nonSerializableObject()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#nonSerializableObject()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#nonSerializableField()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid nonSerializableField() {\r\n    SerializingConverter toBytes = new SerializingConverter();\r\n    assertThatExceptionOfType(SerializationFailedException.class).isThrownBy(() -> toBytes.convert(new UnSerializable())).withCauseInstanceOf(NotSerializableException.class);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.SerializationConverterTests#nonSerializableField()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.SerializationConverterTests#nonSerializableField()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

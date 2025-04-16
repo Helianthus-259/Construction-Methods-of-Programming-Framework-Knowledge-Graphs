@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.support;\n\nimport java.io.File;\nimport java.io.InputStream;\nimport java.net.URI;\nimport java.net.URL;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.Collection;\nimport java.util.Collections;\nimport java.util.EnumSet;\nimport java.util.List;\nimport java.util.Vector;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConversionFailedException;\nimport org.springframework.core.convert.ConverterNotFoundException;\nimport org.springframework.core.convert.TypeDescriptor;\nimport org.springframework.core.io.ClassPathResource;\nimport org.springframework.core.io.FileSystemResource;\nimport org.springframework.core.io.Resource;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n\n/**\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Stephane Nicoll\n */\nclass CollectionToCollectionConverterTests {\n\n\tprivate final GenericConversionService conversionService = new GenericConversionService();\n\n\n\t@BeforeEach\n\tvoid setup() {\n\t\tconversionService.addConverter(new CollectionToCollectionConverter(conversionService));\n\t}\n\n\n\t@Test\n\tvoid scalarList() throws Exception {\n\t\tList<String> list = List.of(\"9\", \"37\");\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(list);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"scalarListTarget\"));\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\tassertThatExceptionOfType(ConversionFailedException.class)\n\t\t\t\t.isThrownBy(() -> conversionService.convert(list, sourceType, targetType))\n\t\t\t\t.withCauseInstanceOf(ConverterNotFoundException.class);\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tList<Integer> result = (List<Integer>) conversionService.convert(list, sourceType, targetType);\n\t\tassertThat(result).isNotEqualTo(list).containsExactly(9, 37);\n\t}\n\n\t@Test\n\tvoid emptyListToList() throws Exception {\n\t\tconversionService.addConverter(new CollectionToCollectionConverter(conversionService));\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tList<String> list = new ArrayList<>();\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(list);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyListTarget\"));\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\tassertThat(conversionService.convert(list, sourceType, targetType)).isEqualTo(list);\n\t}\n\n\t@Test\n\tvoid emptyListToListDifferentTargetType() throws Exception {\n\t\tconversionService.addConverter(new CollectionToCollectionConverter(conversionService));\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tList<String> list = new ArrayList<>();\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(list);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"emptyListDifferentTarget\"));\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tArrayList<Integer> result = (ArrayList<Integer>) conversionService.convert(list, sourceType, targetType);\n\t\tassertThat(result.getClass()).isEqualTo(ArrayList.class);\n\t\tassertThat(result).isEmpty();\n\t}\n\n\t@Test\n\tvoid collectionToObjectInteraction() {\n\t\tList<List<String>> list = new ArrayList<>();\n\t\tlist.add(Arrays.asList(\"9\", \"12\"));\n\t\tlist.add(Arrays.asList(\"37\", \"23\"));\n\t\tconversionService.addConverter(new CollectionToObjectConverter(conversionService));\n\t\tassertThat(conversionService.canConvert(List.class, List.class)).isTrue();\n\t\tassertThat((Object) conversionService.convert(list, List.class)).isSameAs(list);\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid arrayCollectionToObjectInteraction() {\n\t\tList<String>[] array = new List[2];\n\t\tarray[0] = Arrays.asList(\"9\", \"12\");\n\t\tarray[1] = Arrays.asList(\"37\", \"23\");\n\t\tconversionService.addConverter(new ArrayToCollectionConverter(conversionService));\n\t\tconversionService.addConverter(new CollectionToObjectConverter(conversionService));\n\t\tassertThat(conversionService.canConvert(String[].class, List.class)).isTrue();\n\t\tassertThat(conversionService.convert(array, List.class)).isEqualTo(Arrays.asList(array));\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid objectToCollection() throws Exception {\n\t\tList<List<String>> list = new ArrayList<>();\n\t\tlist.add(Arrays.asList(\"9\", \"12\"));\n\t\tlist.add(Arrays.asList(\"37\", \"23\"));\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tconversionService.addConverter(new ObjectToCollectionConverter(conversionService));\n\t\tconversionService.addConverter(new CollectionToObjectConverter(conversionService));\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(list);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"objectToCollection\"));\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\tList<List<List<Integer>>> result = (List<List<List<Integer>>>) conversionService.convert(list, sourceType, targetType);\n\t\tassertThat(result).hasSize(2);\n\t\tassertThat(result.get(0).get(0)).singleElement().isEqualTo(9);\n\t\tassertThat(result.get(0).get(1)).singleElement().isEqualTo(12);\n\t\tassertThat(result.get(1).get(0)).singleElement().isEqualTo(37);\n\t\tassertThat(result.get(1).get(1)).singleElement().isEqualTo(23);\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid stringToCollection() throws Exception {\n\t\tList<List<String>> list = new ArrayList<>();\n\t\tlist.add(List.of(\"9,12\"));\n\t\tlist.add(List.of(\"37,23\"));\n\t\tconversionService.addConverterFactory(new StringToNumberConverterFactory());\n\t\tconversionService.addConverter(new StringToCollectionConverter(conversionService));\n\t\tconversionService.addConverter(new ObjectToCollectionConverter(conversionService));\n\t\tconversionService.addConverter(new CollectionToObjectConverter(conversionService));\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(list);\n\t\tTypeDescriptor targetType = new TypeDescriptor(getClass().getField(\"objectToCollection\"));\n\t\tassertThat(conversionService.canConvert(sourceType, targetType)).isTrue();\n\t\tList<List<List<Integer>>> result = (List<List<List<Integer>>>) conversionService.convert(list, sourceType, targetType);\n\t\tassertThat(result).satisfiesExactly(\n\t\t\t\tzero -> assertThat(zero.get(0)).containsExactly(9, 12),\n\t\t\t\tone -> assertThat(one.get(0)).containsExactly(37, 23));\n\t}\n\n\t@Test\n\tvoid convertEmptyVector_shouldReturnEmptyArrayList() {\n\t\tVector<String> vector = new Vector<>();\n\t\tvector.add(\"Element\");\n\t\ttestCollectionConversionToArrayList(vector);\n\t}\n\n\t@Test\n\tvoid convertNonEmptyVector_shouldReturnNonEmptyArrayList() {\n\t\tVector<String> vector = new Vector<>();\n\t\tvector.add(\"Element\");\n\t\ttestCollectionConversionToArrayList(vector);\n\t}\n\n\t@Test\n\tvoid collectionsEmptyList() throws Exception {\n\t\tCollectionToCollectionConverter converter = new CollectionToCollectionConverter(new GenericConversionService());\n\t\tTypeDescriptor type = new TypeDescriptor(getClass().getField(\"list\"));\n\t\tconverter.convert(list, type, TypeDescriptor.valueOf(Class.forName(\"java.util.Collections$EmptyList\")));\n\t}\n\n\t@SuppressWarnings(\"rawtypes\")\n\tprivate void testCollectionConversionToArrayList(Collection<String> aSource) {\n\t\tObject myConverted = (new CollectionToCollectionConverter(new GenericConversionService())).convert(\n\t\t\t\taSource, TypeDescriptor.forObject(aSource), TypeDescriptor.forObject(new ArrayList()));\n\t\tboolean condition = myConverted instanceof ArrayList<?>;\n\t\tassertThat(condition).isTrue();\n\t\tassertThat(((ArrayList<?>) myConverted)).hasSameSizeAs(aSource);\n\t}\n\n\t@Test\n\tvoid listToCollectionNoCopyRequired() throws NoSuchFieldException {\n\t\tList<?> input = new ArrayList<>(Arrays.asList(\"foo\", \"bar\"));\n\t\tassertThat(conversionService.convert(input,\n\t\t\t\tnew TypeDescriptor(getClass().getField(\"wildcardCollection\")))).isSameAs(input);\n\t}\n\n\t@Test\n\tvoid differentImpls() throws Exception {\n\t\tList<Resource> resources = new ArrayList<>();\n\t\tresources.add(new ClassPathResource(\"test\"));\n\t\tresources.add(new FileSystemResource(\"test\"));\n\t\tresources.add(new TestResource());\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(resources);\n\t\tassertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\n\t}\n\n\t@Test\n\tvoid mixedInNulls() throws Exception {\n\t\tList<Resource> resources = new ArrayList<>();\n\t\tresources.add(new ClassPathResource(\"test\"));\n\t\tresources.add(null);\n\t\tresources.add(new FileSystemResource(\"test\"));\n\t\tresources.add(new TestResource());\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(resources);\n\t\tassertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\n\t}\n\n\t@Test\n\tvoid allNulls() throws Exception {\n\t\tList<Resource> resources = new ArrayList<>();\n\t\tresources.add(null);\n\t\tresources.add(null);\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(resources);\n\t\tassertThat(conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\")))).isSameAs(resources);\n\t}\n\n\t@Test\n\tvoid elementTypesNotConvertible() throws Exception {\n\t\tList<String> resources = new ArrayList<>();\n\t\tresources.add(null);\n\t\tresources.add(null);\n\t\tTypeDescriptor sourceType = new TypeDescriptor(getClass().getField(\"strings\"));\n\t\tassertThatExceptionOfType(ConverterNotFoundException.class).isThrownBy(() ->\n\t\t\t\tconversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\"))));\n\t}\n\n\t@Test\n\tvoid nothingInCommon() {\n\t\tList<Object> resources = new ArrayList<>();\n\t\tresources.add(new ClassPathResource(\"test\"));\n\t\tresources.add(3);\n\t\tTypeDescriptor sourceType = TypeDescriptor.forObject(resources);\n\t\tassertThatExceptionOfType(ConversionFailedException.class).isThrownBy(() ->\n\t\t\t\tconversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField(\"resources\"))));\n\t}\n\n\t@Test\n\tvoid stringToEnumSet() throws Exception {\n\t\tconversionService.addConverterFactory(new StringToEnumConverterFactory());\n\t\tList<String> list = new ArrayList<>();\n\t\tlist.add(\"A\");\n\t\tlist.add(\"C\");\n\t\tassertThat(conversionService.convert(list, new TypeDescriptor(getClass().getField(\"enumSet\")))).isEqualTo(EnumSet.of(MyEnum.A, MyEnum.C));\n\t}\n\n\n\tpublic ArrayList<Integer> scalarListTarget;\n\n\tpublic List<Integer> emptyListTarget;\n\n\tpublic ArrayList<Integer> emptyListDifferentTarget;\n\n\tpublic List<List<List<Integer>>> objectToCollection;\n\n\tpublic List<String> strings;\n\n\tpublic List<?> list = Collections.emptyList();\n\n\tpublic Collection<?> wildcardCollection = Collections.emptyList();\n\n\tpublic List<Resource> resources;\n\n\tpublic EnumSet<MyEnum> enumSet;\n\n\n\tpublic abstract static class BaseResource implements Resource {\n\n\t\t@Override\n\t\tpublic InputStream getInputStream() {\n\t\t\treturn null;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean exists() {\n\t\t\treturn false;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean isReadable() {\n\t\t\treturn false;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean isOpen() {\n\t\t\treturn false;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean isFile() {\n\t\t\treturn false;\n\t\t}\n\n\t\t@Override\n\t\tpublic URL getURL() {\n\t\t\treturn null;\n\t\t}\n\n\t\t@Override\n\t\tpublic URI getURI() {\n\t\t\treturn null;\n\t\t}\n\n\t\t@Override\n\t\tpublic File getFile() {\n\t\t\treturn null;\n\t\t}\n\n\t\t@Override\n\t\tpublic long contentLength() {\n\t\t\treturn 0;\n\t\t}\n\n\t\t@Override\n\t\tpublic long lastModified() {\n\t\t\treturn 0;\n\t\t}\n\n\t\t@Override\n\t\tpublic Resource createRelative(String relativePath) {\n\t\t\treturn null;\n\t\t}\n\n\t\t@Override\n\t\tpublic String getFilename() {\n\t\t\treturn null;\n\t\t}\n\n\t\t@Override\n\t\tpublic String getDescription() {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\n\tpublic static class TestResource extends BaseResource {\n\t}\n\n\n\tpublic enum MyEnum {A, B, C}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#getInputStream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic InputStream getInputStream() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.BaseResource#getInputStream()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#getInputStream()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#exists()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean exists() {\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.BaseResource#exists()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#exists()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#isReadable()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isReadable() {\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.BaseResource#isReadable()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#isReadable()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#isOpen()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isOpen() {\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.BaseResource#isOpen()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#isOpen()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#isFile()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isFile() {\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.BaseResource#isFile()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#isFile()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#getURL()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic URL getURL() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.support.BaseResource#getURL()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#getURL()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.support.BaseResource#getURI()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic URI getURI() {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  }
+]

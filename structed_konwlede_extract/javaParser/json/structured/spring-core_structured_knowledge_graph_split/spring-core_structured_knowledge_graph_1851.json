@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.codec.ResourceEncoderTests",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractEncoderTests",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.codec",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.codec",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.codec;\n\nimport java.util.Collections;\nimport java.util.function.Consumer;\n\nimport org.junit.jupiter.api.Test;\nimport org.reactivestreams.Subscription;\nimport reactor.core.publisher.BaseSubscriber;\nimport reactor.core.publisher.Flux;\nimport reactor.core.publisher.Mono;\nimport reactor.test.StepVerifier;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.core.io.ClassPathResource;\nimport org.springframework.core.io.Resource;\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferUtils;\nimport org.springframework.core.io.support.ResourceRegion;\nimport org.springframework.core.testfixture.io.buffer.AbstractLeakCheckingTests;\nimport org.springframework.util.MimeType;\nimport org.springframework.util.MimeTypeUtils;\n\nimport static java.nio.charset.StandardCharsets.UTF_8;\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Test cases for {@link ResourceRegionEncoder} class.\n * @author Brian Clozel\n */\nclass ResourceRegionEncoderTests extends AbstractLeakCheckingTests {\n\n\tprivate ResourceRegionEncoder encoder = new ResourceRegionEncoder();\n\n\t@Test\n\tvoid canEncode() {\n\t\tResolvableType resourceRegion = ResolvableType.forClass(ResourceRegion.class);\n\t\tMimeType allMimeType = MimeType.valueOf(\"*/*\");\n\n\t\tassertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class),\n\t\t\t\tMimeTypeUtils.APPLICATION_OCTET_STREAM)).isFalse();\n\t\tassertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), allMimeType)).isFalse();\n\t\tassertThat(this.encoder.canEncode(resourceRegion, MimeTypeUtils.APPLICATION_OCTET_STREAM)).isTrue();\n\t\tassertThat(this.encoder.canEncode(resourceRegion, allMimeType)).isTrue();\n\n\t\t// SPR-15464\n\t\tassertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\n\t}\n\n\t@Test\n\tvoid shouldEncodeResourceRegionFileResource() {\n\t\tResourceRegion region = new ResourceRegion(\n\t\t\t\tnew ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass()), 0, 6);\n\t\tFlux<DataBuffer> result = this.encoder.encode(Mono.just(region), this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeTypeUtils.APPLICATION_OCTET_STREAM,\n\t\t\t\tCollections.emptyMap());\n\n\t\tStepVerifier.create(result)\n\t\t\t\t.consumeNextWith(stringConsumer(\"Spring\"))\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify();\n\t}\n\n\t@Test\n\tvoid shouldEncodeMultipleResourceRegionsFileResource() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tFlux<ResourceRegion> regions = Flux.just(\n\t\t\t\tnew ResourceRegion(resource, 0, 6),\n\t\t\t\tnew ResourceRegion(resource, 7, 9),\n\t\t\t\tnew ResourceRegion(resource, 17, 4),\n\t\t\t\tnew ResourceRegion(resource, 22, 17)\n\t\t);\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary)\n\t\t);\n\n\t\tStepVerifier.create(result)\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Spring\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 7-15/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Framework\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 17-20/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"test\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 22-38/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"resource content.\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"--\"))\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify();\n\t}\n\n\t@Test // gh-22107\n\tvoid cancelWithoutDemandForMultipleResourceRegions() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tFlux<ResourceRegion> regions = Flux.just(\n\t\t\t\tnew ResourceRegion(resource, 0, 6),\n\t\t\t\tnew ResourceRegion(resource, 7, 9),\n\t\t\t\tnew ResourceRegion(resource, 17, 4),\n\t\t\t\tnew ResourceRegion(resource, 22, 17)\n\t\t);\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary)\n\t\t);\n\n\t\tZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\n\t\tflux.subscribe(subscriber);\n\t\tsubscriber.cancel();\n\t}\n\n\t@Test // gh-22107\n\tvoid cancelWithoutDemandForSingleResourceRegion() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tMono<ResourceRegion> regions = Mono.just(new ResourceRegion(resource, 0, 6));\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary)\n\t\t);\n\n\t\tZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\n\t\tflux.subscribe(subscriber);\n\t\tsubscriber.cancel();\n\t}\n\n\t@Test\n\tvoid nonExisting() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tResource nonExisting = new ClassPathResource(\"does not exist\", getClass());\n\t\tFlux<ResourceRegion> regions = Flux.just(\n\t\t\t\tnew ResourceRegion(resource, 0, 6),\n\t\t\t\tnew ResourceRegion(nonExisting, 0, 6));\n\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\n\n\t\tStepVerifier.create(result)\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Spring\"))\n\t\t\t\t.expectError(EncodingException.class)\n\t\t\t\t.verify();\n\t}\n\n\tprotected Consumer<DataBuffer> stringConsumer(String expected) {\n\t\treturn dataBuffer -> {\n\t\t\tString value = dataBuffer.toString(UTF_8);\n\t\t\tDataBufferUtils.release(dataBuffer);\n\t\t\tassertThat(value).isEqualTo(expected);\n\t\t};\n\t}\n\n\n\tprivate static class ZeroDemandSubscriber extends BaseSubscriber<DataBuffer> {\n\n\t\t@Override\n\t\tprotected void hookOnSubscribe(Subscription subscription) {\n\t\t\t// Just subscribe without requesting\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#encoder",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#encoder",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ResourceRegionEncoder",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#canEncode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid canEncode() {\r\n    ResolvableType resourceRegion = ResolvableType.forClass(ResourceRegion.class);\r\n    MimeType allMimeType = MimeType.valueOf(\"*/*\");\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), MimeTypeUtils.APPLICATION_OCTET_STREAM)).isFalse();\r\n    assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), allMimeType)).isFalse();\r\n    assertThat(this.encoder.canEncode(resourceRegion, MimeTypeUtils.APPLICATION_OCTET_STREAM)).isTrue();\r\n    assertThat(this.encoder.canEncode(resourceRegion, allMimeType)).isTrue();\r\n    // SPR-15464\r\n    assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#canEncode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#canEncode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeResourceRegionFileResource()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid shouldEncodeResourceRegionFileResource() {\r\n    ResourceRegion region = new ResourceRegion(new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass()), 0, 6);\r\n    Flux<DataBuffer> result = this.encoder.encode(Mono.just(region), this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeTypeUtils.APPLICATION_OCTET_STREAM, Collections.emptyMap());\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"Spring\")).expectComplete().verify();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeResourceRegionFileResource()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeResourceRegionFileResource()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeMultipleResourceRegionsFileResource()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid shouldEncodeMultipleResourceRegionsFileResource() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(resource, 7, 9), new ResourceRegion(resource, 17, 4), new ResourceRegion(resource, 22, 17));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Spring\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 7-15/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Framework\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 17-20/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"test\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 22-38/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"resource content.\")).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"--\")).expectComplete().verify();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeMultipleResourceRegionsFileResource()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#shouldEncodeMultipleResourceRegionsFileResource()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForMultipleResourceRegions()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// gh-22107\r\n@Test\r\nvoid cancelWithoutDemandForMultipleResourceRegions() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(resource, 7, 9), new ResourceRegion(resource, 17, 4), new ResourceRegion(resource, 22, 17));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    ZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\r\n    flux.subscribe(subscriber);\r\n    subscriber.cancel();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForMultipleResourceRegions()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForMultipleResourceRegions()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForSingleResourceRegion()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// gh-22107\r\n@Test\r\nvoid cancelWithoutDemandForSingleResourceRegion() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Mono<ResourceRegion> regions = Mono.just(new ResourceRegion(resource, 0, 6));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    ZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\r\n    flux.subscribe(subscriber);\r\n    subscriber.cancel();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForSingleResourceRegion()",
+    "tailType": "method"
+  }
+]

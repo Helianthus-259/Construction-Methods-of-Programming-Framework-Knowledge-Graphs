@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Arrays;\nimport java.util.List;\nimport java.util.function.Predicate;\nimport java.util.function.Supplier;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.util.StringUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link Profiles}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @author Sam Brannen\n * @since 5.1\n */\nclass ProfilesTests {\n\n\t@Test\n\tvoid ofWhenNullThrowsException() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> Profiles.of((String[]) null))\n\t\t\t.withMessage(\"Must specify at least one profile expression\");\n\t}\n\n\t@Test\n\tvoid ofWhenEmptyThrowsException() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(Profiles::of)\n\t\t\t.withMessage(\"Must specify at least one profile expression\");\n\t}\n\n\t@Test\n\tvoid ofNullElement() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> Profiles.of((String) null))\n\t\t\t.withMessage(\"Invalid profile expression [null]: must contain text\");\n\t}\n\n\t@Test\n\tvoid ofEmptyElement() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> Profiles.of(\"  \"))\n\t\t\t.withMessage(\"Invalid profile expression [  ]: must contain text\");\n\t}\n\n\t@Test\n\tvoid ofSingleElement() {\n\t\tProfiles profiles = Profiles.of(\"spring\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofSingleInvertedElement() {\n\t\tProfiles profiles = Profiles.of(\"!spring\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t}\n\n\t@Test\n\tvoid ofMultipleElements() {\n\t\tProfiles profiles = Profiles.of(\"spring\", \"framework\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofMultipleElementsWithInverted() {\n\t\tProfiles profiles = Profiles.of(\"!spring\", \"framework\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isTrue();\n\t}\n\n\t@Test\n\tvoid ofMultipleElementsAllInverted() {\n\t\tProfiles profiles = Profiles.of(\"!spring\", \"!framework\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\", \"java\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofSingleExpression() {\n\t\tProfiles profiles = Profiles.of(\"(spring)\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofSingleExpressionInverted() {\n\t\tProfiles profiles = Profiles.of(\"!(spring)\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t}\n\n\t@Test\n\tvoid ofSingleInvertedExpression() {\n\t\tProfiles profiles = Profiles.of(\"(!spring)\");\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t}\n\n\t@Test\n\tvoid ofOrExpression() {\n\t\tProfiles profiles = Profiles.of(\"(spring | framework)\");\n\t\tassertOrExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofOrExpressionWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"(spring|framework)\");\n\t\tassertOrExpression(profiles);\n\t}\n\n\tprivate void assertOrExpression(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofAndExpression() {\n\t\tProfiles profiles = Profiles.of(\"(spring & framework)\");\n\t\tassertAndExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"spring&framework)\");\n\t\tassertAndExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithoutParentheses() {\n\t\tProfiles profiles = Profiles.of(\"spring & framework\");\n\t\tassertAndExpression(profiles);\n\t}\n\n\tprivate void assertAndExpression(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofNotAndExpression() {\n\t\tProfiles profiles = Profiles.of(\"!(spring & framework)\");\n\t\tassertOfNotAndExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofNotAndExpressionWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"!(spring&framework)\");\n\t\tassertOfNotAndExpression(profiles);\n\t}\n\n\tprivate void assertOfNotAndExpression(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isTrue();\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithInvertedSingleElement() {\n\t\tProfiles profiles = Profiles.of(\"!spring & framework\");\n\t\tassertOfAndExpressionWithInvertedSingleElement(profiles);\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithInBracketsInvertedSingleElement() {\n\t\tProfiles profiles = Profiles.of(\"(!spring) & framework\");\n\t\tassertOfAndExpressionWithInvertedSingleElement(profiles);\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithInvertedSingleElementInBrackets() {\n\t\tProfiles profiles = Profiles.of(\"! (spring) & framework\");\n\t\tassertOfAndExpressionWithInvertedSingleElement(profiles);\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithInvertedSingleElementInBracketsWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"!(spring)&framework\");\n\t\tassertOfAndExpressionWithInvertedSingleElement(profiles);\n\t}\n\n\t@Test\n\tvoid ofAndExpressionWithInvertedSingleElementWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"!spring&framework\");\n\t\tassertOfAndExpressionWithInvertedSingleElement(profiles);\n\t}\n\n\tprivate void assertOfAndExpressionWithInvertedSingleElement(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofOrExpressionWithInvertedSingleElementWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"!spring|framework\");\n\t\tassertOfOrExpressionWithInvertedSingleElement(profiles);\n\t}\n\n\tprivate void assertOfOrExpressionWithInvertedSingleElement(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid ofNotOrExpression() {\n\t\tProfiles profiles = Profiles.of(\"!(spring | framework)\");\n\t\tassertOfNotOrExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofNotOrExpressionWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"!(spring|framework)\");\n\t\tassertOfNotOrExpression(profiles);\n\t}\n\n\tprivate void assertOfNotOrExpression(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"framework\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\"))).isTrue();\n\t}\n\n\t@Test\n\tvoid ofComplexExpression() {\n\t\tProfiles profiles = Profiles.of(\"(spring & framework) | (spring & java)\");\n\t\tassertComplexExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofComplexExpressionWithoutSpaces() {\n\t\tProfiles profiles = Profiles.of(\"(spring&framework)|(spring&java)\");\n\t\tassertComplexExpression(profiles);\n\t}\n\n\t@Test\n\tvoid ofComplexExpressionEnclosedInParentheses() {\n\t\tProfiles profiles = Profiles.of(\"((spring & framework) | (spring & java))\");\n\t\tassertComplexExpression(profiles);\n\t}\n\n\tprivate void assertComplexExpression(Profiles profiles) {\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"framework\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"java\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"java\", \"framework\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid malformedExpressions() {\n\t\tassertMalformed(() -> Profiles.of(\"(\"));\n\t\tassertMalformed(() -> Profiles.of(\")\"));\n\t\tassertMalformed(() -> Profiles.of(\"a & b | c\"));\n\t}\n\n\t@Test\n\tvoid sensibleToString() {\n\t\tassertThat(Profiles.of(\"spring\")).hasToString(\"spring\");\n\t\tassertThat(Profiles.of(\"(spring & framework) | (spring & java)\")).hasToString(\"(spring & framework) | (spring & java)\");\n\t\tassertThat(Profiles.of(\"(spring&framework)|(spring&java)\")).hasToString(\"(spring&framework)|(spring&java)\");\n\t\tassertThat(Profiles.of(\"spring & framework\", \"java | kotlin\")).hasToString(\"(spring & framework) | (java | kotlin)\");\n\t\tassertThat(Profiles.of(\"java | kotlin\", \"spring & framework\")).hasToString(\"(java | kotlin) | (spring & framework)\");\n\t\tassertThat(Profiles.of(\"java | kotlin\", \"spring & framework\", \"cat | dog\")).hasToString(\"(java | kotlin) | (spring & framework) | (cat | dog)\");\n\t}\n\n\t@Test\n\tvoid toStringGeneratesValidCompositeProfileExpression() {\n\t\tassertThatToStringGeneratesValidCompositeProfileExpression(\"spring\");\n\t\tassertThatToStringGeneratesValidCompositeProfileExpression(\"(spring & kotlin) | (spring & java)\");\n\t\tassertThatToStringGeneratesValidCompositeProfileExpression(\"spring & kotlin\", \"spring & java\");\n\t\tassertThatToStringGeneratesValidCompositeProfileExpression(\"spring & kotlin\", \"spring & java\", \"cat | dog\");\n\t}\n\n\tprivate static void assertThatToStringGeneratesValidCompositeProfileExpression(String... profileExpressions) {\n\t\tProfiles profiles = Profiles.of(profileExpressions);\n\t\tassertThat(profiles.matches(activeProfiles(\"spring\", \"java\"))).isTrue();\n\t\tassertThat(profiles.matches(activeProfiles(\"kotlin\"))).isFalse();\n\n\t\tProfiles compositeProfiles = Profiles.of(profiles.toString());\n\t\tassertThat(compositeProfiles.matches(activeProfiles(\"spring\", \"java\"))).isTrue();\n\t\tassertThat(compositeProfiles.matches(activeProfiles(\"kotlin\"))).isFalse();\n\t}\n\n\t@Test\n\tvoid sensibleEquals() {\n\t\tassertEqual(\"(spring & framework) | (spring & java)\");\n\t\tassertEqual(\"(spring&framework)|(spring&java)\");\n\t\tassertEqual(\"spring & framework\", \"java | kotlin\");\n\n\t\t// Ensure order of individual expressions does not affect equals().\n\t\tString expression1 = \"A | B\";\n\t\tString expression2 = \"C & (D | E)\";\n\t\tProfiles profiles1 = Profiles.of(expression1, expression2);\n\t\tProfiles profiles2 = Profiles.of(expression2, expression1);\n\t\tassertThat(profiles1).isEqualTo(profiles2);\n\t\tassertThat(profiles2).isEqualTo(profiles1);\n\t}\n\n\tprivate void assertEqual(String... expressions) {\n\t\tProfiles profiles1 = Profiles.of(expressions);\n\t\tProfiles profiles2 = Profiles.of(expressions);\n\t\tassertThat(profiles1).isEqualTo(profiles2);\n\t\tassertThat(profiles2).isEqualTo(profiles1);\n\t}\n\n\t@Test\n\tvoid sensibleHashCode() {\n\t\tassertHashCode(\"(spring & framework) | (spring & java)\");\n\t\tassertHashCode(\"(spring&framework)|(spring&java)\");\n\t\tassertHashCode(\"spring & framework\", \"java | kotlin\");\n\n\t\t// Ensure order of individual expressions does not affect hashCode().\n\t\tString expression1 = \"A | B\";\n\t\tString expression2 = \"C & (D | E)\";\n\t\tProfiles profiles1 = Profiles.of(expression1, expression2);\n\t\tProfiles profiles2 = Profiles.of(expression2, expression1);\n\t\tassertThat(profiles1).hasSameHashCodeAs(profiles2);\n\t}\n\n\tprivate void assertHashCode(String... expressions) {\n\t\tProfiles profiles1 = Profiles.of(expressions);\n\t\tProfiles profiles2 = Profiles.of(expressions);\n\t\tassertThat(profiles1).hasSameHashCodeAs(profiles2);\n\t}\n\n\t@Test\n\tvoid equalsAndHashCodeAreNotBasedOnLogicalStructureOfNodesWithinExpressionTree() {\n\t\tProfiles profiles1 = Profiles.of(\"A | B\");\n\t\tProfiles profiles2 = Profiles.of(\"B | A\");\n\n\t\tassertThat(profiles1.matches(activeProfiles(\"A\"))).isTrue();\n\t\tassertThat(profiles1.matches(activeProfiles(\"B\"))).isTrue();\n\t\tassertThat(profiles2.matches(activeProfiles(\"A\"))).isTrue();\n\t\tassertThat(profiles2.matches(activeProfiles(\"B\"))).isTrue();\n\n\t\tassertThat(profiles1).isNotEqualTo(profiles2);\n\t\tassertThat(profiles2).isNotEqualTo(profiles1);\n\t\tassertThat(profiles1.hashCode()).isNotEqualTo(profiles2.hashCode());\n\t}\n\n\n\tprivate static void assertMalformed(Supplier<Profiles> supplier) {\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(supplier::get)\n\t\t\t.withMessageStartingWith(\"Malformed profile expression\");\n\t}\n\n\tprivate static Predicate<String> activeProfiles(String... profiles) {\n\t\treturn new MockActiveProfiles(profiles);\n\t}\n\n\tprivate static class MockActiveProfiles implements Predicate<String> {\n\n\t\tprivate final List<String> activeProfiles;\n\n\t\tMockActiveProfiles(String[] activeProfiles) {\n\t\t\tthis.activeProfiles = Arrays.asList(activeProfiles);\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean test(String profile) {\n\t\t\t// The following if-condition (which basically mimics\n\t\t\t// AbstractEnvironment#validateProfile(String)) is necessary in order\n\t\t\t// to ensure that the Profiles implementation returned by Profiles.of()\n\t\t\t// never passes an invalid (parsed) profile name to the active profiles\n\t\t\t// predicate supplied to Profiles#matches(Predicate<String>).\n\t\t\tif (!StringUtils.hasText(profile) || profile.charAt(0) == '!') {\n\t\t\t\tthrow new IllegalArgumentException(\"Invalid profile [\" + profile + \"]\");\n\t\t\t}\n\t\t\treturn this.activeProfiles.contains(profile);\n\t\t}\n\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofWhenNullThrowsException()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofWhenNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> Profiles.of((String[]) null)).withMessage(\"Must specify at least one profile expression\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesTests#ofWhenNullThrowsException()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofWhenNullThrowsException()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofWhenEmptyThrowsException()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofWhenEmptyThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(Profiles::of).withMessage(\"Must specify at least one profile expression\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesTests#ofWhenEmptyThrowsException()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofWhenEmptyThrowsException()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofNullElement()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofNullElement() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> Profiles.of((String) null)).withMessage(\"Invalid profile expression [null]: must contain text\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesTests#ofNullElement()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofNullElement()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofEmptyElement()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofEmptyElement() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> Profiles.of(\"  \")).withMessage(\"Invalid profile expression [  ]: must contain text\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesTests#ofEmptyElement()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofEmptyElement()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofSingleElement()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofSingleElement() {\r\n    Profiles profiles = Profiles.of(\"spring\");\r\n    assertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\r\n    assertThat(profiles.matches(activeProfiles(\"framework\"))).isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesTests#ofSingleElement()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofSingleElement()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofSingleInvertedElement()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofSingleInvertedElement() {\r\n    Profiles profiles = Profiles.of(\"!spring\");\r\n    assertThat(profiles.matches(activeProfiles(\"spring\"))).isFalse();\r\n    assertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.ProfilesTests#ofSingleInvertedElement()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofSingleInvertedElement()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.ProfilesTests#ofMultipleElements()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid ofMultipleElements() {\r\n    Profiles profiles = Profiles.of(\"spring\", \"framework\");\r\n    assertThat(profiles.matches(activeProfiles(\"spring\"))).isTrue();\r\n    assertThat(profiles.matches(activeProfiles(\"framework\"))).isTrue();\r\n    assertThat(profiles.matches(activeProfiles(\"java\"))).isFalse();\r\n}",
+    "tailType": "method_code"
+  }
+]

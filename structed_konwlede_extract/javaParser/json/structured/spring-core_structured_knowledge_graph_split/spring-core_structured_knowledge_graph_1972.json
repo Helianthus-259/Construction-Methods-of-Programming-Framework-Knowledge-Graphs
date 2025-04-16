@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLinePropertySourceTests#covertNonOptionArgsToStringArrayAndList()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLinePropertySourceTests#covertNonOptionArgsToStringArrayAndList()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.env",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.HashSet;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.SpringProperties;\nimport org.springframework.core.testfixture.env.MockPropertySource;\nimport org.springframework.util.PlaceholderResolutionException;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.springframework.core.env.AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME;\nimport static org.springframework.core.env.AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME;\nimport static org.springframework.core.env.AbstractEnvironment.RESERVED_DEFAULT_PROFILE_NAME;\n\n/**\n * Tests for {@link StandardEnvironment}.\n *\n * @author Chris Beams\n * @author Juergen Hoeller\n * @author Sam Brannen\n */\nclass StandardEnvironmentTests {\n\n\tprivate static final String ALLOWED_PROPERTY_NAME = \"theanswer\";\n\tprivate static final String ALLOWED_PROPERTY_VALUE = \"42\";\n\n\tprivate static final String DISALLOWED_PROPERTY_NAME = \"verboten\";\n\tprivate static final String DISALLOWED_PROPERTY_VALUE = \"secret\";\n\n\tprivate static final String STRING_PROPERTY_NAME = \"stringPropName\";\n\tprivate static final String STRING_PROPERTY_VALUE = \"stringPropValue\";\n\tprivate static final Object NON_STRING_PROPERTY_NAME = new Object();\n\tprivate static final Object NON_STRING_PROPERTY_VALUE = new Object();\n\n\tprivate final ConfigurableEnvironment environment = new StandardEnvironment();\n\n\n\t@Test\n\tvoid merge() {\n\t\tConfigurableEnvironment child = new StandardEnvironment();\n\t\tchild.setActiveProfiles(\"c1\", \"c2\");\n\t\tchild.getPropertySources().addLast(\n\t\t\t\tnew MockPropertySource(\"childMock\")\n\t\t\t\t\t\t.withProperty(\"childKey\", \"childVal\")\n\t\t\t\t\t\t.withProperty(\"bothKey\", \"childBothVal\"));\n\n\t\tConfigurableEnvironment parent = new StandardEnvironment();\n\t\tparent.setActiveProfiles(\"p1\", \"p2\");\n\t\tparent.getPropertySources().addLast(\n\t\t\t\tnew MockPropertySource(\"parentMock\")\n\t\t\t\t\t\t.withProperty(\"parentKey\", \"parentVal\")\n\t\t\t\t\t\t.withProperty(\"bothKey\", \"parentBothVal\"));\n\n\t\tassertThat(child.getProperty(\"childKey\")).isEqualTo(\"childVal\");\n\t\tassertThat(child.getProperty(\"parentKey\")).isNull();\n\t\tassertThat(child.getProperty(\"bothKey\")).isEqualTo(\"childBothVal\");\n\n\t\tassertThat(parent.getProperty(\"childKey\")).isNull();\n\t\tassertThat(parent.getProperty(\"parentKey\")).isEqualTo(\"parentVal\");\n\t\tassertThat(parent.getProperty(\"bothKey\")).isEqualTo(\"parentBothVal\");\n\n\t\tassertThat(child.getActiveProfiles()).containsExactly(\"c1\", \"c2\");\n\t\tassertThat(parent.getActiveProfiles()).containsExactly(\"p1\", \"p2\");\n\n\t\tchild.merge(parent);\n\n\t\tassertThat(child.getProperty(\"childKey\")).isEqualTo(\"childVal\");\n\t\tassertThat(child.getProperty(\"parentKey\")).isEqualTo(\"parentVal\");\n\t\tassertThat(child.getProperty(\"bothKey\")).isEqualTo(\"childBothVal\");\n\n\t\tassertThat(parent.getProperty(\"childKey\")).isNull();\n\t\tassertThat(parent.getProperty(\"parentKey\")).isEqualTo(\"parentVal\");\n\t\tassertThat(parent.getProperty(\"bothKey\")).isEqualTo(\"parentBothVal\");\n\n\t\tassertThat(child.getActiveProfiles()).containsExactly(\"c1\", \"c2\", \"p1\", \"p2\");\n\t\tassertThat(parent.getActiveProfiles()).containsExactly(\"p1\", \"p2\");\n\t}\n\n\t@Test\n\tvoid propertySourceOrder() {\n\t\tConfigurableEnvironment env = new StandardEnvironment();\n\t\tMutablePropertySources sources = env.getPropertySources();\n\t\tassertThat(sources.precedenceOf(PropertySource.named(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME))).isEqualTo(0);\n\t\tassertThat(sources.precedenceOf(PropertySource.named(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME))).isEqualTo(1);\n\t\tassertThat(sources).hasSize(2);\n\t}\n\n\t@Test\n\tvoid propertySourceTypes() {\n\t\tConfigurableEnvironment env = new StandardEnvironment();\n\t\tMutablePropertySources sources = env.getPropertySources();\n\t\tassertThat(sources.get(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME)).isInstanceOf(SystemEnvironmentPropertySource.class);\n\t}\n\n\t@Test\n\tvoid activeProfilesIsEmptyByDefault() {\n\t\tassertThat(environment.getActiveProfiles()).isEmpty();\n\t}\n\n\t@Test\n\tvoid defaultProfilesContainsDefaultProfileByDefault() {\n\t\tassertThat(environment.getDefaultProfiles()).containsExactly(\"default\");\n\t}\n\n\t@Test\n\tvoid setActiveProfiles() {\n\t\tenvironment.setActiveProfiles(\"local\", \"embedded\");\n\t\tString[] activeProfiles = environment.getActiveProfiles();\n\t\tassertThat(activeProfiles).containsExactly(\"local\", \"embedded\");\n\t}\n\n\t@Test\n\tvoid setActiveProfiles_withNullProfileArray() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setActiveProfiles((String[]) null));\n\t}\n\n\t@Test\n\tvoid setActiveProfiles_withNullProfile() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setActiveProfiles((String) null));\n\t}\n\n\t@Test\n\tvoid setActiveProfiles_withEmptyProfile() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setActiveProfiles(\"\"));\n\t}\n\n\t@Test\n\tvoid setActiveProfiles_withNotOperator() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setActiveProfiles(\"p1\", \"!p2\"));\n\t}\n\n\t@Test\n\tvoid setDefaultProfiles_withNullProfileArray() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setDefaultProfiles((String[]) null));\n\t}\n\n\t@Test\n\tvoid setDefaultProfiles_withNullProfile() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setDefaultProfiles((String) null));\n\t}\n\n\t@Test\n\tvoid setDefaultProfiles_withEmptyProfile() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setDefaultProfiles(\"\"));\n\t}\n\n\t@Test\n\tvoid setDefaultProfiles_withNotOperator() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.setDefaultProfiles(\"d1\", \"!d2\"));\n\t}\n\n\t@Test\n\tvoid addActiveProfile() {\n\t\tassertThat(environment.getActiveProfiles()).isEmpty();\n\t\tenvironment.setActiveProfiles(\"local\", \"embedded\");\n\t\tassertThat(environment.getActiveProfiles()).containsExactly(\"local\", \"embedded\");\n\t\tenvironment.addActiveProfile(\"p1\");\n\t\tassertThat(environment.getActiveProfiles()).containsExactly(\"local\", \"embedded\", \"p1\");\n\t\tenvironment.addActiveProfile(\"p2\");\n\t\tenvironment.addActiveProfile(\"p3\");\n\t\tassertThat(environment.getActiveProfiles()).containsExactly(\"local\", \"embedded\", \"p1\", \"p2\", \"p3\");\n\t}\n\n\t@Test\n\tvoid addActiveProfile_whenActiveProfilesPropertyIsAlreadySet() {\n\t\tConfigurableEnvironment env = new StandardEnvironment();\n\t\tassertThat(env.getProperty(ACTIVE_PROFILES_PROPERTY_NAME)).isNull();\n\t\tenv.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\n\t\tassertThat(env.getProperty(ACTIVE_PROFILES_PROPERTY_NAME)).isEqualTo(\"p1\");\n\t\tenv.addActiveProfile(\"p2\");\n\t\tassertThat(env.getActiveProfiles()).containsExactly(\"p1\", \"p2\");\n\t}\n\n\t@Test\n\tvoid reservedDefaultProfile() {\n\t\tassertThat(environment.getDefaultProfiles()).containsExactly(RESERVED_DEFAULT_PROFILE_NAME);\n\t\ttry {\n\t\t\tSystem.setProperty(DEFAULT_PROFILES_PROPERTY_NAME, \"d0\");\n\t\t\tassertThat(environment.getDefaultProfiles()).containsExactly(\"d0\");\n\t\t\tenvironment.setDefaultProfiles(\"d1\", \"d2\");\n\t\t\tassertThat(environment.getDefaultProfiles()).containsExactly(\"d1\",\"d2\");\n\t\t}\n\t\tfinally {\n\t\t\tSystem.clearProperty(DEFAULT_PROFILES_PROPERTY_NAME);\n\t\t}\n\t}\n\n\t@Test\n\tvoid defaultProfileWithCircularPlaceholder() {\n\t\ttry {\n\t\t\tSystem.setProperty(DEFAULT_PROFILES_PROPERTY_NAME, \"${spring.profiles.default}\");\n\t\t\tassertThatExceptionOfType(PlaceholderResolutionException.class)\n\t\t\t\t.isThrownBy(environment::getDefaultProfiles)\n\t\t\t\t.withMessageContaining(\"Circular placeholder reference 'spring.profiles.default'\");\n\t\t}\n\t\tfinally {\n\t\t\tSystem.clearProperty(DEFAULT_PROFILES_PROPERTY_NAME);\n\t\t}\n\t}\n\n\t@Test\n\tvoid getDefaultProfiles() {\n\t\tassertThat(environment.getDefaultProfiles()).containsExactly(RESERVED_DEFAULT_PROFILE_NAME);\n\t\tenvironment.getPropertySources().addFirst(new MockPropertySource().withProperty(DEFAULT_PROFILES_PROPERTY_NAME, \"pd1\"));\n\t\tassertThat(environment.getDefaultProfiles()).containsExactly(\"pd1\");\n\t}\n\n\t@Test\n\tvoid setDefaultProfiles() {\n\t\tenvironment.setDefaultProfiles();\n\t\tassertThat(environment.getDefaultProfiles()).isEmpty();\n\t\tenvironment.setDefaultProfiles(\"pd1\");\n\t\tassertThat(environment.getDefaultProfiles()).containsExactly(\"pd1\");\n\t\tenvironment.setDefaultProfiles(\"pd2\", \"pd3\");\n\t\tassertThat(environment.getDefaultProfiles()).containsExactly(\"pd2\", \"pd3\");\n\t}\n\n\t@Test\n\tvoid environmentSubclass_withCustomProfileValidation() {\n\t\tConfigurableEnvironment env = new AbstractEnvironment() {\n\t\t\t@Override\n\t\t\tprotected void validateProfile(String profile) {\n\t\t\t\tsuper.validateProfile(profile);\n\t\t\t\tif (profile.contains(\"-\")) {\n\t\t\t\t\tthrow new IllegalArgumentException(\"Invalid profile [\" + profile + \"]: must not contain dash character\");\n\t\t\t\t}\n\t\t\t}\n\t\t};\n\n\t\tenv.addActiveProfile(\"validProfile\"); // succeeds\n\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> env.addActiveProfile(\"invalid-profile\"))\n\t\t\t.withMessage(\"Invalid profile [invalid-profile]: must not contain dash character\");\n\t}\n\n\t@Test\n\tvoid suppressGetenvAccessThroughSystemProperty() {\n\t\ttry {\n\t\t\tSystem.setProperty(\"spring.getenv.ignore\", \"true\");\n\t\t\tassertThat(environment.getSystemEnvironment()).isEmpty();\n\t\t}\n\t\tfinally {\n\t\t\tSystem.clearProperty(\"spring.getenv.ignore\");\n\t\t}\n\t}\n\n\t@Test\n\tvoid suppressGetenvAccessThroughSpringProperty() {\n\t\ttry {\n\t\t\tSpringProperties.setProperty(\"spring.getenv.ignore\", \"true\");\n\t\t\tassertThat(environment.getSystemEnvironment()).isEmpty();\n\t\t}\n\t\tfinally {\n\t\t\tSpringProperties.setProperty(\"spring.getenv.ignore\", null);\n\t\t}\n\t}\n\n\t@Test\n\tvoid suppressGetenvAccessThroughSpringFlag() {\n\t\ttry {\n\t\t\tSpringProperties.setFlag(\"spring.getenv.ignore\");\n\t\t\tassertThat(environment.getSystemEnvironment()).isEmpty();\n\t\t}\n\t\tfinally {\n\t\t\tSpringProperties.setProperty(\"spring.getenv.ignore\", null);\n\t\t}\n\t}\n\n\t@Test\n\tvoid getSystemProperties() {\n\t\ttry {\n\t\t\tSystem.setProperty(ALLOWED_PROPERTY_NAME, ALLOWED_PROPERTY_VALUE);\n\t\t\tSystem.setProperty(DISALLOWED_PROPERTY_NAME, DISALLOWED_PROPERTY_VALUE);\n\t\t\tSystem.getProperties().put(STRING_PROPERTY_NAME, NON_STRING_PROPERTY_VALUE);\n\t\t\tSystem.getProperties().put(NON_STRING_PROPERTY_NAME, STRING_PROPERTY_VALUE);\n\n\t\t\tMap<?, ?> systemProperties = environment.getSystemProperties();\n\t\t\tassertThat(systemProperties).isNotNull();\n\t\t\tassertThat(System.getProperties()).isSameAs(systemProperties);\n\t\t\tassertThat(systemProperties.get(ALLOWED_PROPERTY_NAME)).isEqualTo(ALLOWED_PROPERTY_VALUE);\n\t\t\tassertThat(systemProperties.get(DISALLOWED_PROPERTY_NAME)).isEqualTo(DISALLOWED_PROPERTY_VALUE);\n\t\t\tassertThat(systemProperties.get(STRING_PROPERTY_NAME)).isEqualTo(NON_STRING_PROPERTY_VALUE);\n\t\t\tassertThat(systemProperties.get(NON_STRING_PROPERTY_NAME)).isEqualTo(STRING_PROPERTY_VALUE);\n\n\t\t\tPropertiesPropertySource systemPropertySource = (PropertiesPropertySource)\n\t\t\t\t\tenvironment.getPropertySources().get(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);\n\t\t\tSet<String> expectedKeys = new HashSet<>(System.getProperties().stringPropertyNames());\n\t\t\texpectedKeys.add(STRING_PROPERTY_NAME);  // filtered out by stringPropertyNames due to non-String value\n\t\t\tassertThat(Set.of(systemPropertySource.getPropertyNames())).isEqualTo(expectedKeys);\n\t\t}\n\t\tfinally {\n\t\t\tSystem.clearProperty(ALLOWED_PROPERTY_NAME);\n\t\t\tSystem.clearProperty(DISALLOWED_PROPERTY_NAME);\n\t\t\tSystem.getProperties().remove(STRING_PROPERTY_NAME);\n\t\t\tSystem.getProperties().remove(NON_STRING_PROPERTY_NAME);\n\t\t}\n\t}\n\n\t@Test\n\tvoid getSystemEnvironment() {\n\t\tMap<String, Object> systemEnvironment = environment.getSystemEnvironment();\n\t\tassertThat(systemEnvironment).isNotNull();\n\t\tassertThat(System.getenv()).isSameAs(systemEnvironment);\n\t}\n\n\n\t@Nested\n\tclass GetActiveProfiles {\n\n\t\t@Test\n\t\tvoid systemPropertiesEmpty() {\n\t\t\tassertThat(environment.getActiveProfiles()).isEmpty();\n\t\t\ttry {\n\t\t\t\tSystem.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"\");\n\t\t\t\tassertThat(environment.getActiveProfiles()).isEmpty();\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tSystem.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\n\t\t\t}\n\t\t}\n\n\t\t@Test\n\t\tvoid fromSystemProperties() {\n\t\t\ttry {\n\t\t\t\tSystem.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"foo\");\n\t\t\t\tassertThat(environment.getActiveProfiles()).containsExactly(\"foo\");\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tSystem.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\n\t\t\t}\n\t\t}\n\n\t\t@Test\n\t\tvoid fromSystemProperties_withMultipleProfiles() {\n\t\t\ttry {\n\t\t\t\tSystem.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"foo,bar\");\n\t\t\t\tassertThat(environment.getActiveProfiles()).containsExactly(\"foo\", \"bar\");\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tSystem.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\n\t\t\t}\n\t\t}\n\n\t\t@Test\n\t\tvoid fromSystemProperties_withMultipleProfiles_withWhitespace() {\n\t\t\ttry {\n\t\t\t\tSystem.setProperty(ACTIVE_PROFILES_PROPERTY_NAME, \" bar , baz \"); // notice whitespace\n\t\t\t\tassertThat(environment.getActiveProfiles()).containsExactly(\"bar\", \"baz\");\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tSystem.clearProperty(ACTIVE_PROFILES_PROPERTY_NAME);\n\t\t\t}\n\t\t}\n\t}\n\n\n\t@Nested\n\tclass AcceptsProfilesTests {\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid withEmptyArgumentList() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(environment::acceptsProfiles);\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid withNullArgumentList() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles((String[]) null));\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid withNullArgument() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles((String) null));\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid withEmptyArgument() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles(\"\"));\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid activeProfileSetProgrammatically() {\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isFalse();\n\t\t\tenvironment.setActiveProfiles(\"p1\");\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\n\t\t\tenvironment.setActiveProfiles(\"p2\");\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\n\t\t\tenvironment.setActiveProfiles(\"p1\", \"p2\");\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\", \"p2\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid activeProfileSetViaProperty() {\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\")).isFalse();\n\t\t\tenvironment.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid defaultProfile() {\n\t\t\tassertThat(environment.acceptsProfiles(\"pd\")).isFalse();\n\t\t\tenvironment.setDefaultProfiles(\"pd\");\n\t\t\tassertThat(environment.acceptsProfiles(\"pd\")).isTrue();\n\t\t\tenvironment.setActiveProfiles(\"p1\");\n\t\t\tassertThat(environment.acceptsProfiles(\"pd\")).isFalse();\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid withNotOperator() {\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\")).isFalse();\n\t\t\tassertThat(environment.acceptsProfiles(\"!p1\")).isTrue();\n\t\t\tenvironment.addActiveProfile(\"p1\");\n\t\t\tassertThat(environment.acceptsProfiles(\"p1\")).isTrue();\n\t\t\tassertThat(environment.acceptsProfiles(\"!p1\")).isFalse();\n\t\t}\n\n\t\t@Test\n\t\t@SuppressWarnings(\"deprecation\")\n\t\tvoid withInvalidNotOperator() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.acceptsProfiles(\"p1\", \"!\"));\n\t\t}\n\n\t\t@Test\n\t\tvoid withProfileExpression() {\n\t\t\tassertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isFalse();\n\t\t\tenvironment.addActiveProfile(\"p1\");\n\t\t\tassertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isFalse();\n\t\t\tenvironment.addActiveProfile(\"p2\");\n\t\t\tassertThat(environment.acceptsProfiles(Profiles.of(\"p1 & p2\"))).isTrue();\n\t\t}\n\t}\n\n\n\t@Nested\n\tclass MatchesProfilesTests {\n\n\t\t@Test\n\t\tvoid withEmptyArgumentList() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(environment::matchesProfiles);\n\t\t}\n\n\t\t@Test\n\t\tvoid withNullArgumentList() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String[]) null));\n\t\t}\n\n\t\t@Test\n\t\tvoid withNullArgument() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String) null));\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", null));\n\t\t}\n\n\t\t@Test\n\t\tvoid withEmptyArgument() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"\"));\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"\"));\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"      \"));\n\t\t}\n\n\t\t@Test\n\t\tvoid withInvalidNotOperator() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1\", \"!\"));\n\t\t}\n\n\t\t@Test\n\t\tvoid withInvalidCompoundExpressionGrouping() {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 | p2 & p3\"));\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 & p2 | p3\"));\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(\"p1 & (p2 | p3) | p4\"));\n\t\t}\n\n\t\t@Test\n\t\tvoid activeProfileSetProgrammatically() {\n\t\t\tassertThat(environment.matchesProfiles(\"p1\", \"p2\")).isFalse();\n\n\t\t\tenvironment.setActiveProfiles(\"p1\");\n\t\t\tassertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\n\n\t\t\tenvironment.setActiveProfiles(\"p2\");\n\t\t\tassertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\n\n\t\t\tenvironment.setActiveProfiles(\"p1\", \"p2\");\n\t\t\tassertThat(environment.matchesProfiles(\"p1\", \"p2\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\tvoid activeProfileSetViaProperty() {\n\t\t\tassertThat(environment.matchesProfiles(\"p1\")).isFalse();\n\n\t\t\tenvironment.getPropertySources().addFirst(new MockPropertySource().withProperty(ACTIVE_PROFILES_PROPERTY_NAME, \"p1\"));\n\t\t\tassertThat(environment.matchesProfiles(\"p1\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\tvoid defaultProfile() {\n\t\t\tassertThat(environment.matchesProfiles(\"pd\")).isFalse();\n\n\t\t\tenvironment.setDefaultProfiles(\"pd\");\n\t\t\tassertThat(environment.matchesProfiles(\"pd\")).isTrue();\n\n\t\t\tenvironment.setActiveProfiles(\"p1\");\n\t\t\tassertThat(environment.matchesProfiles(\"pd\")).isFalse();\n\t\t\tassertThat(environment.matchesProfiles(\"p1\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\tvoid withNotOperator() {\n\t\t\tassertThat(environment.matchesProfiles(\"p1\")).isFalse();\n\t\t\tassertThat(environment.matchesProfiles(\"!p1\")).isTrue();\n\n\t\t\tenvironment.addActiveProfile(\"p1\");\n\t\t\tassertThat(environment.matchesProfiles(\"p1\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"!p1\")).isFalse();\n\t\t}\n\n\t\t@Test\n\t\tvoid withProfileExpressions() {\n\t\t\tassertThat(environment.matchesProfiles(\"p1 & p2\")).isFalse();\n\n\t\t\tenvironment.addActiveProfile(\"p1\");\n\t\t\tassertThat(environment.matchesProfiles(\"p1 | p2\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"p1 & p2\")).isFalse();\n\n\t\t\tenvironment.addActiveProfile(\"p2\");\n\t\t\tassertThat(environment.matchesProfiles(\"p1 & p2\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"p1 | p2\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"foo | p1\", \"p2\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"foo | p2\", \"p1\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"foo | (p2 & p1)\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"p2 & (foo | p1)\")).isTrue();\n\t\t\tassertThat(environment.matchesProfiles(\"foo\", \"(p2 & p1)\")).isTrue();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#ALLOWED_PROPERTY_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#ALLOWED_PROPERTY_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#ALLOWED_PROPERTY_VALUE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#ALLOWED_PROPERTY_VALUE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#DISALLOWED_PROPERTY_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#DISALLOWED_PROPERTY_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#DISALLOWED_PROPERTY_VALUE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#DISALLOWED_PROPERTY_VALUE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#STRING_PROPERTY_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#STRING_PROPERTY_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#STRING_PROPERTY_VALUE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#STRING_PROPERTY_VALUE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#NON_STRING_PROPERTY_NAME",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests#NON_STRING_PROPERTY_NAME",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.StandardEnvironmentTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.StandardEnvironmentTests#NON_STRING_PROPERTY_VALUE",
+    "tailType": "field"
+  }
+]

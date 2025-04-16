@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.convert.converter.ConvertingComparatorTests#shouldGetMapEntryValues()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid shouldGetMapEntryValues() {\r\n    ArrayList<Entry<String, Integer>> list = createReverseOrderMapEntryList();\r\n    Comparator<Map.Entry<String, Integer>> comparator = ConvertingComparator.mapEntryValues(Comparators.comparable());\r\n    list.sort(comparator);\r\n    assertThat(list.get(0).getValue()).isEqualTo(1);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.ConvertingComparatorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.converter.ConvertingComparatorTests#shouldGetMapEntryValues()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.ConvertingComparatorTests#shouldGetMapEntryValues()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.ConvertingComparatorTests#createReverseOrderMapEntryList()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private ArrayList<Entry<String, Integer>> createReverseOrderMapEntryList() {\r\n    Map<String, Integer> map = new LinkedHashMap<>();\r\n    map.put(\"b\", 2);\r\n    map.put(\"a\", 1);\r\n    ArrayList<Entry<String, Integer>> list = new ArrayList<>(map.entrySet());\r\n    assertThat(list.get(0).getKey()).isEqualTo(\"b\");\r\n    return list;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.ConvertingComparatorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.converter.ConvertingComparatorTests#createReverseOrderMapEntryList()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.converter",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.converter.StringToInteger",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.StringToInteger",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.converter;\n\nimport java.util.ArrayList;\nimport java.util.Comparator;\nimport java.util.LinkedHashMap;\nimport java.util.Map;\nimport java.util.Map.Entry;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.support.DefaultConversionService;\nimport org.springframework.util.comparator.Comparators;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link ConvertingComparator}.\n *\n * @author Phillip Webb\n */\nclass ConvertingComparatorTests {\n\n\tprivate final StringToInteger converter = new StringToInteger();\n\n\tprivate final ConversionService conversionService = new DefaultConversionService();\n\n\tprivate final TestComparator comparator = new TestComparator();\n\n\t@Test\n\tvoid shouldThrowOnNullComparator() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<>(null, this.converter));\n\t}\n\n\t@Test\n\tvoid shouldThrowOnNullConverter() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<String, Integer>(this.comparator, null));\n\t}\n\n\t@Test\n\tvoid shouldThrowOnNullConversionService() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<String, Integer>(this.comparator, null, Integer.class));\n\t}\n\n\t@Test\n\tvoid shouldThrowOnNullType() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<String, Integer>(this.comparator, this.conversionService, null));\n\t}\n\n\t@Test\n\tvoid shouldUseConverterOnCompare() {\n\t\tConvertingComparator<String, Integer> convertingComparator = new ConvertingComparator<>(\n\t\t\t\tthis.comparator, this.converter);\n\t\ttestConversion(convertingComparator);\n\t}\n\n\t@Test\n\tvoid shouldUseConversionServiceOnCompare() {\n\t\tConvertingComparator<String, Integer> convertingComparator = new ConvertingComparator<>(\n\t\t\t\tcomparator, conversionService, Integer.class);\n\t\ttestConversion(convertingComparator);\n\t}\n\n\t@Test\n\tvoid shouldGetForConverter() {\n\t\ttestConversion(new ConvertingComparator<>(comparator, converter));\n\t}\n\n\tprivate void testConversion(ConvertingComparator<String, Integer> convertingComparator) {\n\t\tassertThat(convertingComparator.compare(\"0\", \"0\")).isEqualTo(0);\n\t\tassertThat(convertingComparator.compare(\"0\", \"1\")).isEqualTo(-1);\n\t\tassertThat(convertingComparator.compare(\"1\", \"0\")).isEqualTo(1);\n\t\tcomparator.assertCalled();\n\t}\n\n\t@Test\n\tvoid shouldGetMapEntryKeys() {\n\t\tArrayList<Entry<String, Integer>> list = createReverseOrderMapEntryList();\n\t\tComparator<Map.Entry<String, Integer>> comparator = ConvertingComparator.mapEntryKeys(Comparators.comparable());\n\t\tlist.sort(comparator);\n\t\tassertThat(list.get(0).getKey()).isEqualTo(\"a\");\n\t}\n\n\t@Test\n\tvoid shouldGetMapEntryValues() {\n\t\tArrayList<Entry<String, Integer>> list = createReverseOrderMapEntryList();\n\t\tComparator<Map.Entry<String, Integer>> comparator = ConvertingComparator.mapEntryValues(Comparators.comparable());\n\t\tlist.sort(comparator);\n\t\tassertThat(list.get(0).getValue()).isEqualTo(1);\n\t}\n\n\tprivate ArrayList<Entry<String, Integer>> createReverseOrderMapEntryList() {\n\t\tMap<String, Integer> map = new LinkedHashMap<>();\n\t\tmap.put(\"b\", 2);\n\t\tmap.put(\"a\", 1);\n\t\tArrayList<Entry<String, Integer>> list = new ArrayList<>(\n\t\t\t\tmap.entrySet());\n\t\tassertThat(list.get(0).getKey()).isEqualTo(\"b\");\n\t\treturn list;\n\t}\n\n\tprivate static class StringToInteger implements Converter<String, Integer> {\n\n\t\t@Override\n\t\tpublic Integer convert(String source) {\n\t\t\treturn Integer.valueOf(source);\n\t\t}\n\n\t}\n\n\n\tprivate static class TestComparator implements Comparator<Integer> {\n\n\t\tprivate boolean called;\n\n\t\t@Override\n\t\tpublic int compare(Integer o1, Integer o2) {\n\t\t\tassertThat(o1).isInstanceOf(Integer.class);\n\t\t\tassertThat(o2).isInstanceOf(Integer.class);\n\t\t\tthis.called = true;\n\t\t\treturn Comparators.comparable().compare(o1, o2);\n\t\t}\n\n\t\tpublic void assertCalled() {\n\t\t\tassertThat(this.called).isTrue();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.StringToInteger#convert(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Integer convert(String source) {\r\n    return Integer.valueOf(source);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.StringToInteger",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.converter.StringToInteger#convert(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.StringToInteger#convert(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.converter",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.convert.converter.TestComparator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.convert.converter;\n\nimport java.util.ArrayList;\nimport java.util.Comparator;\nimport java.util.LinkedHashMap;\nimport java.util.Map;\nimport java.util.Map.Entry;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.support.DefaultConversionService;\nimport org.springframework.util.comparator.Comparators;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link ConvertingComparator}.\n *\n * @author Phillip Webb\n */\nclass ConvertingComparatorTests {\n\n\tprivate final StringToInteger converter = new StringToInteger();\n\n\tprivate final ConversionService conversionService = new DefaultConversionService();\n\n\tprivate final TestComparator comparator = new TestComparator();\n\n\t@Test\n\tvoid shouldThrowOnNullComparator() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<>(null, this.converter));\n\t}\n\n\t@Test\n\tvoid shouldThrowOnNullConverter() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<String, Integer>(this.comparator, null));\n\t}\n\n\t@Test\n\tvoid shouldThrowOnNullConversionService() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<String, Integer>(this.comparator, null, Integer.class));\n\t}\n\n\t@Test\n\tvoid shouldThrowOnNullType() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew ConvertingComparator<String, Integer>(this.comparator, this.conversionService, null));\n\t}\n\n\t@Test\n\tvoid shouldUseConverterOnCompare() {\n\t\tConvertingComparator<String, Integer> convertingComparator = new ConvertingComparator<>(\n\t\t\t\tthis.comparator, this.converter);\n\t\ttestConversion(convertingComparator);\n\t}\n\n\t@Test\n\tvoid shouldUseConversionServiceOnCompare() {\n\t\tConvertingComparator<String, Integer> convertingComparator = new ConvertingComparator<>(\n\t\t\t\tcomparator, conversionService, Integer.class);\n\t\ttestConversion(convertingComparator);\n\t}\n\n\t@Test\n\tvoid shouldGetForConverter() {\n\t\ttestConversion(new ConvertingComparator<>(comparator, converter));\n\t}\n\n\tprivate void testConversion(ConvertingComparator<String, Integer> convertingComparator) {\n\t\tassertThat(convertingComparator.compare(\"0\", \"0\")).isEqualTo(0);\n\t\tassertThat(convertingComparator.compare(\"0\", \"1\")).isEqualTo(-1);\n\t\tassertThat(convertingComparator.compare(\"1\", \"0\")).isEqualTo(1);\n\t\tcomparator.assertCalled();\n\t}\n\n\t@Test\n\tvoid shouldGetMapEntryKeys() {\n\t\tArrayList<Entry<String, Integer>> list = createReverseOrderMapEntryList();\n\t\tComparator<Map.Entry<String, Integer>> comparator = ConvertingComparator.mapEntryKeys(Comparators.comparable());\n\t\tlist.sort(comparator);\n\t\tassertThat(list.get(0).getKey()).isEqualTo(\"a\");\n\t}\n\n\t@Test\n\tvoid shouldGetMapEntryValues() {\n\t\tArrayList<Entry<String, Integer>> list = createReverseOrderMapEntryList();\n\t\tComparator<Map.Entry<String, Integer>> comparator = ConvertingComparator.mapEntryValues(Comparators.comparable());\n\t\tlist.sort(comparator);\n\t\tassertThat(list.get(0).getValue()).isEqualTo(1);\n\t}\n\n\tprivate ArrayList<Entry<String, Integer>> createReverseOrderMapEntryList() {\n\t\tMap<String, Integer> map = new LinkedHashMap<>();\n\t\tmap.put(\"b\", 2);\n\t\tmap.put(\"a\", 1);\n\t\tArrayList<Entry<String, Integer>> list = new ArrayList<>(\n\t\t\t\tmap.entrySet());\n\t\tassertThat(list.get(0).getKey()).isEqualTo(\"b\");\n\t\treturn list;\n\t}\n\n\tprivate static class StringToInteger implements Converter<String, Integer> {\n\n\t\t@Override\n\t\tpublic Integer convert(String source) {\n\t\t\treturn Integer.valueOf(source);\n\t\t}\n\n\t}\n\n\n\tprivate static class TestComparator implements Comparator<Integer> {\n\n\t\tprivate boolean called;\n\n\t\t@Override\n\t\tpublic int compare(Integer o1, Integer o2) {\n\t\t\tassertThat(o1).isInstanceOf(Integer.class);\n\t\t\tassertThat(o2).isInstanceOf(Integer.class);\n\t\t\tthis.called = true;\n\t\t\treturn Comparators.comparable().compare(o1, o2);\n\t\t}\n\n\t\tpublic void assertCalled() {\n\t\t\tassertThat(this.called).isTrue();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.convert.converter.TestComparator#called",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator#called",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator#compare(Integer,Integer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int compare(Integer o1, Integer o2) {\r\n    assertThat(o1).isInstanceOf(Integer.class);\r\n    assertThat(o2).isInstanceOf(Integer.class);\r\n    this.called = true;\r\n    return Comparators.comparable().compare(o1, o2);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.converter.TestComparator#compare(Integer,Integer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator#compare(Integer,Integer)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator#assertCalled()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public void assertCalled() {\r\n    assertThat(this.called).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.convert.converter.TestComparator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.convert.converter.TestComparator#assertCalled()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.convert.converter",
+    "tailType": "package"
+  }
+]

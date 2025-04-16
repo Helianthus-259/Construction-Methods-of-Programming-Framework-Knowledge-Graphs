@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#cancelWithoutDemandForSingleResourceRegion()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#nonExisting()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid nonExisting() {\r\n    Resource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\r\n    Resource nonExisting = new ClassPathResource(\"does not exist\", getClass());\r\n    Flux<ResourceRegion> regions = Flux.just(new ResourceRegion(resource, 0, 6), new ResourceRegion(nonExisting, 0, 6));\r\n    String boundary = MimeTypeUtils.generateMultipartBoundaryString();\r\n    Flux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory, ResolvableType.forClass(ResourceRegion.class), MimeType.valueOf(\"text/plain\"), Collections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\r\n    StepVerifier.create(result).consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\")).consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\")).consumeNextWith(stringConsumer(\"Spring\")).expectError(EncodingException.class).verify();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#nonExisting()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#nonExisting()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests#stringConsumer(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "protected Consumer<DataBuffer> stringConsumer(String expected) {\r\n    return dataBuffer -> {\r\n        String value = dataBuffer.toString(UTF_8);\r\n        DataBufferUtils.release(dataBuffer);\r\n        assertThat(value).isEqualTo(expected);\r\n    };\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ResourceRegionEncoderTests#stringConsumer(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ResourceRegionEncoderTests",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractLeakCheckingTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.codec",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.codec.ZeroDemandSubscriber",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.codec.ZeroDemandSubscriber",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.codec;\n\nimport java.util.Collections;\nimport java.util.function.Consumer;\n\nimport org.junit.jupiter.api.Test;\nimport org.reactivestreams.Subscription;\nimport reactor.core.publisher.BaseSubscriber;\nimport reactor.core.publisher.Flux;\nimport reactor.core.publisher.Mono;\nimport reactor.test.StepVerifier;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.core.io.ClassPathResource;\nimport org.springframework.core.io.Resource;\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferUtils;\nimport org.springframework.core.io.support.ResourceRegion;\nimport org.springframework.core.testfixture.io.buffer.AbstractLeakCheckingTests;\nimport org.springframework.util.MimeType;\nimport org.springframework.util.MimeTypeUtils;\n\nimport static java.nio.charset.StandardCharsets.UTF_8;\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Test cases for {@link ResourceRegionEncoder} class.\n * @author Brian Clozel\n */\nclass ResourceRegionEncoderTests extends AbstractLeakCheckingTests {\n\n\tprivate ResourceRegionEncoder encoder = new ResourceRegionEncoder();\n\n\t@Test\n\tvoid canEncode() {\n\t\tResolvableType resourceRegion = ResolvableType.forClass(ResourceRegion.class);\n\t\tMimeType allMimeType = MimeType.valueOf(\"*/*\");\n\n\t\tassertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class),\n\t\t\t\tMimeTypeUtils.APPLICATION_OCTET_STREAM)).isFalse();\n\t\tassertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class), allMimeType)).isFalse();\n\t\tassertThat(this.encoder.canEncode(resourceRegion, MimeTypeUtils.APPLICATION_OCTET_STREAM)).isTrue();\n\t\tassertThat(this.encoder.canEncode(resourceRegion, allMimeType)).isTrue();\n\n\t\t// SPR-15464\n\t\tassertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();\n\t}\n\n\t@Test\n\tvoid shouldEncodeResourceRegionFileResource() {\n\t\tResourceRegion region = new ResourceRegion(\n\t\t\t\tnew ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass()), 0, 6);\n\t\tFlux<DataBuffer> result = this.encoder.encode(Mono.just(region), this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeTypeUtils.APPLICATION_OCTET_STREAM,\n\t\t\t\tCollections.emptyMap());\n\n\t\tStepVerifier.create(result)\n\t\t\t\t.consumeNextWith(stringConsumer(\"Spring\"))\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify();\n\t}\n\n\t@Test\n\tvoid shouldEncodeMultipleResourceRegionsFileResource() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tFlux<ResourceRegion> regions = Flux.just(\n\t\t\t\tnew ResourceRegion(resource, 0, 6),\n\t\t\t\tnew ResourceRegion(resource, 7, 9),\n\t\t\t\tnew ResourceRegion(resource, 17, 4),\n\t\t\t\tnew ResourceRegion(resource, 22, 17)\n\t\t);\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary)\n\t\t);\n\n\t\tStepVerifier.create(result)\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Spring\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 7-15/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Framework\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 17-20/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"test\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 22-38/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"resource content.\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"--\"))\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify();\n\t}\n\n\t@Test // gh-22107\n\tvoid cancelWithoutDemandForMultipleResourceRegions() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tFlux<ResourceRegion> regions = Flux.just(\n\t\t\t\tnew ResourceRegion(resource, 0, 6),\n\t\t\t\tnew ResourceRegion(resource, 7, 9),\n\t\t\t\tnew ResourceRegion(resource, 17, 4),\n\t\t\t\tnew ResourceRegion(resource, 22, 17)\n\t\t);\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary)\n\t\t);\n\n\t\tZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\n\t\tflux.subscribe(subscriber);\n\t\tsubscriber.cancel();\n\t}\n\n\t@Test // gh-22107\n\tvoid cancelWithoutDemandForSingleResourceRegion() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tMono<ResourceRegion> regions = Mono.just(new ResourceRegion(resource, 0, 6));\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> flux = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary)\n\t\t);\n\n\t\tZeroDemandSubscriber subscriber = new ZeroDemandSubscriber();\n\t\tflux.subscribe(subscriber);\n\t\tsubscriber.cancel();\n\t}\n\n\t@Test\n\tvoid nonExisting() {\n\t\tResource resource = new ClassPathResource(\"ResourceRegionEncoderTests.txt\", getClass());\n\t\tResource nonExisting = new ClassPathResource(\"does not exist\", getClass());\n\t\tFlux<ResourceRegion> regions = Flux.just(\n\t\t\t\tnew ResourceRegion(resource, 0, 6),\n\t\t\t\tnew ResourceRegion(nonExisting, 0, 6));\n\n\t\tString boundary = MimeTypeUtils.generateMultipartBoundaryString();\n\n\t\tFlux<DataBuffer> result = this.encoder.encode(regions, this.bufferFactory,\n\t\t\t\tResolvableType.forClass(ResourceRegion.class),\n\t\t\t\tMimeType.valueOf(\"text/plain\"),\n\t\t\t\tCollections.singletonMap(ResourceRegionEncoder.BOUNDARY_STRING_HINT, boundary));\n\n\t\tStepVerifier.create(result)\n\t\t\t\t.consumeNextWith(stringConsumer(\"\\r\\n--\" + boundary + \"\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Type: text/plain\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Content-Range: bytes 0-5/39\\r\\n\\r\\n\"))\n\t\t\t\t.consumeNextWith(stringConsumer(\"Spring\"))\n\t\t\t\t.expectError(EncodingException.class)\n\t\t\t\t.verify();\n\t}\n\n\tprotected Consumer<DataBuffer> stringConsumer(String expected) {\n\t\treturn dataBuffer -> {\n\t\t\tString value = dataBuffer.toString(UTF_8);\n\t\t\tDataBufferUtils.release(dataBuffer);\n\t\t\tassertThat(value).isEqualTo(expected);\n\t\t};\n\t}\n\n\n\tprivate static class ZeroDemandSubscriber extends BaseSubscriber<DataBuffer> {\n\n\t\t@Override\n\t\tprotected void hookOnSubscribe(Subscription subscription) {\n\t\t\t// Just subscribe without requesting\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ZeroDemandSubscriber#hookOnSubscribe(Subscription)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void hookOnSubscribe(Subscription subscription) {\r\n    // Just subscribe without requesting\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.ZeroDemandSubscriber",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.ZeroDemandSubscriber#hookOnSubscribe(Subscription)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.codec.ZeroDemandSubscriber#hookOnSubscribe(Subscription)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.ZeroDemandSubscriber",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "BaseSubscriber",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.codec",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.codec",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.codec.StringDecoderTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.codec.StringDecoderTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.codec;\n\nimport java.nio.charset.Charset;\nimport java.nio.charset.StandardCharsets;\nimport java.time.Duration;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.Collections;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\nimport reactor.core.publisher.Flux;\nimport reactor.test.StepVerifier;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferLimitException;\nimport org.springframework.core.testfixture.codec.AbstractDecoderTests;\nimport org.springframework.util.MimeType;\nimport org.springframework.util.MimeTypeUtils;\n\nimport static java.nio.charset.StandardCharsets.UTF_16BE;\nimport static java.nio.charset.StandardCharsets.UTF_8;\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link StringDecoder}.\n *\n * @author Sebastien Deleuze\n * @author Brian Clozel\n * @author Mark Paluch\n */\nclass StringDecoderTests extends AbstractDecoderTests<StringDecoder> {\n\n\tprivate static final ResolvableType TYPE = ResolvableType.forClass(String.class);\n\n\n\tStringDecoderTests() {\n\t\tsuper(StringDecoder.allMimeTypes());\n\t}\n\n\n\t@Override\n\t@Test\n\tprotected void canDecode() {\n\t\tassertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_PLAIN)).isTrue();\n\t\tassertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_HTML)).isTrue();\n\t\tassertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.APPLICATION_JSON)).isTrue();\n\t\tassertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-8\"))).isTrue();\n\t\tassertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\n\t\tassertThat(this.decoder.canDecode(ResolvableType.forClass(Object.class), MimeTypeUtils.APPLICATION_JSON)).isFalse();\n\t}\n\n\t@Override\n\t@Test\n\tprotected void decode() {\n\t\tString u = \"ü\";\n\t\tString e = \"é\";\n\t\tString o = \"ø\";\n\t\tString s = String.format(\"%s\\n%s\\n%s\", u, e, o);\n\t\tFlux<DataBuffer> input = toDataBuffers(s, 1, UTF_8);\n\n\t\ttestDecodeAll(input, TYPE, step -> step.expectNext(u, e, o).verifyComplete(), null, null);\n\t}\n\n\t@Test // gh-30299\n\tpublic void decodeAndCancelWithPendingChunks() {\n\t\tFlux<DataBuffer> input = toDataBuffers(\"abc\", 1, UTF_8).concatWith(Flux.never());\n\t\tFlux<String> result = this.decoder.decode(input, TYPE, null, null);\n\n\t\tStepVerifier.create(result).thenAwait(Duration.ofMillis(100)).thenCancel().verify();\n\t}\n\n\t@Test\n\tvoid decodeMultibyteCharacterUtf16() {\n\t\tString u = \"ü\";\n\t\tString e = \"é\";\n\t\tString o = \"ø\";\n\t\tString s = String.format(\"%s\\n%s\\n%s\", u, e, o);\n\t\tFlux<DataBuffer> source = toDataBuffers(s, 2, UTF_16BE);\n\t\tMimeType mimeType = MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-16be\");\n\n\t\ttestDecode(source, TYPE, step -> step.expectNext(u, e, o).verifyComplete(), mimeType, null);\n\t}\n\n\tprivate Flux<DataBuffer> toDataBuffers(String s, int length, Charset charset) {\n\t\tbyte[] bytes = s.getBytes(charset);\n\t\tList<byte[]> chunks = new ArrayList<>();\n\t\tfor (int i = 0; i < bytes.length; i += length) {\n\t\t\tchunks.add(Arrays.copyOfRange(bytes, i, i + length));\n\t\t}\n\t\treturn Flux.fromIterable(chunks)\n\t\t\t\t.map(chunk -> {\n\t\t\t\t\tDataBuffer dataBuffer = this.bufferFactory.allocateBuffer(length);\n\t\t\t\t\tdataBuffer.write(chunk, 0, chunk.length);\n\t\t\t\t\treturn dataBuffer;\n\t\t\t\t});\n\t}\n\n\t@Test\n\tvoid decodeNewLine() {\n\t\tFlux<DataBuffer> input = Flux.just(\n\t\t\t\tstringBuffer(\"\\r\\nabc\\n\"),\n\t\t\t\tstringBuffer(\"def\"),\n\t\t\t\tstringBuffer(\"ghi\\r\\n\\n\"),\n\t\t\t\tstringBuffer(\"jkl\"),\n\t\t\t\tstringBuffer(\"mno\\npqr\\n\"),\n\t\t\t\tstringBuffer(\"stu\"),\n\t\t\t\tstringBuffer(\"vw\"),\n\t\t\t\tstringBuffer(\"xyz\")\n\t\t);\n\n\t\ttestDecode(input, String.class, step -> step\n\t\t\t\t.expectNext(\"\").as(\"1st\")\n\t\t\t\t.expectNext(\"abc\")\n\t\t\t\t.expectNext(\"defghi\")\n\t\t\t\t.expectNext(\"\").as(\"2nd\")\n\t\t\t\t.expectNext(\"jklmno\")\n\t\t\t\t.expectNext(\"pqr\")\n\t\t\t\t.expectNext(\"stuvwxyz\")\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\t@Test\n\tvoid decodeNewlinesAcrossBuffers() {\n\t\tFlux<DataBuffer> input = Flux.just(\n\t\t\t\tstringBuffer(\"\\r\"),\n\t\t\t\tstringBuffer(\"\\n\"),\n\t\t\t\tstringBuffer(\"xyz\")\n\t\t);\n\n\t\ttestDecode(input, String.class, step -> step\n\t\t\t\t.expectNext(\"\")\n\t\t\t\t.expectNext(\"xyz\")\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\t@Test\n\tvoid maxInMemoryLimit() {\n\t\tFlux<DataBuffer> input = Flux.just(\n\t\t\t\tstringBuffer(\"abc\\n\"), stringBuffer(\"defg\\n\"),\n\t\t\t\tstringBuffer(\"hi\"), stringBuffer(\"jkl\"), stringBuffer(\"mnop\"));\n\n\t\tthis.decoder.setMaxInMemorySize(5);\n\t\ttestDecode(input, String.class, step ->\n\t\t\t\tstep.expectNext(\"abc\", \"defg\").verifyError(DataBufferLimitException.class));\n\t}\n\n\t@Test\n\tvoid maxInMemoryLimitDoesNotApplyToParsedItemsThatDontRequireBuffering() {\n\t\tFlux<DataBuffer> input = Flux.just(\n\t\t\t\tstringBuffer(\"TOO MUCH DATA\\nanother line\\n\\nand another\\n\"));\n\n\t\tthis.decoder.setMaxInMemorySize(5);\n\n\t\ttestDecode(input, String.class, step -> step\n\t\t\t\t.expectNext(\"TOO MUCH DATA\")\n\t\t\t\t.expectNext(\"another line\")\n\t\t\t\t.expectNext(\"\")\n\t\t\t\t.expectNext(\"and another\")\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\t@Test // gh-24339\n\tvoid maxInMemoryLimitReleaseUnprocessedLinesWhenUnlimited() {\n\t\tFlux<DataBuffer> input = Flux.just(stringBuffer(\"Line 1\\nLine 2\\nLine 3\\n\"));\n\n\t\tthis.decoder.setMaxInMemorySize(-1);\n\t\ttestDecodeCancel(input, ResolvableType.forClass(String.class), null, Collections.emptyMap());\n\t}\n\n\t@Test\n\tvoid decodeNewLineIncludeDelimiters() {\n\t\tthis.decoder = StringDecoder.allMimeTypes(StringDecoder.DEFAULT_DELIMITERS, false);\n\n\t\tFlux<DataBuffer> input = Flux.just(\n\t\t\t\tstringBuffer(\"\\r\\nabc\\n\"),\n\t\t\t\tstringBuffer(\"def\"),\n\t\t\t\tstringBuffer(\"ghi\\r\\n\\n\"),\n\t\t\t\tstringBuffer(\"jkl\"),\n\t\t\t\tstringBuffer(\"mno\\npqr\\n\"),\n\t\t\t\tstringBuffer(\"stu\"),\n\t\t\t\tstringBuffer(\"vw\"),\n\t\t\t\tstringBuffer(\"xyz\")\n\t\t);\n\n\t\ttestDecode(input, String.class, step -> step\n\t\t\t\t.expectNext(\"\\r\\n\")\n\t\t\t\t.expectNext(\"abc\\n\")\n\t\t\t\t.expectNext(\"defghi\\r\\n\")\n\t\t\t\t.expectNext(\"\\n\")\n\t\t\t\t.expectNext(\"jklmno\\n\")\n\t\t\t\t.expectNext(\"pqr\\n\")\n\t\t\t\t.expectNext(\"stuvwxyz\")\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\t@Test\n\tvoid decodeEmptyFlux() {\n\t\tFlux<DataBuffer> input = Flux.empty();\n\n\t\ttestDecode(input, String.class, step -> step\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\t@Test\n\tvoid decodeEmptyDataBuffer() {\n\t\tFlux<DataBuffer> input = Flux.just(stringBuffer(\"\"));\n\t\tFlux<String> output = this.decoder.decode(input,\n\t\t\t\tTYPE, null, Collections.emptyMap());\n\n\t\tStepVerifier.create(output)\n\t\t\t\t.expectNext(\"\")\n\t\t\t\t.expectComplete().verify();\n\n\t}\n\n\t@Override\n\t@Test\n\tprotected void decodeToMono() {\n\t\tFlux<DataBuffer> input = Flux.just(\n\t\t\t\tstringBuffer(\"foo\"),\n\t\t\t\tstringBuffer(\"bar\"),\n\t\t\t\tstringBuffer(\"baz\"));\n\n\t\ttestDecodeToMonoAll(input, String.class, step -> step\n\t\t\t\t.expectNext(\"foobarbaz\")\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\t@Test\n\tvoid decodeToMonoWithEmptyFlux() {\n\t\tFlux<DataBuffer> input = Flux.empty();\n\n\t\ttestDecodeToMono(input, String.class, step -> step\n\t\t\t\t.expectComplete()\n\t\t\t\t.verify());\n\t}\n\n\tprivate DataBuffer stringBuffer(String value) {\n\t\tbyte[] bytes = value.getBytes(StandardCharsets.UTF_8);\n\t\tDataBuffer buffer = this.bufferFactory.allocateBuffer(bytes.length);\n\t\tbuffer.write(bytes);\n\t\treturn buffer;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.codec.StringDecoderTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.StringDecoderTests#TYPE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.StringDecoderTests#TYPE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ResolvableType",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.StringDecoderTests#canDecode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Test\r\nprotected void canDecode() {\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_PLAIN)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.TEXT_HTML)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.APPLICATION_JSON)).isTrue();\r\n    assertThat(this.decoder.canDecode(TYPE, MimeTypeUtils.parseMimeType(\"text/plain;charset=utf-8\"))).isTrue();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class), MimeTypeUtils.TEXT_PLAIN)).isFalse();\r\n    assertThat(this.decoder.canDecode(ResolvableType.forClass(Object.class), MimeTypeUtils.APPLICATION_JSON)).isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.codec.StringDecoderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.codec.StringDecoderTests#canDecode()",
+    "tailType": "method"
+  }
+]

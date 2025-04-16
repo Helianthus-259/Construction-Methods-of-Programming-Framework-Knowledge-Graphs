@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.log.LogSupportTests#logMessageWithFormat4()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid logMessageWithFormat4() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s %s\", \"b\", \"c\", \"d\", \"e\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d e\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.log.LogSupportTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.log.LogSupportTests#logMessageWithFormat4()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.log.LogSupportTests#logMessageWithFormat4()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.log.LogSupportTests#logMessageWithFormatX()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid logMessageWithFormatX() {\r\n    LogMessage msg = LogMessage.format(\"a %s %s %s %s %s\", \"b\", \"c\", \"d\", \"e\", \"f\");\r\n    assertThat(msg.toString()).isEqualTo(\"a b c d e f\");\r\n    assertThat(msg.toString()).isSameAs(msg.toString());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.log.LogSupportTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.log.LogSupportTests#logMessageWithFormatX()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.log.LogSupportTests#logMessageWithFormatX()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.MethodIntrospectorTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospectorTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.reflect.Method;\nimport java.util.Map;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.MethodIntrospector.MetadataLookup;\nimport org.springframework.core.annotation.MergedAnnotations;\nimport org.springframework.util.ReflectionUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.springframework.core.annotation.MergedAnnotations.SearchStrategy.TYPE_HIERARCHY;\n\n/**\n * Tests for {@link MethodIntrospector}.\n *\n * @author Sam Brannen\n * @since 5.3.34\n */\nclass MethodIntrospectorTests {\n\n\t@Test  // gh-32586\n\tvoid selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations() {\n\t\tClass<?> targetType = ActualController.class;\n\n\t\t// Preconditions for this use case.\n\t\tassertThat(targetType).isPublic();\n\t\tassertThat(targetType.getSuperclass()).isPackagePrivate();\n\n\t\tMetadataLookup<String> metadataLookup = (MetadataLookup<String>) method -> {\n\t\t\tif (MergedAnnotations.from(method, TYPE_HIERARCHY).isPresent(Mapped.class)) {\n\t\t\t\treturn method.getName();\n\t\t\t}\n\t\t\treturn null;\n\t\t};\n\n\t\t// Start with a clean slate.\n\t\tReflectionUtils.clearCache();\n\n\t\t// Round #1\n\t\tMap<Method, String> methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\n\t\tassertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\n\n\t\t// Simulate ConfigurableApplicationContext#refresh() which clears the\n\t\t// ReflectionUtils#declaredMethodsCache but NOT the BridgeMethodResolver#cache.\n\t\t// As a consequence, ReflectionUtils.getDeclaredMethods(...) will return a\n\t\t// new set of methods that are logically equivalent to but not identical\n\t\t// to (in terms of object identity) any bridged methods cached in the\n\t\t// BridgeMethodResolver cache.\n\t\tReflectionUtils.clearCache();\n\n\t\t// Round #2\n\t\tmethods = MethodIntrospector.selectMethods(targetType, metadataLookup);\n\t\tassertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface Mapped {\n\t}\n\n\tinterface Controller {\n\n\t\tvoid unmappedMethod();\n\n\t\t@Mapped\n\t\tvoid update();\n\n\t\t@Mapped\n\t\tvoid delete();\n\t}\n\n\t// Must NOT be public.\n\tabstract static class AbstractController implements Controller {\n\n\t\t@Override\n\t\tpublic void unmappedMethod() {\n\t\t}\n\n\t\t@Override\n\t\tpublic void delete() {\n\t\t}\n\t}\n\n\t// MUST be public.\n\tpublic static class ActualController extends AbstractController {\n\n\t\t@Override\n\t\tpublic void update() {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospectorTests#selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// gh-32586\r\n@Test\r\nvoid selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations() {\r\n    Class<?> targetType = ActualController.class;\r\n    // Preconditions for this use case.\r\n    assertThat(targetType).isPublic();\r\n    assertThat(targetType.getSuperclass()).isPackagePrivate();\r\n    MetadataLookup<String> metadataLookup = (MetadataLookup<String>) method -> {\r\n        if (MergedAnnotations.from(method, TYPE_HIERARCHY).isPresent(Mapped.class)) {\r\n            return method.getName();\r\n        }\r\n        return null;\r\n    };\r\n    // Start with a clean slate.\r\n    ReflectionUtils.clearCache();\r\n    // Round #1\r\n    Map<Method, String> methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\r\n    assertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\r\n    // Simulate ConfigurableApplicationContext#refresh() which clears the\r\n    // ReflectionUtils#declaredMethodsCache but NOT the BridgeMethodResolver#cache.\r\n    // As a consequence, ReflectionUtils.getDeclaredMethods(...) will return a\r\n    // new set of methods that are logically equivalent to but not identical\r\n    // to (in terms of object identity) any bridged methods cached in the\r\n    // BridgeMethodResolver cache.\r\n    ReflectionUtils.clearCache();\r\n    // Round #2\r\n    methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\r\n    assertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospectorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodIntrospectorTests#selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospectorTests#selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.Controller",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.Controller",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\nimport java.lang.reflect.Method;\nimport java.util.Map;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.MethodIntrospector.MetadataLookup;\nimport org.springframework.core.annotation.MergedAnnotations;\nimport org.springframework.util.ReflectionUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.springframework.core.annotation.MergedAnnotations.SearchStrategy.TYPE_HIERARCHY;\n\n/**\n * Tests for {@link MethodIntrospector}.\n *\n * @author Sam Brannen\n * @since 5.3.34\n */\nclass MethodIntrospectorTests {\n\n\t@Test  // gh-32586\n\tvoid selectMethodsAndClearDeclaredMethodsCacheBetweenInvocations() {\n\t\tClass<?> targetType = ActualController.class;\n\n\t\t// Preconditions for this use case.\n\t\tassertThat(targetType).isPublic();\n\t\tassertThat(targetType.getSuperclass()).isPackagePrivate();\n\n\t\tMetadataLookup<String> metadataLookup = (MetadataLookup<String>) method -> {\n\t\t\tif (MergedAnnotations.from(method, TYPE_HIERARCHY).isPresent(Mapped.class)) {\n\t\t\t\treturn method.getName();\n\t\t\t}\n\t\t\treturn null;\n\t\t};\n\n\t\t// Start with a clean slate.\n\t\tReflectionUtils.clearCache();\n\n\t\t// Round #1\n\t\tMap<Method, String> methods = MethodIntrospector.selectMethods(targetType, metadataLookup);\n\t\tassertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\n\n\t\t// Simulate ConfigurableApplicationContext#refresh() which clears the\n\t\t// ReflectionUtils#declaredMethodsCache but NOT the BridgeMethodResolver#cache.\n\t\t// As a consequence, ReflectionUtils.getDeclaredMethods(...) will return a\n\t\t// new set of methods that are logically equivalent to but not identical\n\t\t// to (in terms of object identity) any bridged methods cached in the\n\t\t// BridgeMethodResolver cache.\n\t\tReflectionUtils.clearCache();\n\n\t\t// Round #2\n\t\tmethods = MethodIntrospector.selectMethods(targetType, metadataLookup);\n\t\tassertThat(methods.values()).containsExactlyInAnyOrder(\"update\", \"delete\");\n\t}\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@interface Mapped {\n\t}\n\n\tinterface Controller {\n\n\t\tvoid unmappedMethod();\n\n\t\t@Mapped\n\t\tvoid update();\n\n\t\t@Mapped\n\t\tvoid delete();\n\t}\n\n\t// Must NOT be public.\n\tabstract static class AbstractController implements Controller {\n\n\t\t@Override\n\t\tpublic void unmappedMethod() {\n\t\t}\n\n\t\t@Override\n\t\tpublic void delete() {\n\t\t}\n\t}\n\n\t// MUST be public.\n\tpublic static class ActualController extends AbstractController {\n\n\t\t@Override\n\t\tpublic void update() {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.Controller#unmappedMethod()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "void unmappedMethod();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Controller",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Controller#unmappedMethod()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Controller#update()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Mapped\r\nvoid update();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.Controller",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.Controller#update()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.Controller#update()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Mapped",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.Controller#delete()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Mapped\r\nvoid delete();",
+    "tailType": "method_code"
+  }
+]

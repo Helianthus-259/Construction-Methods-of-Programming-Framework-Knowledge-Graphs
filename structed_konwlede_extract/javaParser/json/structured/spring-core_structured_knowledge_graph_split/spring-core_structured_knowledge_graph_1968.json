@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.PropertySourceTests#equals()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourceTests#equals()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourceTests#collectionsOperations()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid collectionsOperations() {\r\n    Map<String, Object> map1 = Map.of(\"a\", \"b\");\r\n    Map<String, Object> map2 = Map.of(\"c\", \"d\");\r\n    PropertySource<?> ps1 = new MapPropertySource(\"ps1\", map1);\r\n    ps1.getSource();\r\n    List<PropertySource<?>> propertySources = new ArrayList<>();\r\n    assertThat(propertySources.add(ps1)).isTrue();\r\n    assertThat(propertySources).contains(ps1);\r\n    assertThat(propertySources).contains(PropertySource.named(\"ps1\"));\r\n    // notice - different map\r\n    PropertySource<?> ps1replacement = new MapPropertySource(\"ps1\", map2);\r\n    // true because linkedlist allows duplicates\r\n    assertThat(propertySources.add(ps1replacement)).isTrue();\r\n    assertThat(propertySources).hasSize(2);\r\n    assertThat(propertySources.remove(PropertySource.named(\"ps1\"))).isTrue();\r\n    assertThat(propertySources).hasSize(1);\r\n    assertThat(propertySources.remove(PropertySource.named(\"ps1\"))).isTrue();\r\n    assertThat(propertySources).isEmpty();\r\n    PropertySource<?> ps2 = new MapPropertySource(\"ps2\", map2);\r\n    propertySources.add(ps1);\r\n    propertySources.add(ps2);\r\n    assertThat(propertySources.indexOf(PropertySource.named(\"ps1\"))).isEqualTo(0);\r\n    assertThat(propertySources.indexOf(PropertySource.named(\"ps2\"))).isEqualTo(1);\r\n    propertySources.clear();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourceTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.PropertySourceTests#collectionsOperations()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.PropertySourceTests#collectionsOperations()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.env",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParserTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.Collections;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link SimpleCommandLineArgsParser}.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @author Brian Clozel\n */\nclass SimpleCommandLineArgsParserTests {\n\n\tprivate final SimpleCommandLineArgsParser parser = new SimpleCommandLineArgsParser();\n\n\n\t@Test\n\tvoid withNoOptions() {\n\t\tassertThat(parser.parse().getOptionValues(\"foo\")).isNull();\n\t}\n\n\t@Test\n\tvoid withSingleOptionAndNoValue() {\n\t\tCommandLineArgs args = parser.parse(\"--o1\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.getOptionValues(\"o1\")).isEmpty();\n\t}\n\n\t@Test\n\tvoid withSingleOptionAndValue() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=v1\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\");\n\t}\n\n\t@Test\n\tvoid withRepeatedOptionAndSameValues() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=v1\", \"--o1=v1\", \"--o1=v1\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\", \"v1\", \"v1\");\n\t}\n\n\t@Test\n\tvoid withRepeatedOptionAndDifferentValues() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=v1\", \"--o1=v2\", \"--o1=v3\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\", \"v2\", \"v3\");\n\t}\n\n\t@Test\n\tvoid withMixOfOptionsHavingValueAndOptionsHavingNoValue() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=v1\", \"--o2\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.containsOption(\"o2\")).isTrue();\n\t\tassertThat(args.containsOption(\"o3\")).isFalse();\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\");\n\t\tassertThat(args.getOptionValues(\"o2\")).isEqualTo(Collections.EMPTY_LIST);\n\t\tassertThat(args.getOptionValues(\"o3\")).isNull();\n\t}\n\n\t@Test\n\tvoid withEmptyOptionName() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> parser.parse(\"--=v1\"));\n\t}\n\n\t@Test\n\tvoid withEmptyOptionValue() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"\");\n\t}\n\n\t@Test\n\tvoid withEmptyOptionNameAndEmptyOptionValue() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> parser.parse(\"--=\"));\n\t}\n\n\t@Test\n\tvoid withNonOptionArguments() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=v1\", \"noa1\", \"--o2=v2\", \"noa2\");\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\");\n\t\tassertThat(args.getOptionValues(\"o2\")).containsExactly(\"v2\");\n\n\t\tList<String> nonOptions = args.getNonOptionArgs();\n\t\tassertThat(nonOptions).containsExactly(\"noa1\", \"noa2\");\n\t}\n\n\t@Test\n\tvoid optionNamesSetIsUnmodifiable() {\n\t\tCommandLineArgs args = new SimpleCommandLineArgsParser().parse();\n\t\tassertThatExceptionOfType(UnsupportedOperationException.class)\n\t\t\t\t.isThrownBy(() -> args.getOptionNames().add(\"bogus\"));\n\t}\n\n\t@Test\n\tvoid nonOptionArgsListIsUnmodifiable() {\n\t\tCommandLineArgs args = new SimpleCommandLineArgsParser().parse();\n\t\tassertThatExceptionOfType(UnsupportedOperationException.class)\n\t\t\t\t.isThrownBy(() -> args.getNonOptionArgs().add(\"foo\"));\n\t}\n\n\t@Test\n\tvoid supportsEndOfOptionsDelimiter() {\n\t\tCommandLineArgs args = parser.parse(\"--o1=v1\", \"--\", \"--o2=v2\");\n\t\tassertThat(args.containsOption(\"o1\")).isTrue();\n\t\tassertThat(args.containsOption(\"o2\")).isFalse();\n\t\tassertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\");\n\t\tassertThat(args.getNonOptionArgs()).contains(\"--o2=v2\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParserTests#parser",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#parser",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "SimpleCommandLineArgsParser",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withNoOptions()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withNoOptions() {\r\n    assertThat(parser.parse().getOptionValues(\"foo\")).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withNoOptions()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withNoOptions()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withSingleOptionAndNoValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withSingleOptionAndNoValue() {\r\n    CommandLineArgs args = parser.parse(\"--o1\");\r\n    assertThat(args.containsOption(\"o1\")).isTrue();\r\n    assertThat(args.getOptionValues(\"o1\")).isEmpty();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withSingleOptionAndNoValue()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withSingleOptionAndNoValue()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withSingleOptionAndValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withSingleOptionAndValue() {\r\n    CommandLineArgs args = parser.parse(\"--o1=v1\");\r\n    assertThat(args.containsOption(\"o1\")).isTrue();\r\n    assertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withSingleOptionAndValue()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withSingleOptionAndValue()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.SimpleCommandLineArgsParserTests#withRepeatedOptionAndSameValues()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withRepeatedOptionAndSameValues() {\r\n    CommandLineArgs args = parser.parse(\"--o1=v1\", \"--o1=v1\", \"--o1=v1\");\r\n    assertThat(args.containsOption(\"o1\")).isTrue();\r\n    assertThat(args.getOptionValues(\"o1\")).containsExactly(\"v1\", \"v1\", \"v1\");\r\n}",
+    "tailType": "method_code"
+  }
+]

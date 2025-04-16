@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests#withNoProfileProperties()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withNoProfileProperties() {\r\n    ConfigurableEnvironment env = new AbstractEnvironment() {\r\n\r\n        @Override\r\n        @Nullable\r\n        protected String doGetActiveProfilesProperty() {\r\n            return null;\r\n        }\r\n\r\n        @Override\r\n        @Nullable\r\n        protected String doGetDefaultProfilesProperty() {\r\n            return null;\r\n        }\r\n    };\r\n    Map<String, Object> values = new LinkedHashMap<>();\r\n    values.put(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME, \"a,b,c\");\r\n    values.put(AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME, \"d,e,f\");\r\n    PropertySource<?> propertySource = new MapPropertySource(\"test\", values);\r\n    env.getPropertySources().addFirst(propertySource);\r\n    assertThat(env.getActiveProfiles()).isEmpty();\r\n    assertThat(env.getDefaultProfiles()).containsExactly(DEFAULT_PROFILE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.CustomEnvironmentTests#withNoProfileProperties()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests#withNoProfileProperties()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests#withCustomMutablePropertySources()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withCustomMutablePropertySources() {\r\n    class CustomMutablePropertySources extends MutablePropertySources ;\r\n    MutablePropertySources propertySources = new CustomMutablePropertySources();\r\n    ConfigurableEnvironment env = new AbstractEnvironment(propertySources) ;;\r\n    assertThat(env.getPropertySources()).isInstanceOf(CustomMutablePropertySources.class);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.CustomEnvironmentTests#withCustomMutablePropertySources()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests#withCustomMutablePropertySources()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests#withCustomPropertyResolver()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid withCustomPropertyResolver() {\r\n    class CustomPropertySourcesPropertyResolver extends PropertySourcesPropertyResolver {\r\n\r\n        public CustomPropertySourcesPropertyResolver(PropertySources propertySources) {\r\n            super(propertySources);\r\n        }\r\n\r\n        @Override\r\n        @Nullable\r\n        public String getProperty(String key) {\r\n            return super.getProperty(key) + \"-test\";\r\n        }\r\n    }\r\n    ConfigurableEnvironment env = new AbstractEnvironment() {\r\n\r\n        @Override\r\n        protected ConfigurablePropertyResolver createPropertyResolver(MutablePropertySources propertySources) {\r\n            return new CustomPropertySourcesPropertyResolver(propertySources);\r\n        }\r\n    };\r\n    Map<String, Object> values = new LinkedHashMap<>();\r\n    values.put(\"spring\", \"framework\");\r\n    PropertySource<?> propertySource = new MapPropertySource(\"test\", values);\r\n    env.getPropertySources().addFirst(propertySource);\r\n    assertThat(env.getProperty(\"spring\")).isEqualTo(\"framework-test\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.CustomEnvironmentTests#withCustomPropertyResolver()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironmentTests#withCustomPropertyResolver()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.CustomEnvironment",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.LinkedHashMap;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Unit tests covering the extensibility of {@link AbstractEnvironment}.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @since 3.1\n */\nclass CustomEnvironmentTests {\n\n\tprivate static final String DEFAULT_PROFILE = AbstractEnvironment.RESERVED_DEFAULT_PROFILE_NAME;\n\n\n\t@Test\n\tvoid control() {\n\t\tEnvironment env = new AbstractEnvironment() { };\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isTrue();\n\t}\n\n\t@Test\n\tvoid withNoReservedDefaultProfile() {\n\t\tclass CustomEnvironment extends AbstractEnvironment {\n\t\t\t@Override\n\t\t\tprotected Set<String> getReservedDefaultProfiles() {\n\t\t\t\treturn Set.of();\n\t\t\t}\n\t\t}\n\n\t\tEnvironment env = new CustomEnvironment();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t}\n\n\t@Test\n\tvoid withSingleCustomReservedDefaultProfile() {\n\t\tclass CustomEnvironment extends AbstractEnvironment {\n\t\t\t@Override\n\t\t\tprotected Set<String> getReservedDefaultProfiles() {\n\t\t\t\treturn Set.of(\"rd1\");\n\t\t\t}\n\t\t}\n\n\t\tEnvironment env = new CustomEnvironment();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t\tassertThat(env.matchesProfiles(\"rd1\")).isTrue();\n\t}\n\n\t@Test\n\tvoid withMultiCustomReservedDefaultProfile() {\n\t\tclass CustomEnvironment extends AbstractEnvironment {\n\t\t\t@Override\n\t\t\tprotected Set<String> getReservedDefaultProfiles() {\n\t\t\t\treturn Set.of(\"rd1\", \"rd2\");\n\t\t\t}\n\t\t}\n\n\t\tConfigurableEnvironment env = new CustomEnvironment();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t\tassertThat(env.matchesProfiles(\"rd1 | rd2\")).isTrue();\n\n\t\t// finally, issue additional assertions to cover all combinations of calling these\n\t\t// methods, however unlikely.\n\t\tenv.setDefaultProfiles(\"d1\");\n\t\tassertThat(env.matchesProfiles(\"rd1 | rd2\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"d1\")).isTrue();\n\n\t\tenv.setActiveProfiles(\"a1\", \"a2\");\n\t\tassertThat(env.matchesProfiles(\"d1\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"a1 | a2\")).isTrue();\n\n\t\tenv.setActiveProfiles();\n\t\tassertThat(env.matchesProfiles(\"d1\")).isTrue();\n\t\tassertThat(env.matchesProfiles(\"a1 | a2\")).isFalse();\n\n\t\tenv.setDefaultProfiles();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t\tassertThat(env.matchesProfiles(\"rd1 | rd2\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"d1\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"a1 | a2\")).isFalse();\n\t}\n\n\t@Test\n\tvoid withNoProfileProperties() {\n\t\tConfigurableEnvironment env = new AbstractEnvironment() {\n\t\t\t@Override\n\t\t\tprotected @Nullable String doGetActiveProfilesProperty() {\n\t\t\t\treturn null;\n\t\t\t}\n\t\t\t@Override\n\t\t\tprotected @Nullable String doGetDefaultProfilesProperty() {\n\t\t\t\treturn null;\n\t\t\t}\n\t\t};\n\t\tMap<String, Object> values = new LinkedHashMap<>();\n\t\tvalues.put(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME, \"a,b,c\");\n\t\tvalues.put(AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME, \"d,e,f\");\n\t\tPropertySource<?> propertySource = new MapPropertySource(\"test\", values);\n\t\tenv.getPropertySources().addFirst(propertySource);\n\t\tassertThat(env.getActiveProfiles()).isEmpty();\n\t\tassertThat(env.getDefaultProfiles()).containsExactly(DEFAULT_PROFILE);\n\t}\n\n\t@Test\n\tvoid withCustomMutablePropertySources() {\n\t\tclass CustomMutablePropertySources extends MutablePropertySources {}\n\t\tMutablePropertySources propertySources = new CustomMutablePropertySources();\n\t\tConfigurableEnvironment env = new AbstractEnvironment(propertySources) {};\n\t\tassertThat(env.getPropertySources()).isInstanceOf(CustomMutablePropertySources.class);\n\t}\n\n\t@Test\n\tvoid withCustomPropertyResolver() {\n\t\tclass CustomPropertySourcesPropertyResolver extends PropertySourcesPropertyResolver {\n\t\t\tpublic CustomPropertySourcesPropertyResolver(PropertySources propertySources) {\n\t\t\t\tsuper(propertySources);\n\t\t\t}\n\t\t\t@Override\n\t\t\tpublic @Nullable String getProperty(String key) {\n\t\t\t\treturn super.getProperty(key) + \"-test\";\n\t\t\t}\n\t\t}\n\n\t\tConfigurableEnvironment env = new AbstractEnvironment() {\n\t\t\t@Override\n\t\t\tprotected ConfigurablePropertyResolver createPropertyResolver(MutablePropertySources propertySources) {\n\t\t\t\treturn new CustomPropertySourcesPropertyResolver(propertySources);\n\t\t\t}\n\t\t};\n\n\t\tMap<String, Object> values = new LinkedHashMap<>();\n\t\tvalues.put(\"spring\", \"framework\");\n\t\tPropertySource<?> propertySource = new MapPropertySource(\"test\", values);\n\t\tenv.getPropertySources().addFirst(propertySource);\n\t\tassertThat(env.getProperty(\"spring\")).isEqualTo(\"framework-test\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment#getReservedDefaultProfiles()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Set<String> getReservedDefaultProfiles() {\r\n    return Set.of();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.CustomEnvironment#getReservedDefaultProfiles()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment#getReservedDefaultProfiles()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractEnvironment",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.env.CustomEnvironment",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.env;\n\nimport java.util.LinkedHashMap;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Unit tests covering the extensibility of {@link AbstractEnvironment}.\n *\n * @author Chris Beams\n * @author Sam Brannen\n * @since 3.1\n */\nclass CustomEnvironmentTests {\n\n\tprivate static final String DEFAULT_PROFILE = AbstractEnvironment.RESERVED_DEFAULT_PROFILE_NAME;\n\n\n\t@Test\n\tvoid control() {\n\t\tEnvironment env = new AbstractEnvironment() { };\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isTrue();\n\t}\n\n\t@Test\n\tvoid withNoReservedDefaultProfile() {\n\t\tclass CustomEnvironment extends AbstractEnvironment {\n\t\t\t@Override\n\t\t\tprotected Set<String> getReservedDefaultProfiles() {\n\t\t\t\treturn Set.of();\n\t\t\t}\n\t\t}\n\n\t\tEnvironment env = new CustomEnvironment();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t}\n\n\t@Test\n\tvoid withSingleCustomReservedDefaultProfile() {\n\t\tclass CustomEnvironment extends AbstractEnvironment {\n\t\t\t@Override\n\t\t\tprotected Set<String> getReservedDefaultProfiles() {\n\t\t\t\treturn Set.of(\"rd1\");\n\t\t\t}\n\t\t}\n\n\t\tEnvironment env = new CustomEnvironment();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t\tassertThat(env.matchesProfiles(\"rd1\")).isTrue();\n\t}\n\n\t@Test\n\tvoid withMultiCustomReservedDefaultProfile() {\n\t\tclass CustomEnvironment extends AbstractEnvironment {\n\t\t\t@Override\n\t\t\tprotected Set<String> getReservedDefaultProfiles() {\n\t\t\t\treturn Set.of(\"rd1\", \"rd2\");\n\t\t\t}\n\t\t}\n\n\t\tConfigurableEnvironment env = new CustomEnvironment();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t\tassertThat(env.matchesProfiles(\"rd1 | rd2\")).isTrue();\n\n\t\t// finally, issue additional assertions to cover all combinations of calling these\n\t\t// methods, however unlikely.\n\t\tenv.setDefaultProfiles(\"d1\");\n\t\tassertThat(env.matchesProfiles(\"rd1 | rd2\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"d1\")).isTrue();\n\n\t\tenv.setActiveProfiles(\"a1\", \"a2\");\n\t\tassertThat(env.matchesProfiles(\"d1\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"a1 | a2\")).isTrue();\n\n\t\tenv.setActiveProfiles();\n\t\tassertThat(env.matchesProfiles(\"d1\")).isTrue();\n\t\tassertThat(env.matchesProfiles(\"a1 | a2\")).isFalse();\n\n\t\tenv.setDefaultProfiles();\n\t\tassertThat(env.matchesProfiles(DEFAULT_PROFILE)).isFalse();\n\t\tassertThat(env.matchesProfiles(\"rd1 | rd2\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"d1\")).isFalse();\n\t\tassertThat(env.matchesProfiles(\"a1 | a2\")).isFalse();\n\t}\n\n\t@Test\n\tvoid withNoProfileProperties() {\n\t\tConfigurableEnvironment env = new AbstractEnvironment() {\n\t\t\t@Override\n\t\t\tprotected @Nullable String doGetActiveProfilesProperty() {\n\t\t\t\treturn null;\n\t\t\t}\n\t\t\t@Override\n\t\t\tprotected @Nullable String doGetDefaultProfilesProperty() {\n\t\t\t\treturn null;\n\t\t\t}\n\t\t};\n\t\tMap<String, Object> values = new LinkedHashMap<>();\n\t\tvalues.put(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME, \"a,b,c\");\n\t\tvalues.put(AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME, \"d,e,f\");\n\t\tPropertySource<?> propertySource = new MapPropertySource(\"test\", values);\n\t\tenv.getPropertySources().addFirst(propertySource);\n\t\tassertThat(env.getActiveProfiles()).isEmpty();\n\t\tassertThat(env.getDefaultProfiles()).containsExactly(DEFAULT_PROFILE);\n\t}\n\n\t@Test\n\tvoid withCustomMutablePropertySources() {\n\t\tclass CustomMutablePropertySources extends MutablePropertySources {}\n\t\tMutablePropertySources propertySources = new CustomMutablePropertySources();\n\t\tConfigurableEnvironment env = new AbstractEnvironment(propertySources) {};\n\t\tassertThat(env.getPropertySources()).isInstanceOf(CustomMutablePropertySources.class);\n\t}\n\n\t@Test\n\tvoid withCustomPropertyResolver() {\n\t\tclass CustomPropertySourcesPropertyResolver extends PropertySourcesPropertyResolver {\n\t\t\tpublic CustomPropertySourcesPropertyResolver(PropertySources propertySources) {\n\t\t\t\tsuper(propertySources);\n\t\t\t}\n\t\t\t@Override\n\t\t\tpublic @Nullable String getProperty(String key) {\n\t\t\t\treturn super.getProperty(key) + \"-test\";\n\t\t\t}\n\t\t}\n\n\t\tConfigurableEnvironment env = new AbstractEnvironment() {\n\t\t\t@Override\n\t\t\tprotected ConfigurablePropertyResolver createPropertyResolver(MutablePropertySources propertySources) {\n\t\t\t\treturn new CustomPropertySourcesPropertyResolver(propertySources);\n\t\t\t}\n\t\t};\n\n\t\tMap<String, Object> values = new LinkedHashMap<>();\n\t\tvalues.put(\"spring\", \"framework\");\n\t\tPropertySource<?> propertySource = new MapPropertySource(\"test\", values);\n\t\tenv.getPropertySources().addFirst(propertySource);\n\t\tassertThat(env.getProperty(\"spring\")).isEqualTo(\"framework-test\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment#getReservedDefaultProfiles()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected Set<String> getReservedDefaultProfiles() {\r\n    return Set.of(\"rd1\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.env.CustomEnvironment#getReservedDefaultProfiles()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.env.CustomEnvironment#getReservedDefaultProfiles()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]
