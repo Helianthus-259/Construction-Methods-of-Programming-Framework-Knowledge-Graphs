@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor#toClassName(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor#isBridge(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private boolean isBridge(int access) {\r\n    return (access & Opcodes.ACC_BRIDGE) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor#isBridge(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor#isInterface(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private boolean isInterface(int access) {\r\n    return (access & Opcodes.ACC_INTERFACE) != 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor#isInterface(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleAnnotationMetadataReadingVisitor",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ClassVisitor",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.type.classreading",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.type.classreading.Source",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.type.classreading;\n\nimport java.util.LinkedHashSet;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.asm.AnnotationVisitor;\nimport org.springframework.asm.ClassVisitor;\nimport org.springframework.asm.MethodVisitor;\nimport org.springframework.asm.Opcodes;\nimport org.springframework.asm.SpringAsmInfo;\nimport org.springframework.core.annotation.MergedAnnotation;\nimport org.springframework.core.annotation.MergedAnnotations;\nimport org.springframework.core.type.MethodMetadata;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\n\n/**\n * ASM class visitor that creates {@link SimpleAnnotationMetadata}.\n *\n * @author Phillip Webb\n * @author Juergen Hoeller\n * @since 5.2\n */\nfinal class SimpleAnnotationMetadataReadingVisitor extends ClassVisitor {\n\n\tprivate final @Nullable ClassLoader classLoader;\n\n\tprivate String className = \"\";\n\n\tprivate int access;\n\n\tprivate @Nullable String superClassName;\n\n\tprivate @Nullable String enclosingClassName;\n\n\tprivate boolean independentInnerClass;\n\n\tprivate final Set<String> interfaceNames = new LinkedHashSet<>(4);\n\n\tprivate final Set<String> memberClassNames = new LinkedHashSet<>(4);\n\n\tprivate final Set<MergedAnnotation<?>> annotations = new LinkedHashSet<>(4);\n\n\tprivate final Set<MethodMetadata> declaredMethods = new LinkedHashSet<>(4);\n\n\tprivate @Nullable SimpleAnnotationMetadata metadata;\n\n\tprivate @Nullable Source source;\n\n\n\tSimpleAnnotationMetadataReadingVisitor(@Nullable ClassLoader classLoader) {\n\t\tsuper(SpringAsmInfo.ASM_VERSION);\n\t\tthis.classLoader = classLoader;\n\t}\n\n\n\t@Override\n\tpublic void visit(int version, int access, String name, String signature,\n\t\t\t@Nullable String supername, String[] interfaces) {\n\n\t\tthis.className = toClassName(name);\n\t\tthis.access = access;\n\t\tif (supername != null && !isInterface(access)) {\n\t\t\tthis.superClassName = toClassName(supername);\n\t\t}\n\t\tfor (String element : interfaces) {\n\t\t\tthis.interfaceNames.add(toClassName(element));\n\t\t}\n\t}\n\n\t@Override\n\tpublic void visitOuterClass(String owner, String name, String desc) {\n\t\tthis.enclosingClassName = toClassName(owner);\n\t}\n\n\t@Override\n\tpublic void visitInnerClass(String name, @Nullable String outerName, String innerName, int access) {\n\t\tif (outerName != null) {\n\t\t\tString className = toClassName(name);\n\t\t\tString outerClassName = toClassName(outerName);\n\t\t\tif (this.className.equals(className)) {\n\t\t\t\tthis.enclosingClassName = outerClassName;\n\t\t\t\tthis.independentInnerClass = ((access & Opcodes.ACC_STATIC) != 0);\n\t\t\t}\n\t\t\telse if (this.className.equals(outerClassName)) {\n\t\t\t\tthis.memberClassNames.add(className);\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {\n\t\treturn MergedAnnotationReadingVisitor.get(this.classLoader, getSource(),\n\t\t\t\tdescriptor, visible, this.annotations::add);\n\t}\n\n\t@Override\n\tpublic @Nullable MethodVisitor visitMethod(\n\t\t\tint access, String name, String descriptor, String signature, String[] exceptions) {\n\n\t\t// Skip bridge methods and constructors - we're only interested in original user methods.\n\t\tif (isBridge(access) || name.equals(\"<init>\")) {\n\t\t\treturn null;\n\t\t}\n\t\treturn new SimpleMethodMetadataReadingVisitor(this.classLoader, this.className,\n\t\t\t\taccess, name, descriptor, this.declaredMethods::add);\n\t}\n\n\t@Override\n\tpublic void visitEnd() {\n\t\tMergedAnnotations annotations = MergedAnnotations.of(this.annotations);\n\t\tthis.metadata = new SimpleAnnotationMetadata(this.className, this.access,\n\t\t\t\tthis.enclosingClassName, this.superClassName, this.independentInnerClass,\n\t\t\t\tthis.interfaceNames, this.memberClassNames, this.declaredMethods, annotations);\n\t}\n\n\tpublic SimpleAnnotationMetadata getMetadata() {\n\t\tAssert.state(this.metadata != null, \"AnnotationMetadata not initialized\");\n\t\treturn this.metadata;\n\t}\n\n\tprivate Source getSource() {\n\t\tSource source = this.source;\n\t\tif (source == null) {\n\t\t\tsource = new Source(this.className);\n\t\t\tthis.source = source;\n\t\t}\n\t\treturn source;\n\t}\n\n\tprivate String toClassName(String name) {\n\t\treturn ClassUtils.convertResourcePathToClassName(name);\n\t}\n\n\tprivate boolean isBridge(int access) {\n\t\treturn (access & Opcodes.ACC_BRIDGE) != 0;\n\t}\n\n\tprivate boolean isInterface(int access) {\n\t\treturn (access & Opcodes.ACC_INTERFACE) != 0;\n\t}\n\n\n\t/**\n\t * {@link MergedAnnotation} source.\n\t */\n\tprivate static final class Source {\n\n\t\tprivate final String className;\n\n\t\tSource(String className) {\n\t\t\tthis.className = className;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean equals(@Nullable Object other) {\n\t\t\treturn (this == other || (other instanceof Source that && this.className.equals(that.className)));\n\t\t}\n\n\t\t@Override\n\t\tpublic int hashCode() {\n\t\t\treturn this.className.hashCode();\n\t\t}\n\n\t\t@Override\n\t\tpublic String toString() {\n\t\t\treturn this.className;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.type.classreading.Source#className",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#className",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#equals(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof Source that && this.className.equals(that.className)));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.classreading.Source#equals(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#equals(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#hashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int hashCode() {\r\n    return this.className.hashCode();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.classreading.Source#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String toString() {\r\n    return this.className;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.classreading.Source#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.Source#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.type.classreading",
+    "tailType": "package"
+  }
+]

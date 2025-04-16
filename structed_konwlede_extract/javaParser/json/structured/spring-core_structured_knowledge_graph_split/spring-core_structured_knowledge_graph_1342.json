@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.MimeTypeUtils#parseMimeTypeInternal(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static MimeType parseMimeTypeInternal(String mimeType) {\r\n    int index = mimeType.indexOf(';');\r\n    String fullType = (index >= 0 ? mimeType.substring(0, index) : mimeType).trim();\r\n    if (fullType.isEmpty()) {\r\n        throw new InvalidMimeTypeException(mimeType, \"'mimeType' must not be empty\");\r\n    }\r\n    // java.net.HttpURLConnection returns a *; q=.2 Accept header\r\n    if (MimeType.WILDCARD_TYPE.equals(fullType)) {\r\n        fullType = \"*/*\";\r\n    }\r\n    int subIndex = fullType.indexOf('/');\r\n    if (subIndex == -1) {\r\n        throw new InvalidMimeTypeException(mimeType, \"does not contain '/'\");\r\n    }\r\n    if (subIndex == fullType.length() - 1) {\r\n        throw new InvalidMimeTypeException(mimeType, \"does not contain subtype after '/'\");\r\n    }\r\n    String type = fullType.substring(0, subIndex);\r\n    String subtype = fullType.substring(subIndex + 1);\r\n    if (MimeType.WILDCARD_TYPE.equals(type) && !MimeType.WILDCARD_TYPE.equals(subtype)) {\r\n        throw new InvalidMimeTypeException(mimeType, \"wildcard type is legal only in '*/*' (all mime types)\");\r\n    }\r\n    Map<String, String> parameters = null;\r\n    do {\r\n        int nextIndex = index + 1;\r\n        boolean quoted = false;\r\n        while (nextIndex < mimeType.length()) {\r\n            char ch = mimeType.charAt(nextIndex);\r\n            if (ch == ';') {\r\n                if (!quoted) {\r\n                    break;\r\n                }\r\n            } else if (ch == '\"') {\r\n                quoted = !quoted;\r\n            }\r\n            nextIndex++;\r\n        }\r\n        String parameter = mimeType.substring(index + 1, nextIndex).trim();\r\n        if (parameter.length() > 0) {\r\n            if (parameters == null) {\r\n                parameters = new LinkedHashMap<>(4);\r\n            }\r\n            int eqIndex = parameter.indexOf('=');\r\n            if (eqIndex >= 0) {\r\n                String attribute = parameter.substring(0, eqIndex).trim();\r\n                String value = parameter.substring(eqIndex + 1).trim();\r\n                parameters.put(attribute, value);\r\n            }\r\n        }\r\n        index = nextIndex;\r\n    } while (index < mimeType.length());\r\n    try {\r\n        return new MimeType(type, subtype, parameters);\r\n    } catch (UnsupportedCharsetException ex) {\r\n        throw new InvalidMimeTypeException(mimeType, \"unsupported charset '\" + ex.getCharsetName() + \"'\");\r\n    } catch (IllegalArgumentException ex) {\r\n        throw new InvalidMimeTypeException(mimeType, ex.getMessage());\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#parseMimeTypeInternal(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#parseMimeTypes(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Parse the comma-separated string into a mutable list of {@code MimeType} objects.\r\n * @param mimeTypes the string to parse\r\n * @return the list of mime types\r\n * @throws InvalidMimeTypeException if the string cannot be parsed\r\n */\r\npublic static List<MimeType> parseMimeTypes(String mimeTypes) {\r\n    if (!StringUtils.hasLength(mimeTypes)) {\r\n        return Collections.emptyList();\r\n    }\r\n    return tokenize(mimeTypes).stream().filter(StringUtils::hasText).map(MimeTypeUtils::parseMimeType).collect(Collectors.toList());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#parseMimeTypes(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#tokenize(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Tokenize the given comma-separated string of {@code MimeType} objects\r\n * into a {@code List<String>}. Unlike simple tokenization by \",\", this\r\n * method takes into account quoted parameters.\r\n * @param mimeTypes the string to tokenize\r\n * @return the list of tokens\r\n * @since 5.1.3\r\n */\r\npublic static List<String> tokenize(String mimeTypes) {\r\n    if (!StringUtils.hasLength(mimeTypes)) {\r\n        return Collections.emptyList();\r\n    }\r\n    List<String> tokens = new ArrayList<>();\r\n    boolean inQuotes = false;\r\n    int startIndex = 0;\r\n    int i = 0;\r\n    while (i < mimeTypes.length()) {\r\n        switch(mimeTypes.charAt(i)) {\r\n            case '\"' ->\r\n                inQuotes = !inQuotes;\r\n            case ',' ->\r\n                {\r\n                    if (!inQuotes) {\r\n                        tokens.add(mimeTypes.substring(startIndex, i));\r\n                        startIndex = i + 1;\r\n                    }\r\n                }\r\n            case '\\\\' ->\r\n                i++;\r\n        }\r\n        i++;\r\n    }\r\n    tokens.add(mimeTypes.substring(startIndex));\r\n    return tokens;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#tokenize(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#toString(Collection<? extends MimeType>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Generate a string representation of the given collection of {@link MimeType}\r\n * objects.\r\n * @param mimeTypes the {@code MimeType} objects\r\n * @return a string representation of the {@code MimeType} objects\r\n */\r\npublic static String toString(Collection<? extends MimeType> mimeTypes) {\r\n    StringBuilder builder = new StringBuilder();\r\n    for (Iterator<? extends MimeType> iterator = mimeTypes.iterator(); iterator.hasNext(); ) {\r\n        MimeType mimeType = iterator.next();\r\n        mimeType.appendTo(builder);\r\n        if (iterator.hasNext()) {\r\n            builder.append(\", \");\r\n        }\r\n    }\r\n    return builder.toString();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#toString(Collection<? extends MimeType>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#sortBySpecificity(List<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Sort the given list of {@code MimeType} objects by\r\n * {@linkplain MimeType#isMoreSpecific(MimeType) specificity}.\r\n * <p>Because of the computational cost, this method throws an exception if\r\n * the given list contains too many elements.\r\n * @param mimeTypes the list of mime types to be sorted\r\n * @throws InvalidMimeTypeException if {@code mimeTypes} contains more than 50 elements\r\n * @see <a href=\"https://tools.ietf.org/html/rfc7231#section-5.3.2\">HTTP 1.1: Semantics\r\n * and Content, section 5.3.2</a>\r\n * @see MimeType#isMoreSpecific(MimeType)\r\n */\r\npublic static <T extends MimeType> void sortBySpecificity(List<T> mimeTypes) {\r\n    Assert.notNull(mimeTypes, \"'mimeTypes' must not be null\");\r\n    if (mimeTypes.size() > 50) {\r\n        throw new InvalidMimeTypeException(mimeTypes.toString(), \"Too many elements\");\r\n    }\r\n    bubbleSort(mimeTypes, MimeType::isLessSpecific);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#sortBySpecificity(List<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#bubbleSort(List<T>,BiPredicate<? super T,? super T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static <T> void bubbleSort(List<T> list, BiPredicate<? super T, ? super T> swap) {\r\n    int len = list.size();\r\n    for (int i = 0; i < len; i++) {\r\n        for (int j = 1; j < len - i; j++) {\r\n            T prev = list.get(j - 1);\r\n            T cur = list.get(j);\r\n            if (swap.test(prev, cur)) {\r\n                list.set(j, prev);\r\n                list.set(j - 1, cur);\r\n            }\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#bubbleSort(List<T>,BiPredicate<? super T,? super T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#generateMultipartBoundary()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Generate a random MIME boundary as bytes, often used in multipart mime types.\r\n */\r\npublic static byte[] generateMultipartBoundary() {\r\n    Random randomToUse = initRandom();\r\n    byte[] boundary = new byte[randomToUse.nextInt(11) + 30];\r\n    for (int i = 0; i < boundary.length; i++) {\r\n        boundary[i] = BOUNDARY_CHARS[randomToUse.nextInt(BOUNDARY_CHARS.length)];\r\n    }\r\n    return boundary;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#generateMultipartBoundary()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#initRandom()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Lazily initialize the {@link SecureRandom} for {@link #generateMultipartBoundary()}.\r\n */\r\nprivate static Random initRandom() {\r\n    Random randomToUse = random;\r\n    if (randomToUse == null) {\r\n        synchronized (MimeTypeUtils.class) {\r\n            randomToUse = random;\r\n            if (randomToUse == null) {\r\n                randomToUse = new SecureRandom();\r\n                random = randomToUse;\r\n            }\r\n        }\r\n    }\r\n    return randomToUse;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#initRandom()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils#generateMultipartBoundaryString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Generate a random MIME boundary as String, often used in multipart mime types.\r\n */\r\npublic static String generateMultipartBoundaryString() {\r\n    return new String(generateMultipartBoundary(), StandardCharsets.US_ASCII);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeUtils#generateMultipartBoundaryString()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "tailType": "class"
+  }
+]

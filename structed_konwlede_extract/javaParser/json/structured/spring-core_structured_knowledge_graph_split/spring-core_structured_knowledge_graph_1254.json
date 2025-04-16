@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ClassUtils#getMethodIfAvailable(Class<?>,String,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given class has a public method with the given signature,\r\n * and return it if available (else return {@code null}).\r\n * <p>In case of any signature specified, only returns the method if there is a\r\n * unique candidate, i.e. a single public method with the specified name.\r\n * <p>Essentially translates {@code NoSuchMethodException} to {@code null}.\r\n * @param clazz the clazz to analyze\r\n * @param methodName the name of the method\r\n * @param paramTypes the parameter types of the method\r\n * (can be {@code null} to indicate any signature)\r\n * @return the method, or {@code null} if not found\r\n * @see Class#getMethod\r\n */\r\n@Nullable\r\npublic static Method getMethodIfAvailable(Class<?> clazz, String methodName, @Nullable Class<?>@Nullable ... paramTypes) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    Assert.notNull(methodName, \"Method name must not be null\");\r\n    if (paramTypes != null) {\r\n        return getMethodOrNull(clazz, methodName, paramTypes);\r\n    } else {\r\n        Set<Method> candidates = findMethodCandidatesByName(clazz, methodName);\r\n        if (candidates.size() == 1) {\r\n            return candidates.iterator().next();\r\n        }\r\n        return null;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#getMethodIfAvailable(Class<?>,String,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getMethodIfAvailable(Class<?>,String,Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getMethodCountForName(Class<?>,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the number of methods with a given name (with any argument types),\r\n * for the given class and/or its superclasses. Includes non-public methods.\r\n * @param clazz\tthe clazz to check\r\n * @param methodName the name of the method\r\n * @return the number of methods with the given name\r\n */\r\npublic static int getMethodCountForName(Class<?> clazz, String methodName) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    Assert.notNull(methodName, \"Method name must not be null\");\r\n    int count = 0;\r\n    Method[] declaredMethods = clazz.getDeclaredMethods();\r\n    for (Method method : declaredMethods) {\r\n        if (methodName.equals(method.getName())) {\r\n            count++;\r\n        }\r\n    }\r\n    Class<?>[] ifcs = clazz.getInterfaces();\r\n    for (Class<?> ifc : ifcs) {\r\n        count += getMethodCountForName(ifc, methodName);\r\n    }\r\n    if (clazz.getSuperclass() != null) {\r\n        count += getMethodCountForName(clazz.getSuperclass(), methodName);\r\n    }\r\n    return count;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#getMethodCountForName(Class<?>,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#hasAtLeastOneMethodWithName(Class<?>,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Does the given class or one of its superclasses at least have one or more\r\n * methods with the supplied name (with any argument types)?\r\n * Includes non-public methods.\r\n * @param clazz\tthe clazz to check\r\n * @param methodName the name of the method\r\n * @return whether there is at least one method with the given name\r\n */\r\npublic static boolean hasAtLeastOneMethodWithName(Class<?> clazz, String methodName) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    Assert.notNull(methodName, \"Method name must not be null\");\r\n    Method[] declaredMethods = clazz.getDeclaredMethods();\r\n    for (Method method : declaredMethods) {\r\n        if (method.getName().equals(methodName)) {\r\n            return true;\r\n        }\r\n    }\r\n    Class<?>[] ifcs = clazz.getInterfaces();\r\n    for (Class<?> ifc : ifcs) {\r\n        if (hasAtLeastOneMethodWithName(ifc, methodName)) {\r\n            return true;\r\n        }\r\n    }\r\n    return (clazz.getSuperclass() != null && hasAtLeastOneMethodWithName(clazz.getSuperclass(), methodName));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#hasAtLeastOneMethodWithName(Class<?>,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getMostSpecificMethod(Method,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Given a method, which may come from an interface, and a target class used\r\n * in the current reflective invocation, find the corresponding target method\r\n * if there is one &mdash; for example, the method may be {@code IFoo.bar()},\r\n * and the target class may be {@code DefaultFoo}. In this case, the method may be\r\n * {@code DefaultFoo.bar()}. This enables attributes on that method to be found.\r\n * <p><b>NOTE:</b> In contrast to {@link org.springframework.aop.support.AopUtils#getMostSpecificMethod},\r\n * this method does <i>not</i> resolve bridge methods automatically.\r\n * Call {@link org.springframework.core.BridgeMethodResolver#findBridgedMethod}\r\n * if bridge method resolution is desirable &mdash; for example, to obtain\r\n * metadata from the original method definition.\r\n * <p><b>NOTE:</b> If Java security settings disallow reflective access &mdash;\r\n * for example, calls to {@code Class#getDeclaredMethods}, etc. &mdash; this\r\n * implementation will fall back to returning the originally provided method.\r\n * @param method the method to be invoked, which may come from an interface\r\n * @param targetClass the target class for the current invocation\r\n * (can be {@code null} or may not even implement the method)\r\n * @return the specific target method, or the original method if the\r\n * {@code targetClass} does not implement it\r\n * @see #getInterfaceMethodIfPossible(Method, Class)\r\n */\r\npublic static Method getMostSpecificMethod(Method method, @Nullable Class<?> targetClass) {\r\n    if (targetClass != null && targetClass != method.getDeclaringClass() && (isOverridable(method, targetClass) || !method.getDeclaringClass().isAssignableFrom(targetClass))) {\r\n        try {\r\n            if (Modifier.isPublic(method.getModifiers())) {\r\n                try {\r\n                    return targetClass.getMethod(method.getName(), method.getParameterTypes());\r\n                } catch (NoSuchMethodException ex) {\r\n                    return method;\r\n                }\r\n            } else {\r\n                Method specificMethod = ReflectionUtils.findMethod(targetClass, method.getName(), method.getParameterTypes());\r\n                return (specificMethod != null ? specificMethod : method);\r\n            }\r\n        } catch (SecurityException ex) {\r\n            // Security settings are disallowing reflective access; fall back to 'method' below.\r\n        }\r\n    }\r\n    return method;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#getMostSpecificMethod(Method,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine a corresponding interface method for the given method handle, if possible.\r\n * <p>This is particularly useful for arriving at a public exported type on the Java\r\n * Module System which allows the method to be invoked via reflection without an illegal\r\n * access warning.\r\n * @param method the method to be invoked, potentially from an implementation class\r\n * @return the corresponding interface method, or the original method if none found\r\n * @since 5.1\r\n * @see #getPubliclyAccessibleMethodIfPossible(Method, Class)\r\n * @deprecated in favor of {@link #getInterfaceMethodIfPossible(Method, Class)}\r\n */\r\n@Deprecated\r\npublic static Method getInterfaceMethodIfPossible(Method method) {\r\n    return getInterfaceMethodIfPossible(method, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine a corresponding interface method for the given method handle, if possible.\r\n * <p>This is particularly useful for arriving at a public exported type on the Java\r\n * Module System which allows the method to be invoked via reflection without an illegal\r\n * access warning.\r\n * @param method the method to be invoked, potentially from an implementation class\r\n * @param targetClass the target class to invoke the method on, or {@code null} if unknown\r\n * @return the corresponding interface method, or the original method if none found\r\n * @since 5.3.16\r\n * @see #getPubliclyAccessibleMethodIfPossible(Method, Class)\r\n * @see #getMostSpecificMethod\r\n */\r\npublic static Method getInterfaceMethodIfPossible(Method method, @Nullable Class<?> targetClass) {\r\n    return getInterfaceMethodIfPossible(method, targetClass, false);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method,Class<?>,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Method getInterfaceMethodIfPossible(Method method, @Nullable Class<?> targetClass, boolean requirePublicInterface) {\r\n    Class<?> declaringClass = method.getDeclaringClass();\r\n    if (!Modifier.isPublic(method.getModifiers()) || (declaringClass.isInterface() && (!requirePublicInterface || Modifier.isPublic(declaringClass.getModifiers())))) {\r\n        return method;\r\n    }\r\n    String methodName = method.getName();\r\n    Class<?>[] parameterTypes = method.getParameterTypes();\r\n    Map<Method, Method> methodCache = (requirePublicInterface ? publicInterfaceMethodCache : interfaceMethodCache);\r\n    // Try cached version of method in its declaring class\r\n    Method result = methodCache.computeIfAbsent(method, key -> findInterfaceMethodIfPossible(methodName, parameterTypes, declaringClass, Object.class, requirePublicInterface));\r\n    if (result == null && targetClass != null) {\r\n        // No interface method found yet -> try given target class (possibly a subclass of the\r\n        // declaring class, late-binding a base class method to a subclass-declared interface:\r\n        // see, for example, HashMap.HashIterator.hasNext)\r\n        result = findInterfaceMethodIfPossible(methodName, parameterTypes, targetClass, declaringClass, requirePublicInterface);\r\n    }\r\n    return (result != null ? result : method);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#getInterfaceMethodIfPossible(Method,Class<?>,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#findInterfaceMethodIfPossible(String,Class<?>[],Class<?>,Class<?>,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate static Method findInterfaceMethodIfPossible(String methodName, Class<?>[] parameterTypes, Class<?> startClass, Class<?> endClass, boolean requirePublicInterface) {\r\n    Class<?> current = startClass;\r\n    while (current != null && current != endClass) {\r\n        for (Class<?> ifc : current.getInterfaces()) {\r\n            try {\r\n                if (!requirePublicInterface || Modifier.isPublic(ifc.getModifiers())) {\r\n                    return ifc.getMethod(methodName, parameterTypes);\r\n                }\r\n            } catch (NoSuchMethodException ex) {\r\n                // ignore\r\n            }\r\n        }\r\n        current = current.getSuperclass();\r\n    }\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#findInterfaceMethodIfPossible(String,Class<?>[],Class<?>,Class<?>,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#findInterfaceMethodIfPossible(String,Class<?>[],Class<?>,Class<?>,boolean)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#getPubliclyAccessibleMethodIfPossible(Method,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the first publicly accessible method in the supplied method's type hierarchy that\r\n * has a method signature equivalent to the supplied method, if possible.\r\n * <p>If the supplied method is {@code public} and declared in a {@code public} type,\r\n * the supplied method will be returned.\r\n * <p>Otherwise, this method recursively searches the class hierarchy and implemented\r\n * interfaces for an equivalent method that is {@code public} and declared in a\r\n * {@code public} type.\r\n * <p>If a publicly accessible equivalent method cannot be found, the supplied method\r\n * will be returned, indicating that no such equivalent method exists. Consequently,\r\n * callers of this method must manually validate the accessibility of the returned method\r\n * if public access is a requirement.\r\n * <p>This is particularly useful for arriving at a public exported type on the Java\r\n * Module System which allows the method to be invoked via reflection without an illegal\r\n * access warning. This is also useful for invoking methods via a public API in bytecode\r\n * &mdash; for example, for use with the Spring Expression Language (SpEL) compiler.\r\n * For example, if a non-public class overrides {@code toString()}, this method will\r\n * traverse up the type hierarchy to find the first public type that declares the method\r\n * (if there is one). For {@code toString()}, it may traverse as far as {@link Object}.\r\n * @param method the method to be invoked, potentially from an implementation class\r\n * @param targetClass the target class to invoke the method on, or {@code null} if unknown\r\n * @return the corresponding publicly accessible method, or the original method if none found\r\n * @since 6.2\r\n * @see #getInterfaceMethodIfPossible(Method, Class)\r\n * @see #getMostSpecificMethod(Method, Class)\r\n */\r\npublic static Method getPubliclyAccessibleMethodIfPossible(Method method, @Nullable Class<?> targetClass) {\r\n    Class<?> declaringClass = method.getDeclaringClass();\r\n    // If the method is not public, we can abort the search immediately; or if the method's\r\n    // declaring class is public, the method is already publicly accessible.\r\n    if (!Modifier.isPublic(method.getModifiers()) || Modifier.isPublic(declaringClass.getModifiers())) {\r\n        return method;\r\n    }\r\n    Method interfaceMethod = getInterfaceMethodIfPossible(method, targetClass, true);\r\n    // If we found a method in a public interface, return the interface method.\r\n    if (!interfaceMethod.equals(method)) {\r\n        return interfaceMethod;\r\n    }\r\n    Method result = publiclyAccessibleMethodCache.computeIfAbsent(method, key -> findPubliclyAccessibleMethodIfPossible(key.getName(), key.getParameterTypes(), declaringClass));\r\n    return (result != null ? result : method);\r\n}",
+    "tailType": "method_code"
+  }
+]

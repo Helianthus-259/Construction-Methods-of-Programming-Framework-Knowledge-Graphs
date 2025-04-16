@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2021 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.util.Iterator;\n\nimport javax.xml.namespace.NamespaceContext;\nimport javax.xml.namespace.QName;\nimport javax.xml.stream.Location;\nimport javax.xml.stream.XMLEventReader;\nimport javax.xml.stream.XMLStreamConstants;\nimport javax.xml.stream.XMLStreamException;\nimport javax.xml.stream.events.Attribute;\nimport javax.xml.stream.events.Comment;\nimport javax.xml.stream.events.Namespace;\nimport javax.xml.stream.events.ProcessingInstruction;\nimport javax.xml.stream.events.StartDocument;\nimport javax.xml.stream.events.XMLEvent;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Implementation of the {@link javax.xml.stream.XMLStreamReader} interface that wraps a\n * {@link XMLEventReader}. Useful because the StAX {@link javax.xml.stream.XMLInputFactory}\n * allows one to create an event reader from a stream reader, but not vice-versa.\n *\n * @author Arjen Poutsma\n * @since 3.0\n * @see StaxUtils#createEventStreamReader(javax.xml.stream.XMLEventReader)\n */\nclass XMLEventStreamReader extends AbstractXMLStreamReader {\n\n\tprivate XMLEvent event;\n\n\tprivate final XMLEventReader eventReader;\n\n\n\tpublic XMLEventStreamReader(XMLEventReader eventReader) throws XMLStreamException {\n\t\tthis.eventReader = eventReader;\n\t\tthis.event = eventReader.nextEvent();\n\t}\n\n\n\t@Override\n\tpublic QName getName() {\n\t\tif (this.event.isStartElement()) {\n\t\t\treturn this.event.asStartElement().getName();\n\t\t}\n\t\telse if (this.event.isEndElement()) {\n\t\t\treturn this.event.asEndElement().getName();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\tpublic Location getLocation() {\n\t\treturn this.event.getLocation();\n\t}\n\n\t@Override\n\tpublic int getEventType() {\n\t\treturn this.event.getEventType();\n\t}\n\n\t@Override\n\tpublic @Nullable String getVersion() {\n\t\tif (this.event.isStartDocument()) {\n\t\t\treturn ((StartDocument) this.event).getVersion();\n\t\t}\n\t\telse {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\t@Override\n\tpublic Object getProperty(String name) throws IllegalArgumentException {\n\t\treturn this.eventReader.getProperty(name);\n\t}\n\n\t@Override\n\tpublic boolean isStandalone() {\n\t\tif (this.event.isStartDocument()) {\n\t\t\treturn ((StartDocument) this.event).isStandalone();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean standaloneSet() {\n\t\tif (this.event.isStartDocument()) {\n\t\t\treturn ((StartDocument) this.event).standaloneSet();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable String getEncoding() {\n\t\treturn null;\n\t}\n\n\t@Override\n\tpublic @Nullable String getCharacterEncodingScheme() {\n\t\treturn null;\n\t}\n\n\t@Override\n\tpublic String getPITarget() {\n\t\tif (this.event.isProcessingInstruction()) {\n\t\t\treturn ((ProcessingInstruction) this.event).getTarget();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\tpublic String getPIData() {\n\t\tif (this.event.isProcessingInstruction()) {\n\t\t\treturn ((ProcessingInstruction) this.event).getData();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\tpublic int getTextStart() {\n\t\treturn 0;\n\t}\n\n\t@Override\n\tpublic String getText() {\n\t\tif (this.event.isCharacters()) {\n\t\t\treturn this.event.asCharacters().getData();\n\t\t}\n\t\telse if (this.event.getEventType() == XMLStreamConstants.COMMENT) {\n\t\t\treturn ((Comment) this.event).getText();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\t@SuppressWarnings(\"rawtypes\")\n\tpublic int getAttributeCount() {\n\t\tif (!this.event.isStartElement()) {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t\tIterator attributes = this.event.asStartElement().getAttributes();\n\t\treturn countIterator(attributes);\n\t}\n\n\t@Override\n\tpublic boolean isAttributeSpecified(int index) {\n\t\treturn getAttribute(index).isSpecified();\n\t}\n\n\t@Override\n\tpublic QName getAttributeName(int index) {\n\t\treturn getAttribute(index).getName();\n\t}\n\n\t@Override\n\tpublic String getAttributeType(int index) {\n\t\treturn getAttribute(index).getDTDType();\n\t}\n\n\t@Override\n\tpublic String getAttributeValue(int index) {\n\t\treturn getAttribute(index).getValue();\n\t}\n\n\t@SuppressWarnings(\"rawtypes\")\n\tprivate Attribute getAttribute(int index) {\n\t\tif (!this.event.isStartElement()) {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t\tint count = 0;\n\t\tIterator attributes = this.event.asStartElement().getAttributes();\n\t\twhile (attributes.hasNext()) {\n\t\t\tAttribute attribute = (Attribute) attributes.next();\n\t\t\tif (count == index) {\n\t\t\t\treturn attribute;\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcount++;\n\t\t\t}\n\t\t}\n\t\tthrow new IllegalArgumentException();\n\t}\n\n\t@Override\n\tpublic NamespaceContext getNamespaceContext() {\n\t\tif (this.event.isStartElement()) {\n\t\t\treturn this.event.asStartElement().getNamespaceContext();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t}\n\n\t@Override\n\t@SuppressWarnings(\"rawtypes\")\n\tpublic int getNamespaceCount() {\n\t\tIterator namespaces;\n\t\tif (this.event.isStartElement()) {\n\t\t\tnamespaces = this.event.asStartElement().getNamespaces();\n\t\t}\n\t\telse if (this.event.isEndElement()) {\n\t\t\tnamespaces = this.event.asEndElement().getNamespaces();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t\treturn countIterator(namespaces);\n\t}\n\n\t@Override\n\tpublic String getNamespacePrefix(int index) {\n\t\treturn getNamespace(index).getPrefix();\n\t}\n\n\t@Override\n\tpublic String getNamespaceURI(int index) {\n\t\treturn getNamespace(index).getNamespaceURI();\n\t}\n\n\t@SuppressWarnings(\"rawtypes\")\n\tprivate Namespace getNamespace(int index) {\n\t\tIterator namespaces;\n\t\tif (this.event.isStartElement()) {\n\t\t\tnamespaces = this.event.asStartElement().getNamespaces();\n\t\t}\n\t\telse if (this.event.isEndElement()) {\n\t\t\tnamespaces = this.event.asEndElement().getNamespaces();\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalStateException();\n\t\t}\n\t\tint count = 0;\n\t\twhile (namespaces.hasNext()) {\n\t\t\tNamespace namespace = (Namespace) namespaces.next();\n\t\t\tif (count == index) {\n\t\t\t\treturn namespace;\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcount++;\n\t\t\t}\n\t\t}\n\t\tthrow new IllegalArgumentException();\n\t}\n\n\t@Override\n\tpublic int next() throws XMLStreamException {\n\t\tthis.event = this.eventReader.nextEvent();\n\t\treturn this.event.getEventType();\n\t}\n\n\t@Override\n\tpublic void close() throws XMLStreamException {\n\t\tthis.eventReader.close();\n\t}\n\n\n\t@SuppressWarnings(\"rawtypes\")\n\tprivate static int countIterator(Iterator iterator) {\n\t\tint count = 0;\n\t\twhile (iterator.hasNext()) {\n\t\t\titerator.next();\n\t\t\tcount++;\n\t\t}\n\t\treturn count;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#event",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#event",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "XMLEvent",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#eventReader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#eventReader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "XMLEventReader",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic QName getName() {\r\n    if (this.event.isStartElement()) {\r\n        return this.event.asStartElement().getName();\r\n    } else if (this.event.isEndElement()) {\r\n        return this.event.asEndElement().getName();\r\n    } else {\r\n        throw new IllegalStateException();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#getName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getLocation()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Location getLocation() {\r\n    return this.event.getLocation();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#getLocation()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getLocation()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getEventType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int getEventType() {\r\n    return this.event.getEventType();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#getEventType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getEventType()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getVersion()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic String getVersion() {\r\n    if (this.event.isStartDocument()) {\r\n        return ((StartDocument) this.event).getVersion();\r\n    } else {\r\n        return null;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#getVersion()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getVersion()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getVersion()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader#getProperty(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Object getProperty(String name) throws IllegalArgumentException {\r\n    return this.eventReader.getProperty(name);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamReader#getProperty(String)",
+    "tailType": "method"
+  }
+]

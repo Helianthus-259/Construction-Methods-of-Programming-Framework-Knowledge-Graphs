@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#DOCTYPE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#START_COMMENT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#START_COMMENT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#END_COMMENT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#END_COMMENT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#inComment",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#inComment",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#detectValidationMode(InputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Detect the validation mode for the XML document in the supplied {@link InputStream}.\r\n * <p>Note that the supplied {@link InputStream} is closed by this method before returning.\r\n * @param inputStream the InputStream to parse\r\n * @throws IOException in case of I/O failure\r\n * @see #VALIDATION_DTD\r\n * @see #VALIDATION_XSD\r\n */\r\npublic int detectValidationMode(InputStream inputStream) throws IOException {\r\n    this.inComment = false;\r\n    // Peek into the file to look for DOCTYPE.\r\n    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {\r\n        boolean isDtdValidated = false;\r\n        String content;\r\n        while ((content = reader.readLine()) != null) {\r\n            content = consumeCommentTokens(content);\r\n            if (!StringUtils.hasText(content)) {\r\n                continue;\r\n            }\r\n            if (hasDoctype(content)) {\r\n                isDtdValidated = true;\r\n                break;\r\n            }\r\n            if (hasOpeningTag(content)) {\r\n                // End of meaningful data...\r\n                break;\r\n            }\r\n        }\r\n        return (isDtdValidated ? VALIDATION_DTD : VALIDATION_XSD);\r\n    } catch (CharConversionException ex) {\r\n        // Choked on some character encoding...\r\n        // Leave the decision up to the caller.\r\n        return VALIDATION_AUTO;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#detectValidationMode(InputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#hasDoctype(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Does the content contain the DTD DOCTYPE declaration?\r\n */\r\nprivate boolean hasDoctype(String content) {\r\n    return content.contains(DOCTYPE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#hasDoctype(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#hasOpeningTag(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine if the supplied content contains an XML opening tag.\r\n * <p>It is expected that all comment tokens will have been consumed for the\r\n * supplied content before passing the remainder to this method. However, as\r\n * a sanity check, if the parse state is currently in an XML comment this\r\n * method always returns {@code false}.\r\n */\r\nprivate boolean hasOpeningTag(String content) {\r\n    if (this.inComment) {\r\n        return false;\r\n    }\r\n    int openTagIndex = content.indexOf('<');\r\n    return (openTagIndex > -1 && (content.length() > openTagIndex + 1) && Character.isLetter(content.charAt(openTagIndex + 1)));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#hasOpeningTag(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#consumeCommentTokens(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Consume all comments in the given String and return the remaining content,\r\n * which may be empty since the supplied content might be all comment data.\r\n * <p>This method takes the current \"in comment\" parsing state into account.\r\n */\r\nprivate String consumeCommentTokens(String line) {\r\n    int indexOfStartComment = line.indexOf(START_COMMENT);\r\n    if (indexOfStartComment == -1 && !line.contains(END_COMMENT)) {\r\n        return line;\r\n    }\r\n    String result = \"\";\r\n    String currLine = line;\r\n    if (!this.inComment && (indexOfStartComment >= 0)) {\r\n        result = line.substring(0, indexOfStartComment);\r\n        currLine = line.substring(indexOfStartComment);\r\n    }\r\n    if ((currLine = consume(currLine)) != null) {\r\n        result += consumeCommentTokens(currLine);\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#consumeCommentTokens(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#consume(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Consume the next comment token, update the \"inComment\" flag,\r\n * and return the remaining content.\r\n */\r\n@Nullable\r\nprivate String consume(String line) {\r\n    int index = (this.inComment ? endComment(line) : startComment(line));\r\n    return (index == -1 ? null : line.substring(index));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#consume(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#consume(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#startComment(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Try to consume the {@link #START_COMMENT} token.\r\n * @see #commentToken(String, String, boolean)\r\n */\r\nprivate int startComment(String line) {\r\n    return commentToken(line, START_COMMENT, true);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#startComment(String)",
+    "tailType": "method"
+  }
+]

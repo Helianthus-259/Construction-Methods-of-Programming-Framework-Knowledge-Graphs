@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.serializer.support.SerializingConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.support.SerializingConverter#convert(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.SerializingConverter#convert(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.SimpleAliasRegistry",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.concurrent.ConcurrentHashMap;\n\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ObjectUtils;\nimport org.springframework.util.StringUtils;\nimport org.springframework.util.StringValueResolver;\n\n/**\n * Simple implementation of the {@link AliasRegistry} interface.\n *\n * <p>Serves as base class for\n * {@link org.springframework.beans.factory.support.BeanDefinitionRegistry}\n * implementations.\n *\n * @author Juergen Hoeller\n * @author Qimiao Chen\n * @author Sam Brannen\n * @since 2.5.2\n */\npublic class SimpleAliasRegistry implements AliasRegistry {\n\n\t/** Logger available to subclasses. */\n\tprotected final Log logger = LogFactory.getLog(getClass());\n\n\t/** Map from alias to canonical name. */\n\tprivate final Map<String, String> aliasMap = new ConcurrentHashMap<>(16);\n\n\t/** List of alias names, in registration order. */\n\tprivate final List<String> aliasNames = new ArrayList<>(16);\n\n\n\t@Override\n\tpublic void registerAlias(String name, String alias) {\n\t\tAssert.hasText(name, \"'name' must not be empty\");\n\t\tAssert.hasText(alias, \"'alias' must not be empty\");\n\t\tsynchronized (this.aliasMap) {\n\t\t\tif (alias.equals(name)) {\n\t\t\t\tthis.aliasMap.remove(alias);\n\t\t\t\tthis.aliasNames.remove(alias);\n\t\t\t\tif (logger.isDebugEnabled()) {\n\t\t\t\t\tlogger.debug(\"Alias definition '\" + alias + \"' ignored since it points to same name\");\n\t\t\t\t}\n\t\t\t}\n\t\t\telse {\n\t\t\t\tString registeredName = this.aliasMap.get(alias);\n\t\t\t\tif (registeredName != null) {\n\t\t\t\t\tif (registeredName.equals(name)) {\n\t\t\t\t\t\t// An existing alias - no need to re-register\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tif (!allowAliasOverriding()) {\n\t\t\t\t\t\tthrow new IllegalStateException(\"Cannot define alias '\" + alias + \"' for name '\" +\n\t\t\t\t\t\t\t\tname + \"': It is already registered for name '\" + registeredName + \"'.\");\n\t\t\t\t\t}\n\t\t\t\t\tif (logger.isDebugEnabled()) {\n\t\t\t\t\t\tlogger.debug(\"Overriding alias '\" + alias + \"' definition for registered name '\" +\n\t\t\t\t\t\t\t\tregisteredName + \"' with new target name '\" + name + \"'\");\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tcheckForAliasCircle(name, alias);\n\t\t\t\tthis.aliasMap.put(alias, name);\n\t\t\t\tthis.aliasNames.add(alias);\n\t\t\t\tif (logger.isTraceEnabled()) {\n\t\t\t\t\tlogger.trace(\"Alias definition '\" + alias + \"' registered for name '\" + name + \"'\");\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * Determine whether alias overriding is allowed.\n\t * <p>Default is {@code true}.\n\t */\n\tprotected boolean allowAliasOverriding() {\n\t\treturn true;\n\t}\n\n\t/**\n\t * Determine whether the given name has the given alias registered.\n\t * @param name the name to check\n\t * @param alias the alias to look for\n\t * @since 4.2.1\n\t */\n\tpublic boolean hasAlias(String name, String alias) {\n\t\tString registeredName = this.aliasMap.get(alias);\n\t\treturn ObjectUtils.nullSafeEquals(registeredName, name) ||\n\t\t\t\t(registeredName != null && hasAlias(name, registeredName));\n\t}\n\n\t@Override\n\tpublic void removeAlias(String alias) {\n\t\tsynchronized (this.aliasMap) {\n\t\t\tString name = this.aliasMap.remove(alias);\n\t\t\tthis.aliasNames.remove(alias);\n\t\t\tif (name == null) {\n\t\t\t\tthrow new IllegalStateException(\"No alias '\" + alias + \"' registered\");\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean isAlias(String name) {\n\t\treturn this.aliasMap.containsKey(name);\n\t}\n\n\t@Override\n\tpublic String[] getAliases(String name) {\n\t\tList<String> result = new ArrayList<>();\n\t\tsynchronized (this.aliasMap) {\n\t\t\tretrieveAliases(name, result);\n\t\t}\n\t\treturn StringUtils.toStringArray(result);\n\t}\n\n\t/**\n\t * Transitively retrieve all aliases for the given name.\n\t * @param name the target name to find aliases for\n\t * @param result the resulting aliases list\n\t */\n\tprivate void retrieveAliases(String name, List<String> result) {\n\t\tthis.aliasMap.forEach((alias, registeredName) -> {\n\t\t\tif (registeredName.equals(name)) {\n\t\t\t\tresult.add(alias);\n\t\t\t\tretrieveAliases(alias, result);\n\t\t\t}\n\t\t});\n\t}\n\n\t/**\n\t * Resolve all alias target names and aliases registered in this\n\t * registry, applying the given {@link StringValueResolver} to them.\n\t * <p>The value resolver may for example resolve placeholders\n\t * in target bean names and even in alias names.\n\t * @param valueResolver the StringValueResolver to apply\n\t */\n\tpublic void resolveAliases(StringValueResolver valueResolver) {\n\t\tAssert.notNull(valueResolver, \"StringValueResolver must not be null\");\n\t\tsynchronized (this.aliasMap) {\n\t\t\tList<String> aliasNamesCopy = new ArrayList<>(this.aliasNames);\n\t\t\taliasNamesCopy.forEach(alias -> {\n\t\t\t\tString registeredName = this.aliasMap.get(alias);\n\t\t\t\tif (registeredName != null) {\n\t\t\t\t\tString resolvedAlias = valueResolver.resolveStringValue(alias);\n\t\t\t\t\tString resolvedName = valueResolver.resolveStringValue(registeredName);\n\t\t\t\t\tif (resolvedAlias == null || resolvedName == null || resolvedAlias.equals(resolvedName)) {\n\t\t\t\t\t\tthis.aliasMap.remove(alias);\n\t\t\t\t\t\tthis.aliasNames.remove(alias);\n\t\t\t\t\t}\n\t\t\t\t\telse if (!resolvedAlias.equals(alias)) {\n\t\t\t\t\t\tString existingName = this.aliasMap.get(resolvedAlias);\n\t\t\t\t\t\tif (existingName != null) {\n\t\t\t\t\t\t\tif (existingName.equals(resolvedName)) {\n\t\t\t\t\t\t\t\t// Pointing to existing alias - just remove placeholder\n\t\t\t\t\t\t\t\tthis.aliasMap.remove(alias);\n\t\t\t\t\t\t\t\tthis.aliasNames.remove(alias);\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tthrow new IllegalStateException(\n\t\t\t\t\t\t\t\t\t\"Cannot register resolved alias '\" + resolvedAlias + \"' (original: '\" + alias +\n\t\t\t\t\t\t\t\t\t\"') for name '\" + resolvedName + \"': It is already registered for name '\" +\n\t\t\t\t\t\t\t\t\texistingName + \"'.\");\n\t\t\t\t\t\t}\n\t\t\t\t\t\tcheckForAliasCircle(resolvedName, resolvedAlias);\n\t\t\t\t\t\tthis.aliasMap.remove(alias);\n\t\t\t\t\t\tthis.aliasNames.remove(alias);\n\t\t\t\t\t\tthis.aliasMap.put(resolvedAlias, resolvedName);\n\t\t\t\t\t\tthis.aliasNames.add(resolvedAlias);\n\t\t\t\t\t}\n\t\t\t\t\telse if (!registeredName.equals(resolvedName)) {\n\t\t\t\t\t\tthis.aliasMap.put(alias, resolvedName);\n\t\t\t\t\t\tthis.aliasNames.add(alias);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t});\n\t\t}\n\t}\n\n\t/**\n\t * Check whether the given name points back to the given alias as an alias\n\t * in the other direction already, catching a circular reference upfront\n\t * and throwing a corresponding IllegalStateException.\n\t * @param name the candidate name\n\t * @param alias the candidate alias\n\t * @see #registerAlias\n\t * @see #hasAlias\n\t */\n\tprotected void checkForAliasCircle(String name, String alias) {\n\t\tif (hasAlias(alias, name)) {\n\t\t\tthrow new IllegalStateException(\"Cannot register alias '\" + alias +\n\t\t\t\t\t\"' for name '\" + name + \"': Circular reference - '\" +\n\t\t\t\t\tname + \"' is a direct or indirect alias for '\" + alias + \"' already\");\n\t\t}\n\t}\n\n\t/**\n\t * Determine the raw name, resolving aliases to canonical names.\n\t * @param name the user-specified name\n\t * @return the transformed name\n\t */\n\tpublic String canonicalName(String name) {\n\t\tString canonicalName = name;\n\t\t// Handle aliasing...\n\t\tString resolvedName;\n\t\tdo {\n\t\t\tresolvedName = this.aliasMap.get(canonicalName);\n\t\t\tif (resolvedName != null) {\n\t\t\t\tcanonicalName = resolvedName;\n\t\t\t}\n\t\t}\n\t\twhile (resolvedName != null);\n\t\treturn canonicalName;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SimpleAliasRegistry#logger",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#logger",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Log",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SimpleAliasRegistry#aliasMap",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#aliasMap",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SimpleAliasRegistry#aliasNames",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#aliasNames",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#registerAlias(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void registerAlias(String name, String alias) {\r\n    Assert.hasText(name, \"'name' must not be empty\");\r\n    Assert.hasText(alias, \"'alias' must not be empty\");\r\n    synchronized (this.aliasMap) {\r\n        if (alias.equals(name)) {\r\n            this.aliasMap.remove(alias);\r\n            this.aliasNames.remove(alias);\r\n            if (logger.isDebugEnabled()) {\r\n                logger.debug(\"Alias definition '\" + alias + \"' ignored since it points to same name\");\r\n            }\r\n        } else {\r\n            String registeredName = this.aliasMap.get(alias);\r\n            if (registeredName != null) {\r\n                if (registeredName.equals(name)) {\r\n                    // An existing alias - no need to re-register\r\n                    return;\r\n                }\r\n                if (!allowAliasOverriding()) {\r\n                    throw new IllegalStateException(\"Cannot define alias '\" + alias + \"' for name '\" + name + \"': It is already registered for name '\" + registeredName + \"'.\");\r\n                }\r\n                if (logger.isDebugEnabled()) {\r\n                    logger.debug(\"Overriding alias '\" + alias + \"' definition for registered name '\" + registeredName + \"' with new target name '\" + name + \"'\");\r\n                }\r\n            }\r\n            checkForAliasCircle(name, alias);\r\n            this.aliasMap.put(alias, name);\r\n            this.aliasNames.add(alias);\r\n            if (logger.isTraceEnabled()) {\r\n                logger.trace(\"Alias definition '\" + alias + \"' registered for name '\" + name + \"'\");\r\n            }\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistry#registerAlias(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#registerAlias(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#allowAliasOverriding()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether alias overriding is allowed.\r\n * <p>Default is {@code true}.\r\n */\r\nprotected boolean allowAliasOverriding() {\r\n    return true;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistry#allowAliasOverriding()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#hasAlias(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given name has the given alias registered.\r\n * @param name the name to check\r\n * @param alias the alias to look for\r\n * @since 4.2.1\r\n */\r\npublic boolean hasAlias(String name, String alias) {\r\n    String registeredName = this.aliasMap.get(alias);\r\n    return ObjectUtils.nullSafeEquals(registeredName, name) || (registeredName != null && hasAlias(name, registeredName));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistry#hasAlias(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry#removeAlias(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void removeAlias(String alias) {\r\n    synchronized (this.aliasMap) {\r\n        String name = this.aliasMap.remove(alias);\r\n        this.aliasNames.remove(alias);\r\n        if (name == null) {\r\n            throw new IllegalStateException(\"No alias '\" + alias + \"' registered\");\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistry",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistry#removeAlias(String)",
+    "tailType": "method"
+  }
+]

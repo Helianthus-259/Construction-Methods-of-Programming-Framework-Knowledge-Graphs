@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.SmartClassLoader#getOriginalClassLoader()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the original ClassLoader for this SmartClassLoader, or potentially\r\n * the present loader itself if it is self-sufficient.\r\n * <p>The default implementation returns the local ClassLoader reference as-is.\r\n * In case of a reloadable or other selectively overriding ClassLoader which\r\n * commonly deals with unaffected classes from a base application class loader,\r\n * this should get implemented to return the original ClassLoader that the\r\n * present loader got derived from (for example, through {@code return getParent();}).\r\n * <p>This gets specifically used in Spring's AOP framework to determine the\r\n * class loader for a specific proxy in case the target class has not been\r\n * defined in the present class loader. In case of a reloadable class loader,\r\n * we prefer the base application class loader for proxying general classes\r\n * not defined in the reloadable class loader itself.\r\n * @return the original ClassLoader (the same reference by default)\r\n * @since 5.3.5\r\n * @see ClassLoader#getParent()\r\n * @see org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator\r\n */\r\ndefault ClassLoader getOriginalClassLoader() {\r\n    return (ClassLoader) this;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SmartClassLoader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SmartClassLoader#getOriginalClassLoader()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SmartClassLoader#publicDefineClass(String,byte[],ProtectionDomain)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Define a custom class (typically a CGLIB proxy class) in this class loader.\r\n * <p>This is a public equivalent of the protected\r\n * {@code defineClass(String, byte[], int, int, ProtectionDomain)} method\r\n * in {@link ClassLoader} which is traditionally invoked via reflection.\r\n * A concrete implementation in a custom class loader should simply delegate\r\n * to that protected method in order to make classloader-specific definitions\r\n * publicly available without \"illegal access\" warnings on JDK 9+:\r\n * {@code return defineClass(name, b, 0, b.length, protectionDomain)}.\r\n * Note that the JDK 9+ {@code Lookup#defineClass} method does not support\r\n * a custom target class loader for the new definition; it rather always\r\n * defines the class in the same class loader as the lookup's context class.\r\n * @param name the name of the class\r\n * @param b the bytes defining the class\r\n * @param protectionDomain the protection domain for the class, if any\r\n * @return the newly created class\r\n * @throws LinkageError in case of a bad class definition\r\n * @throws SecurityException in case of an invalid definition attempt\r\n * @throws UnsupportedOperationException in case of a custom definition attempt\r\n * not being possible (thrown by the default implementation in this interface)\r\n * @since 5.3.4\r\n * @see ClassLoader#defineClass(String, byte[], int, int, ProtectionDomain)\r\n */\r\ndefault Class<?> publicDefineClass(String name, byte[] b, @Nullable ProtectionDomain protectionDomain) {\r\n    throw new UnsupportedOperationException();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SmartClassLoader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SmartClassLoader#publicDefineClass(String,byte[],ProtectionDomain)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.SortedProperties",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2020 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.io.ByteArrayOutputStream;\nimport java.io.IOException;\nimport java.io.OutputStream;\nimport java.io.StringWriter;\nimport java.io.Writer;\nimport java.nio.charset.StandardCharsets;\nimport java.util.Collections;\nimport java.util.Comparator;\nimport java.util.Enumeration;\nimport java.util.Map.Entry;\nimport java.util.Properties;\nimport java.util.Set;\nimport java.util.TreeSet;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Specialization of {@link Properties} that sorts properties alphanumerically\n * based on their keys.\n *\n * <p>This can be useful when storing the {@link Properties} instance in a\n * properties file, since it allows such files to be generated in a repeatable\n * manner with consistent ordering of properties.\n *\n * <p>Comments in generated properties files can also be optionally omitted.\n *\n * @author Sam Brannen\n * @since 5.2\n * @see java.util.Properties\n */\n@SuppressWarnings(\"serial\")\nclass SortedProperties extends Properties {\n\n\tstatic final String EOL = System.lineSeparator();\n\n\tprivate static final Comparator<Object> keyComparator = Comparator.comparing(String::valueOf);\n\n\tprivate static final Comparator<Entry<Object, Object>> entryComparator = Entry.comparingByKey(keyComparator);\n\n\n\tprivate final boolean omitComments;\n\n\n\t/**\n\t * Construct a new {@code SortedProperties} instance that honors the supplied\n\t * {@code omitComments} flag.\n\t * @param omitComments {@code true} if comments should be omitted when\n\t * storing properties in a file\n\t */\n\tSortedProperties(boolean omitComments) {\n\t\tthis.omitComments = omitComments;\n\t}\n\n\t/**\n\t * Construct a new {@code SortedProperties} instance with properties populated\n\t * from the supplied {@link Properties} object and honoring the supplied\n\t * {@code omitComments} flag.\n\t * <p>Default properties from the supplied {@code Properties} object will\n\t * not be copied.\n\t * @param properties the {@code Properties} object from which to copy the\n\t * initial properties\n\t * @param omitComments {@code true} if comments should be omitted when\n\t * storing properties in a file\n\t */\n\tSortedProperties(Properties properties, boolean omitComments) {\n\t\tthis(omitComments);\n\t\tputAll(properties);\n\t}\n\n\n\t@Override\n\tpublic void store(OutputStream out, @Nullable String comments) throws IOException {\n\t\tByteArrayOutputStream baos = new ByteArrayOutputStream();\n\t\tsuper.store(baos, (this.omitComments ? null : comments));\n\t\tString contents = baos.toString(StandardCharsets.ISO_8859_1);\n\t\tfor (String line : contents.split(EOL)) {\n\t\t\tif (!(this.omitComments && line.startsWith(\"#\"))) {\n\t\t\t\tout.write((line + EOL).getBytes(StandardCharsets.ISO_8859_1));\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic void store(Writer writer, @Nullable String comments) throws IOException {\n\t\tStringWriter stringWriter = new StringWriter();\n\t\tsuper.store(stringWriter, (this.omitComments ? null : comments));\n\t\tString contents = stringWriter.toString();\n\t\tfor (String line : contents.split(EOL)) {\n\t\t\tif (!(this.omitComments && line.startsWith(\"#\"))) {\n\t\t\t\twriter.write(line + EOL);\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic void storeToXML(OutputStream out, @Nullable String comments) throws IOException {\n\t\tsuper.storeToXML(out, (this.omitComments ? null : comments));\n\t}\n\n\t@Override\n\tpublic void storeToXML(OutputStream out, @Nullable String comments, String encoding) throws IOException {\n\t\tsuper.storeToXML(out, (this.omitComments ? null : comments), encoding);\n\t}\n\n\t/**\n\t * Return a sorted enumeration of the keys in this {@link Properties} object.\n\t * @see #keySet()\n\t */\n\t@Override\n\tpublic synchronized Enumeration<Object> keys() {\n\t\treturn Collections.enumeration(keySet());\n\t}\n\n\t/**\n\t * Return a sorted set of the keys in this {@link Properties} object.\n\t * <p>The keys will be converted to strings if necessary using\n\t * {@link String#valueOf(Object)} and sorted alphanumerically according to\n\t * the natural order of strings.\n\t */\n\t@Override\n\tpublic Set<Object> keySet() {\n\t\tSet<Object> sortedKeys = new TreeSet<>(keyComparator);\n\t\tsortedKeys.addAll(super.keySet());\n\t\treturn Collections.synchronizedSet(sortedKeys);\n\t}\n\n\t/**\n\t * Return a sorted set of the entries in this {@link Properties} object.\n\t * <p>The entries will be sorted based on their keys, and the keys will be\n\t * converted to strings if necessary using {@link String#valueOf(Object)}\n\t * and compared alphanumerically according to the natural order of strings.\n\t */\n\t@Override\n\tpublic Set<Entry<Object, Object>> entrySet() {\n\t\tSet<Entry<Object, Object>> sortedEntries = new TreeSet<>(entryComparator);\n\t\tsortedEntries.addAll(super.entrySet());\n\t\treturn Collections.synchronizedSet(sortedEntries);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SortedProperties#EOL",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#EOL",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SortedProperties#keyComparator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#keyComparator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Comparator<Object>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SortedProperties#entryComparator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#entryComparator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Comparator<Entry<Object, Object>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.SortedProperties#omitComments",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#omitComments",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#store(OutputStream,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void store(OutputStream out, @Nullable String comments) throws IOException {\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    super.store(baos, (this.omitComments ? null : comments));\r\n    String contents = baos.toString(StandardCharsets.ISO_8859_1);\r\n    for (String line : contents.split(EOL)) {\r\n        if (!(this.omitComments && line.startsWith(\"#\"))) {\r\n            out.write((line + EOL).getBytes(StandardCharsets.ISO_8859_1));\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedProperties#store(OutputStream,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#store(OutputStream,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedProperties#store(Writer,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void store(Writer writer, @Nullable String comments) throws IOException {\r\n    StringWriter stringWriter = new StringWriter();\r\n    super.store(stringWriter, (this.omitComments ? null : comments));\r\n    String contents = stringWriter.toString();\r\n    for (String line : contents.split(EOL)) {\r\n        if (!(this.omitComments && line.startsWith(\"#\"))) {\r\n            writer.write(line + EOL);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "VfsUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.UrlResource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.UncheckedIOException;\nimport java.net.HttpURLConnection;\nimport java.net.MalformedURLException;\nimport java.net.URI;\nimport java.net.URISyntaxException;\nimport java.net.URL;\nimport java.net.URLConnection;\nimport java.net.URLDecoder;\nimport java.nio.charset.StandardCharsets;\nimport java.util.Base64;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ResourceUtils;\nimport org.springframework.util.StringUtils;\n\n/**\n * {@link Resource} implementation for {@code java.net.URL} locators.\n * Supports resolution as a {@code URL} and also as a {@code File} in\n * case of the {@code \"file:\"} protocol.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 28.12.2003\n * @see java.net.URL\n */\npublic class UrlResource extends AbstractFileResolvingResource {\n\n\tprivate static final String AUTHORIZATION = \"Authorization\";\n\n\n\t/**\n\t * Original URI, if available; used for URI and File access.\n\t */\n\tprivate final @Nullable URI uri;\n\n\t/**\n\t * Original URL, used for actual access.\n\t */\n\tprivate final URL url;\n\n\t/**\n\t * Cleaned URL String (with normalized path), used for comparisons.\n\t */\n\tprivate volatile @Nullable String cleanedUrl;\n\n\n\t/**\n\t * Create a new {@code UrlResource} based on the given URL object.\n\t * @param url a URL\n\t * @see #UrlResource(URI)\n\t * @see #UrlResource(String)\n\t */\n\tpublic UrlResource(URL url) {\n\t\tAssert.notNull(url, \"URL must not be null\");\n\t\tthis.uri = null;\n\t\tthis.url = url;\n\t}\n\n\t/**\n\t * Create a new {@code UrlResource} based on the given URI object.\n\t * @param uri a URI\n\t * @throws MalformedURLException if the given URL path is not valid\n\t * @since 2.5\n\t */\n\tpublic UrlResource(URI uri) throws MalformedURLException {\n\t\tAssert.notNull(uri, \"URI must not be null\");\n\t\tthis.uri = uri;\n\t\tthis.url = uri.toURL();\n\t}\n\n\t/**\n\t * Create a new {@code UrlResource} based on a URI path.\n\t * <p>Note: The given path needs to be pre-encoded if necessary.\n\t * @param path a URI path\n\t * @throws MalformedURLException if the given URI path is not valid\n\t * @see ResourceUtils#toURI(String)\n\t */\n\tpublic UrlResource(String path) throws MalformedURLException {\n\t\tAssert.notNull(path, \"Path must not be null\");\n\t\tString cleanedPath = StringUtils.cleanPath(path);\n\t\tURI uri;\n\t\tURL url;\n\n\t\ttry {\n\t\t\t// Prefer URI construction with toURL conversion (as of 6.1)\n\t\t\turi = ResourceUtils.toURI(cleanedPath);\n\t\t\turl = uri.toURL();\n\t\t}\n\t\tcatch (URISyntaxException | IllegalArgumentException ex) {\n\t\t\turi = null;\n\t\t\turl = ResourceUtils.toURL(path);\n\t\t}\n\n\t\tthis.uri = uri;\n\t\tthis.url = url;\n\t\tthis.cleanedUrl = cleanedPath;\n\t}\n\n\t/**\n\t * Create a new {@code UrlResource} based on a URI specification.\n\t * <p>The given parts will automatically get encoded if necessary.\n\t * @param protocol the URL protocol to use (for example, \"jar\" or \"file\" - without colon);\n\t * also known as \"scheme\"\n\t * @param location the location (for example, the file path within that protocol);\n\t * also known as \"scheme-specific part\"\n\t * @throws MalformedURLException if the given URL specification is not valid\n\t * @see java.net.URI#URI(String, String, String)\n\t */\n\tpublic UrlResource(String protocol, String location) throws MalformedURLException {\n\t\tthis(protocol, location, null);\n\t}\n\n\t/**\n\t * Create a new {@code UrlResource} based on a URI specification.\n\t * <p>The given parts will automatically get encoded if necessary.\n\t * @param protocol the URL protocol to use (for example, \"jar\" or \"file\" - without colon);\n\t * also known as \"scheme\"\n\t * @param location the location (for example, the file path within that protocol);\n\t * also known as \"scheme-specific part\"\n\t * @param fragment the fragment within that location (for example, anchor on an HTML page,\n\t * as following after a \"#\" separator)\n\t * @throws MalformedURLException if the given URL specification is not valid\n\t * @see java.net.URI#URI(String, String, String)\n\t */\n\tpublic UrlResource(String protocol, String location, @Nullable String fragment) throws MalformedURLException {\n\t\ttry {\n\t\t\tthis.uri = new URI(protocol, location, fragment);\n\t\t\tthis.url = this.uri.toURL();\n\t\t}\n\t\tcatch (URISyntaxException ex) {\n\t\t\tMalformedURLException exToThrow = new MalformedURLException(ex.getMessage());\n\t\t\texToThrow.initCause(ex);\n\t\t\tthrow exToThrow;\n\t\t}\n\t}\n\n\n\t/**\n\t * Create a new {@code UrlResource} from the given {@link URI}.\n\t * <p>This factory method is a convenience for {@link #UrlResource(URI)} that\n\t * catches any {@link MalformedURLException} and rethrows it wrapped in an\n\t * {@link UncheckedIOException}; suitable for use in {@link java.util.stream.Stream}\n\t * and {@link java.util.Optional} APIs or other scenarios when a checked\n\t * {@link IOException} is undesirable.\n\t * @param uri a URI\n\t * @throws UncheckedIOException if the given URL path is not valid\n\t * @since 6.0\n\t * @see #UrlResource(URI)\n\t */\n\tpublic static UrlResource from(URI uri) throws UncheckedIOException {\n\t\ttry {\n\t\t\treturn new UrlResource(uri);\n\t\t}\n\t\tcatch (MalformedURLException ex) {\n\t\t\tthrow new UncheckedIOException(ex);\n\t\t}\n\t}\n\n\t/**\n\t * Create a new {@code UrlResource} from the given URL path.\n\t * <p>This factory method is a convenience for {@link #UrlResource(String)}\n\t * that catches any {@link MalformedURLException} and rethrows it wrapped in an\n\t * {@link UncheckedIOException}; suitable for use in {@link java.util.stream.Stream}\n\t * and {@link java.util.Optional} APIs or other scenarios when a checked\n\t * {@link IOException} is undesirable.\n\t * @param path a URL path\n\t * @throws UncheckedIOException if the given URL path is not valid\n\t * @since 6.0\n\t * @see #UrlResource(String)\n\t */\n\tpublic static UrlResource from(String path) throws UncheckedIOException {\n\t\ttry {\n\t\t\treturn new UrlResource(path);\n\t\t}\n\t\tcatch (MalformedURLException ex) {\n\t\t\tthrow new UncheckedIOException(ex);\n\t\t}\n\t}\n\n\n\t/**\n\t * Lazily determine a cleaned URL for the given original URL.\n\t */\n\tprivate String getCleanedUrl() {\n\t\tString cleanedUrl = this.cleanedUrl;\n\t\tif (cleanedUrl != null) {\n\t\t\treturn cleanedUrl;\n\t\t}\n\t\tString originalPath = (this.uri != null ? this.uri : this.url).toString();\n\t\tcleanedUrl = StringUtils.cleanPath(originalPath);\n\t\tthis.cleanedUrl = cleanedUrl;\n\t\treturn cleanedUrl;\n\t}\n\n\n\t/**\n\t * This implementation opens an InputStream for the given URL.\n\t * <p>It sets the {@code useCaches} flag to {@code false},\n\t * mainly to avoid jar file locking on Windows.\n\t * @see java.net.URL#openConnection()\n\t * @see java.net.URLConnection#setUseCaches(boolean)\n\t * @see java.net.URLConnection#getInputStream()\n\t */\n\t@Override\n\tpublic InputStream getInputStream() throws IOException {\n\t\tURLConnection con = this.url.openConnection();\n\t\tcustomizeConnection(con);\n\t\ttry {\n\t\t\treturn con.getInputStream();\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\t// Close the HTTP connection (if applicable).\n\t\t\tif (con instanceof HttpURLConnection httpConn) {\n\t\t\t\thttpConn.disconnect();\n\t\t\t}\n\t\t\tthrow ex;\n\t\t}\n\t}\n\n\t@Override\n\tprotected void customizeConnection(URLConnection con) throws IOException {\n\t\tsuper.customizeConnection(con);\n\t\tString userInfo = this.url.getUserInfo();\n\t\tif (userInfo != null) {\n\t\t\tString encodedCredentials = Base64.getUrlEncoder().encodeToString(userInfo.getBytes());\n\t\t\tcon.setRequestProperty(AUTHORIZATION, \"Basic \" + encodedCredentials);\n\t\t}\n\t}\n\n\t/**\n\t * This implementation returns the underlying URL reference.\n\t */\n\t@Override\n\tpublic URL getURL() {\n\t\treturn this.url;\n\t}\n\n\t/**\n\t * This implementation returns the underlying URI directly,\n\t * if possible.\n\t */\n\t@Override\n\tpublic URI getURI() throws IOException {\n\t\tif (this.uri != null) {\n\t\t\treturn this.uri;\n\t\t}\n\t\telse {\n\t\t\treturn super.getURI();\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean isFile() {\n\t\tif (this.uri != null) {\n\t\t\treturn super.isFile(this.uri);\n\t\t}\n\t\telse {\n\t\t\treturn super.isFile();\n\t\t}\n\t}\n\n\t/**\n\t * This implementation returns a File reference for the underlying URL/URI,\n\t * provided that it refers to a file in the file system.\n\t * @see org.springframework.util.ResourceUtils#getFile(java.net.URL, String)\n\t */\n\t@Override\n\tpublic File getFile() throws IOException {\n\t\tif (this.uri != null) {\n\t\t\treturn super.getFile(this.uri);\n\t\t}\n\t\telse {\n\t\t\treturn super.getFile();\n\t\t}\n\t}\n\n\t/**\n\t * This implementation creates a {@code UrlResource}, delegating to\n\t * {@link #createRelativeURL(String)} for adapting the relative path.\n\t * @see #createRelativeURL(String)\n\t */\n\t@Override\n\tpublic Resource createRelative(String relativePath) throws MalformedURLException {\n\t\treturn new UrlResource(createRelativeURL(relativePath));\n\t}\n\n\t/**\n\t * This delegate creates a {@code java.net.URL}, applying the given path\n\t * relative to the path of the underlying URL of this resource descriptor.\n\t * <p>A leading slash will get dropped; a \"#\" symbol will get encoded.\n\t * Note that this method effectively cleans the combined path as of 6.1.\n\t * @since 5.2\n\t * @see #createRelative(String)\n\t * @see ResourceUtils#toRelativeURL(URL, String)\n\t */\n\tprotected URL createRelativeURL(String relativePath) throws MalformedURLException {\n\t\tif (relativePath.startsWith(\"/\")) {\n\t\t\trelativePath = relativePath.substring(1);\n\t\t}\n\t\treturn ResourceUtils.toRelativeURL(this.url, relativePath);\n\t}\n\n\t/**\n\t * This implementation returns the URL-decoded name of the file that this URL\n\t * refers to.\n\t * @see java.net.URL#getPath()\n\t * @see java.net.URLDecoder#decode(String, java.nio.charset.Charset)\n\t */\n\t@Override\n\tpublic @Nullable String getFilename() {\n\t\tif (this.uri != null) {\n\t\t\tString path = this.uri.getPath();\n\t\t\tif (path != null) {\n\t\t\t\t// Prefer URI path: decoded and has standard separators\n\t\t\t\treturn StringUtils.getFilename(this.uri.getPath());\n\t\t\t}\n\t\t}\n\t\t// Otherwise, process URL path\n\t\tString filename = StringUtils.getFilename(StringUtils.cleanPath(this.url.getPath()));\n\t\treturn (filename != null ? URLDecoder.decode(filename, StandardCharsets.UTF_8) : null);\n\t}\n\n\t/**\n\t * This implementation returns a description that includes the URL.\n\t */\n\t@Override\n\tpublic String getDescription() {\n\t\treturn \"URL [\" + (this.uri != null ? this.uri : this.url) + \"]\";\n\t}\n\n\n\t/**\n\t * This implementation compares the underlying URL references.\n\t */\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof UrlResource that &&\n\t\t\t\tgetCleanedUrl().equals(that.getCleanedUrl())));\n\t}\n\n\t/**\n\t * This implementation returns the hash code of the underlying URL reference.\n\t */\n\t@Override\n\tpublic int hashCode() {\n\t\treturn getCleanedUrl().hashCode();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.UrlResource#AUTHORIZATION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#AUTHORIZATION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.UrlResource#uri",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#uri",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "URI",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.UrlResource#url",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#url",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "URL",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.UrlResource#cleanedUrl",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#cleanedUrl",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#from(URI)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@code UrlResource} from the given {@link URI}.\r\n * <p>This factory method is a convenience for {@link #UrlResource(URI)} that\r\n * catches any {@link MalformedURLException} and rethrows it wrapped in an\r\n * {@link UncheckedIOException}; suitable for use in {@link java.util.stream.Stream}\r\n * and {@link java.util.Optional} APIs or other scenarios when a checked\r\n * {@link IOException} is undesirable.\r\n * @param uri a URI\r\n * @throws UncheckedIOException if the given URL path is not valid\r\n * @since 6.0\r\n * @see #UrlResource(URI)\r\n */\r\npublic static UrlResource from(URI uri) throws UncheckedIOException {\r\n    try {\r\n        return new UrlResource(uri);\r\n    } catch (MalformedURLException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.UrlResource#from(URI)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#from(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@code UrlResource} from the given URL path.\r\n * <p>This factory method is a convenience for {@link #UrlResource(String)}\r\n * that catches any {@link MalformedURLException} and rethrows it wrapped in an\r\n * {@link UncheckedIOException}; suitable for use in {@link java.util.stream.Stream}\r\n * and {@link java.util.Optional} APIs or other scenarios when a checked\r\n * {@link IOException} is undesirable.\r\n * @param path a URL path\r\n * @throws UncheckedIOException if the given URL path is not valid\r\n * @since 6.0\r\n * @see #UrlResource(String)\r\n */\r\npublic static UrlResource from(String path) throws UncheckedIOException {\r\n    try {\r\n        return new UrlResource(path);\r\n    } catch (MalformedURLException ex) {\r\n        throw new UncheckedIOException(ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.UrlResource#from(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#getCleanedUrl()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Lazily determine a cleaned URL for the given original URL.\r\n */\r\nprivate String getCleanedUrl() {\r\n    String cleanedUrl = this.cleanedUrl;\r\n    if (cleanedUrl != null) {\r\n        return cleanedUrl;\r\n    }\r\n    String originalPath = (this.uri != null ? this.uri : this.url).toString();\r\n    cleanedUrl = StringUtils.cleanPath(originalPath);\r\n    this.cleanedUrl = cleanedUrl;\r\n    return cleanedUrl;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.UrlResource#getCleanedUrl()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource#getInputStream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation opens an InputStream for the given URL.\r\n * <p>It sets the {@code useCaches} flag to {@code false},\r\n * mainly to avoid jar file locking on Windows.\r\n * @see java.net.URL#openConnection()\r\n * @see java.net.URLConnection#setUseCaches(boolean)\r\n * @see java.net.URLConnection#getInputStream()\r\n */\r\n@Override\r\npublic InputStream getInputStream() throws IOException {\r\n    URLConnection con = this.url.openConnection();\r\n    customizeConnection(con);\r\n    try {\r\n        return con.getInputStream();\r\n    } catch (IOException ex) {\r\n        // Close the HTTP connection (if applicable).\r\n        if (con instanceof HttpURLConnection httpConn) {\r\n            httpConn.disconnect();\r\n        }\r\n        throw ex;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.UrlResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.UrlResource#getInputStream()",
+    "tailType": "method"
+  }
+]

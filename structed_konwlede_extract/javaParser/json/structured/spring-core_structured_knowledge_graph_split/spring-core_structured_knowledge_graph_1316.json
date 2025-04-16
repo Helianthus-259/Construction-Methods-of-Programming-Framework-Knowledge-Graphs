@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.function.SupplierUtils#resolve(Supplier<T>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Contract",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.function.SupplierUtils#resolve(Supplier<T>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.function.SupplierUtils#resolve(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve a given {@code Supplier}, getting its result or immediately\r\n * returning the given Object as-is if not a {@code Supplier}.\r\n * @param candidate the candidate to resolve (potentially a {@code Supplier})\r\n * @return a supplier's result or the given Object as-is\r\n * @since 6.1.4\r\n */\r\n@Nullable\r\npublic static Object resolve(@Nullable Object candidate) {\r\n    return (candidate instanceof Supplier<?> supplier ? supplier.get() : candidate);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.SupplierUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.SupplierUtils#resolve(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.SupplierUtils#resolve(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.function",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.function",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.function.ThrowingBiFunction",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.function;\n\nimport java.util.function.BiFunction;\n\n/**\n * A {@link BiFunction} that allows invocation of code that throws a checked\n * exception.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @since 6.0\n * @param <T> the type of the first argument to the function\n * @param <U> the type of the second argument to the function\n * @param <R> the type of the result of the function\n */\npublic interface ThrowingBiFunction<T, U, R> extends BiFunction<T, U, R> {\n\n\t/**\n\t * Applies this function to the given argument, possibly throwing a checked\n\t * exception.\n\t * @param t the first function argument\n\t * @param u the second function argument\n\t * @return the function result\n\t * @throws Exception on error\n\t */\n\tR applyWithException(T t, U u) throws Exception;\n\n\t/**\n\t * Default {@link BiFunction#apply(Object, Object)} that wraps any thrown\n\t * checked exceptions (by default in a {@link RuntimeException}).\n\t * @param t the first function argument\n\t * @param u the second function argument\n\t * @return the function result\n\t * @see java.util.function.BiFunction#apply(Object, Object)\n\t */\n\t@Override\n\tdefault R apply(T t, U u) {\n\t\treturn apply(t, u, RuntimeException::new);\n\t}\n\n\t/**\n\t * Applies this function to the given argument, wrapping any thrown checked\n\t * exceptions using the given {@code exceptionWrapper}.\n\t * @param t the first function argument\n\t * @param u the second function argument\n\t * @param exceptionWrapper {@link BiFunction} that wraps the given message\n\t * and checked exception into a runtime exception\n\t * @return a result\n\t */\n\tdefault R apply(T t, U u, BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\n\t\ttry {\n\t\t\treturn applyWithException(t, u);\n\t\t}\n\t\tcatch (RuntimeException ex) {\n\t\t\tthrow ex;\n\t\t}\n\t\tcatch (Exception ex) {\n\t\t\tthrow exceptionWrapper.apply(ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t/**\n\t * Return a new {@link ThrowingBiFunction} where the\n\t * {@link #apply(Object, Object)} method wraps any thrown checked exceptions\n\t * using the given {@code exceptionWrapper}.\n\t * @param exceptionWrapper {@link BiFunction} that wraps the given message\n\t * and checked exception into a runtime exception\n\t * @return the replacement {@link ThrowingBiFunction} instance\n\t */\n\tdefault ThrowingBiFunction<T, U, R> throwing(BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\n\t\treturn new ThrowingBiFunction<>() {\n\t\t\t@Override\n\t\t\tpublic R applyWithException(T t, U u) throws Exception {\n\t\t\t\treturn ThrowingBiFunction.this.applyWithException(t, u);\n\t\t\t}\n\t\t\t@Override\n\t\t\tpublic R apply(T t, U u) {\n\t\t\t\treturn apply(t, u, exceptionWrapper);\n\t\t\t}\n\t\t};\n\t}\n\n\t/**\n\t * Lambda friendly convenience method that can be used to create a\n\t * {@link ThrowingBiFunction} where the {@link #apply(Object, Object)}\n\t * method wraps any checked exception thrown by the supplied lambda expression\n\t * or method reference.\n\t * <p>This method can be especially useful when working with method references.\n\t * It allows you to easily convert a method that throws a checked exception\n\t * into an instance compatible with a regular {@link BiFunction}.\n\t * <p>For example:\n\t * <pre class=\"code\">\n\t * map.replaceAll(ThrowingBiFunction.of(Example::methodThatCanThrowCheckedException));\n\t * </pre>\n\t * @param <T> the type of the first argument to the function\n\t * @param <U> the type of the second argument to the function\n\t * @param <R> the type of the result of the function\n\t * @param function the source function\n\t * @return a new {@link ThrowingFunction} instance\n\t */\n\tstatic <T, U, R> ThrowingBiFunction<T, U, R> of(ThrowingBiFunction<T, U, R> function) {\n\t\treturn function;\n\t}\n\n\t/**\n\t * Lambda friendly convenience method that can be used to create a\n\t * {@link ThrowingBiFunction} where the {@link #apply(Object, Object)}\n\t * method wraps any thrown checked exceptions using the given\n\t * {@code exceptionWrapper}.\n\t * <p>This method can be especially useful when working with method references.\n\t * It allows you to easily convert a method that throws a checked exception\n\t * into an instance compatible with a regular {@link BiFunction}.\n\t * <p>For example:\n\t * <pre class=\"code\">\n\t * map.replaceAll(ThrowingBiFunction.of(Example::methodThatCanThrowCheckedException, IllegalStateException::new));\n\t * </pre>\n\t * @param <T> the type of the first argument to the function\n\t * @param <U> the type of the second argument to the function\n\t * @param <R> the type of the result of the function\n\t * @param function the source function\n\t * @param exceptionWrapper the exception wrapper to use\n\t * @return a new {@link ThrowingFunction} instance\n\t */\n\tstatic <T, U, R> ThrowingBiFunction<T, U, R> of(ThrowingBiFunction<T, U, R> function,\n\t\t\tBiFunction<String, Exception, RuntimeException> exceptionWrapper) {\n\n\t\treturn function.throwing(exceptionWrapper);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#applyWithException(T,U)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Applies this function to the given argument, possibly throwing a checked\r\n * exception.\r\n * @param t the first function argument\r\n * @param u the second function argument\r\n * @return the function result\r\n * @throws Exception on error\r\n */\r\nR applyWithException(T t, U u) throws Exception;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingBiFunction#applyWithException(T,U)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#apply(T,U)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Default {@link BiFunction#apply(Object, Object)} that wraps any thrown\r\n * checked exceptions (by default in a {@link RuntimeException}).\r\n * @param t the first function argument\r\n * @param u the second function argument\r\n * @return the function result\r\n * @see java.util.function.BiFunction#apply(Object, Object)\r\n */\r\n@Override\r\ndefault R apply(T t, U u) {\r\n    return apply(t, u, RuntimeException::new);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingBiFunction#apply(T,U)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#apply(T,U)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#apply(T,U,BiFunction<String,Exception,RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Applies this function to the given argument, wrapping any thrown checked\r\n * exceptions using the given {@code exceptionWrapper}.\r\n * @param t the first function argument\r\n * @param u the second function argument\r\n * @param exceptionWrapper {@link BiFunction} that wraps the given message\r\n * and checked exception into a runtime exception\r\n * @return a result\r\n */\r\ndefault R apply(T t, U u, BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\r\n    try {\r\n        return applyWithException(t, u);\r\n    } catch (RuntimeException ex) {\r\n        throw ex;\r\n    } catch (Exception ex) {\r\n        throw exceptionWrapper.apply(ex.getMessage(), ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingBiFunction#apply(T,U,BiFunction<String,Exception,RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#throwing(BiFunction<String,Exception,RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a new {@link ThrowingBiFunction} where the\r\n * {@link #apply(Object, Object)} method wraps any thrown checked exceptions\r\n * using the given {@code exceptionWrapper}.\r\n * @param exceptionWrapper {@link BiFunction} that wraps the given message\r\n * and checked exception into a runtime exception\r\n * @return the replacement {@link ThrowingBiFunction} instance\r\n */\r\ndefault ThrowingBiFunction<T, U, R> throwing(BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\r\n    return new ThrowingBiFunction<>() {\r\n\r\n        @Override\r\n        public R applyWithException(T t, U u) throws Exception {\r\n            return ThrowingBiFunction.this.applyWithException(t, u);\r\n        }\r\n\r\n        @Override\r\n        public R apply(T t, U u) {\r\n            return apply(t, u, exceptionWrapper);\r\n        }\r\n    };\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingBiFunction#throwing(BiFunction<String,Exception,RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#of(ThrowingBiFunction<T,U,R>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Lambda friendly convenience method that can be used to create a\r\n * {@link ThrowingBiFunction} where the {@link #apply(Object, Object)}\r\n * method wraps any checked exception thrown by the supplied lambda expression\r\n * or method reference.\r\n * <p>This method can be especially useful when working with method references.\r\n * It allows you to easily convert a method that throws a checked exception\r\n * into an instance compatible with a regular {@link BiFunction}.\r\n * <p>For example:\r\n * <pre class=\"code\">\r\n * map.replaceAll(ThrowingBiFunction.of(Example::methodThatCanThrowCheckedException));\r\n * </pre>\r\n * @param <T> the type of the first argument to the function\r\n * @param <U> the type of the second argument to the function\r\n * @param <R> the type of the result of the function\r\n * @param function the source function\r\n * @return a new {@link ThrowingFunction} instance\r\n */\r\nstatic <T, U, R> ThrowingBiFunction<T, U, R> of(ThrowingBiFunction<T, U, R> function) {\r\n    return function;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingBiFunction#of(ThrowingBiFunction<T,U,R>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction#of(ThrowingBiFunction<T,U,R>,BiFunction<String,Exception,RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Lambda friendly convenience method that can be used to create a\r\n * {@link ThrowingBiFunction} where the {@link #apply(Object, Object)}\r\n * method wraps any thrown checked exceptions using the given\r\n * {@code exceptionWrapper}.\r\n * <p>This method can be especially useful when working with method references.\r\n * It allows you to easily convert a method that throws a checked exception\r\n * into an instance compatible with a regular {@link BiFunction}.\r\n * <p>For example:\r\n * <pre class=\"code\">\r\n * map.replaceAll(ThrowingBiFunction.of(Example::methodThatCanThrowCheckedException, IllegalStateException::new));\r\n * </pre>\r\n * @param <T> the type of the first argument to the function\r\n * @param <U> the type of the second argument to the function\r\n * @param <R> the type of the result of the function\r\n * @param function the source function\r\n * @param exceptionWrapper the exception wrapper to use\r\n * @return a new {@link ThrowingFunction} instance\r\n */\r\nstatic <T, U, R> ThrowingBiFunction<T, U, R> of(ThrowingBiFunction<T, U, R> function, BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\r\n    return function.throwing(exceptionWrapper);\r\n}",
+    "tailType": "method_code"
+  }
+]

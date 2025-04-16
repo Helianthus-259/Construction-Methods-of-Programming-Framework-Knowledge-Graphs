@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#determineUnresolvableGenerics(Set<Type>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#currentTypeSeen(Set<Type>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Set<Type> currentTypeSeen(@Nullable Set<Type> alreadySeen) {\r\n    if (alreadySeen == null) {\r\n        alreadySeen = new HashSet<>(4);\r\n    }\r\n    alreadySeen.add(this.type);\r\n    return alreadySeen;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#currentTypeSeen(Set<Type>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#isUnresolvableTypeVariable()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the underlying type is a type variable that\r\n * cannot be resolved through the associated variable resolver.\r\n */\r\nprivate boolean isUnresolvableTypeVariable() {\r\n    if (this.type instanceof TypeVariable<?> variable) {\r\n        if (this.variableResolver == null) {\r\n            return true;\r\n        }\r\n        ResolvableType resolved = this.variableResolver.resolveVariable(variable);\r\n        if (resolved == null || resolved.isUnresolvableTypeVariable() || resolved.isWildcardWithoutBounds()) {\r\n            return true;\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#isUnresolvableTypeVariable()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#isWildcardWithoutBounds()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the underlying type represents a wildcard\r\n * without specific bounds (i.e., equal to {@code ? extends Object}).\r\n */\r\nprivate boolean isWildcardWithoutBounds() {\r\n    if (this.type instanceof WildcardType wildcardType) {\r\n        if (wildcardType.getLowerBounds().length == 0) {\r\n            Type[] upperBounds = wildcardType.getUpperBounds();\r\n            if (upperBounds.length == 0 || (upperBounds.length == 1 && Object.class == upperBounds[0])) {\r\n                return true;\r\n            }\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#isWildcardWithoutBounds()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#getNested(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a {@code ResolvableType} for the specified nesting level.\r\n * <p>See {@link #getNested(int, Map)} for details.\r\n * @param nestingLevel the nesting level\r\n * @return the {@code ResolvableType} type, or {@code #NONE}\r\n */\r\npublic ResolvableType getNested(int nestingLevel) {\r\n    return getNested(nestingLevel, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#getNested(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#getNested(int,Map<Integer,Integer>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a {@code ResolvableType} for the specified nesting level.\r\n * <p>The nesting level refers to the specific generic parameter that should be returned.\r\n * A nesting level of 1 indicates this type; 2 indicates the first nested generic;\r\n * 3 the second; and so on. For example, given {@code List<Set<Integer>>} level 1 refers\r\n * to the {@code List}, level 2 the {@code Set}, and level 3 the {@code Integer}.\r\n * <p>The {@code typeIndexesPerLevel} map can be used to reference a specific generic\r\n * for the given level. For example, an index of 0 would refer to a {@code Map} key;\r\n * whereas, 1 would refer to the value. If the map does not contain a value for a\r\n * specific level the last generic will be used (for example, a {@code Map} value).\r\n * <p>Nesting levels may also apply to array types; for example given\r\n * {@code String[]}, a nesting level of 2 refers to {@code String}.\r\n * <p>If a type does not {@link #hasGenerics() contain} generics the\r\n * {@link #getSuperType() supertype} hierarchy will be considered.\r\n * @param nestingLevel the required nesting level, indexed from 1 for the\r\n * current type, 2 for the first nested generic, 3 for the second and so on\r\n * @param typeIndexesPerLevel a map containing the generic index for a given\r\n * nesting level (can be {@code null})\r\n * @return a {@code ResolvableType} for the nested level, or {@link #NONE}\r\n */\r\npublic ResolvableType getNested(int nestingLevel, @Nullable Map<Integer, Integer> typeIndexesPerLevel) {\r\n    ResolvableType result = this;\r\n    for (int i = 2; i <= nestingLevel; i++) {\r\n        if (result.isArray()) {\r\n            result = result.getComponentType();\r\n        } else {\r\n            // Handle derived types\r\n            while (result != ResolvableType.NONE && !result.hasGenerics()) {\r\n                result = result.getSuperType();\r\n            }\r\n            Integer index = (typeIndexesPerLevel != null ? typeIndexesPerLevel.get(i) : null);\r\n            index = (index == null ? result.getGenerics().length - 1 : index);\r\n            result = result.getGeneric(index);\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#getNested(int,Map<Integer,Integer>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#getGeneric(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a {@code ResolvableType} representing the generic parameter for the\r\n * given indexes. Indexes are zero based; for example given the type\r\n * {@code Map<Integer, List<String>>}, {@code getGeneric(0)} will access the\r\n * {@code Integer}. Nested generics can be accessed by specifying multiple indexes;\r\n * for example {@code getGeneric(1, 0)} will access the {@code String} from the\r\n * nested {@code List}. For convenience, if no indexes are specified the first\r\n * generic is returned.\r\n * <p>If no generic is available at the specified indexes {@link #NONE} is returned.\r\n * @param indexes the indexes that refer to the generic parameter\r\n * (can be omitted to return the first generic)\r\n * @return a {@code ResolvableType} for the specified generic, or {@link #NONE}\r\n * @see #hasGenerics()\r\n * @see #getGenerics()\r\n * @see #resolveGeneric(int...)\r\n * @see #resolveGenerics()\r\n */\r\npublic ResolvableType getGeneric(int@Nullable ... indexes) {\r\n    ResolvableType[] generics = getGenerics();\r\n    if (indexes == null || indexes.length == 0) {\r\n        return (generics.length == 0 ? NONE : generics[0]);\r\n    }\r\n    ResolvableType generic = this;\r\n    for (int index : indexes) {\r\n        generics = generic.getGenerics();\r\n        if (index < 0 || index >= generics.length) {\r\n            return NONE;\r\n        }\r\n        generic = generics[index];\r\n    }\r\n    return generic;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#getGeneric(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#getGenerics()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return an array of {@code ResolvableType ResolvableTypes} representing the generic parameters of\r\n * this type. If no generics are available an empty array is returned. If you need to\r\n * access a specific generic consider using the {@link #getGeneric(int...)} method as\r\n * it allows access to nested generics and protects against\r\n * {@code IndexOutOfBoundsExceptions}.\r\n * @return an array of {@code ResolvableType ResolvableTypes} representing the generic parameters\r\n * (never {@code null})\r\n * @see #hasGenerics()\r\n * @see #getGeneric(int...)\r\n * @see #resolveGeneric(int...)\r\n * @see #resolveGenerics()\r\n */\r\npublic ResolvableType[] getGenerics() {\r\n    if (this == NONE) {\r\n        return EMPTY_TYPES_ARRAY;\r\n    }\r\n    ResolvableType[] generics = this.generics;\r\n    if (generics == null) {\r\n        if (this.type instanceof Class<?> clazz) {\r\n            Type[] typeParams = clazz.getTypeParameters();\r\n            if (typeParams.length > 0) {\r\n                generics = new ResolvableType[typeParams.length];\r\n                for (int i = 0; i < generics.length; i++) {\r\n                    generics[i] = ResolvableType.forType(typeParams[i], this);\r\n                }\r\n            } else {\r\n                generics = EMPTY_TYPES_ARRAY;\r\n            }\r\n        } else if (this.type instanceof ParameterizedType parameterizedType) {\r\n            Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();\r\n            if (actualTypeArguments.length > 0) {\r\n                generics = new ResolvableType[actualTypeArguments.length];\r\n                for (int i = 0; i < actualTypeArguments.length; i++) {\r\n                    generics[i] = forType(actualTypeArguments[i], this.variableResolver);\r\n                }\r\n            } else {\r\n                generics = EMPTY_TYPES_ARRAY;\r\n            }\r\n        } else {\r\n            generics = resolveType().getGenerics();\r\n        }\r\n        this.generics = generics;\r\n    }\r\n    return generics;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#getGenerics()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#resolveGenerics()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Convenience method that will {@link #getGenerics() get} and\r\n * {@link #resolve() resolve} generic parameters.\r\n * @return an array of resolved generic parameters (the resulting array\r\n * will never be {@code null}, but it may contain {@code null} elements)\r\n * @see #getGenerics()\r\n * @see #resolve()\r\n */\r\n@Nullable\r\npublic Class<?>[] resolveGenerics() {\r\n    ResolvableType[] generics = getGenerics();\r\n    @Nullable\r\n    Class<?>[] resolvedGenerics = new Class<?>[generics.length];\r\n    for (int i = 0; i < generics.length; i++) {\r\n        resolvedGenerics[i] = generics[i].resolve();\r\n    }\r\n    return resolvedGenerics;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#resolveGenerics()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#resolveGenerics()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType#resolveGenerics(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Convenience method that will {@link #getGenerics() get} and {@link #resolve()\r\n * resolve} generic parameters, using the specified {@code fallback} if any type\r\n * cannot be resolved.\r\n * @param fallback the fallback class to use if resolution fails\r\n * @return an array of resolved generic parameters\r\n * @see #getGenerics()\r\n * @see #resolve()\r\n */\r\npublic Class<?>[] resolveGenerics(Class<?> fallback) {\r\n    ResolvableType[] generics = getGenerics();\r\n    Class<?>[] resolvedGenerics = new Class<?>[generics.length];\r\n    for (int i = 0; i < generics.length; i++) {\r\n        resolvedGenerics[i] = generics[i].resolve(fallback);\r\n    }\r\n    return resolvedGenerics;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.ResolvableType",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.ResolvableType#resolveGenerics(Class<?>)",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#isUrl(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#getURL(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given resource location to a {@code java.net.URL}.\r\n * <p>Does not check whether the URL actually exists; simply returns\r\n * the URL that the given location would correspond to.\r\n * @param resourceLocation the resource location to resolve: either a\r\n * \"classpath:\" pseudo URL, a \"file:\" URL, or a plain file path\r\n * @return a corresponding URL object\r\n * @throws FileNotFoundException if the resource cannot be resolved to a URL\r\n * @see #toURL(String)\r\n */\r\npublic static URL getURL(String resourceLocation) throws FileNotFoundException {\r\n    Assert.notNull(resourceLocation, \"Resource location must not be null\");\r\n    if (resourceLocation.startsWith(CLASSPATH_URL_PREFIX)) {\r\n        String path = resourceLocation.substring(CLASSPATH_URL_PREFIX.length());\r\n        ClassLoader cl = ClassUtils.getDefaultClassLoader();\r\n        URL url = (cl != null ? cl.getResource(path) : ClassLoader.getSystemResource(path));\r\n        if (url == null) {\r\n            String description = \"class path resource [\" + path + \"]\";\r\n            throw new FileNotFoundException(description + \" cannot be resolved to URL because it does not exist\");\r\n        }\r\n        return url;\r\n    }\r\n    try {\r\n        // try URL\r\n        return toURL(resourceLocation);\r\n    } catch (MalformedURLException ex) {\r\n        // no URL -> treat as file path\r\n        try {\r\n            return new File(resourceLocation).toURI().toURL();\r\n        } catch (MalformedURLException ex2) {\r\n            throw new FileNotFoundException(\"Resource location [\" + resourceLocation + \"] is neither a URL not a well-formed file path\");\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#getURL(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#getFile(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given resource location to a {@code java.io.File},\r\n * i.e. to a file in the file system.\r\n * <p>Does not check whether the file actually exists; simply returns\r\n * the File that the given location would correspond to.\r\n * @param resourceLocation the resource location to resolve: either a\r\n * \"classpath:\" pseudo URL, a \"file:\" URL, or a plain file path\r\n * @return a corresponding File object\r\n * @throws FileNotFoundException if the resource cannot be resolved to\r\n * a file in the file system\r\n * @see #getFile(URL)\r\n */\r\npublic static File getFile(String resourceLocation) throws FileNotFoundException {\r\n    Assert.notNull(resourceLocation, \"Resource location must not be null\");\r\n    if (resourceLocation.startsWith(CLASSPATH_URL_PREFIX)) {\r\n        String path = resourceLocation.substring(CLASSPATH_URL_PREFIX.length());\r\n        String description = \"class path resource [\" + path + \"]\";\r\n        ClassLoader cl = ClassUtils.getDefaultClassLoader();\r\n        URL url = (cl != null ? cl.getResource(path) : ClassLoader.getSystemResource(path));\r\n        if (url == null) {\r\n            throw new FileNotFoundException(description + \" cannot be resolved to absolute file path because it does not exist\");\r\n        }\r\n        return getFile(url, description);\r\n    }\r\n    try {\r\n        // try URL\r\n        return getFile(toURL(resourceLocation));\r\n    } catch (MalformedURLException ex) {\r\n        // no URL -> treat as file path\r\n        return new File(resourceLocation);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#getFile(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#getFile(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given resource URL to a {@code java.io.File},\r\n * i.e. to a file in the file system.\r\n * @param resourceUrl the resource URL to resolve\r\n * @return a corresponding File object\r\n * @throws FileNotFoundException if the URL cannot be resolved to\r\n * a file in the file system\r\n * @see #getFile(URL, String)\r\n */\r\npublic static File getFile(URL resourceUrl) throws FileNotFoundException {\r\n    return getFile(resourceUrl, \"URL\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#getFile(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#getFile(URL,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given resource URL to a {@code java.io.File},\r\n * i.e. to a file in the file system.\r\n * @param resourceUrl the resource URL to resolve\r\n * @param description a description of the original resource that\r\n * the URL was created for (for example, a class path location)\r\n * @return a corresponding File object\r\n * @throws FileNotFoundException if the URL cannot be resolved to\r\n * a file in the file system\r\n */\r\npublic static File getFile(URL resourceUrl, String description) throws FileNotFoundException {\r\n    Assert.notNull(resourceUrl, \"Resource URL must not be null\");\r\n    if (!URL_PROTOCOL_FILE.equals(resourceUrl.getProtocol())) {\r\n        throw new FileNotFoundException(description + \" cannot be resolved to absolute file path \" + \"because it does not reside in the file system: \" + resourceUrl);\r\n    }\r\n    try {\r\n        // URI decoding for special characters such as spaces.\r\n        return new File(toURI(resourceUrl).getSchemeSpecificPart());\r\n    } catch (URISyntaxException ex) {\r\n        // Fallback for URLs that are not valid URIs (should hardly ever happen).\r\n        return new File(resourceUrl.getFile());\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#getFile(URL,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#getFile(URI)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given resource URI to a {@code java.io.File},\r\n * i.e. to a file in the file system.\r\n * @param resourceUri the resource URI to resolve\r\n * @return a corresponding File object\r\n * @throws FileNotFoundException if the URL cannot be resolved to\r\n * a file in the file system\r\n * @since 2.5\r\n * @see #getFile(URI, String)\r\n */\r\npublic static File getFile(URI resourceUri) throws FileNotFoundException {\r\n    return getFile(resourceUri, \"URI\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#getFile(URI)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#getFile(URI,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given resource URI to a {@code java.io.File},\r\n * i.e. to a file in the file system.\r\n * @param resourceUri the resource URI to resolve\r\n * @param description a description of the original resource that\r\n * the URI was created for (for example, a class path location)\r\n * @return a corresponding File object\r\n * @throws FileNotFoundException if the URL cannot be resolved to\r\n * a file in the file system\r\n * @since 2.5\r\n */\r\npublic static File getFile(URI resourceUri, String description) throws FileNotFoundException {\r\n    Assert.notNull(resourceUri, \"Resource URI must not be null\");\r\n    if (!URL_PROTOCOL_FILE.equals(resourceUri.getScheme())) {\r\n        throw new FileNotFoundException(description + \" cannot be resolved to absolute file path \" + \"because it does not reside in the file system: \" + resourceUri);\r\n    }\r\n    return new File(resourceUri.getSchemeSpecificPart());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#getFile(URI,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#isFileURL(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given URL points to a resource in the file system,\r\n * i.e. has protocol \"file\", \"vfsfile\" or \"vfs\".\r\n * @param url the URL to check\r\n * @return whether the URL has been identified as a file system URL\r\n * @see #isJarURL(URL)\r\n */\r\npublic static boolean isFileURL(URL url) {\r\n    String protocol = url.getProtocol();\r\n    return (URL_PROTOCOL_FILE.equals(protocol) || URL_PROTOCOL_VFSFILE.equals(protocol) || URL_PROTOCOL_VFS.equals(protocol));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#isFileURL(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#isJarURL(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given URL points to a resource in a jar file\r\n * &mdash; for example, whether the URL has protocol \"jar\", \"war, \"zip\",\r\n * \"vfszip\", or \"wsjar\".\r\n * @param url the URL to check\r\n * @return whether the URL has been identified as a JAR URL\r\n * @see #isJarFileURL(URL)\r\n */\r\npublic static boolean isJarURL(URL url) {\r\n    String protocol = url.getProtocol();\r\n    return (URL_PROTOCOL_JAR.equals(protocol) || URL_PROTOCOL_WAR.equals(protocol) || URL_PROTOCOL_ZIP.equals(protocol) || URL_PROTOCOL_VFSZIP.equals(protocol) || URL_PROTOCOL_WSJAR.equals(protocol));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#isJarURL(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#isJarFileURL(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given URL points to a jar file itself,\r\n * that is, has protocol \"file\" and ends with the \".jar\" extension.\r\n * @param url the URL to check\r\n * @return whether the URL has been identified as a JAR file URL\r\n * @since 4.1\r\n * @see #extractJarFileURL(URL)\r\n */\r\npublic static boolean isJarFileURL(URL url) {\r\n    return (URL_PROTOCOL_FILE.equals(url.getProtocol()) && url.getPath().toLowerCase(Locale.ROOT).endsWith(JAR_FILE_EXTENSION));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ResourceUtils#isJarFileURL(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ResourceUtils#extractJarFileURL(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Extract the URL for the actual jar file from the given URL\r\n * (which may point to a resource in a jar file or to a jar file itself).\r\n * @param jarUrl the original URL\r\n * @return the URL for the actual jar file\r\n * @throws MalformedURLException if no valid jar file URL could be extracted\r\n * @see #extractArchiveURL(URL)\r\n */\r\npublic static URL extractJarFileURL(URL jarUrl) throws MalformedURLException {\r\n    String urlFile = jarUrl.getFile();\r\n    int separatorIndex = urlFile.indexOf(JAR_URL_SEPARATOR);\r\n    if (separatorIndex != -1) {\r\n        String jarFile = urlFile.substring(0, separatorIndex);\r\n        try {\r\n            return toURL(jarFile);\r\n        } catch (MalformedURLException ex) {\r\n            // Probably no protocol in original jar URL, like \"jar:C:/mypath/myjar.jar\".\r\n            // This usually indicates that the jar file resides in the file system.\r\n            if (!jarFile.startsWith(\"/\")) {\r\n                jarFile = \"/\" + jarFile;\r\n            }\r\n            return toURL(FILE_URL_PREFIX + jarFile);\r\n        }\r\n    } else {\r\n        return jarUrl;\r\n    }\r\n}",
+    "tailType": "method_code"
+  }
+]

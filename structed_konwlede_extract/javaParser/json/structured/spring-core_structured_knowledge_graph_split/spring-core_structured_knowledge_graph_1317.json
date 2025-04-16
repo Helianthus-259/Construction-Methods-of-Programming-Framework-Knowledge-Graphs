@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingBiFunction#of(ThrowingBiFunction<T,U,R>,BiFunction<String,Exception,RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingBiFunction",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "BiFunction",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.function",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.function",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.function.ThrowingConsumer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@FunctionalInterface",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.function;\n\nimport java.util.function.BiFunction;\nimport java.util.function.Consumer;\n\n/**\n * A {@link Consumer} that allows invocation of code that throws a checked\n * exception.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @since 6.0\n * @param <T> the type of the input to the operation\n */\n@FunctionalInterface\npublic interface ThrowingConsumer<T> extends Consumer<T> {\n\n\t/**\n\t * Performs this operation on the given argument, possibly throwing a\n\t * checked exception.\n\t * @param t the input argument\n\t * @throws Exception on error\n\t */\n\tvoid acceptWithException(T t) throws Exception;\n\n\t/**\n\t * Default {@link Consumer#accept(Object)} that wraps any thrown checked\n\t * exceptions (by default in a {@link RuntimeException}).\n\t * @see java.util.function.Consumer#accept(Object)\n\t */\n\t@Override\n\tdefault void accept(T t) {\n\t\taccept(t, RuntimeException::new);\n\t}\n\n\t/**\n\t * Performs this operation on the given argument, wrapping any thrown\n\t * checked exceptions using the given {@code exceptionWrapper}.\n\t * @param exceptionWrapper {@link BiFunction} that wraps the given message\n\t * and checked exception into a runtime exception\n\t */\n\tdefault void accept(T t, BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\n\t\ttry {\n\t\t\tacceptWithException(t);\n\t\t}\n\t\tcatch (RuntimeException ex) {\n\t\t\tthrow ex;\n\t\t}\n\t\tcatch (Exception ex) {\n\t\t\tthrow exceptionWrapper.apply(ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t/**\n\t * Return a new {@link ThrowingConsumer} where the {@link #accept(Object)}\n\t * method wraps any thrown checked exceptions using the given\n\t * {@code exceptionWrapper}.\n\t * @param exceptionWrapper {@link BiFunction} that wraps the given message\n\t * and checked exception into a runtime exception\n\t * @return the replacement {@link ThrowingConsumer} instance\n\t */\n\tdefault ThrowingConsumer<T> throwing(BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\n\t\treturn new ThrowingConsumer<>() {\n\t\t\t@Override\n\t\t\tpublic void acceptWithException(T t) throws Exception {\n\t\t\t\tThrowingConsumer.this.acceptWithException(t);\n\t\t\t}\n\t\t\t@Override\n\t\t\tpublic void accept(T t) {\n\t\t\t\taccept(t, exceptionWrapper);\n\t\t\t}\n\t\t};\n\t}\n\n\t/**\n\t * Lambda friendly convenience method that can be used to create a\n\t * {@link ThrowingConsumer} where the {@link #accept(Object)} method wraps\n\t * any checked exception thrown by the supplied lambda expression or method\n\t * reference.\n\t * <p>This method can be especially useful when working with method references.\n\t * It allows you to easily convert a method that throws a checked exception\n\t * into an instance compatible with a regular {@link Consumer}.\n\t * <p>For example:\n\t * <pre class=\"code\">\n\t * list.forEach(ThrowingConsumer.of(Example::methodThatCanThrowCheckedException));\n\t * </pre>\n\t * @param <T> the type of the input to the operation\n\t * @param consumer the source consumer\n\t * @return a new {@link ThrowingConsumer} instance\n\t */\n\tstatic <T> ThrowingConsumer<T> of(ThrowingConsumer<T> consumer) {\n\t\treturn consumer;\n\t}\n\n\t/**\n\t * Lambda friendly convenience method that can be used to create a\n\t * {@link ThrowingConsumer} where the {@link #accept(Object)} method wraps\n\t * any thrown checked exceptions using the given {@code exceptionWrapper}.\n\t * <p>This method can be especially useful when working with method references.\n\t * It allows you to easily convert a method that throws a checked exception\n\t * into an instance compatible with a regular {@link Consumer}.\n\t * <p>For example:\n\t * <pre class=\"code\">\n\t * list.forEach(ThrowingConsumer.of(Example::methodThatCanThrowCheckedException, IllegalStateException::new));\n\t * </pre>\n\t * @param <T> the type of the input to the operation\n\t * @param consumer the source consumer\n\t * @param exceptionWrapper the exception wrapper to use\n\t * @return a new {@link ThrowingConsumer} instance\n\t */\n\tstatic <T> ThrowingConsumer<T> of(ThrowingConsumer<T> consumer,\n\t\t\tBiFunction<String, Exception, RuntimeException> exceptionWrapper) {\n\n\t\treturn consumer.throwing(exceptionWrapper);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#acceptWithException(T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Performs this operation on the given argument, possibly throwing a\r\n * checked exception.\r\n * @param t the input argument\r\n * @throws Exception on error\r\n */\r\nvoid acceptWithException(T t) throws Exception;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingConsumer#acceptWithException(T)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#accept(T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Default {@link Consumer#accept(Object)} that wraps any thrown checked\r\n * exceptions (by default in a {@link RuntimeException}).\r\n * @see java.util.function.Consumer#accept(Object)\r\n */\r\n@Override\r\ndefault void accept(T t) {\r\n    accept(t, RuntimeException::new);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingConsumer#accept(T)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#accept(T)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#accept(T,BiFunction<String,Exception,RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Performs this operation on the given argument, wrapping any thrown\r\n * checked exceptions using the given {@code exceptionWrapper}.\r\n * @param exceptionWrapper {@link BiFunction} that wraps the given message\r\n * and checked exception into a runtime exception\r\n */\r\ndefault void accept(T t, BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\r\n    try {\r\n        acceptWithException(t);\r\n    } catch (RuntimeException ex) {\r\n        throw ex;\r\n    } catch (Exception ex) {\r\n        throw exceptionWrapper.apply(ex.getMessage(), ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingConsumer#accept(T,BiFunction<String,Exception,RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#throwing(BiFunction<String,Exception,RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a new {@link ThrowingConsumer} where the {@link #accept(Object)}\r\n * method wraps any thrown checked exceptions using the given\r\n * {@code exceptionWrapper}.\r\n * @param exceptionWrapper {@link BiFunction} that wraps the given message\r\n * and checked exception into a runtime exception\r\n * @return the replacement {@link ThrowingConsumer} instance\r\n */\r\ndefault ThrowingConsumer<T> throwing(BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\r\n    return new ThrowingConsumer<>() {\r\n\r\n        @Override\r\n        public void acceptWithException(T t) throws Exception {\r\n            ThrowingConsumer.this.acceptWithException(t);\r\n        }\r\n\r\n        @Override\r\n        public void accept(T t) {\r\n            accept(t, exceptionWrapper);\r\n        }\r\n    };\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingConsumer#throwing(BiFunction<String,Exception,RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#of(ThrowingConsumer<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Lambda friendly convenience method that can be used to create a\r\n * {@link ThrowingConsumer} where the {@link #accept(Object)} method wraps\r\n * any checked exception thrown by the supplied lambda expression or method\r\n * reference.\r\n * <p>This method can be especially useful when working with method references.\r\n * It allows you to easily convert a method that throws a checked exception\r\n * into an instance compatible with a regular {@link Consumer}.\r\n * <p>For example:\r\n * <pre class=\"code\">\r\n * list.forEach(ThrowingConsumer.of(Example::methodThatCanThrowCheckedException));\r\n * </pre>\r\n * @param <T> the type of the input to the operation\r\n * @param consumer the source consumer\r\n * @return a new {@link ThrowingConsumer} instance\r\n */\r\nstatic <T> ThrowingConsumer<T> of(ThrowingConsumer<T> consumer) {\r\n    return consumer;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingConsumer#of(ThrowingConsumer<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer#of(ThrowingConsumer<T>,BiFunction<String,Exception,RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Lambda friendly convenience method that can be used to create a\r\n * {@link ThrowingConsumer} where the {@link #accept(Object)} method wraps\r\n * any thrown checked exceptions using the given {@code exceptionWrapper}.\r\n * <p>This method can be especially useful when working with method references.\r\n * It allows you to easily convert a method that throws a checked exception\r\n * into an instance compatible with a regular {@link Consumer}.\r\n * <p>For example:\r\n * <pre class=\"code\">\r\n * list.forEach(ThrowingConsumer.of(Example::methodThatCanThrowCheckedException, IllegalStateException::new));\r\n * </pre>\r\n * @param <T> the type of the input to the operation\r\n * @param consumer the source consumer\r\n * @param exceptionWrapper the exception wrapper to use\r\n * @return a new {@link ThrowingConsumer} instance\r\n */\r\nstatic <T> ThrowingConsumer<T> of(ThrowingConsumer<T> consumer, BiFunction<String, Exception, RuntimeException> exceptionWrapper) {\r\n    return consumer.throwing(exceptionWrapper);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.ThrowingConsumer#of(ThrowingConsumer<T>,BiFunction<String,Exception,RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.ThrowingConsumer",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Consumer",
+    "tailType": "class"
+  }
+]

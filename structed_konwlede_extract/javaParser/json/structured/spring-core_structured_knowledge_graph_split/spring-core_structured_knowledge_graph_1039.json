@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.DescriptiveResource#getDescription()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource#equals(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation compares the underlying description String.\r\n */\r\n@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof DescriptiveResource that && this.description.equals(that.description)));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.DescriptiveResource#equals(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource#equals(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource#hashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation returns the hash code of the underlying description String.\r\n */\r\n@Override\r\npublic int hashCode() {\r\n    return this.description.hashCode();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.DescriptiveResource#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.DescriptiveResource",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractResource",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.FileSystemResource",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.FileNotFoundException;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.OutputStream;\nimport java.net.URI;\nimport java.net.URISyntaxException;\nimport java.net.URL;\nimport java.nio.channels.FileChannel;\nimport java.nio.channels.ReadableByteChannel;\nimport java.nio.channels.WritableByteChannel;\nimport java.nio.charset.Charset;\nimport java.nio.file.FileSystem;\nimport java.nio.file.Files;\nimport java.nio.file.NoSuchFileException;\nimport java.nio.file.Path;\nimport java.nio.file.StandardOpenOption;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\nimport org.springframework.util.ResourceUtils;\nimport org.springframework.util.StringUtils;\n\n/**\n * {@link Resource} implementation for {@code java.io.File} and\n * {@code java.nio.file.Path} handles with a file system target.\n * Supports resolution as a {@code File} and also as a {@code URL}.\n * Implements the extended {@link WritableResource} interface.\n *\n * <p>Note: This {@link Resource} implementation uses NIO.2 API for read/write\n * interactions and may be constructed with a {@link java.nio.file.Path} handle\n * in which case it will perform all file system interactions via NIO.2, only\n * resorting to {@link File} on {@link #getFile()}.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 28.12.2003\n * @see #FileSystemResource(String)\n * @see #FileSystemResource(File)\n * @see #FileSystemResource(Path)\n * @see java.io.File\n * @see java.nio.file.Files\n */\npublic class FileSystemResource extends AbstractResource implements WritableResource {\n\n\tprivate final String path;\n\n\tprivate final @Nullable File file;\n\n\tprivate final Path filePath;\n\n\n\t/**\n\t * Create a new {@code FileSystemResource} from a file path.\n\t * <p>Note: When building relative resources via {@link #createRelative},\n\t * it makes a difference whether the specified resource base path here\n\t * ends with a slash or not. In the case of \"C:/dir1/\", relative paths\n\t * will be built underneath that root: for example, relative path \"dir2\" &rarr;\n\t * \"C:/dir1/dir2\". In the case of \"C:/dir1\", relative paths will apply\n\t * at the same directory level: relative path \"dir2\" &rarr; \"C:/dir2\".\n\t * @param path a file path\n\t * @see #FileSystemResource(Path)\n\t */\n\tpublic FileSystemResource(String path) {\n\t\tAssert.notNull(path, \"Path must not be null\");\n\t\tthis.path = StringUtils.cleanPath(path);\n\t\tthis.file = new File(path);\n\t\tthis.filePath = this.file.toPath();\n\t}\n\n\t/**\n\t * Create a new {@code FileSystemResource} from a {@link File} handle.\n\t * <p>Note: When building relative resources via {@link #createRelative},\n\t * the relative path will apply <i>at the same directory level</i>:\n\t * for example, new File(\"C:/dir1\"), relative path \"dir2\" &rarr; \"C:/dir2\"!\n\t * If you prefer to have relative paths built underneath the given root directory,\n\t * use the {@link #FileSystemResource(String) constructor with a file path}\n\t * to append a trailing slash to the root path: \"C:/dir1/\", which indicates\n\t * this directory as root for all relative paths.\n\t * @param file a File handle\n\t * @see #FileSystemResource(Path)\n\t * @see #getFile()\n\t */\n\tpublic FileSystemResource(File file) {\n\t\tAssert.notNull(file, \"File must not be null\");\n\t\tthis.path = StringUtils.cleanPath(file.getPath());\n\t\tthis.file = file;\n\t\tthis.filePath = file.toPath();\n\t}\n\n\t/**\n\t * Create a new {@code FileSystemResource} from a {@link Path} handle,\n\t * performing all file system interactions via NIO.2 instead of {@link File}.\n\t * <p>In contrast to {@link PathResource}, this variant strictly follows the\n\t * general {@link FileSystemResource} conventions, in particular in terms of\n\t * path cleaning and {@link #createRelative(String)} handling.\n\t * <p>Note: When building relative resources via {@link #createRelative},\n\t * the relative path will apply <i>at the same directory level</i>:\n\t * for example, Paths.get(\"C:/dir1\"), relative path \"dir2\" &rarr; \"C:/dir2\"!\n\t * If you prefer to have relative paths built underneath the given root directory,\n\t * use the {@link #FileSystemResource(String) constructor with a file path}\n\t * to append a trailing slash to the root path: \"C:/dir1/\", which indicates\n\t * this directory as root for all relative paths. Alternatively, consider\n\t * using {@link PathResource#PathResource(Path)} for {@code java.nio.path.Path}\n\t * resolution in {@code createRelative}, always nesting relative paths.\n\t * @param filePath a Path handle to a file\n\t * @since 5.1\n\t * @see #FileSystemResource(File)\n\t */\n\tpublic FileSystemResource(Path filePath) {\n\t\tAssert.notNull(filePath, \"Path must not be null\");\n\t\tthis.path = StringUtils.cleanPath(filePath.toString());\n\t\tthis.file = null;\n\t\tthis.filePath = filePath;\n\t}\n\n\t/**\n\t * Create a new {@code FileSystemResource} from a {@link FileSystem} handle,\n\t * locating the specified path.\n\t * <p>This is an alternative to {@link #FileSystemResource(String)},\n\t * performing all file system interactions via NIO.2 instead of {@link File}.\n\t * @param fileSystem the FileSystem to locate the path within\n\t * @param path a file path\n\t * @since 5.1.1\n\t * @see #FileSystemResource(File)\n\t */\n\tpublic FileSystemResource(FileSystem fileSystem, String path) {\n\t\tAssert.notNull(fileSystem, \"FileSystem must not be null\");\n\t\tAssert.notNull(path, \"Path must not be null\");\n\t\tthis.path = StringUtils.cleanPath(path);\n\t\tthis.file = null;\n\t\tthis.filePath = fileSystem.getPath(this.path).normalize();\n\t}\n\n\n\t/**\n\t * Return the file path for this resource.\n\t */\n\tpublic final String getPath() {\n\t\treturn this.path;\n\t}\n\n\t/**\n\t * This implementation returns whether the underlying file exists.\n\t * @see java.io.File#exists()\n\t * @see java.nio.file.Files#exists(Path, java.nio.file.LinkOption...)\n\t */\n\t@Override\n\tpublic boolean exists() {\n\t\treturn (this.file != null ? this.file.exists() : Files.exists(this.filePath));\n\t}\n\n\t/**\n\t * This implementation checks whether the underlying file is marked as readable\n\t * (and corresponds to an actual file with content, not to a directory).\n\t * @see java.io.File#canRead()\n\t * @see java.io.File#isDirectory()\n\t * @see java.nio.file.Files#isReadable(Path)\n\t * @see java.nio.file.Files#isDirectory(Path, java.nio.file.LinkOption...)\n\t */\n\t@Override\n\tpublic boolean isReadable() {\n\t\treturn (this.file != null ? this.file.canRead() && !this.file.isDirectory() :\n\t\t\t\tFiles.isReadable(this.filePath) && !Files.isDirectory(this.filePath));\n\t}\n\n\t/**\n\t * This implementation opens an NIO file stream for the underlying file.\n\t * @see java.nio.file.Files#newInputStream(Path, java.nio.file.OpenOption...)\n\t */\n\t@Override\n\tpublic InputStream getInputStream() throws IOException {\n\t\ttry {\n\t\t\treturn Files.newInputStream(this.filePath);\n\t\t}\n\t\tcatch (NoSuchFileException ex) {\n\t\t\tthrow new FileNotFoundException(ex.getMessage());\n\t\t}\n\t}\n\n\t@Override\n\tpublic byte[] getContentAsByteArray() throws IOException {\n\t\ttry {\n\t\t\treturn Files.readAllBytes(this.filePath);\n\t\t}\n\t\tcatch (NoSuchFileException ex) {\n\t\t\tthrow new FileNotFoundException(ex.getMessage());\n\t\t}\n\t}\n\n\t@Override\n\tpublic String getContentAsString(Charset charset) throws IOException {\n\t\ttry {\n\t\t\treturn Files.readString(this.filePath, charset);\n\t\t}\n\t\tcatch (NoSuchFileException ex) {\n\t\t\tthrow new FileNotFoundException(ex.getMessage());\n\t\t}\n\t}\n\n\t/**\n\t * This implementation checks whether the underlying file is marked as writable\n\t * (and corresponds to an actual file with content, not to a directory).\n\t * @see java.io.File#canWrite()\n\t * @see java.io.File#isDirectory()\n\t * @see java.nio.file.Files#isWritable(Path)\n\t * @see java.nio.file.Files#isDirectory(Path, java.nio.file.LinkOption...)\n\t */\n\t@Override\n\tpublic boolean isWritable() {\n\t\treturn (this.file != null ? this.file.canWrite() && !this.file.isDirectory() :\n\t\t\t\tFiles.isWritable(this.filePath) && !Files.isDirectory(this.filePath));\n\t}\n\n\t/**\n\t * This implementation opens a FileOutputStream for the underlying file.\n\t * @see java.nio.file.Files#newOutputStream(Path, java.nio.file.OpenOption...)\n\t */\n\t@Override\n\tpublic OutputStream getOutputStream() throws IOException {\n\t\treturn Files.newOutputStream(this.filePath);\n\t}\n\n\t/**\n\t * This implementation returns a URL for the underlying file.\n\t * @see java.io.File#toURI()\n\t * @see java.nio.file.Path#toUri()\n\t */\n\t@Override\n\tpublic URL getURL() throws IOException {\n\t\treturn (this.file != null ? this.file.toURI().toURL() : this.filePath.toUri().toURL());\n\t}\n\n\t/**\n\t * This implementation returns a URI for the underlying file.\n\t * @see java.io.File#toURI()\n\t * @see java.nio.file.Path#toUri()\n\t */\n\t@Override\n\tpublic URI getURI() throws IOException {\n\t\tif (this.file != null) {\n\t\t\treturn this.file.toURI();\n\t\t}\n\t\telse {\n\t\t\tURI uri = this.filePath.toUri();\n\t\t\t// Normalize URI? See https://github.com/spring-projects/spring-framework/issues/29275\n\t\t\tString scheme = uri.getScheme();\n\t\t\tif (ResourceUtils.URL_PROTOCOL_FILE.equals(scheme)) {\n\t\t\t\ttry {\n\t\t\t\t\turi = new URI(scheme, uri.getPath(), null);\n\t\t\t\t}\n\t\t\t\tcatch (URISyntaxException ex) {\n\t\t\t\t\tthrow new IOException(\"Failed to normalize URI: \" + uri, ex);\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn uri;\n\t\t}\n\t}\n\n\t/**\n\t * This implementation always indicates a file.\n\t */\n\t@Override\n\tpublic boolean isFile() {\n\t\treturn true;\n\t}\n\n\t/**\n\t * This implementation returns the underlying File reference.\n\t */\n\t@Override\n\tpublic File getFile() {\n\t\treturn (this.file != null ? this.file : this.filePath.toFile());\n\t}\n\n\t/**\n\t * This implementation opens a FileChannel for the underlying file.\n\t * @see java.nio.channels.FileChannel\n\t */\n\t@Override\n\tpublic ReadableByteChannel readableChannel() throws IOException {\n\t\ttry {\n\t\t\treturn FileChannel.open(this.filePath, StandardOpenOption.READ);\n\t\t}\n\t\tcatch (NoSuchFileException ex) {\n\t\t\tthrow new FileNotFoundException(ex.getMessage());\n\t\t}\n\t}\n\n\t/**\n\t * This implementation opens a FileChannel for the underlying file.\n\t * @see java.nio.channels.FileChannel\n\t */\n\t@Override\n\tpublic WritableByteChannel writableChannel() throws IOException {\n\t\treturn FileChannel.open(this.filePath, StandardOpenOption.WRITE);\n\t}\n\n\t/**\n\t * This implementation returns the underlying File/Path length.\n\t */\n\t@Override\n\tpublic long contentLength() throws IOException {\n\t\tif (this.file != null) {\n\t\t\tlong length = this.file.length();\n\t\t\tif (length == 0L && !this.file.exists()) {\n\t\t\t\tthrow new FileNotFoundException(getDescription() +\n\t\t\t\t\t\t\" cannot be resolved in the file system for checking its content length\");\n\t\t\t}\n\t\t\treturn length;\n\t\t}\n\t\telse {\n\t\t\ttry {\n\t\t\t\treturn Files.size(this.filePath);\n\t\t\t}\n\t\t\tcatch (NoSuchFileException ex) {\n\t\t\t\tthrow new FileNotFoundException(ex.getMessage());\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * This implementation returns the underlying File/Path last-modified time.\n\t */\n\t@Override\n\tpublic long lastModified() throws IOException {\n\t\tif (this.file != null) {\n\t\t\treturn super.lastModified();\n\t\t}\n\t\telse {\n\t\t\ttry {\n\t\t\t\treturn Files.getLastModifiedTime(this.filePath).toMillis();\n\t\t\t}\n\t\t\tcatch (NoSuchFileException ex) {\n\t\t\t\tthrow new FileNotFoundException(ex.getMessage());\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * This implementation creates a FileSystemResource, applying the given path\n\t * relative to the path of the underlying file of this resource descriptor.\n\t * @see org.springframework.util.StringUtils#applyRelativePath(String, String)\n\t */\n\t@Override\n\tpublic Resource createRelative(String relativePath) {\n\t\tString pathToUse = StringUtils.applyRelativePath(this.path, relativePath);\n\t\treturn (this.file != null ? new FileSystemResource(pathToUse) :\n\t\t\t\tnew FileSystemResource(this.filePath.getFileSystem(), pathToUse));\n\t}\n\n\t/**\n\t * This implementation returns the name of the file.\n\t * @see java.io.File#getName()\n\t * @see java.nio.file.Path#getFileName()\n\t */\n\t@Override\n\tpublic String getFilename() {\n\t\treturn (this.file != null ? this.file.getName() : this.filePath.getFileName().toString());\n\t}\n\n\t/**\n\t * This implementation returns a description that includes the absolute\n\t * path of the file.\n\t * @see java.io.File#getAbsolutePath()\n\t * @see java.nio.file.Path#toAbsolutePath()\n\t */\n\t@Override\n\tpublic String getDescription() {\n\t\treturn \"file [\" + (this.file != null ? this.file.getAbsolutePath() : this.filePath.toAbsolutePath()) + \"]\";\n\t}\n\n\n\t/**\n\t * This implementation compares the underlying file paths.\n\t * @see #getPath()\n\t */\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof FileSystemResource that && this.path.equals(that.path)));\n\t}\n\n\t/**\n\t * This implementation returns the hash code of the underlying file path.\n\t * @see #getPath()\n\t */\n\t@Override\n\tpublic int hashCode() {\n\t\treturn this.path.hashCode();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.FileSystemResource#path",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource#path",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.FileSystemResource#file",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource#file",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "File",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.FileSystemResource#filePath",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource#filePath",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Path",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource#getPath()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the file path for this resource.\r\n */\r\npublic final String getPath() {\r\n    return this.path;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.FileSystemResource#getPath()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.FileSystemResource#exists()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * This implementation returns whether the underlying file exists.\r\n * @see java.io.File#exists()\r\n * @see java.nio.file.Files#exists(Path, java.nio.file.LinkOption...)\r\n */\r\n@Override\r\npublic boolean exists() {\r\n    return (this.file != null ? this.file.exists() : Files.exists(this.filePath));\r\n}",
+    "tailType": "method_code"
+  }
+]

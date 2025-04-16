@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.support.FailureHandler#throwing()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@link FailureHandler} that handles errors by throwing an\r\n * {@link IllegalArgumentException}.\r\n * @return a new {@link FailureHandler} instance\r\n * @see #throwing(BiFunction)\r\n */\r\nstatic FailureHandler throwing() {\r\n    return throwing(IllegalArgumentException::new);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.FailureHandler#throwing()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler#throwing(BiFunction<String,Throwable,? extends RuntimeException>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@link FailureHandler} that handles errors by throwing an\r\n * exception.\r\n * @param exceptionFactory factory used to create the exception\r\n * @return a new {@link FailureHandler} instance\r\n */\r\nstatic FailureHandler throwing(BiFunction<String, Throwable, ? extends RuntimeException> exceptionFactory) {\r\n    return handleMessage((messageSupplier, failure) -> {\r\n        throw exceptionFactory.apply(messageSupplier.get(), failure);\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.FailureHandler#throwing(BiFunction<String,Throwable,? extends RuntimeException>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler#logging(Log)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@link FailureHandler} that handles errors by logging trace\r\n * messages.\r\n * @param logger the logger used to log messages\r\n * @return a new {@link FailureHandler} instance\r\n */\r\nstatic FailureHandler logging(Log logger) {\r\n    return handleMessage((messageSupplier, failure) -> logger.trace(LogMessage.of(messageSupplier), failure));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.FailureHandler#logging(Log)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler#handleMessage(BiConsumer<Supplier<String>,Throwable>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create a new {@link FailureHandler} that handles errors using a standard\r\n * formatted message.\r\n * @param messageHandler the message handler used to handle the problem\r\n * @return a new {@link FailureHandler} instance\r\n */\r\nstatic FailureHandler handleMessage(BiConsumer<Supplier<String>, Throwable> messageHandler) {\r\n    return (factoryType, factoryImplementationName, failure) -> {\r\n        Supplier<String> messageSupplier = () -> \"Unable to instantiate factory class [%s] for factory type [%s]\".formatted(factoryImplementationName, factoryType.getName());\r\n        messageHandler.accept(messageSupplier, failure);\r\n    };\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.FailureHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.FailureHandler#handleMessage(BiConsumer<Supplier<String>,Throwable>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.support.VfsPatternUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2017 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.support;\n\nimport java.io.IOException;\nimport java.lang.reflect.InvocationHandler;\nimport java.lang.reflect.Proxy;\nimport java.net.URL;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.io.VfsUtils;\n\n/**\n * Artificial class used for accessing the {@link VfsUtils} methods\n * without exposing them to the entire world.\n *\n * @author Costin Leau\n * @since 3.0.3\n */\nabstract class VfsPatternUtils extends VfsUtils {\n\n\tstatic @Nullable Object getVisitorAttributes() {\n\t\treturn doGetVisitorAttributes();\n\t}\n\n\tstatic String getPath(Object resource) {\n\t\tString path = doGetPath(resource);\n\t\treturn (path != null ? path : \"\");\n\t}\n\n\tstatic Object findRoot(URL url) throws IOException {\n\t\treturn getRoot(url);\n\t}\n\n\tstatic void visit(Object resource, InvocationHandler visitor) throws IOException {\n\t\tObject visitorProxy = Proxy.newProxyInstance(\n\t\t\t\tVIRTUAL_FILE_VISITOR_INTERFACE.getClassLoader(),\n\t\t\t\tnew Class<?>[] {VIRTUAL_FILE_VISITOR_INTERFACE}, visitor);\n\t\tinvokeVfsMethod(VIRTUAL_FILE_METHOD_VISIT, resource, visitorProxy);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils#getVisitorAttributes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nstatic Object getVisitorAttributes() {\r\n    return doGetVisitorAttributes();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.VfsPatternUtils#getVisitorAttributes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils#getVisitorAttributes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils#getPath(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static String getPath(Object resource) {\r\n    String path = doGetPath(resource);\r\n    return (path != null ? path : \"\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.VfsPatternUtils#getPath(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils#findRoot(URL)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static Object findRoot(URL url) throws IOException {\r\n    return getRoot(url);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.VfsPatternUtils#findRoot(URL)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils#visit(Object,InvocationHandler)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static void visit(Object resource, InvocationHandler visitor) throws IOException {\r\n    Object visitorProxy = Proxy.newProxyInstance(VIRTUAL_FILE_VISITOR_INTERFACE.getClassLoader(), new Class<?>[] { VIRTUAL_FILE_VISITOR_INTERFACE }, visitor);\r\n    invokeVfsMethod(VIRTUAL_FILE_METHOD_VISIT, resource, visitorProxy);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.VfsPatternUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.VfsPatternUtils#visit(Object,InvocationHandler)",
+    "tailType": "method"
+  }
+]

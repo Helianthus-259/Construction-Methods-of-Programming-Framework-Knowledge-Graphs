@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.CompositeSet#hashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int hashCode() {\r\n    int hashCode = 0;\r\n    for (E obj : this) {\r\n        if (obj != null) {\r\n            hashCode += obj.hashCode();\r\n        }\r\n    }\r\n    return hashCode;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeSet",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeSet#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeSet#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeSet",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "CompositeCollection",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.IOException;\nimport java.io.ObjectInputStream;\nimport java.io.Serializable;\nimport java.util.concurrent.locks.Condition;\nimport java.util.concurrent.locks.Lock;\nimport java.util.concurrent.locks.ReentrantLock;\n\nimport org.apache.commons.logging.Log;\nimport org.apache.commons.logging.LogFactory;\n\n/**\n * Support class for throttling concurrent access to a specific resource.\n *\n * <p>Designed for use as a base class, with the subclass invoking\n * the {@link #beforeAccess()} and {@link #afterAccess()} methods at\n * appropriate points of its workflow. Note that {@code afterAccess}\n * should usually be called in a {@code finally} block!\n *\n * <p>The default concurrency limit of this support class is -1\n * (\"unbounded concurrency\"). Subclasses may override this default;\n * check the javadoc of the concrete class that you're using.\n *\n * @author Juergen Hoeller\n * @since 1.2.5\n * @see #setConcurrencyLimit\n * @see #beforeAccess()\n * @see #afterAccess()\n * @see org.springframework.aop.interceptor.ConcurrencyThrottleInterceptor\n * @see java.io.Serializable\n */\n@SuppressWarnings(\"serial\")\npublic abstract class ConcurrencyThrottleSupport implements Serializable {\n\n\t/**\n\t * Permit any number of concurrent invocations: that is, don't throttle concurrency.\n\t */\n\tpublic static final int UNBOUNDED_CONCURRENCY = -1;\n\n\t/**\n\t * Switch concurrency 'off': that is, don't allow any concurrent invocations.\n\t */\n\tpublic static final int NO_CONCURRENCY = 0;\n\n\n\t/** Transient to optimize serialization. */\n\tprotected transient Log logger = LogFactory.getLog(getClass());\n\n\tprivate final Lock concurrencyLock = new ReentrantLock();\n\n\tprivate final Condition concurrencyCondition = this.concurrencyLock.newCondition();\n\n\tprivate int concurrencyLimit = UNBOUNDED_CONCURRENCY;\n\n\tprivate int concurrencyCount = 0;\n\n\n\t/**\n\t * Set the maximum number of concurrent access attempts allowed.\n\t * The default of -1 indicates no concurrency limit at all.\n\t * <p>In principle, this limit can be changed at runtime,\n\t * although it is generally designed as a config time setting.\n\t * <p>NOTE: Do not switch between -1 and any concrete limit at runtime,\n\t * as this will lead to inconsistent concurrency counts: A limit\n\t * of -1 effectively turns off concurrency counting completely.\n\t */\n\tpublic void setConcurrencyLimit(int concurrencyLimit) {\n\t\tthis.concurrencyLimit = concurrencyLimit;\n\t}\n\n\t/**\n\t * Return the maximum number of concurrent access attempts allowed.\n\t */\n\tpublic int getConcurrencyLimit() {\n\t\treturn this.concurrencyLimit;\n\t}\n\n\t/**\n\t * Return whether this throttle is currently active.\n\t * @return {@code true} if the concurrency limit for this instance is active\n\t * @see #getConcurrencyLimit()\n\t */\n\tpublic boolean isThrottleActive() {\n\t\treturn (this.concurrencyLimit >= 0);\n\t}\n\n\n\t/**\n\t * To be invoked before the main execution logic of concrete subclasses.\n\t * <p>This implementation applies the concurrency throttle.\n\t * @see #afterAccess()\n\t */\n\tprotected void beforeAccess() {\n\t\tif (this.concurrencyLimit == NO_CONCURRENCY) {\n\t\t\tthrow new IllegalStateException(\n\t\t\t\t\t\"Currently no invocations allowed - concurrency limit set to NO_CONCURRENCY\");\n\t\t}\n\t\tif (this.concurrencyLimit > 0) {\n\t\t\tboolean debug = logger.isDebugEnabled();\n\t\t\tthis.concurrencyLock.lock();\n\t\t\ttry {\n\t\t\t\tboolean interrupted = false;\n\t\t\t\twhile (this.concurrencyCount >= this.concurrencyLimit) {\n\t\t\t\t\tif (interrupted) {\n\t\t\t\t\t\tthrow new IllegalStateException(\"Thread was interrupted while waiting for invocation access, \" +\n\t\t\t\t\t\t\t\t\"but concurrency limit still does not allow for entering\");\n\t\t\t\t\t}\n\t\t\t\t\tif (debug) {\n\t\t\t\t\t\tlogger.debug(\"Concurrency count \" + this.concurrencyCount +\n\t\t\t\t\t\t\t\t\" has reached limit \" + this.concurrencyLimit + \" - blocking\");\n\t\t\t\t\t}\n\t\t\t\t\ttry {\n\t\t\t\t\t\tthis.concurrencyCondition.await();\n\t\t\t\t\t}\n\t\t\t\t\tcatch (InterruptedException ex) {\n\t\t\t\t\t\t// Re-interrupt current thread, to allow other threads to react.\n\t\t\t\t\t\tThread.currentThread().interrupt();\n\t\t\t\t\t\tinterrupted = true;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (debug) {\n\t\t\t\t\tlogger.debug(\"Entering throttle at concurrency count \" + this.concurrencyCount);\n\t\t\t\t}\n\t\t\t\tthis.concurrencyCount++;\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tthis.concurrencyLock.unlock();\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * To be invoked after the main execution logic of concrete subclasses.\n\t * @see #beforeAccess()\n\t */\n\tprotected void afterAccess() {\n\t\tif (this.concurrencyLimit >= 0) {\n\t\t\tboolean debug = logger.isDebugEnabled();\n\t\t\tthis.concurrencyLock.lock();\n\t\t\ttry {\n\t\t\t\tthis.concurrencyCount--;\n\t\t\t\tif (debug) {\n\t\t\t\t\tlogger.debug(\"Returning from throttle at concurrency count \" + this.concurrencyCount);\n\t\t\t\t}\n\t\t\t\tthis.concurrencyCondition.signal();\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tthis.concurrencyLock.unlock();\n\t\t\t}\n\t\t}\n\t}\n\n\n\t//---------------------------------------------------------------------\n\t// Serialization support\n\t//---------------------------------------------------------------------\n\n\tprivate void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {\n\t\t// Rely on default serialization, just initialize state after deserialization.\n\t\tois.defaultReadObject();\n\n\t\t// Initialize transient fields.\n\t\tthis.logger = LogFactory.getLog(getClass());\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#UNBOUNDED_CONCURRENCY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#UNBOUNDED_CONCURRENCY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#NO_CONCURRENCY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#NO_CONCURRENCY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#logger",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#logger",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Log",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyLock",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyLock",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Lock",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyCondition",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyCondition",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Condition",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyLimit",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyLimit",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  }
+]

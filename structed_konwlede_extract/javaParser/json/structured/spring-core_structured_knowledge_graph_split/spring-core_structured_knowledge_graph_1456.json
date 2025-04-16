@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.StaxSource#setInputSource(InputSource)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Throws an {@code UnsupportedOperationException}.\r\n * @throws UnsupportedOperationException always\r\n */\r\n@Override\r\npublic void setInputSource(InputSource inputSource) {\r\n    throw new UnsupportedOperationException(\"setInputSource is not supported\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxSource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxSource#setInputSource(InputSource)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxSource#setInputSource(InputSource)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxSource#setXMLReader(XMLReader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Throws an {@code UnsupportedOperationException}.\r\n * @throws UnsupportedOperationException always\r\n */\r\n@Override\r\npublic void setXMLReader(XMLReader reader) {\r\n    throw new UnsupportedOperationException(\"setXMLReader is not supported\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxSource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxSource#setXMLReader(XMLReader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxSource#setXMLReader(XMLReader)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxSource",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "SAXSource",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.StaxStreamHandler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2014 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.util.Map;\n\nimport javax.xml.XMLConstants;\nimport javax.xml.namespace.QName;\nimport javax.xml.stream.XMLStreamException;\nimport javax.xml.stream.XMLStreamWriter;\n\nimport org.xml.sax.Attributes;\nimport org.xml.sax.Locator;\nimport org.xml.sax.SAXException;\nimport org.xml.sax.ext.LexicalHandler;\n\n/**\n * SAX {@link org.xml.sax.ContentHandler} and {@link LexicalHandler}\n * that writes to an {@link XMLStreamWriter}.\n *\n * @author Arjen Poutsma\n * @since 4.0.3\n */\nclass StaxStreamHandler extends AbstractStaxHandler {\n\n\tprivate final XMLStreamWriter streamWriter;\n\n\n\tpublic StaxStreamHandler(XMLStreamWriter streamWriter) {\n\t\tthis.streamWriter = streamWriter;\n\t}\n\n\n\t@Override\n\tprotected void startDocumentInternal() throws XMLStreamException {\n\t\tthis.streamWriter.writeStartDocument();\n\t}\n\n\t@Override\n\tprotected void endDocumentInternal() throws XMLStreamException {\n\t\tthis.streamWriter.writeEndDocument();\n\t}\n\n\t@Override\n\tprotected void startElementInternal(QName name, Attributes attributes,\n\t\t\tMap<String, String> namespaceMapping) throws XMLStreamException {\n\n\t\tthis.streamWriter.writeStartElement(name.getPrefix(), name.getLocalPart(), name.getNamespaceURI());\n\n\t\tfor (Map.Entry<String, String> entry : namespaceMapping.entrySet()) {\n\t\t\tString prefix = entry.getKey();\n\t\t\tString namespaceUri = entry.getValue();\n\t\t\tthis.streamWriter.writeNamespace(prefix, namespaceUri);\n\t\t\tif (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\n\t\t\t\tthis.streamWriter.setDefaultNamespace(namespaceUri);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tthis.streamWriter.setPrefix(prefix, namespaceUri);\n\t\t\t}\n\t\t}\n\t\tfor (int i = 0; i < attributes.getLength(); i++) {\n\t\t\tQName attrName = toQName(attributes.getURI(i), attributes.getQName(i));\n\t\t\tif (!isNamespaceDeclaration(attrName)) {\n\t\t\t\tthis.streamWriter.writeAttribute(attrName.getPrefix(), attrName.getNamespaceURI(),\n\t\t\t\t\t\tattrName.getLocalPart(), attributes.getValue(i));\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tprotected void endElementInternal(QName name, Map<String, String> namespaceMapping) throws XMLStreamException {\n\t\tthis.streamWriter.writeEndElement();\n\t}\n\n\t@Override\n\tprotected void charactersInternal(String data) throws XMLStreamException {\n\t\tthis.streamWriter.writeCharacters(data);\n\t}\n\n\t@Override\n\tprotected void cDataInternal(String data) throws XMLStreamException {\n\t\tthis.streamWriter.writeCData(data);\n\t}\n\n\t@Override\n\tprotected void ignorableWhitespaceInternal(String data) throws XMLStreamException {\n\t\tthis.streamWriter.writeCharacters(data);\n\t}\n\n\t@Override\n\tprotected void processingInstructionInternal(String target, String data) throws XMLStreamException {\n\t\tthis.streamWriter.writeProcessingInstruction(target, data);\n\t}\n\n\t@Override\n\tprotected void dtdInternal(String dtd) throws XMLStreamException {\n\t\tthis.streamWriter.writeDTD(dtd);\n\t}\n\n\t@Override\n\tprotected void commentInternal(String comment) throws XMLStreamException {\n\t\tthis.streamWriter.writeComment(comment);\n\t}\n\n\t// Ignored\n\n\t@Override\n\tpublic void setDocumentLocator(Locator locator) {\n\t}\n\n\t@Override\n\tpublic void startEntity(String name) throws SAXException {\n\t}\n\n\t@Override\n\tpublic void endEntity(String name) throws SAXException {\n\t}\n\n\t@Override\n\tprotected void skippedEntityInternal(String name) throws XMLStreamException {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.StaxStreamHandler#streamWriter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler#streamWriter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "XMLStreamWriter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler#startDocumentInternal()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void startDocumentInternal() throws XMLStreamException {\r\n    this.streamWriter.writeStartDocument();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxStreamHandler#startDocumentInternal()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler#startDocumentInternal()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler#endDocumentInternal()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void endDocumentInternal() throws XMLStreamException {\r\n    this.streamWriter.writeEndDocument();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxStreamHandler#endDocumentInternal()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler#endDocumentInternal()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler#startElementInternal(QName,Attributes,Map<String,String>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void startElementInternal(QName name, Attributes attributes, Map<String, String> namespaceMapping) throws XMLStreamException {\r\n    this.streamWriter.writeStartElement(name.getPrefix(), name.getLocalPart(), name.getNamespaceURI());\r\n    for (Map.Entry<String, String> entry : namespaceMapping.entrySet()) {\r\n        String prefix = entry.getKey();\r\n        String namespaceUri = entry.getValue();\r\n        this.streamWriter.writeNamespace(prefix, namespaceUri);\r\n        if (XMLConstants.DEFAULT_NS_PREFIX.equals(prefix)) {\r\n            this.streamWriter.setDefaultNamespace(namespaceUri);\r\n        } else {\r\n            this.streamWriter.setPrefix(prefix, namespaceUri);\r\n        }\r\n    }\r\n    for (int i = 0; i < attributes.getLength(); i++) {\r\n        QName attrName = toQName(attributes.getURI(i), attributes.getQName(i));\r\n        if (!isNamespaceDeclaration(attrName)) {\r\n            this.streamWriter.writeAttribute(attrName.getPrefix(), attrName.getNamespaceURI(), attrName.getLocalPart(), attributes.getValue(i));\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxStreamHandler#startElementInternal(QName,Attributes,Map<String,String>)",
+    "tailType": "method"
+  }
+]

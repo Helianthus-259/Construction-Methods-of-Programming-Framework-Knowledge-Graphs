@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.DefaultValueStyler#styleObject(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#getCollectionTypeString(Collection<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static String getCollectionTypeString(Collection<?> collection) {\r\n    if (collection instanceof List) {\r\n        return LIST;\r\n    } else if (collection instanceof Set) {\r\n        return SET;\r\n    } else {\r\n        return COLLECTION;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.DefaultValueStyler#getCollectionTypeString(Collection<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.style",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.style",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.style",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.style.SimpleValueStyler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.style;\n\nimport java.lang.reflect.Method;\nimport java.util.Arrays;\nimport java.util.Collection;\nimport java.util.Map;\nimport java.util.StringJoiner;\nimport java.util.function.Function;\nimport java.util.stream.Collectors;\n\n/**\n * {@link ValueStyler} that converts objects to String form &mdash; generally for\n * debugging purposes &mdash; using simple styling conventions that mimic the\n * {@code toString()} styling conventions for standard JDK implementations of\n * collections, maps, and arrays.\n *\n * <p>Uses the reflective visitor pattern underneath the hood to nicely\n * encapsulate styling algorithms for each type of styled object.\n *\n * <p>Favor {@link SimpleValueStyler} over {@link DefaultValueStyler} when you\n * wish to use styling similar to the JDK or when you need configurable control\n * over the styling of classes and methods.\n *\n * @author Sam Brannen\n * @since 6.0\n */\npublic class SimpleValueStyler extends DefaultValueStyler {\n\n\t/**\n\t * Default {@link Class} styling function: {@link Class#getCanonicalName()}.\n\t */\n\tpublic static final Function<Class<?>, String> DEFAULT_CLASS_STYLER = Class::getCanonicalName;\n\n\t/**\n\t * Default {@link Method} styling function: converts the supplied {@link Method}\n\t * to a simple string representation of the method's signature in the form of\n\t * {@code <method name>(<parameter types>)}, where {@code <parameter types>}\n\t * is a comma-separated list of the {@linkplain Class#getSimpleName() simple names}\n\t * of the parameter types.\n\t * <p>For example, if the supplied method is a reference to\n\t * {@link String#getBytes(java.nio.charset.Charset)}, this function will\n\t * return {@code \"getBytes(Charset)\"}.\n\t */\n\tpublic static final Function<Method, String> DEFAULT_METHOD_STYLER = SimpleValueStyler::toSimpleMethodSignature;\n\n\n\tprivate final Function<Class<?>, String> classStyler;\n\n\tprivate final Function<Method, String> methodStyler;\n\n\n\t/**\n\t * Create a {@code SimpleValueStyler} using the {@link #DEFAULT_CLASS_STYLER}\n\t * and {@link #DEFAULT_METHOD_STYLER}.\n\t */\n\tpublic SimpleValueStyler() {\n\t\tthis(DEFAULT_CLASS_STYLER, DEFAULT_METHOD_STYLER);\n\t}\n\n\t/**\n\t * Create a {@code SimpleValueStyler} using the supplied class and method stylers.\n\t * @param classStyler a function that applies styling to a {@link Class}\n\t * @param methodStyler a function that applies styling to a {@link Method}\n\t */\n\tpublic SimpleValueStyler(Function<Class<?>, String> classStyler, Function<Method, String> methodStyler) {\n\t\tthis.classStyler = classStyler;\n\t\tthis.methodStyler = methodStyler;\n\t}\n\n\n\t@Override\n\tprotected String styleNull() {\n\t\treturn \"null\";\n\t}\n\n\t@Override\n\tprotected String styleString(String str) {\n\t\treturn \"\\\"\" + str + \"\\\"\";\n\t}\n\n\t@Override\n\tprotected String styleClass(Class<?> clazz) {\n\t\treturn this.classStyler.apply(clazz);\n\t}\n\n\t@Override\n\tprotected String styleMethod(Method method) {\n\t\treturn this.methodStyler.apply(method);\n\t}\n\n\t@Override\n\tprotected <K, V> String styleMap(Map<K, V> map) {\n\t\tStringJoiner result = new StringJoiner(\", \", \"{\", \"}\");\n\t\tfor (Map.Entry<K, V> entry : map.entrySet()) {\n\t\t\tresult.add(style(entry));\n\t\t}\n\t\treturn result.toString();\n\t}\n\n\t@Override\n\tprotected String styleCollection(Collection<?> collection) {\n\t\tStringJoiner result = new StringJoiner(\", \", \"[\", \"]\");\n\t\tfor (Object element : collection) {\n\t\t\tresult.add(style(element));\n\t\t}\n\t\treturn result.toString();\n\t}\n\n\t@Override\n\tprotected String styleArray(Object[] array) {\n\t\tStringJoiner result = new StringJoiner(\", \", \"[\", \"]\");\n\t\tfor (Object element : array) {\n\t\t\tresult.add(style(element));\n\t\t}\n\t\treturn result.toString();\n\t}\n\n\tprivate static String toSimpleMethodSignature(Method method) {\n\t\tString parameterList = Arrays.stream(method.getParameterTypes())\n\t\t\t\t.map(Class::getSimpleName)\n\t\t\t\t.collect(Collectors.joining(\", \"));\n\t\treturn String.format(\"%s(%s)\", method.getName(), parameterList);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.SimpleValueStyler#DEFAULT_CLASS_STYLER",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#DEFAULT_CLASS_STYLER",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<Class<?>, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.SimpleValueStyler#DEFAULT_METHOD_STYLER",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#DEFAULT_METHOD_STYLER",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<Method, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.SimpleValueStyler#classStyler",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#classStyler",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<Class<?>, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.SimpleValueStyler#methodStyler",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#methodStyler",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<Method, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#styleNull()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected String styleNull() {\r\n    return \"null\";\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.SimpleValueStyler#styleNull()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#styleNull()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler#styleString(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected String styleString(String str) {\r\n    return \"\\\"\" + str + \"\\\"\";\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.style.SimpleValueStyler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.SimpleValueStyler#styleString(String)",
+    "tailType": "method"
+  }
+]

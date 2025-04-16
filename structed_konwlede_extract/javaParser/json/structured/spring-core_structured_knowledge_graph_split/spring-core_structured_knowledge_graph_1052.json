@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io;\n\nimport java.io.File;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.InputStreamReader;\nimport java.net.URI;\nimport java.net.URL;\nimport java.nio.channels.Channels;\nimport java.nio.channels.ReadableByteChannel;\nimport java.nio.charset.Charset;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.FileCopyUtils;\n\n/**\n * Interface for a resource descriptor that abstracts from the actual\n * type of underlying resource, such as a file or class path resource.\n *\n * <p>An InputStream can be opened for every resource if it exists in\n * physical form, but a URL or File handle can just be returned for\n * certain resources. The actual behavior is implementation-specific.\n *\n * @author Juergen Hoeller\n * @author Arjen Poutsma\n * @since 28.12.2003\n * @see #getInputStream()\n * @see #getURL()\n * @see #getURI()\n * @see #getFile()\n * @see WritableResource\n * @see ContextResource\n * @see UrlResource\n * @see FileUrlResource\n * @see FileSystemResource\n * @see ClassPathResource\n * @see ByteArrayResource\n * @see InputStreamResource\n */\npublic interface Resource extends InputStreamSource {\n\n\t/**\n\t * Determine whether this resource actually exists in physical form.\n\t * <p>This method performs a definitive existence check, whereas the\n\t * existence of a {@code Resource} handle only guarantees a valid\n\t * descriptor handle.\n\t */\n\tboolean exists();\n\n\t/**\n\t * Indicate whether non-empty contents of this resource can be read via\n\t * {@link #getInputStream()}.\n\t * <p>Will be {@code true} for typical resource descriptors that exist\n\t * since it strictly implies {@link #exists()} semantics as of 5.1.\n\t * Note that actual content reading may still fail when attempted.\n\t * However, a value of {@code false} is a definitive indication\n\t * that the resource content cannot be read.\n\t * @see #getInputStream()\n\t * @see #exists()\n\t */\n\tdefault boolean isReadable() {\n\t\treturn exists();\n\t}\n\n\t/**\n\t * Indicate whether this resource represents a handle with an open stream.\n\t * If {@code true}, the InputStream cannot be read multiple times,\n\t * and must be read and closed to avoid resource leaks.\n\t * <p>Will be {@code false} for typical resource descriptors.\n\t */\n\tdefault boolean isOpen() {\n\t\treturn false;\n\t}\n\n\t/**\n\t * Determine whether this resource represents a file in a file system.\n\t * <p>A value of {@code true} strongly suggests (but does not guarantee)\n\t * that a {@link #getFile()} call will succeed.\n\t * <p>This is conservatively {@code false} by default.\n\t * @since 5.0\n\t * @see #getFile()\n\t */\n\tdefault boolean isFile() {\n\t\treturn false;\n\t}\n\n\t/**\n\t * Return a URL handle for this resource.\n\t * @throws IOException if the resource cannot be resolved as URL,\n\t * i.e. if the resource is not available as a descriptor\n\t */\n\tURL getURL() throws IOException;\n\n\t/**\n\t * Return a URI handle for this resource.\n\t * @throws IOException if the resource cannot be resolved as URI,\n\t * i.e. if the resource is not available as a descriptor\n\t * @since 2.5\n\t */\n\tURI getURI() throws IOException;\n\n\t/**\n\t * Return a File handle for this resource.\n\t * @throws java.io.FileNotFoundException if the resource cannot be resolved as\n\t * absolute file path, i.e. if the resource is not available in a file system\n\t * @throws IOException in case of general resolution/reading failures\n\t * @see #getInputStream()\n\t */\n\tFile getFile() throws IOException;\n\n\t/**\n\t * Return a {@link ReadableByteChannel}.\n\t * <p>It is expected that each call creates a <i>fresh</i> channel.\n\t * <p>The default implementation returns {@link Channels#newChannel(InputStream)}\n\t * with the result of {@link #getInputStream()}.\n\t * @return the byte channel for the underlying resource (must not be {@code null})\n\t * @throws java.io.FileNotFoundException if the underlying resource doesn't exist\n\t * @throws IOException if the content channel could not be opened\n\t * @since 5.0\n\t * @see #getInputStream()\n\t */\n\tdefault ReadableByteChannel readableChannel() throws IOException {\n\t\treturn Channels.newChannel(getInputStream());\n\t}\n\n\t/**\n\t * Return the contents of this resource as a byte array.\n\t * @return the contents of this resource as byte array\n\t * @throws java.io.FileNotFoundException if the resource cannot be resolved as\n\t * absolute file path, i.e. if the resource is not available in a file system\n\t * @throws IOException in case of general resolution/reading failures\n\t * @since 6.0.5\n\t */\n\tdefault byte[] getContentAsByteArray() throws IOException {\n\t\treturn FileCopyUtils.copyToByteArray(getInputStream());\n\t}\n\n\t/**\n\t * Return the contents of this resource as a string, using the specified charset.\n\t * @param charset the charset to use for decoding\n\t * @return the contents of this resource as a {@code String}\n\t * @throws java.io.FileNotFoundException if the resource cannot be resolved as\n\t * absolute file path, i.e. if the resource is not available in a file system\n\t * @throws IOException in case of general resolution/reading failures\n\t * @since 6.0.5\n\t */\n\tdefault String getContentAsString(Charset charset) throws IOException {\n\t\treturn FileCopyUtils.copyToString(new InputStreamReader(getInputStream(), charset));\n\t}\n\n\t/**\n\t * Determine the content length for this resource.\n\t * @throws IOException if the resource cannot be resolved\n\t * (in the file system or as some other known physical resource type)\n\t */\n\tlong contentLength() throws IOException;\n\n\t/**\n\t * Determine the last-modified timestamp for this resource.\n\t * @throws IOException if the resource cannot be resolved\n\t * (in the file system or as some other known physical resource type)\n\t */\n\tlong lastModified() throws IOException;\n\n\t/**\n\t * Create a resource relative to this resource.\n\t * @param relativePath the relative path (relative to this resource)\n\t * @return the resource handle for the relative resource\n\t * @throws IOException if the relative resource cannot be determined\n\t */\n\tResource createRelative(String relativePath) throws IOException;\n\n\t/**\n\t * Determine the filename for this resource &mdash; typically the last\n\t * part of the path &mdash; for example, {@code \"myfile.txt\"}.\n\t * <p>Returns {@code null} if this type of resource does not\n\t * have a filename.\n\t * <p>Implementations are encouraged to return the filename unencoded.\n\t */\n\t@Nullable String getFilename();\n\n\t/**\n\t * Return a description for this resource,\n\t * to be used for error output when working with the resource.\n\t * <p>Implementations are also encouraged to return this value\n\t * from their {@code toString} method.\n\t * @see Object#toString()\n\t */\n\tString getDescription();\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#exists()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether this resource actually exists in physical form.\r\n * <p>This method performs a definitive existence check, whereas the\r\n * existence of a {@code Resource} handle only guarantees a valid\r\n * descriptor handle.\r\n */\r\nboolean exists();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#exists()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#isReadable()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Indicate whether non-empty contents of this resource can be read via\r\n * {@link #getInputStream()}.\r\n * <p>Will be {@code true} for typical resource descriptors that exist\r\n * since it strictly implies {@link #exists()} semantics as of 5.1.\r\n * Note that actual content reading may still fail when attempted.\r\n * However, a value of {@code false} is a definitive indication\r\n * that the resource content cannot be read.\r\n * @see #getInputStream()\r\n * @see #exists()\r\n */\r\ndefault boolean isReadable() {\r\n    return exists();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#isReadable()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#isOpen()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Indicate whether this resource represents a handle with an open stream.\r\n * If {@code true}, the InputStream cannot be read multiple times,\r\n * and must be read and closed to avoid resource leaks.\r\n * <p>Will be {@code false} for typical resource descriptors.\r\n */\r\ndefault boolean isOpen() {\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#isOpen()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#isFile()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether this resource represents a file in a file system.\r\n * <p>A value of {@code true} strongly suggests (but does not guarantee)\r\n * that a {@link #getFile()} call will succeed.\r\n * <p>This is conservatively {@code false} by default.\r\n * @since 5.0\r\n * @see #getFile()\r\n */\r\ndefault boolean isFile() {\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#isFile()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#getURL()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a URL handle for this resource.\r\n * @throws IOException if the resource cannot be resolved as URL,\r\n * i.e. if the resource is not available as a descriptor\r\n */\r\nURL getURL() throws IOException;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#getURL()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#getURI()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a URI handle for this resource.\r\n * @throws IOException if the resource cannot be resolved as URI,\r\n * i.e. if the resource is not available as a descriptor\r\n * @since 2.5\r\n */\r\nURI getURI() throws IOException;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#getURI()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#getFile()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a File handle for this resource.\r\n * @throws java.io.FileNotFoundException if the resource cannot be resolved as\r\n * absolute file path, i.e. if the resource is not available in a file system\r\n * @throws IOException in case of general resolution/reading failures\r\n * @see #getInputStream()\r\n */\r\nFile getFile() throws IOException;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#getFile()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#readableChannel()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a {@link ReadableByteChannel}.\r\n * <p>It is expected that each call creates a <i>fresh</i> channel.\r\n * <p>The default implementation returns {@link Channels#newChannel(InputStream)}\r\n * with the result of {@link #getInputStream()}.\r\n * @return the byte channel for the underlying resource (must not be {@code null})\r\n * @throws java.io.FileNotFoundException if the underlying resource doesn't exist\r\n * @throws IOException if the content channel could not be opened\r\n * @since 5.0\r\n * @see #getInputStream()\r\n */\r\ndefault ReadableByteChannel readableChannel() throws IOException {\r\n    return Channels.newChannel(getInputStream());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#readableChannel()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#getContentAsByteArray()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the contents of this resource as a byte array.\r\n * @return the contents of this resource as byte array\r\n * @throws java.io.FileNotFoundException if the resource cannot be resolved as\r\n * absolute file path, i.e. if the resource is not available in a file system\r\n * @throws IOException in case of general resolution/reading failures\r\n * @since 6.0.5\r\n */\r\ndefault byte[] getContentAsByteArray() throws IOException {\r\n    return FileCopyUtils.copyToByteArray(getInputStream());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.Resource",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.Resource#getContentAsByteArray()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.Resource#getContentAsString(Charset)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the contents of this resource as a string, using the specified charset.\r\n * @param charset the charset to use for decoding\r\n * @return the contents of this resource as a {@code String}\r\n * @throws java.io.FileNotFoundException if the resource cannot be resolved as\r\n * absolute file path, i.e. if the resource is not available in a file system\r\n * @throws IOException in case of general resolution/reading failures\r\n * @since 6.0.5\r\n */\r\ndefault String getContentAsString(Charset charset) throws IOException {\r\n    return FileCopyUtils.copyToString(new InputStreamReader(getInputStream(), charset));\r\n}",
+    "tailType": "method_code"
+  }
+]

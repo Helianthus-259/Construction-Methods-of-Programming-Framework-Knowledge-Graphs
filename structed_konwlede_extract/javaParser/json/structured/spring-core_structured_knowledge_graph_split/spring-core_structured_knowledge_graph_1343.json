@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.Serializable;\nimport java.util.AbstractCollection;\nimport java.util.AbstractMap;\nimport java.util.AbstractSet;\nimport java.util.Collection;\nimport java.util.Collections;\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.function.BiConsumer;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Adapts a given {@link MultiValueMap} to the {@link Map} contract. The\n * difference with {@link SingleToMultiValueMapAdapter} and\n * {@link MultiValueMapAdapter} is that this class adapts in the opposite\n * direction.\n *\n * @author Arjen Poutsma\n * @since 6.2\n * @param <K> the key type\n * @param <V> the value element type\n */\n@SuppressWarnings(\"serial\")\nfinal class MultiToSingleValueMapAdapter<K, V> implements Map<K, V>, Serializable {\n\n\tprivate final MultiValueMap<K, V> targetMap;\n\n\tprivate transient @Nullable Collection<V> values;\n\n\tprivate transient @Nullable Set<Entry<K, V>> entries;\n\n\n\t/**\n\t * Wrap the given target {@link MultiValueMap} as a {@link Map} adapter.\n\t * @param targetMap the target {@code MultiValue}\n\t */\n\tpublic MultiToSingleValueMapAdapter(MultiValueMap<K, V> targetMap) {\n\t\tAssert.notNull(targetMap, \"'targetMap' must not be null\");\n\t\tthis.targetMap = targetMap;\n\t}\n\n\n\t@Override\n\tpublic int size() {\n\t\treturn this.targetMap.size();\n\t}\n\n\t@Override\n\tpublic boolean isEmpty() {\n\t\treturn this.targetMap.isEmpty();\n\t}\n\n\t@Override\n\tpublic boolean containsKey(Object key) {\n\t\treturn this.targetMap.containsKey(key);\n\t}\n\n\t@Override\n\tpublic boolean containsValue(@Nullable Object value) {\n\t\tIterator<Entry<K, V>> i = entrySet().iterator();\n\t\tif (value == null) {\n\t\t\twhile (i.hasNext()) {\n\t\t\t\tEntry<K, V> e = i.next();\n\t\t\t\tif (e.getValue() == null) {\n\t\t\t\t\treturn true;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\telse {\n\t\t\twhile (i.hasNext()) {\n\t\t\t\tEntry<K, V> e = i.next();\n\t\t\t\tif (value.equals(e.getValue())) {\n\t\t\t\t\treturn true;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn false;\n\t}\n\n\t@Override\n\tpublic @Nullable V get(Object key) {\n\t\treturn adaptValue(this.targetMap.get(key));\n\t}\n\n\t@Override\n\tpublic @Nullable V put(K key, @Nullable V value) {\n\t\treturn adaptValue(this.targetMap.put(key, adaptValue(value)));\n\t}\n\n\t@Override\n\tpublic @Nullable V remove(Object key) {\n\t\treturn adaptValue(this.targetMap.remove(key));\n\t}\n\n\t@Override\n\tpublic void putAll(Map<? extends K, ? extends V> map) {\n\t\tfor (Entry<? extends K, ? extends V> entry : map.entrySet()) {\n\t\t\tput(entry.getKey(), entry.getValue());\n\t\t}\n\t}\n\n\t@Override\n\tpublic void clear() {\n\t\tthis.targetMap.clear();\n\t}\n\n\t@Override\n\tpublic Set<K> keySet() {\n\t\treturn this.targetMap.keySet();\n\t}\n\n\t@Override\n\tpublic Collection<V> values() {\n\t\tCollection<V> values = this.values;\n\t\tif (values == null) {\n\t\t\tCollection<List<V>> targetValues = this.targetMap.values();\n\t\t\tvalues = new AbstractCollection<>() {\n\t\t\t\t@Override\n\t\t\t\tpublic Iterator<V> iterator() {\n\t\t\t\t\tIterator<List<V>> targetIterator = targetValues.iterator();\n\t\t\t\t\treturn new Iterator<>() {\n\t\t\t\t\t\t@Override\n\t\t\t\t\t\tpublic boolean hasNext() {\n\t\t\t\t\t\t\treturn targetIterator.hasNext();\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t@Override\n\t\t\t\t\t\tpublic V next() {\n\t\t\t\t\t\t\treturn targetIterator.next().get(0);\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\n\t\t\t\t@Override\n\t\t\t\tpublic int size() {\n\t\t\t\t\treturn targetValues.size();\n\t\t\t\t}\n\t\t\t};\n\t\t\tthis.values = values;\n\t\t}\n\t\treturn values;\n\t}\n\n\t@Override\n\tpublic Set<Entry<K, V>> entrySet() {\n\t\tSet<Entry<K, V>> entries = this.entries;\n\t\tif (entries == null) {\n\t\t\tSet<Entry<K, List<V>>> targetEntries = this.targetMap.entrySet();\n\t\t\tentries = new AbstractSet<>() {\n\t\t\t\t@Override\n\t\t\t\tpublic Iterator<Entry<K, V>> iterator() {\n\t\t\t\t\tIterator<Entry<K, List<V>>> targetIterator = targetEntries.iterator();\n\t\t\t\t\treturn new Iterator<>() {\n\t\t\t\t\t\t@Override\n\t\t\t\t\t\tpublic boolean hasNext() {\n\t\t\t\t\t\t\treturn targetIterator.hasNext();\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t@Override\n\t\t\t\t\t\tpublic Entry<K, V> next() {\n\t\t\t\t\t\t\tEntry<K, List<V>> entry = targetIterator.next();\n\t\t\t\t\t\t\treturn new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), entry.getValue().get(0));\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\n\t\t\t\t@Override\n\t\t\t\tpublic int size() {\n\t\t\t\t\treturn targetEntries.size();\n\t\t\t\t}\n\t\t\t};\n\t\t\tthis.entries = entries;\n\t\t}\n\t\treturn entries;\n\t}\n\n\t@Override\n\tpublic void forEach(BiConsumer<? super K, ? super V> action) {\n\t\tthis.targetMap.forEach((k, vs) -> action.accept(k, vs.get(0)));\n\t}\n\n\tprivate @Nullable V adaptValue(@Nullable List<V> values) {\n\t\tif (!CollectionUtils.isEmpty(values)) {\n\t\t\treturn values.get(0);\n\t\t}\n\t\telse {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\tprivate @Nullable List<V> adaptValue(@Nullable V value) {\n\t\tif (value != null) {\n\t\t\treturn Collections.singletonList(value);\n\t\t}\n\t\telse {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\tif (this == other) {\n\t\t\treturn true;\n\t\t}\n\t\tif (other instanceof Map<?,?> otherMap && size() == otherMap.size()) {\n\t\t\ttry {\n\t\t\t\tfor (Entry<K, V> e : entrySet()) {\n\t\t\t\t\tK key = e.getKey();\n\t\t\t\t\tV value = e.getValue();\n\t\t\t\t\tif (value == null) {\n\t\t\t\t\t\tif (otherMap.get(key) != null || !otherMap.containsKey(key)) {\n\t\t\t\t\t\t\treturn false;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\tif (!value.equals(otherMap.get(key))) {\n\t\t\t\t\t\t\treturn false;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\treturn true;\n\t\t\t}\n\t\t\tcatch (ClassCastException | NullPointerException ignored) {\n\t\t\t\t// fall through\n\t\t\t}\n\t\t}\n\t\treturn false;\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn this.targetMap.hashCode();\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\treturn this.targetMap.toString();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#targetMap",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#targetMap",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MultiValueMap<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#values",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#values",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Collection<V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#entries",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#entries",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Set<Entry<K, V>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#size()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int size() {\r\n    return this.targetMap.size();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#size()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#size()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#isEmpty()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isEmpty() {\r\n    return this.targetMap.isEmpty();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#isEmpty()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#isEmpty()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#containsKey(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean containsKey(Object key) {\r\n    return this.targetMap.containsKey(key);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#containsKey(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#containsKey(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#containsValue(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean containsValue(@Nullable Object value) {\r\n    Iterator<Entry<K, V>> i = entrySet().iterator();\r\n    if (value == null) {\r\n        while (i.hasNext()) {\r\n            Entry<K, V> e = i.next();\r\n            if (e.getValue() == null) {\r\n                return true;\r\n            }\r\n        }\r\n    } else {\r\n        while (i.hasNext()) {\r\n            Entry<K, V> e = i.next();\r\n            if (value.equals(e.getValue())) {\r\n                return true;\r\n            }\r\n        }\r\n    }\r\n    return false;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#containsValue(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#containsValue(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

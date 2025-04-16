@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.serializer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.serializer.Serializer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.serializer.Serializer",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@FunctionalInterface",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.serializer.Serializer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2020 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.serializer;\n\nimport java.io.ByteArrayOutputStream;\nimport java.io.IOException;\nimport java.io.OutputStream;\n\n/**\n * A strategy interface for streaming an object to an OutputStream.\n *\n * @author Gary Russell\n * @author Mark Fisher\n * @author Juergen Hoeller\n * @since 3.0.5\n * @param <T> the object type\n * @see Deserializer\n */\n@FunctionalInterface\npublic interface Serializer<T> {\n\n\t/**\n\t * Write an object of type T to the given OutputStream.\n\t * <p>Note: Implementations should not close the given OutputStream\n\t * (or any decorators of that OutputStream) but rather leave this up\n\t * to the caller.\n\t * @param object the object to serialize\n\t * @param outputStream the output stream\n\t * @throws IOException in case of errors writing to the stream\n\t */\n\tvoid serialize(T object, OutputStream outputStream) throws IOException;\n\n\t/**\n\t * Turn an object of type T into a serialized byte array.\n\t * @param object the object to serialize\n\t * @return the resulting byte array\n\t * @throws IOException in case of serialization failure\n\t * @since 5.2.7\n\t */\n\tdefault byte[] serializeToByteArray(T object) throws IOException {\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream(1024);\n\t\tserialize(object, out);\n\t\treturn out.toByteArray();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.Serializer#serialize(T,OutputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write an object of type T to the given OutputStream.\r\n * <p>Note: Implementations should not close the given OutputStream\r\n * (or any decorators of that OutputStream) but rather leave this up\r\n * to the caller.\r\n * @param object the object to serialize\r\n * @param outputStream the output stream\r\n * @throws IOException in case of errors writing to the stream\r\n */\r\nvoid serialize(T object, OutputStream outputStream) throws IOException;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.Serializer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.Serializer#serialize(T,OutputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.Serializer#serializeToByteArray(T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Turn an object of type T into a serialized byte array.\r\n * @param object the object to serialize\r\n * @return the resulting byte array\r\n * @throws IOException in case of serialization failure\r\n * @since 5.2.7\r\n */\r\ndefault byte[] serializeToByteArray(T object) throws IOException {\r\n    ByteArrayOutputStream out = new ByteArrayOutputStream(1024);\r\n    serialize(object, out);\r\n    return out.toByteArray();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.Serializer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.Serializer#serializeToByteArray(T)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.serializer.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.serializer.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.serializer.support.DeserializingConverter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.DeserializingConverter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.serializer.support;\n\nimport java.io.ByteArrayInputStream;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.convert.converter.Converter;\nimport org.springframework.core.serializer.DefaultDeserializer;\nimport org.springframework.core.serializer.Deserializer;\nimport org.springframework.util.Assert;\n\n/**\n * A {@link Converter} that delegates to a\n * {@link org.springframework.core.serializer.Deserializer}\n * to convert data in a byte array to an object.\n *\n * @author Gary Russell\n * @author Mark Fisher\n * @author Juergen Hoeller\n * @since 3.0.5\n */\npublic class DeserializingConverter implements Converter<byte[], Object> {\n\n\tprivate final Deserializer<Object> deserializer;\n\n\n\t/**\n\t * Create a {@code DeserializingConverter} with default {@link java.io.ObjectInputStream}\n\t * configuration, using the \"latest user-defined ClassLoader\".\n\t * @see DefaultDeserializer#DefaultDeserializer()\n\t */\n\tpublic DeserializingConverter() {\n\t\tthis.deserializer = new DefaultDeserializer();\n\t}\n\n\t/**\n\t * Create a {@code DeserializingConverter} for using an {@link java.io.ObjectInputStream}\n\t * with the given {@code ClassLoader}.\n\t * @param classLoader the ClassLoader to use\n\t * @since 4.2.1\n\t * @see DefaultDeserializer#DefaultDeserializer(ClassLoader)\n\t */\n\tpublic DeserializingConverter(@Nullable ClassLoader classLoader) {\n\t\tthis.deserializer = new DefaultDeserializer(classLoader);\n\t}\n\n\t/**\n\t * Create a {@code DeserializingConverter} that delegates to the provided {@link Deserializer}.\n\t */\n\tpublic DeserializingConverter(Deserializer<Object> deserializer) {\n\t\tAssert.notNull(deserializer, \"Deserializer must not be null\");\n\t\tthis.deserializer = deserializer;\n\t}\n\n\n\t@Override\n\tpublic Object convert(byte[] source) {\n\t\tByteArrayInputStream byteStream = new ByteArrayInputStream(source);\n\t\ttry {\n\t\t\treturn this.deserializer.deserialize(byteStream);\n\t\t}\n\t\tcatch (Throwable ex) {\n\t\t\tthrow new SerializationFailedException(\"Failed to deserialize payload. \" +\n\t\t\t\t\t\"Is the byte array a result of corresponding serialization for \" +\n\t\t\t\t\tthis.deserializer.getClass().getSimpleName() + \"?\", ex);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.DeserializingConverter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.serializer.support.DeserializingConverter#deserializer",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.DeserializingConverter#deserializer",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Deserializer<Object>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.DeserializingConverter#convert(byte[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Object convert(byte[] source) {\r\n    ByteArrayInputStream byteStream = new ByteArrayInputStream(source);\r\n    try {\r\n        return this.deserializer.deserialize(byteStream);\r\n    } catch (Throwable ex) {\r\n        throw new SerializationFailedException(\"Failed to deserialize payload. \" + \"Is the byte array a result of corresponding serialization for \" + this.deserializer.getClass().getSimpleName() + \"?\", ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.DeserializingConverter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.serializer.support.DeserializingConverter#convert(byte[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.DeserializingConverter#convert(byte[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.serializer.support",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.serializer.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.serializer.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.serializer.support.SerializationDelegate",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.SerializationDelegate",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2015 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.serializer.support;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.OutputStream;\n\nimport org.springframework.core.serializer.DefaultDeserializer;\nimport org.springframework.core.serializer.DefaultSerializer;\nimport org.springframework.core.serializer.Deserializer;\nimport org.springframework.core.serializer.Serializer;\nimport org.springframework.util.Assert;\n\n/**\n * A convenient delegate with pre-arranged configuration state for common\n * serialization needs. Implements {@link Serializer} and {@link Deserializer}\n * itself, so can also be passed into such more specific callback methods.\n *\n * @author Juergen Hoeller\n * @since 4.3\n */\npublic class SerializationDelegate implements Serializer<Object>, Deserializer<Object> {\n\n\tprivate final Serializer<Object> serializer;\n\n\tprivate final Deserializer<Object> deserializer;\n\n\n\t/**\n\t * Create a {@code SerializationDelegate} with a default serializer/deserializer\n\t * for the given {@code ClassLoader}.\n\t * @see DefaultDeserializer\n\t * @see DefaultDeserializer#DefaultDeserializer(ClassLoader)\n\t */\n\tpublic SerializationDelegate(ClassLoader classLoader) {\n\t\tthis.serializer = new DefaultSerializer();\n\t\tthis.deserializer = new DefaultDeserializer(classLoader);\n\t}\n\n\t/**\n\t * Create a {@code SerializationDelegate} with the given serializer/deserializer.\n\t * @param serializer the {@link Serializer} to use (never {@code null)}\n\t * @param deserializer the {@link Deserializer} to use (never {@code null)}\n\t */\n\tpublic SerializationDelegate(Serializer<Object> serializer, Deserializer<Object> deserializer) {\n\t\tAssert.notNull(serializer, \"Serializer must not be null\");\n\t\tAssert.notNull(deserializer, \"Deserializer must not be null\");\n\t\tthis.serializer = serializer;\n\t\tthis.deserializer = deserializer;\n\t}\n\n\n\t@Override\n\tpublic void serialize(Object object, OutputStream outputStream) throws IOException {\n\t\tthis.serializer.serialize(object, outputStream);\n\t}\n\n\t@Override\n\tpublic Object deserialize(InputStream inputStream) throws IOException {\n\t\treturn this.deserializer.deserialize(inputStream);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.serializer.support.SerializationDelegate",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.serializer.support.SerializationDelegate#serializer",
+    "tailType": "field"
+  }
+]

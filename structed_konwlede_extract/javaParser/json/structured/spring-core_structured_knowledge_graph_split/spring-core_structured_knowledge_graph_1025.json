@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#checkDemandAndAwaitIfNeeded()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void checkDemandAndAwaitIfNeeded() throws IOException {\r\n    long r = this.requested.get();\r\n    if (isTerminated(r) || isCancelled(r)) {\r\n        throw new IOException(\"Subscription has been terminated\");\r\n    }\r\n    long p = this.produced;\r\n    if (p == r) {\r\n        if (p > 0) {\r\n            r = tryProduce(p);\r\n            this.produced = 0;\r\n        }\r\n        while (true) {\r\n            if (isTerminated(r) || isCancelled(r)) {\r\n                throw new IOException(\"Subscription has been terminated\");\r\n            }\r\n            if (r != 0) {\r\n                return;\r\n            }\r\n            await();\r\n            r = this.requested.get();\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#checkDemandAndAwaitIfNeeded()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#invokeHandler()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void invokeHandler() {\r\n    // assume sync write within try-with-resource block\r\n    // use BufferedOutputStream, so that written bytes are buffered\r\n    // before publishing as byte buffer\r\n    try (OutputStream outputStream = new BufferedOutputStream(this, this.chunkSize)) {\r\n        this.outputStreamHandler.handle(outputStream);\r\n    } catch (Exception ex) {\r\n        long previousState = tryTerminate();\r\n        if (isCancelled(previousState)) {\r\n            return;\r\n        }\r\n        if (isTerminated(previousState)) {\r\n            // failure due to illegal requestN\r\n            Throwable error = this.error;\r\n            if (error != null) {\r\n                this.actual.onError(error);\r\n                return;\r\n            }\r\n        }\r\n        this.actual.onError(ex);\r\n        return;\r\n    }\r\n    long previousState = tryTerminate();\r\n    if (isCancelled(previousState)) {\r\n        return;\r\n    }\r\n    if (isTerminated(previousState)) {\r\n        // failure due to illegal requestN\r\n        Throwable error = this.error;\r\n        if (error != null) {\r\n            this.actual.onError(error);\r\n            return;\r\n        }\r\n    }\r\n    this.actual.onComplete();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#invokeHandler()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#request(long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void request(long n) {\r\n    if (n <= 0) {\r\n        this.error = new IllegalArgumentException(\"request should be a positive number\");\r\n        long previousState = tryTerminate();\r\n        if (isTerminated(previousState) || isCancelled(previousState)) {\r\n            return;\r\n        }\r\n        if (previousState > 0) {\r\n            // error should eventually be observed and propagated\r\n            return;\r\n        }\r\n        // resume parked thread, so it can observe error and propagate it\r\n        resume();\r\n        return;\r\n    }\r\n    if (addCap(n) == 0) {\r\n        // resume parked thread so it can continue the work\r\n        resume();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#request(long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#request(long)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#cancel()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void cancel() {\r\n    long previousState = tryCancel();\r\n    if (isCancelled(previousState) || previousState > 0) {\r\n        return;\r\n    }\r\n    // resume parked thread, so it can be unblocked and close all the resources\r\n    resume();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#cancel()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#cancel()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#await()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void await() {\r\n    Thread toUnpark = Thread.currentThread();\r\n    while (true) {\r\n        Object current = this.parkedThread.get();\r\n        if (current == READY) {\r\n            break;\r\n        }\r\n        if (current != null && current != toUnpark) {\r\n            throw new IllegalStateException(\"Only one (Virtual)Thread can await!\");\r\n        }\r\n        if (this.parkedThread.compareAndSet(null, toUnpark)) {\r\n            LockSupport.park();\r\n            // we don't just break here because park() can wake up spuriously\r\n            // if we got a proper resume, get() == READY and the loop will quit above\r\n        }\r\n    }\r\n    // clear the resume indicator so that the next await call will park without a resume()\r\n    this.parkedThread.lazySet(null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#await()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#resume()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void resume() {\r\n    if (this.parkedThread.get() != READY) {\r\n        Object old = this.parkedThread.getAndSet(READY);\r\n        if (old != READY) {\r\n            LockSupport.unpark((Thread) old);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#resume()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#tryCancel()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private long tryCancel() {\r\n    while (true) {\r\n        long r = this.requested.get();\r\n        if (isCancelled(r)) {\r\n            return r;\r\n        }\r\n        if (this.requested.compareAndSet(r, Long.MIN_VALUE)) {\r\n            return r;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#tryCancel()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#tryTerminate()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private long tryTerminate() {\r\n    while (true) {\r\n        long r = this.requested.get();\r\n        if (isCancelled(r) || isTerminated(r)) {\r\n            return r;\r\n        }\r\n        if (this.requested.compareAndSet(r, Long.MIN_VALUE | Long.MAX_VALUE)) {\r\n            return r;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#tryTerminate()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription#tryProduce(long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private long tryProduce(long n) {\r\n    while (true) {\r\n        long current = this.requested.get();\r\n        if (isTerminated(current) || isCancelled(current)) {\r\n            return current;\r\n        }\r\n        if (current == Long.MAX_VALUE) {\r\n            return Long.MAX_VALUE;\r\n        }\r\n        long update = current - n;\r\n        if (update < 0L) {\r\n            update = 0L;\r\n        }\r\n        if (this.requested.compareAndSet(current, update)) {\r\n            return update;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.OutputStreamSubscription",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.OutputStreamSubscription#tryProduce(long)",
+    "tailType": "method"
+  }
+]

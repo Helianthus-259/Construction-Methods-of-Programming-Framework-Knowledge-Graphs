@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderSupport#mergeProperties()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a merged Properties instance containing both the\r\n * loaded properties and properties set on this FactoryBean.\r\n */\r\nprotected Properties mergeProperties() throws IOException {\r\n    Properties result = new Properties();\r\n    if (this.localOverride) {\r\n        // Load properties from file upfront, to let local properties override.\r\n        loadProperties(result);\r\n    }\r\n    if (this.localProperties != null) {\r\n        for (Properties localProp : this.localProperties) {\r\n            CollectionUtils.mergePropertiesIntoMap(localProp, result);\r\n        }\r\n    }\r\n    if (!this.localOverride) {\r\n        // Load properties from file afterwards, to let those properties override.\r\n        loadProperties(result);\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderSupport#mergeProperties()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderSupport#loadProperties(Properties)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Load properties into the given instance.\r\n * @param props the Properties instance to load into\r\n * @throws IOException in case of I/O errors\r\n * @see #setLocations\r\n */\r\nprotected void loadProperties(Properties props) throws IOException {\r\n    if (this.locations != null) {\r\n        for (Resource location : this.locations) {\r\n            if (logger.isTraceEnabled()) {\r\n                logger.trace(\"Loading properties file from \" + location);\r\n            }\r\n            try {\r\n                PropertiesLoaderUtils.fillProperties(props, new EncodedResource(location, this.fileEncoding), this.propertiesPersister);\r\n            } catch (FileNotFoundException | UnknownHostException | SocketException ex) {\r\n                if (this.ignoreResourceNotFound) {\r\n                    if (logger.isDebugEnabled()) {\r\n                        logger.debug(\"Properties resource not found: \" + ex.getMessage());\r\n                    }\r\n                } else {\r\n                    throw ex;\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderSupport#loadProperties(Properties)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.support;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.Reader;\nimport java.net.URL;\nimport java.net.URLConnection;\nimport java.util.Enumeration;\nimport java.util.Properties;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.io.Resource;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.DefaultPropertiesPersister;\nimport org.springframework.util.PropertiesPersister;\nimport org.springframework.util.ResourceUtils;\n\n/**\n * Convenient utility methods for loading of {@code java.util.Properties},\n * performing standard handling of input streams.\n *\n * <p>For more configurable properties loading, including the option of a\n * customized encoding, consider using the PropertiesLoaderSupport class.\n *\n * @author Juergen Hoeller\n * @author Rob Harrop\n * @author Sebastien Deleuze\n * @since 2.0\n * @see PropertiesLoaderSupport\n */\npublic abstract class PropertiesLoaderUtils {\n\n\tprivate static final String XML_FILE_EXTENSION = \".xml\";\n\n\n\t/**\n\t * Load properties from the given EncodedResource,\n\t * potentially defining a specific encoding for the properties file.\n\t * @see #fillProperties(java.util.Properties, EncodedResource)\n\t */\n\tpublic static Properties loadProperties(EncodedResource resource) throws IOException {\n\t\tProperties props = new Properties();\n\t\tfillProperties(props, resource);\n\t\treturn props;\n\t}\n\n\t/**\n\t * Fill the given properties from the given EncodedResource,\n\t * potentially defining a specific encoding for the properties file.\n\t * @param props the Properties instance to load into\n\t * @param resource the resource to load from\n\t * @throws IOException in case of I/O errors\n\t */\n\tpublic static void fillProperties(Properties props, EncodedResource resource)\n\t\t\tthrows IOException {\n\n\t\tfillProperties(props, resource, DefaultPropertiesPersister.INSTANCE);\n\t}\n\n\t/**\n\t * Actually load properties from the given EncodedResource into the given Properties instance.\n\t * @param props the Properties instance to load into\n\t * @param resource the resource to load from\n\t * @param persister the PropertiesPersister to use\n\t * @throws IOException in case of I/O errors\n\t */\n\tstatic void fillProperties(Properties props, EncodedResource resource, PropertiesPersister persister)\n\t\t\tthrows IOException {\n\n\t\tInputStream stream = null;\n\t\tReader reader = null;\n\t\ttry {\n\t\t\tString filename = resource.getResource().getFilename();\n\t\t\tif (filename != null && filename.endsWith(XML_FILE_EXTENSION)) {\n\t\t\t\tstream = resource.getInputStream();\n\t\t\t\tpersister.loadFromXml(props, stream);\n\t\t\t}\n\t\t\telse if (resource.requiresReader()) {\n\t\t\t\treader = resource.getReader();\n\t\t\t\tpersister.load(props, reader);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tstream = resource.getInputStream();\n\t\t\t\tpersister.load(props, stream);\n\t\t\t}\n\t\t}\n\t\tfinally {\n\t\t\tif (stream != null) {\n\t\t\t\tstream.close();\n\t\t\t}\n\t\t\tif (reader != null) {\n\t\t\t\treader.close();\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * Load properties from the given resource (in ISO-8859-1 encoding).\n\t * @param resource the resource to load from\n\t * @return the populated Properties instance\n\t * @throws IOException if loading failed\n\t * @see #fillProperties(java.util.Properties, Resource)\n\t */\n\tpublic static Properties loadProperties(Resource resource) throws IOException {\n\t\tProperties props = new Properties();\n\t\tfillProperties(props, resource);\n\t\treturn props;\n\t}\n\n\t/**\n\t * Fill the given properties from the given resource (in ISO-8859-1 encoding).\n\t * @param props the Properties instance to fill\n\t * @param resource the resource to load from\n\t * @throws IOException if loading failed\n\t */\n\tpublic static void fillProperties(Properties props, Resource resource) throws IOException {\n\t\ttry (InputStream is = resource.getInputStream()) {\n\t\t\tString filename = resource.getFilename();\n\t\t\tif (filename != null && filename.endsWith(XML_FILE_EXTENSION)) {\n\t\t\t\tprops.loadFromXML(is);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tprops.load(is);\n\t\t\t}\n\t\t}\n\t}\n\n\t/**\n\t * Load all properties from the specified class path resource\n\t * (in ISO-8859-1 encoding), using the default class loader.\n\t * <p>Merges properties if more than one resource of the same name\n\t * found in the class path.\n\t * @param resourceName the name of the class path resource\n\t * @return the populated Properties instance\n\t * @throws IOException if loading failed\n\t */\n\tpublic static Properties loadAllProperties(String resourceName) throws IOException {\n\t\treturn loadAllProperties(resourceName, null);\n\t}\n\n\t/**\n\t * Load all properties from the specified class path resource\n\t * (in ISO-8859-1 encoding), using the given class loader.\n\t * <p>Merges properties if more than one resource of the same name\n\t * found in the class path.\n\t * @param resourceName the name of the class path resource\n\t * @param classLoader the ClassLoader to use for loading\n\t * (or {@code null} to use the default class loader)\n\t * @return the populated Properties instance\n\t * @throws IOException if loading failed\n\t */\n\tpublic static Properties loadAllProperties(String resourceName, @Nullable ClassLoader classLoader) throws IOException {\n\t\tAssert.notNull(resourceName, \"Resource name must not be null\");\n\t\tClassLoader classLoaderToUse = classLoader;\n\t\tif (classLoaderToUse == null) {\n\t\t\tclassLoaderToUse = ClassUtils.getDefaultClassLoader();\n\t\t}\n\t\tEnumeration<URL> urls = (classLoaderToUse != null ? classLoaderToUse.getResources(resourceName) :\n\t\t\t\tClassLoader.getSystemResources(resourceName));\n\t\tProperties props = new Properties();\n\t\twhile (urls.hasMoreElements()) {\n\t\t\tURL url = urls.nextElement();\n\t\t\tURLConnection con = url.openConnection();\n\t\t\tResourceUtils.useCachesIfNecessary(con);\n\t\t\ttry (InputStream is = con.getInputStream()) {\n\t\t\t\tif (resourceName.endsWith(XML_FILE_EXTENSION)) {\n\t\t\t\t\tprops.loadFromXML(is);\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tprops.load(is);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn props;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils#XML_FILE_EXTENSION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#XML_FILE_EXTENSION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#loadProperties(EncodedResource)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Load properties from the given EncodedResource,\r\n * potentially defining a specific encoding for the properties file.\r\n * @see #fillProperties(java.util.Properties, EncodedResource)\r\n */\r\npublic static Properties loadProperties(EncodedResource resource) throws IOException {\r\n    Properties props = new Properties();\r\n    fillProperties(props, resource);\r\n    return props;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils#loadProperties(EncodedResource)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#fillProperties(Properties,EncodedResource)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Fill the given properties from the given EncodedResource,\r\n * potentially defining a specific encoding for the properties file.\r\n * @param props the Properties instance to load into\r\n * @param resource the resource to load from\r\n * @throws IOException in case of I/O errors\r\n */\r\npublic static void fillProperties(Properties props, EncodedResource resource) throws IOException {\r\n    fillProperties(props, resource, DefaultPropertiesPersister.INSTANCE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils#fillProperties(Properties,EncodedResource)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#fillProperties(Properties,EncodedResource,PropertiesPersister)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Actually load properties from the given EncodedResource into the given Properties instance.\r\n * @param props the Properties instance to load into\r\n * @param resource the resource to load from\r\n * @param persister the PropertiesPersister to use\r\n * @throws IOException in case of I/O errors\r\n */\r\nstatic void fillProperties(Properties props, EncodedResource resource, PropertiesPersister persister) throws IOException {\r\n    InputStream stream = null;\r\n    Reader reader = null;\r\n    try {\r\n        String filename = resource.getResource().getFilename();\r\n        if (filename != null && filename.endsWith(XML_FILE_EXTENSION)) {\r\n            stream = resource.getInputStream();\r\n            persister.loadFromXml(props, stream);\r\n        } else if (resource.requiresReader()) {\r\n            reader = resource.getReader();\r\n            persister.load(props, reader);\r\n        } else {\r\n            stream = resource.getInputStream();\r\n            persister.load(props, stream);\r\n        }\r\n    } finally {\r\n        if (stream != null) {\r\n            stream.close();\r\n        }\r\n        if (reader != null) {\r\n            reader.close();\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils#fillProperties(Properties,EncodedResource,PropertiesPersister)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#loadProperties(Resource)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Load properties from the given resource (in ISO-8859-1 encoding).\r\n * @param resource the resource to load from\r\n * @return the populated Properties instance\r\n * @throws IOException if loading failed\r\n * @see #fillProperties(java.util.Properties, Resource)\r\n */\r\npublic static Properties loadProperties(Resource resource) throws IOException {\r\n    Properties props = new Properties();\r\n    fillProperties(props, resource);\r\n    return props;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils#loadProperties(Resource)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#fillProperties(Properties,Resource)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Fill the given properties from the given resource (in ISO-8859-1 encoding).\r\n * @param props the Properties instance to fill\r\n * @param resource the resource to load from\r\n * @throws IOException if loading failed\r\n */\r\npublic static void fillProperties(Properties props, Resource resource) throws IOException {\r\n    try (InputStream is = resource.getInputStream()) {\r\n        String filename = resource.getFilename();\r\n        if (filename != null && filename.endsWith(XML_FILE_EXTENSION)) {\r\n            props.loadFromXML(is);\r\n        } else {\r\n            props.load(is);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.support.PropertiesLoaderUtils#fillProperties(Properties,Resource)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.support.PropertiesLoaderUtils#loadAllProperties(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Load all properties from the specified class path resource\r\n * (in ISO-8859-1 encoding), using the default class loader.\r\n * <p>Merges properties if more than one resource of the same name\r\n * found in the class path.\r\n * @param resourceName the name of the class path resource\r\n * @return the populated Properties instance\r\n * @throws IOException if loading failed\r\n */\r\npublic static Properties loadAllProperties(String resourceName) throws IOException {\r\n    return loadAllProperties(resourceName, null);\r\n}",
+    "tailType": "method_code"
+  }
+]

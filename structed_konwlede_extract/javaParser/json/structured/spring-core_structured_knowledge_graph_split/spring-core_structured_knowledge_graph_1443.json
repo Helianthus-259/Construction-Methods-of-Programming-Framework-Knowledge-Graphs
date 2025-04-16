@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.DomContentHandler#skippedEntity(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void skippedEntity(String name) ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomContentHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomContentHandler#skippedEntity(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomContentHandler#skippedEntity(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.DomUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.Collection;\nimport java.util.List;\n\nimport org.jspecify.annotations.Nullable;\nimport org.w3c.dom.CharacterData;\nimport org.w3c.dom.Comment;\nimport org.w3c.dom.Element;\nimport org.w3c.dom.EntityReference;\nimport org.w3c.dom.Node;\nimport org.w3c.dom.NodeList;\nimport org.xml.sax.ContentHandler;\n\nimport org.springframework.util.Assert;\n\n/**\n * Convenience methods for working with the DOM API,\n * in particular for working with DOM Nodes and DOM Elements.\n *\n * @author Juergen Hoeller\n * @author Rob Harrop\n * @author Costin Leau\n * @author Arjen Poutsma\n * @author Luke Taylor\n * @since 1.2\n * @see org.w3c.dom.Node\n * @see org.w3c.dom.Element\n */\npublic abstract class DomUtils {\n\n\t/**\n\t * Retrieves all child elements of the given DOM element that match any of the given element names.\n\t * Only looks at the direct child level of the given element; do not go into further depth\n\t * (in contrast to the DOM API's {@code getElementsByTagName} method).\n\t * @param ele the DOM element to analyze\n\t * @param childEleNames the child element names to look for\n\t * @return a List of child {@code org.w3c.dom.Element} instances\n\t * @see org.w3c.dom.Element\n\t * @see org.w3c.dom.Element#getElementsByTagName\n\t */\n\tpublic static List<Element> getChildElementsByTagName(Element ele, String... childEleNames) {\n\t\tAssert.notNull(ele, \"Element must not be null\");\n\t\tAssert.notNull(childEleNames, \"Element names collection must not be null\");\n\t\tList<String> childEleNameList = Arrays.asList(childEleNames);\n\t\tNodeList nl = ele.getChildNodes();\n\t\tList<Element> childEles = new ArrayList<>();\n\t\tfor (int i = 0; i < nl.getLength(); i++) {\n\t\t\tNode node = nl.item(i);\n\t\t\tif (node instanceof Element element && nodeNameMatch(node, childEleNameList)) {\n\t\t\t\tchildEles.add(element);\n\t\t\t}\n\t\t}\n\t\treturn childEles;\n\t}\n\n\t/**\n\t * Retrieves all child elements of the given DOM element that match the given element name.\n\t * Only look at the direct child level of the given element; do not go into further depth\n\t * (in contrast to the DOM API's {@code getElementsByTagName} method).\n\t * @param ele the DOM element to analyze\n\t * @param childEleName the child element name to look for\n\t * @return a List of child {@code org.w3c.dom.Element} instances\n\t * @see org.w3c.dom.Element\n\t * @see org.w3c.dom.Element#getElementsByTagName\n\t */\n\tpublic static List<Element> getChildElementsByTagName(Element ele, String childEleName) {\n\t\treturn getChildElementsByTagName(ele, new String[] {childEleName});\n\t}\n\n\t/**\n\t * Utility method that returns the first child element identified by its name.\n\t * @param ele the DOM element to analyze\n\t * @param childEleName the child element name to look for\n\t * @return the {@code org.w3c.dom.Element} instance, or {@code null} if none found\n\t */\n\tpublic static @Nullable Element getChildElementByTagName(Element ele, String childEleName) {\n\t\tAssert.notNull(ele, \"Element must not be null\");\n\t\tAssert.notNull(childEleName, \"Element name must not be null\");\n\t\tNodeList nl = ele.getChildNodes();\n\t\tfor (int i = 0; i < nl.getLength(); i++) {\n\t\t\tNode node = nl.item(i);\n\t\t\tif (node instanceof Element element && nodeNameMatch(node, childEleName)) {\n\t\t\t\treturn element;\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\t/**\n\t * Utility method that returns the first child element value identified by its name.\n\t * @param ele the DOM element to analyze\n\t * @param childEleName the child element name to look for\n\t * @return the extracted text value, or {@code null} if no child element found\n\t */\n\tpublic static @Nullable String getChildElementValueByTagName(Element ele, String childEleName) {\n\t\tElement child = getChildElementByTagName(ele, childEleName);\n\t\treturn (child != null ? getTextValue(child) : null);\n\t}\n\n\t/**\n\t * Retrieves all child elements of the given DOM element.\n\t * @param ele the DOM element to analyze\n\t * @return a List of child {@code org.w3c.dom.Element} instances\n\t */\n\tpublic static List<Element> getChildElements(Element ele) {\n\t\tAssert.notNull(ele, \"Element must not be null\");\n\t\tNodeList nl = ele.getChildNodes();\n\t\tList<Element> childEles = new ArrayList<>();\n\t\tfor (int i = 0; i < nl.getLength(); i++) {\n\t\t\tNode node = nl.item(i);\n\t\t\tif (node instanceof Element element) {\n\t\t\t\tchildEles.add(element);\n\t\t\t}\n\t\t}\n\t\treturn childEles;\n\t}\n\n\t/**\n\t * Extracts the text value from the given DOM element, ignoring XML comments.\n\t * <p>Appends all CharacterData nodes and EntityReference nodes into a single\n\t * String value, excluding Comment nodes. Only exposes actual user-specified\n\t * text, no default values of any kind.\n\t * @see CharacterData\n\t * @see EntityReference\n\t * @see Comment\n\t */\n\tpublic static String getTextValue(Element valueEle) {\n\t\tAssert.notNull(valueEle, \"Element must not be null\");\n\t\tStringBuilder sb = new StringBuilder();\n\t\tNodeList nl = valueEle.getChildNodes();\n\t\tfor (int i = 0; i < nl.getLength(); i++) {\n\t\t\tNode item = nl.item(i);\n\t\t\tif ((item instanceof CharacterData && !(item instanceof Comment)) || item instanceof EntityReference) {\n\t\t\t\tsb.append(item.getNodeValue());\n\t\t\t}\n\t\t}\n\t\treturn sb.toString();\n\t}\n\n\t/**\n\t * Namespace-aware equals comparison. Returns {@code true} if either\n\t * {@link Node#getLocalName} or {@link Node#getNodeName} equals\n\t * {@code desiredName}, otherwise returns {@code false}.\n\t */\n\tpublic static boolean nodeNameEquals(Node node, String desiredName) {\n\t\tAssert.notNull(node, \"Node must not be null\");\n\t\tAssert.notNull(desiredName, \"Desired name must not be null\");\n\t\treturn nodeNameMatch(node, desiredName);\n\t}\n\n\t/**\n\t * Returns a SAX {@code ContentHandler} that transforms callback calls to DOM {@code Node}s.\n\t * @param node the node to publish events to\n\t * @return the content handler\n\t */\n\tpublic static ContentHandler createContentHandler(Node node) {\n\t\treturn new DomContentHandler(node);\n\t}\n\n\t/**\n\t * Matches the given node's name and local name against the given desired name.\n\t */\n\tprivate static boolean nodeNameMatch(Node node, String desiredName) {\n\t\treturn (desiredName.equals(node.getNodeName()) || desiredName.equals(node.getLocalName()));\n\t}\n\n\t/**\n\t * Matches the given node's name and local name against the given desired names.\n\t */\n\tprivate static boolean nodeNameMatch(Node node, Collection<?> desiredNames) {\n\t\treturn (desiredNames.contains(node.getNodeName()) || desiredNames.contains(node.getLocalName()));\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElementsByTagName(Element,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieves all child elements of the given DOM element that match any of the given element names.\r\n * Only looks at the direct child level of the given element; do not go into further depth\r\n * (in contrast to the DOM API's {@code getElementsByTagName} method).\r\n * @param ele the DOM element to analyze\r\n * @param childEleNames the child element names to look for\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n * @see org.w3c.dom.Element\r\n * @see org.w3c.dom.Element#getElementsByTagName\r\n */\r\npublic static List<Element> getChildElementsByTagName(Element ele, String... childEleNames) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    Assert.notNull(childEleNames, \"Element names collection must not be null\");\r\n    List<String> childEleNameList = Arrays.asList(childEleNames);\r\n    NodeList nl = ele.getChildNodes();\r\n    List<Element> childEles = new ArrayList<>();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element && nodeNameMatch(node, childEleNameList)) {\r\n            childEles.add(element);\r\n        }\r\n    }\r\n    return childEles;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#getChildElementsByTagName(Element,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElementsByTagName(Element,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieves all child elements of the given DOM element that match the given element name.\r\n * Only look at the direct child level of the given element; do not go into further depth\r\n * (in contrast to the DOM API's {@code getElementsByTagName} method).\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n * @see org.w3c.dom.Element\r\n * @see org.w3c.dom.Element#getElementsByTagName\r\n */\r\npublic static List<Element> getChildElementsByTagName(Element ele, String childEleName) {\r\n    return getChildElementsByTagName(ele, new String[] { childEleName });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#getChildElementsByTagName(Element,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElementByTagName(Element,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Utility method that returns the first child element identified by its name.\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return the {@code org.w3c.dom.Element} instance, or {@code null} if none found\r\n */\r\n@Nullable\r\npublic static Element getChildElementByTagName(Element ele, String childEleName) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    Assert.notNull(childEleName, \"Element name must not be null\");\r\n    NodeList nl = ele.getChildNodes();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element && nodeNameMatch(node, childEleName)) {\r\n            return element;\r\n        }\r\n    }\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#getChildElementByTagName(Element,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElementByTagName(Element,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElementValueByTagName(Element,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Utility method that returns the first child element value identified by its name.\r\n * @param ele the DOM element to analyze\r\n * @param childEleName the child element name to look for\r\n * @return the extracted text value, or {@code null} if no child element found\r\n */\r\n@Nullable\r\npublic static String getChildElementValueByTagName(Element ele, String childEleName) {\r\n    Element child = getChildElementByTagName(ele, childEleName);\r\n    return (child != null ? getTextValue(child) : null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#getChildElementValueByTagName(Element,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElementValueByTagName(Element,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getChildElements(Element)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieves all child elements of the given DOM element.\r\n * @param ele the DOM element to analyze\r\n * @return a List of child {@code org.w3c.dom.Element} instances\r\n */\r\npublic static List<Element> getChildElements(Element ele) {\r\n    Assert.notNull(ele, \"Element must not be null\");\r\n    NodeList nl = ele.getChildNodes();\r\n    List<Element> childEles = new ArrayList<>();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node node = nl.item(i);\r\n        if (node instanceof Element element) {\r\n            childEles.add(element);\r\n        }\r\n    }\r\n    return childEles;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#getChildElements(Element)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#getTextValue(Element)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Extracts the text value from the given DOM element, ignoring XML comments.\r\n * <p>Appends all CharacterData nodes and EntityReference nodes into a single\r\n * String value, excluding Comment nodes. Only exposes actual user-specified\r\n * text, no default values of any kind.\r\n * @see CharacterData\r\n * @see EntityReference\r\n * @see Comment\r\n */\r\npublic static String getTextValue(Element valueEle) {\r\n    Assert.notNull(valueEle, \"Element must not be null\");\r\n    StringBuilder sb = new StringBuilder();\r\n    NodeList nl = valueEle.getChildNodes();\r\n    for (int i = 0; i < nl.getLength(); i++) {\r\n        Node item = nl.item(i);\r\n        if ((item instanceof CharacterData && !(item instanceof Comment)) || item instanceof EntityReference) {\r\n            sb.append(item.getNodeValue());\r\n        }\r\n    }\r\n    return sb.toString();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#getTextValue(Element)",
+    "tailType": "method"
+  }
+]

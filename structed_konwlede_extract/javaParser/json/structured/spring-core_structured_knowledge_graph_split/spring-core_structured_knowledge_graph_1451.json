@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler#dtdInternal(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler#commentInternal(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void commentInternal(String comment) throws XMLStreamException {\r\n    this.eventWriter.add(this.eventFactory.createComment(comment));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxEventHandler#commentInternal(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler#commentInternal(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler#skippedEntityInternal(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// Ignored\r\n@Override\r\nprotected void skippedEntityInternal(String name) ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxEventHandler#skippedEntityInternal(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler#skippedEntityInternal(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxEventHandler",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractStaxHandler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.LocatorLocationAdapter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2018 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.Map;\n\nimport javax.xml.namespace.QName;\nimport javax.xml.stream.Location;\nimport javax.xml.stream.XMLEventFactory;\nimport javax.xml.stream.XMLEventWriter;\nimport javax.xml.stream.XMLStreamException;\nimport javax.xml.stream.events.Attribute;\nimport javax.xml.stream.events.Namespace;\n\nimport org.jspecify.annotations.Nullable;\nimport org.xml.sax.Attributes;\nimport org.xml.sax.Locator;\nimport org.xml.sax.ext.LexicalHandler;\n\n/**\n * SAX {@link org.xml.sax.ContentHandler} and {@link LexicalHandler}\n * that writes to a {@link javax.xml.stream.util.XMLEventConsumer}.\n *\n * @author Arjen Poutsma\n * @since 4.0.3\n */\nclass StaxEventHandler extends AbstractStaxHandler {\n\n\tprivate final XMLEventFactory eventFactory;\n\n\tprivate final XMLEventWriter eventWriter;\n\n\n\t/**\n\t * Construct a new instance of the {@code StaxEventContentHandler} that writes to the\n\t * given {@code XMLEventWriter}. A default {@code XMLEventFactory} will be created.\n\t * @param eventWriter the writer to write events to\n\t */\n\tpublic StaxEventHandler(XMLEventWriter eventWriter) {\n\t\tthis.eventFactory = XMLEventFactory.newInstance();\n\t\tthis.eventWriter = eventWriter;\n\t}\n\n\t/**\n\t * Construct a new instance of the {@code StaxEventContentHandler} that uses the given\n\t * event factory to create events and writes to the given {@code XMLEventConsumer}.\n\t * @param eventWriter the writer to write events to\n\t * @param factory the factory used to create events\n\t */\n\tpublic StaxEventHandler(XMLEventWriter eventWriter, XMLEventFactory factory) {\n\t\tthis.eventFactory = factory;\n\t\tthis.eventWriter = eventWriter;\n\t}\n\n\n\t@Override\n\tpublic void setDocumentLocator(@Nullable Locator locator) {\n\t\tif (locator != null) {\n\t\t\tthis.eventFactory.setLocation(new LocatorLocationAdapter(locator));\n\t\t}\n\t}\n\n\t@Override\n\tprotected void startDocumentInternal() throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createStartDocument());\n\t}\n\n\t@Override\n\tprotected void endDocumentInternal() throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createEndDocument());\n\t}\n\n\t@Override\n\tprotected void startElementInternal(QName name, Attributes atts,\n\t\t\tMap<String, String> namespaceMapping) throws XMLStreamException {\n\n\t\tList<Attribute> attributes = getAttributes(atts);\n\t\tList<Namespace> namespaces = getNamespaces(namespaceMapping);\n\t\tthis.eventWriter.add(\n\t\t\t\tthis.eventFactory.createStartElement(name, attributes.iterator(), namespaces.iterator()));\n\n\t}\n\n\tprivate List<Namespace> getNamespaces(Map<String, String> namespaceMappings) {\n\t\tList<Namespace> result = new ArrayList<>(namespaceMappings.size());\n\t\tnamespaceMappings.forEach((prefix, namespaceUri) ->\n\t\t\t\tresult.add(this.eventFactory.createNamespace(prefix, namespaceUri)));\n\t\treturn result;\n\t}\n\n\tprivate List<Attribute> getAttributes(Attributes attributes) {\n\t\tint attrLength = attributes.getLength();\n\t\tList<Attribute> result = new ArrayList<>(attrLength);\n\t\tfor (int i = 0; i < attrLength; i++) {\n\t\t\tQName attrName = toQName(attributes.getURI(i), attributes.getQName(i));\n\t\t\tif (!isNamespaceDeclaration(attrName)) {\n\t\t\t\tresult.add(this.eventFactory.createAttribute(attrName, attributes.getValue(i)));\n\t\t\t}\n\t\t}\n\t\treturn result;\n\t}\n\n\t@Override\n\tprotected void endElementInternal(QName name, Map<String, String> namespaceMapping) throws XMLStreamException {\n\t\tList<Namespace> namespaces = getNamespaces(namespaceMapping);\n\t\tthis.eventWriter.add(this.eventFactory.createEndElement(name, namespaces.iterator()));\n\t}\n\n\t@Override\n\tprotected void charactersInternal(String data) throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createCharacters(data));\n\t}\n\n\t@Override\n\tprotected void cDataInternal(String data) throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createCData(data));\n\t}\n\n\t@Override\n\tprotected void ignorableWhitespaceInternal(String data) throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createIgnorableSpace(data));\n\t}\n\n\t@Override\n\tprotected void processingInstructionInternal(String target, String data) throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createProcessingInstruction(target, data));\n\t}\n\n\t@Override\n\tprotected void dtdInternal(String dtd) throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createDTD(dtd));\n\t}\n\n\t@Override\n\tprotected void commentInternal(String comment) throws XMLStreamException {\n\t\tthis.eventWriter.add(this.eventFactory.createComment(comment));\n\t}\n\n\t// Ignored\n\t@Override\n\tprotected void skippedEntityInternal(String name) {\n\t}\n\n\n\tprivate static final class LocatorLocationAdapter implements Location {\n\n\t\tprivate final Locator locator;\n\n\t\tpublic LocatorLocationAdapter(Locator locator) {\n\t\t\tthis.locator = locator;\n\t\t}\n\n\t\t@Override\n\t\tpublic int getLineNumber() {\n\t\t\treturn this.locator.getLineNumber();\n\t\t}\n\n\t\t@Override\n\t\tpublic int getColumnNumber() {\n\t\t\treturn this.locator.getColumnNumber();\n\t\t}\n\n\t\t@Override\n\t\tpublic int getCharacterOffset() {\n\t\t\treturn -1;\n\t\t}\n\n\t\t@Override\n\t\tpublic String getPublicId() {\n\t\t\treturn this.locator.getPublicId();\n\t\t}\n\n\t\t@Override\n\t\tpublic String getSystemId() {\n\t\t\treturn this.locator.getSystemId();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.LocatorLocationAdapter#locator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter#locator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Locator",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter#getLineNumber()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int getLineNumber() {\r\n    return this.locator.getLineNumber();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.LocatorLocationAdapter#getLineNumber()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter#getLineNumber()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter#getColumnNumber()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int getColumnNumber() {\r\n    return this.locator.getColumnNumber();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.LocatorLocationAdapter#getColumnNumber()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter#getColumnNumber()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter#getCharacterOffset()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int getCharacterOffset() {\r\n    return -1;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.LocatorLocationAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.LocatorLocationAdapter#getCharacterOffset()",
+    "tailType": "method"
+  }
+]

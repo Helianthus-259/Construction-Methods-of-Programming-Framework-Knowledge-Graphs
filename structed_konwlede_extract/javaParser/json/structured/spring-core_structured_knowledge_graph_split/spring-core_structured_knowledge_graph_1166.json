@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.style.DefaultToStringStyler#styleFieldSeparator(StringBuilder)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.style",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.style",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.style.DefaultValueStyler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.style;\n\nimport java.lang.reflect.Method;\nimport java.util.Collection;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.StringJoiner;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.ObjectUtils;\n\n/**\n * Converts objects to String form, generally for debugging purposes,\n * using Spring's {@code toString} styling conventions.\n *\n * <p>Uses the reflective visitor pattern underneath the hood to nicely\n * encapsulate styling algorithms for each type of styled object.\n *\n * @author Keith Donald\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 1.2.2\n */\npublic class DefaultValueStyler implements ValueStyler {\n\n\tprivate static final String EMPTY = \"[[empty]]\";\n\tprivate static final String NULL = \"[null]\";\n\tprivate static final String COLLECTION = \"collection\";\n\tprivate static final String SET = \"set\";\n\tprivate static final String LIST = \"list\";\n\tprivate static final String MAP = \"map\";\n\tprivate static final String EMPTY_MAP = MAP + EMPTY;\n\tprivate static final String ARRAY = \"array\";\n\n\n\t@Override\n\tpublic String style(@Nullable Object value) {\n\t\tif (value == null) {\n\t\t\treturn styleNull();\n\t\t}\n\t\telse if (value instanceof String str) {\n\t\t\treturn styleString(str);\n\t\t}\n\t\telse if (value instanceof Class<?> clazz) {\n\t\t\treturn styleClass(clazz);\n\t\t}\n\t\telse if (value instanceof Method method) {\n\t\t\treturn styleMethod(method);\n\t\t}\n\t\telse if (value instanceof Map<?, ?> map) {\n\t\t\treturn styleMap(map);\n\t\t}\n\t\telse if (value instanceof Map.Entry<?, ?> entry) {\n\t\t\treturn styleMapEntry(entry);\n\t\t}\n\t\telse if (value instanceof Collection<?> collection) {\n\t\t\treturn styleCollection(collection);\n\t\t}\n\t\telse if (value.getClass().isArray()) {\n\t\t\treturn styleArray(ObjectUtils.toObjectArray(value));\n\t\t}\n\t\telse {\n\t\t\treturn styleObject(value);\n\t\t}\n\t}\n\n\t/**\n\t * Generate a styled version of {@code null}.\n\t * <p>The default implementation returns {@code \"[null]\"}.\n\t * @return a styled version of {@code null}\n\t * @since 6.0\n\t */\n\tprotected String styleNull() {\n\t\treturn NULL;\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link String}.\n\t * <p>The default implementation returns the supplied string wrapped in\n\t * single quotes.\n\t * @return a styled version of the supplied string\n\t * @since 6.0\n\t */\n\tprotected String styleString(String str) {\n\t\treturn \"\\'\" + str + \"\\'\";\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link Class}.\n\t * <p>The default implementation delegates to {@link ClassUtils#getShortName(Class)}.\n\t * @return a styled version of the supplied class\n\t * @since 6.0\n\t */\n\tprotected String styleClass(Class<?> clazz) {\n\t\treturn ClassUtils.getShortName(clazz);\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link Method}.\n\t * <p>The default implementation returns the method's {@linkplain Method#getName()\n\t * name} and the {@linkplain ClassUtils#getShortName(Class) short name} of the\n\t * method's {@linkplain Method#getDeclaringClass() declaring class}, separated by\n\t * the {@code \"@\"} symbol.\n\t * @return a styled version of the supplied method\n\t * @since 6.0\n\t */\n\tprotected String styleMethod(Method method) {\n\t\treturn method.getName() + \"@\" + ClassUtils.getShortName(method.getDeclaringClass());\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link Map}.\n\t * @return a styled version of the supplied map\n\t * @since 6.0\n\t */\n\tprotected <K, V> String styleMap(Map<K, V> map) {\n\t\tif (map.isEmpty()) {\n\t\t\treturn EMPTY_MAP;\n\t\t}\n\n\t\tStringJoiner result = new StringJoiner(\", \", \"[\", \"]\");\n\t\tfor (Map.Entry<K, V> entry : map.entrySet()) {\n\t\t\tresult.add(styleMapEntry(entry));\n\t\t}\n\t\treturn MAP + result;\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link Map.Entry}.\n\t * @return a styled version of the supplied map entry\n\t * @since 6.0\n\t */\n\tprotected String styleMapEntry(Map.Entry<?, ?> entry) {\n\t\treturn style(entry.getKey()) + \" -> \" + style(entry.getValue());\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link Collection}.\n\t * @return a styled version of the supplied collection\n\t * @since 6.0\n\t */\n\tprotected String styleCollection(Collection<?> collection) {\n\t\tString collectionType = getCollectionTypeString(collection);\n\n\t\tif (collection.isEmpty()) {\n\t\t\treturn collectionType + EMPTY;\n\t\t}\n\n\t\tStringJoiner result = new StringJoiner(\", \", \"[\", \"]\");\n\t\tfor (Object element : collection) {\n\t\t\tresult.add(style(element));\n\t\t}\n\t\treturn collectionType + result;\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied array.\n\t * @return a styled version of the supplied array\n\t * @since 6.0\n\t */\n\tprotected String styleArray(Object[] array) {\n\t\tif (array.length == 0) {\n\t\t\treturn ARRAY + '<' + ClassUtils.getShortName(array.getClass().componentType()) + '>' + EMPTY;\n\t\t}\n\n\t\tStringJoiner result = new StringJoiner(\", \", \"[\", \"]\");\n\t\tfor (Object element : array) {\n\t\t\tresult.add(style(element));\n\t\t}\n\t\treturn ARRAY + '<' + ClassUtils.getShortName(array.getClass().componentType()) + '>' + result;\n\t}\n\n\t/**\n\t * Generate a styled version of the supplied {@link Object}.\n\t * <p>This method is only invoked by {@link #style(Object)} as a fallback,\n\t * if none of the other {@code style*()} methods is suitable for the object's\n\t * type.\n\t * <p>The default implementation delegates to {@link String#valueOf(Object)}.\n\t * @return a styled version of the supplied object\n\t * @since 6.0\n\t */\n\tprotected String styleObject(Object obj) {\n\t\treturn String.valueOf(obj);\n\t}\n\n\n\tprivate static String getCollectionTypeString(Collection<?> collection) {\n\t\tif (collection instanceof List) {\n\t\t\treturn LIST;\n\t\t}\n\t\telse if (collection instanceof Set) {\n\t\t\treturn SET;\n\t\t}\n\t\telse {\n\t\t\treturn COLLECTION;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#EMPTY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#EMPTY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#NULL",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#NULL",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#COLLECTION",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#COLLECTION",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#SET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#SET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#LIST",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#LIST",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#MAP",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#MAP",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#EMPTY_MAP",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#EMPTY_MAP",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStyler#ARRAY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStyler#ARRAY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  }
+]

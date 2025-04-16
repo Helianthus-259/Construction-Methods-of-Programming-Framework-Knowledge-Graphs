@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.StopWatch",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StopWatch#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StopWatch#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.TaskInfo",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.text.NumberFormat;\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.Locale;\nimport java.util.concurrent.TimeUnit;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Simple stop watch, allowing for timing of a number of tasks, exposing total\n * running time and running time for each named task.\n *\n * <p>Conceals use of {@link System#nanoTime()}, improving the readability of\n * application code and reducing the likelihood of calculation errors.\n *\n * <p>Note that this object is not designed to be thread-safe and does not use\n * synchronization.\n *\n * <p>This class is normally used to verify performance during proof-of-concept\n * work and in development, rather than as part of production applications.\n *\n * <p>Running time is tracked and reported in nanoseconds. As of Spring Framework\n * 6.1, the default time unit for String renderings is seconds with decimal points\n * in nanosecond precision. Custom renderings with specific time units can be\n * requested through {@link #prettyPrint(TimeUnit)}.\n *\n * @author Rod Johnson\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since May 2, 2001\n * @see #start()\n * @see #stop()\n * @see #shortSummary()\n * @see #prettyPrint()\n */\npublic class StopWatch {\n\n\t/**\n\t * Identifier of this {@code StopWatch}.\n\t * <p>Handy when we have output from multiple stop watches and need to\n\t * distinguish between them in log or console output.\n\t */\n\tprivate final String id;\n\n\tprivate @Nullable List<TaskInfo> taskList = new ArrayList<>(1);\n\n\t/** Start time of the current task. */\n\tprivate long startTimeNanos;\n\n\t/** Name of the current task. */\n\tprivate @Nullable String currentTaskName;\n\n\tprivate @Nullable TaskInfo lastTaskInfo;\n\n\tprivate int taskCount;\n\n\t/** Total running time. */\n\tprivate long totalTimeNanos;\n\n\n\t/**\n\t * Construct a new {@code StopWatch}.\n\t * <p>Does not start any task.\n\t */\n\tpublic StopWatch() {\n\t\tthis(\"\");\n\t}\n\n\t/**\n\t * Construct a new {@code StopWatch} with the given id.\n\t * <p>The id is handy when we have output from multiple stop watches and need\n\t * to distinguish between them.\n\t * <p>Does not start any task.\n\t * @param id identifier for this stop watch\n\t */\n\tpublic StopWatch(String id) {\n\t\tthis.id = id;\n\t}\n\n\n\t/**\n\t * Get the id of this {@code StopWatch}, as specified on construction.\n\t * @return the id (empty String by default)\n\t * @since 4.2.2\n\t * @see #StopWatch(String)\n\t */\n\tpublic String getId() {\n\t\treturn this.id;\n\t}\n\n\t/**\n\t * Configure whether the {@link TaskInfo} array is built over time.\n\t * <p>Set this to {@code false} when using a {@code StopWatch} for millions of\n\t * tasks; otherwise, the {@code TaskInfo} structure will consume excessive memory.\n\t * <p>Default is {@code true}.\n\t */\n\tpublic void setKeepTaskList(boolean keepTaskList) {\n\t\tthis.taskList = (keepTaskList ? new ArrayList<>() : null);\n\t}\n\n\n\t/**\n\t * Start an unnamed task.\n\t * <p>The results are undefined if {@link #stop()} or timing methods are\n\t * called without invoking this method first.\n\t * @see #start(String)\n\t * @see #stop()\n\t */\n\tpublic void start() throws IllegalStateException {\n\t\tstart(\"\");\n\t}\n\n\t/**\n\t * Start a named task.\n\t * <p>The results are undefined if {@link #stop()} or timing methods are\n\t * called without invoking this method first.\n\t * @param taskName the name of the task to start\n\t * @see #start()\n\t * @see #stop()\n\t */\n\tpublic void start(String taskName) throws IllegalStateException {\n\t\tif (this.currentTaskName != null) {\n\t\t\tthrow new IllegalStateException(\"Can't start StopWatch: it's already running\");\n\t\t}\n\t\tthis.currentTaskName = taskName;\n\t\tthis.startTimeNanos = System.nanoTime();\n\t}\n\n\t/**\n\t * Stop the current task.\n\t * <p>The results are undefined if timing methods are called without invoking\n\t * at least one pair of {@code start()} / {@code stop()} methods.\n\t * @see #start()\n\t * @see #start(String)\n\t */\n\tpublic void stop() throws IllegalStateException {\n\t\tif (this.currentTaskName == null) {\n\t\t\tthrow new IllegalStateException(\"Can't stop StopWatch: it's not running\");\n\t\t}\n\t\tlong lastTime = System.nanoTime() - this.startTimeNanos;\n\t\tthis.totalTimeNanos += lastTime;\n\t\tthis.lastTaskInfo = new TaskInfo(this.currentTaskName, lastTime);\n\t\tif (this.taskList != null) {\n\t\t\tthis.taskList.add(this.lastTaskInfo);\n\t\t}\n\t\t++this.taskCount;\n\t\tthis.currentTaskName = null;\n\t}\n\n\t/**\n\t * Determine whether this {@code StopWatch} is currently running.\n\t * @see #currentTaskName()\n\t */\n\tpublic boolean isRunning() {\n\t\treturn (this.currentTaskName != null);\n\t}\n\n\t/**\n\t * Get the name of the currently running task, if any.\n\t * @since 4.2.2\n\t * @see #isRunning()\n\t */\n\tpublic @Nullable String currentTaskName() {\n\t\treturn this.currentTaskName;\n\t}\n\n\t/**\n\t * Get the last task as a {@link TaskInfo} object.\n\t * @throws IllegalStateException if no tasks have run yet\n\t * @since 6.1\n\t */\n\tpublic TaskInfo lastTaskInfo() throws IllegalStateException {\n\t\tAssert.state(this.lastTaskInfo != null, \"No tasks run\");\n\t\treturn this.lastTaskInfo;\n\t}\n\n\t/**\n\t * Get the last task as a {@link TaskInfo} object.\n\t * @deprecated as of 6.1, in favor of {@link #lastTaskInfo()}\n\t */\n\t@Deprecated(since = \"6.1\")\n\tpublic TaskInfo getLastTaskInfo() throws IllegalStateException {\n\t\treturn lastTaskInfo();\n\t}\n\n\t/**\n\t * Get the name of the last task.\n\t * @see TaskInfo#getTaskName()\n\t * @deprecated as of 6.1, in favor of {@link #lastTaskInfo()}\n\t */\n\t@Deprecated(since = \"6.1\")\n\tpublic String getLastTaskName() throws IllegalStateException {\n\t\treturn lastTaskInfo().getTaskName();\n\t}\n\n\t/**\n\t * Get the time taken by the last task in nanoseconds.\n\t * @since 5.2\n\t * @see TaskInfo#getTimeNanos()\n\t * @deprecated as of 6.1, in favor of {@link #lastTaskInfo()}\n\t */\n\t@Deprecated(since = \"6.1\")\n\tpublic long getLastTaskTimeNanos() throws IllegalStateException {\n\t\treturn lastTaskInfo().getTimeNanos();\n\t}\n\n\t/**\n\t * Get the time taken by the last task in milliseconds.\n\t * @see TaskInfo#getTimeMillis()\n\t * @deprecated as of 6.1, in favor of {@link #lastTaskInfo()}\n\t */\n\t@Deprecated(since = \"6.1\")\n\tpublic long getLastTaskTimeMillis() throws IllegalStateException {\n\t\treturn lastTaskInfo().getTimeMillis();\n\t}\n\n\t/**\n\t * Get an array of the data for tasks performed.\n\t * @see #setKeepTaskList\n\t */\n\tpublic TaskInfo[] getTaskInfo() {\n\t\tif (this.taskList == null) {\n\t\t\tthrow new UnsupportedOperationException(\"Task info is not being kept!\");\n\t\t}\n\t\treturn this.taskList.toArray(new TaskInfo[0]);\n\t}\n\n\t/**\n\t * Get the number of tasks timed.\n\t */\n\tpublic int getTaskCount() {\n\t\treturn this.taskCount;\n\t}\n\n\t/**\n\t * Get the total time for all tasks in nanoseconds.\n\t * @since 5.2\n\t * @see #getTotalTime(TimeUnit)\n\t */\n\tpublic long getTotalTimeNanos() {\n\t\treturn this.totalTimeNanos;\n\t}\n\n\t/**\n\t * Get the total time for all tasks in milliseconds.\n\t * @see #getTotalTime(TimeUnit)\n\t */\n\tpublic long getTotalTimeMillis() {\n\t\treturn TimeUnit.NANOSECONDS.toMillis(this.totalTimeNanos);\n\t}\n\n\t/**\n\t * Get the total time for all tasks in seconds.\n\t * @see #getTotalTime(TimeUnit)\n\t */\n\tpublic double getTotalTimeSeconds() {\n\t\treturn getTotalTime(TimeUnit.SECONDS);\n\t}\n\n\t/**\n\t * Get the total time for all tasks in the requested time unit\n\t * (with decimal points in nanosecond precision).\n\t * @param timeUnit the unit to use\n\t * @since 6.1\n\t * @see #getTotalTimeNanos()\n\t * @see #getTotalTimeMillis()\n\t * @see #getTotalTimeSeconds()\n\t */\n\tpublic double getTotalTime(TimeUnit timeUnit) {\n\t\treturn (double) this.totalTimeNanos / TimeUnit.NANOSECONDS.convert(1, timeUnit);\n\t}\n\n\n\t/**\n\t * Generate a table describing all tasks performed in seconds\n\t * (with decimal points in nanosecond precision).\n\t * <p>For custom reporting, call {@link #getTaskInfo()} and use the data directly.\n\t * @see #prettyPrint(TimeUnit)\n\t * @see #getTotalTimeSeconds()\n\t * @see TaskInfo#getTimeSeconds()\n\t */\n\tpublic String prettyPrint() {\n\t\treturn prettyPrint(TimeUnit.SECONDS);\n\t}\n\n\t/**\n\t * Generate a table describing all tasks performed in the requested time unit\n\t * (with decimal points in nanosecond precision).\n\t * <p>For custom reporting, call {@link #getTaskInfo()} and use the data directly.\n\t * @param timeUnit the unit to use for rendering total time and task time\n\t * @since 6.1\n\t * @see #prettyPrint()\n\t * @see #getTotalTime(TimeUnit)\n\t * @see TaskInfo#getTime(TimeUnit)\n\t */\n\tpublic String prettyPrint(TimeUnit timeUnit) {\n\t\tNumberFormat nf = NumberFormat.getNumberInstance(Locale.ENGLISH);\n\t\tnf.setMaximumFractionDigits(9);\n\t\tnf.setGroupingUsed(false);\n\n\t\tNumberFormat pf = NumberFormat.getPercentInstance(Locale.ENGLISH);\n\t\tpf.setMinimumIntegerDigits(2);\n\t\tpf.setGroupingUsed(false);\n\n\t\tStringBuilder sb = new StringBuilder(128);\n\t\tsb.append(\"StopWatch '\").append(getId()).append(\"': \");\n\t\tString total = (timeUnit == TimeUnit.NANOSECONDS ?\n\t\t\t\tnf.format(getTotalTimeNanos()) : nf.format(getTotalTime(timeUnit)));\n\t\tsb.append(total).append(\" \").append(timeUnit.name().toLowerCase(Locale.ENGLISH));\n\t\tint width = Math.max(sb.length(), 40);\n\t\tsb.append(\"\\n\");\n\n\t\tif (this.taskList != null) {\n\t\t\tString line = \"-\".repeat(width) + \"\\n\";\n\t\t\tString unitName = timeUnit.name();\n\t\t\tunitName = unitName.charAt(0) + unitName.substring(1).toLowerCase(Locale.ENGLISH);\n\t\t\tunitName = String.format(\"%-12s\", unitName);\n\t\t\tsb.append(line);\n\t\t\tsb.append(unitName).append(\"  %       Task name\\n\");\n\t\t\tsb.append(line);\n\n\t\t\tint digits = total.indexOf('.');\n\t\t\tif (digits < 0) {\n\t\t\t\tdigits = total.length();\n\t\t\t}\n\t\t\tnf.setMinimumIntegerDigits(digits);\n\t\t\tnf.setMaximumFractionDigits(10 - digits);\n\n\t\t\tfor (TaskInfo task : this.taskList) {\n\t\t\t\tsb.append(String.format(\"%-14s\", (timeUnit == TimeUnit.NANOSECONDS ?\n\t\t\t\t\t\tnf.format(task.getTimeNanos()) : nf.format(task.getTime(timeUnit)))));\n\t\t\t\tsb.append(String.format(\"%-8s\",\n\t\t\t\t\t\tpf.format(task.getTimeSeconds() / getTotalTimeSeconds())));\n\t\t\t\tsb.append(task.getTaskName()).append('\\n');\n\t\t\t}\n\t\t}\n\t\telse {\n\t\t\tsb.append(\"No task info kept\");\n\t\t}\n\n\t\treturn sb.toString();\n\t}\n\n\t/**\n\t * Get a short description of the total running time in seconds.\n\t * @see #prettyPrint()\n\t * @see #prettyPrint(TimeUnit)\n\t */\n\tpublic String shortSummary() {\n\t\treturn \"StopWatch '\" + getId() + \"': \" + getTotalTimeSeconds() + \" seconds\";\n\t}\n\n\t/**\n\t * Generate an informative string describing all tasks performed in seconds.\n\t * @see #prettyPrint()\n\t * @see #prettyPrint(TimeUnit)\n\t */\n\t@Override\n\tpublic String toString() {\n\t\tStringBuilder sb = new StringBuilder(shortSummary());\n\t\tif (this.taskList != null) {\n\t\t\tfor (TaskInfo task : this.taskList) {\n\t\t\t\tsb.append(\"; [\").append(task.getTaskName()).append(\"] took \").append(task.getTimeSeconds()).append(\" seconds\");\n\t\t\t\tlong percent = Math.round(100.0 * task.getTimeSeconds() / getTotalTimeSeconds());\n\t\t\t\tsb.append(\" = \").append(percent).append('%');\n\t\t\t}\n\t\t}\n\t\telse {\n\t\t\tsb.append(\"; no task info kept\");\n\t\t}\n\t\treturn sb.toString();\n\t}\n\n\n\t/**\n\t * Nested class to hold data about one task executed within the {@code StopWatch}.\n\t */\n\tpublic static final class TaskInfo {\n\n\t\tprivate final String taskName;\n\n\t\tprivate final long timeNanos;\n\n\t\tTaskInfo(String taskName, long timeNanos) {\n\t\t\tthis.taskName = taskName;\n\t\t\tthis.timeNanos = timeNanos;\n\t\t}\n\n\t\t/**\n\t\t * Get the name of this task.\n\t\t */\n\t\tpublic String getTaskName() {\n\t\t\treturn this.taskName;\n\t\t}\n\n\t\t/**\n\t\t * Get the time this task took in nanoseconds.\n\t\t * @since 5.2\n\t\t * @see #getTime(TimeUnit)\n\t\t */\n\t\tpublic long getTimeNanos() {\n\t\t\treturn this.timeNanos;\n\t\t}\n\n\t\t/**\n\t\t * Get the time this task took in milliseconds.\n\t\t * @see #getTime(TimeUnit)\n\t\t */\n\t\tpublic long getTimeMillis() {\n\t\t\treturn TimeUnit.NANOSECONDS.toMillis(this.timeNanos);\n\t\t}\n\n\t\t/**\n\t\t * Get the time this task took in seconds.\n\t\t * @see #getTime(TimeUnit)\n\t\t */\n\t\tpublic double getTimeSeconds() {\n\t\t\treturn getTime(TimeUnit.SECONDS);\n\t\t}\n\n\t\t/**\n\t\t * Get the time this task took in the requested time unit\n\t\t * (with decimal points in nanosecond precision).\n\t\t * @param timeUnit the unit to use\n\t\t * @since 6.1\n\t\t * @see #getTimeNanos()\n\t\t * @see #getTimeMillis()\n\t\t * @see #getTimeSeconds()\n\t\t */\n\t\tpublic double getTime(TimeUnit timeUnit) {\n\t\t\treturn (double) this.timeNanos / TimeUnit.NANOSECONDS.convert(1, timeUnit);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.TaskInfo#taskName",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#taskName",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.TaskInfo#timeNanos",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#timeNanos",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "long",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#getTaskName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the name of this task.\r\n */\r\npublic String getTaskName() {\r\n    return this.taskName;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.TaskInfo#getTaskName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#getTimeNanos()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the time this task took in nanoseconds.\r\n * @since 5.2\r\n * @see #getTime(TimeUnit)\r\n */\r\npublic long getTimeNanos() {\r\n    return this.timeNanos;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.TaskInfo#getTimeNanos()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#getTimeMillis()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the time this task took in milliseconds.\r\n * @see #getTime(TimeUnit)\r\n */\r\npublic long getTimeMillis() {\r\n    return TimeUnit.NANOSECONDS.toMillis(this.timeNanos);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.TaskInfo#getTimeMillis()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#getTimeSeconds()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the time this task took in seconds.\r\n * @see #getTime(TimeUnit)\r\n */\r\npublic double getTimeSeconds() {\r\n    return getTime(TimeUnit.SECONDS);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.TaskInfo#getTimeSeconds()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo#getTime(TimeUnit)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the time this task took in the requested time unit\r\n * (with decimal points in nanosecond precision).\r\n * @param timeUnit the unit to use\r\n * @since 6.1\r\n * @see #getTimeNanos()\r\n * @see #getTimeMillis()\r\n * @see #getTimeSeconds()\r\n */\r\npublic double getTime(TimeUnit timeUnit) {\r\n    return (double) this.timeNanos / TimeUnit.NANOSECONDS.convert(1, timeUnit);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.TaskInfo",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.TaskInfo#getTime(TimeUnit)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.StreamUtils",
+    "tailType": "class"
+  }
+]

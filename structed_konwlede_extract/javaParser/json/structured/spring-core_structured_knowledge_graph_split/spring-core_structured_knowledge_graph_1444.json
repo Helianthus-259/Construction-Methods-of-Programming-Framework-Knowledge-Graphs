@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.DomUtils#nodeNameEquals(Node,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Namespace-aware equals comparison. Returns {@code true} if either\r\n * {@link Node#getLocalName} or {@link Node#getNodeName} equals\r\n * {@code desiredName}, otherwise returns {@code false}.\r\n */\r\npublic static boolean nodeNameEquals(Node node, String desiredName) {\r\n    Assert.notNull(node, \"Node must not be null\");\r\n    Assert.notNull(desiredName, \"Desired name must not be null\");\r\n    return nodeNameMatch(node, desiredName);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#nodeNameEquals(Node,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#createContentHandler(Node)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns a SAX {@code ContentHandler} that transforms callback calls to DOM {@code Node}s.\r\n * @param node the node to publish events to\r\n * @return the content handler\r\n */\r\npublic static ContentHandler createContentHandler(Node node) {\r\n    return new DomContentHandler(node);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#createContentHandler(Node)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#nodeNameMatch(Node,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Matches the given node's name and local name against the given desired name.\r\n */\r\nprivate static boolean nodeNameMatch(Node node, String desiredName) {\r\n    return (desiredName.equals(node.getNodeName()) || desiredName.equals(node.getLocalName()));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#nodeNameMatch(Node,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils#nodeNameMatch(Node,Collection<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Matches the given node's name and local name against the given desired names.\r\n */\r\nprivate static boolean nodeNameMatch(Node node, Collection<?> desiredNames) {\r\n    return (desiredNames.contains(node.getNodeName()) || desiredNames.contains(node.getLocalName()));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.DomUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.DomUtils#nodeNameMatch(Node,Collection<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.NoSuchElementException;\n\nimport javax.xml.stream.XMLStreamConstants;\nimport javax.xml.stream.XMLStreamException;\nimport javax.xml.stream.events.Characters;\nimport javax.xml.stream.events.XMLEvent;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\n\n/**\n * Implementation of {@code XMLEventReader} based on a {@link List}\n * of {@link XMLEvent} elements.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @since 5.0\n */\nclass ListBasedXMLEventReader extends AbstractXMLEventReader {\n\n\tprivate final List<XMLEvent> events;\n\n\tprivate @Nullable XMLEvent currentEvent;\n\n\tprivate int cursor = 0;\n\n\n\tpublic ListBasedXMLEventReader(List<XMLEvent> events) {\n\t\tAssert.notNull(events, \"XMLEvent List must not be null\");\n\t\tthis.events = new ArrayList<>(events);\n\t}\n\n\n\t@Override\n\tpublic boolean hasNext() {\n\t\treturn (this.cursor < this.events.size());\n\t}\n\n\t@Override\n\tpublic XMLEvent nextEvent() {\n\t\tif (hasNext()) {\n\t\t\tthis.currentEvent = this.events.get(this.cursor);\n\t\t\tthis.cursor++;\n\t\t\treturn this.currentEvent;\n\t\t}\n\t\telse {\n\t\t\tthrow new NoSuchElementException();\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable XMLEvent peek() {\n\t\tif (hasNext()) {\n\t\t\treturn this.events.get(this.cursor);\n\t\t}\n\t\telse {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\t@Override\n\tpublic String getElementText() throws XMLStreamException {\n\t\tcheckIfClosed();\n\t\tif (this.currentEvent == null || !this.currentEvent.isStartElement()) {\n\t\t\tthrow new XMLStreamException(\"Not at START_ELEMENT: \" + this.currentEvent);\n\t\t}\n\n\t\tStringBuilder builder = new StringBuilder();\n\t\twhile (true) {\n\t\t\tXMLEvent event = nextEvent();\n\t\t\tif (event.isEndElement()) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\telse if (!event.isCharacters()) {\n\t\t\t\tthrow new XMLStreamException(\"Unexpected non-text event: \" + event);\n\t\t\t}\n\t\t\tCharacters characters = event.asCharacters();\n\t\t\tif (!characters.isIgnorableWhiteSpace()) {\n\t\t\t\tbuilder.append(event.asCharacters().getData());\n\t\t\t}\n\t\t}\n\t\treturn builder.toString();\n\t}\n\n\t@Override\n\tpublic @Nullable XMLEvent nextTag() throws XMLStreamException {\n\t\tcheckIfClosed();\n\n\t\twhile (true) {\n\t\t\tXMLEvent event = nextEvent();\n\t\t\tswitch (event.getEventType()) {\n\t\t\t\tcase XMLStreamConstants.START_ELEMENT, XMLStreamConstants.END_ELEMENT -> {\n\t\t\t\t\treturn event;\n\t\t\t\t}\n\t\t\t\tcase XMLStreamConstants.END_DOCUMENT -> {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\t\t\t\tcase XMLStreamConstants.SPACE, XMLStreamConstants.COMMENT, XMLStreamConstants.PROCESSING_INSTRUCTION -> {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tcase XMLStreamConstants.CDATA, XMLStreamConstants.CHARACTERS -> {\n\t\t\t\t\tif (!event.asCharacters().isWhiteSpace()) {\n\t\t\t\t\t\tthrow new XMLStreamException(\n\t\t\t\t\t\t\t\t\"Non-ignorable whitespace CDATA or CHARACTERS event: \" + event);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tdefault -> throw new XMLStreamException(\"Expected START_ELEMENT or END_ELEMENT: \" + event);\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic void close() {\n\t\tsuper.close();\n\t\tthis.events.clear();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.ListBasedXMLEventReader#events",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader#events",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<XMLEvent>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.ListBasedXMLEventReader#currentEvent",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader#currentEvent",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "XMLEvent",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.ListBasedXMLEventReader#cursor",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader#cursor",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader#hasNext()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean hasNext() {\r\n    return (this.cursor < this.events.size());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.ListBasedXMLEventReader#hasNext()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.ListBasedXMLEventReader#hasNext()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.type",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.type.StandardMethodMetadata",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.type;\n\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Modifier;\nimport java.util.Map;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.annotation.AnnotatedElementUtils;\nimport org.springframework.core.annotation.MergedAnnotations;\nimport org.springframework.core.annotation.MergedAnnotations.SearchStrategy;\nimport org.springframework.core.annotation.RepeatableContainers;\nimport org.springframework.util.Assert;\nimport org.springframework.util.MultiValueMap;\n\n/**\n * {@link MethodMetadata} implementation that uses standard reflection\n * to introspect a given {@code Method}.\n *\n * @author Juergen Hoeller\n * @author Mark Pollack\n * @author Chris Beams\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 3.0\n */\npublic class StandardMethodMetadata implements MethodMetadata {\n\n\tprivate final Method introspectedMethod;\n\n\tprivate final boolean nestedAnnotationsAsMap;\n\n\tprivate final MergedAnnotations mergedAnnotations;\n\n\n\t/**\n\t * Create a new StandardMethodMetadata wrapper for the given Method.\n\t * @param introspectedMethod the Method to introspect\n\t * @deprecated since 5.2 in favor of obtaining instances via {@link AnnotationMetadata}\n\t */\n\t@Deprecated\n\tpublic StandardMethodMetadata(Method introspectedMethod) {\n\t\tthis(introspectedMethod, false);\n\t}\n\n\t/**\n\t * Create a new StandardMethodMetadata wrapper for the given Method,\n\t * providing the option to return any nested annotations or annotation arrays in the\n\t * form of {@link org.springframework.core.annotation.AnnotationAttributes} instead\n\t * of actual {@link java.lang.annotation.Annotation} instances.\n\t * @param introspectedMethod the Method to introspect\n\t * @param nestedAnnotationsAsMap return nested annotations and annotation arrays as\n\t * {@link org.springframework.core.annotation.AnnotationAttributes} for compatibility\n\t * with ASM-based {@link AnnotationMetadata} implementations\n\t * @since 3.1.1\n\t */\n\tStandardMethodMetadata(Method introspectedMethod, boolean nestedAnnotationsAsMap) {\n\t\tAssert.notNull(introspectedMethod, \"Method must not be null\");\n\t\tthis.introspectedMethod = introspectedMethod;\n\t\tthis.nestedAnnotationsAsMap = nestedAnnotationsAsMap;\n\t\tthis.mergedAnnotations = MergedAnnotations.from(\n\t\t\t\tintrospectedMethod, SearchStrategy.DIRECT, RepeatableContainers.none());\n\t}\n\n\n\t@Override\n\tpublic MergedAnnotations getAnnotations() {\n\t\treturn this.mergedAnnotations;\n\t}\n\n\t/**\n\t * Return the underlying Method.\n\t */\n\tpublic final Method getIntrospectedMethod() {\n\t\treturn this.introspectedMethod;\n\t}\n\n\t@Override\n\tpublic String getMethodName() {\n\t\treturn this.introspectedMethod.getName();\n\t}\n\n\t@Override\n\tpublic String getDeclaringClassName() {\n\t\treturn this.introspectedMethod.getDeclaringClass().getName();\n\t}\n\n\t@Override\n\tpublic String getReturnTypeName() {\n\t\treturn this.introspectedMethod.getReturnType().getName();\n\t}\n\n\t@Override\n\tpublic boolean isAbstract() {\n\t\treturn Modifier.isAbstract(this.introspectedMethod.getModifiers());\n\t}\n\n\t@Override\n\tpublic boolean isStatic() {\n\t\treturn Modifier.isStatic(this.introspectedMethod.getModifiers());\n\t}\n\n\t@Override\n\tpublic boolean isFinal() {\n\t\treturn Modifier.isFinal(this.introspectedMethod.getModifiers());\n\t}\n\n\t@Override\n\tpublic boolean isOverridable() {\n\t\treturn !isStatic() && !isFinal() && !isPrivate();\n\t}\n\n\tprivate boolean isPrivate() {\n\t\treturn Modifier.isPrivate(this.introspectedMethod.getModifiers());\n\t}\n\n\t@Override\n\tpublic @Nullable Map<String, @Nullable Object> getAnnotationAttributes(String annotationName, boolean classValuesAsString) {\n\t\tif (this.nestedAnnotationsAsMap) {\n\t\t\treturn MethodMetadata.super.getAnnotationAttributes(annotationName, classValuesAsString);\n\t\t}\n\t\treturn AnnotatedElementUtils.getMergedAnnotationAttributes(this.introspectedMethod,\n\t\t\t\tannotationName, classValuesAsString, false);\n\t}\n\n\t@Override\n\t@SuppressWarnings(\"NullAway\") // Null-safety of Java super method not yet managed\n\tpublic @Nullable MultiValueMap<String, @Nullable Object> getAllAnnotationAttributes(String annotationName, boolean classValuesAsString) {\n\t\tif (this.nestedAnnotationsAsMap) {\n\t\t\treturn MethodMetadata.super.getAllAnnotationAttributes(annotationName, classValuesAsString);\n\t\t}\n\t\treturn AnnotatedElementUtils.getAllAnnotationAttributes(this.introspectedMethod,\n\t\t\t\tannotationName, classValuesAsString, false);\n\t}\n\n\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || (other instanceof StandardMethodMetadata that &&\n\t\t\t\tthis.introspectedMethod.equals(that.introspectedMethod)));\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn this.introspectedMethod.hashCode();\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\treturn this.introspectedMethod.toString();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#introspectedMethod",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#introspectedMethod",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Method",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#nestedAnnotationsAsMap",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#nestedAnnotationsAsMap",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#mergedAnnotations",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#mergedAnnotations",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MergedAnnotations",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getAnnotations()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic MergedAnnotations getAnnotations() {\r\n    return this.mergedAnnotations;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#getAnnotations()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getAnnotations()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getIntrospectedMethod()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the underlying Method.\r\n */\r\npublic final Method getIntrospectedMethod() {\r\n    return this.introspectedMethod;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#getIntrospectedMethod()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getMethodName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String getMethodName() {\r\n    return this.introspectedMethod.getName();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#getMethodName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getMethodName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getDeclaringClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String getDeclaringClassName() {\r\n    return this.introspectedMethod.getDeclaringClass().getName();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.StandardMethodMetadata#getDeclaringClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getDeclaringClassName()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.StandardMethodMetadata#getReturnTypeName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String getReturnTypeName() {\r\n    return this.introspectedMethod.getReturnType().getName();\r\n}",
+    "tailType": "method_code"
+  }
+]

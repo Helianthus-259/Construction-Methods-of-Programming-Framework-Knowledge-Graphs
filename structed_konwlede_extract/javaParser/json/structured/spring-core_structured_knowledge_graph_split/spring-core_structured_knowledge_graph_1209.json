@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.type.filter.AbstractTypeHierarchyTraversingFilter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.filter.AbstractTypeHierarchyTraversingFilter#matchInterface(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AbstractTypeHierarchyTraversingFilter#matchInterface(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.type.filter",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.type.filter",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.type.filter;\n\nimport java.lang.annotation.Annotation;\nimport java.lang.annotation.Inherited;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.core.annotation.AnnotationUtils;\nimport org.springframework.core.type.AnnotationMetadata;\nimport org.springframework.core.type.classreading.MetadataReader;\nimport org.springframework.util.ClassUtils;\n\n/**\n * A simple {@link TypeFilter} which matches classes with a given annotation,\n * checking inherited annotations as well.\n *\n * <p>By default, the matching logic mirrors that of\n * {@link AnnotationUtils#getAnnotation(java.lang.reflect.AnnotatedElement, Class)},\n * supporting annotations that are <em>present</em> or <em>meta-present</em> for a\n * single level of meta-annotations. The search for meta-annotations may be disabled.\n * Similarly, the search for annotations on interfaces may optionally be enabled.\n * Consult the various constructors in this class for details.\n *\n * @author Mark Fisher\n * @author Ramnivas Laddad\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 2.5\n */\npublic class AnnotationTypeFilter extends AbstractTypeHierarchyTraversingFilter {\n\n\tprivate final Class<? extends Annotation> annotationType;\n\n\tprivate final boolean considerMetaAnnotations;\n\n\n\t/**\n\t * Create a new {@code AnnotationTypeFilter} for the given annotation type.\n\t * <p>The filter will also match meta-annotations. To disable the\n\t * meta-annotation matching, use the constructor that accepts a\n\t * '{@code considerMetaAnnotations}' argument.\n\t * <p>The filter will not match interfaces.\n\t * @param annotationType the annotation type to match\n\t */\n\tpublic AnnotationTypeFilter(Class<? extends Annotation> annotationType) {\n\t\tthis(annotationType, true, false);\n\t}\n\n\t/**\n\t * Create a new {@code AnnotationTypeFilter} for the given annotation type.\n\t * <p>The filter will not match interfaces.\n\t * @param annotationType the annotation type to match\n\t * @param considerMetaAnnotations whether to also match on meta-annotations\n\t */\n\tpublic AnnotationTypeFilter(Class<? extends Annotation> annotationType, boolean considerMetaAnnotations) {\n\t\tthis(annotationType, considerMetaAnnotations, false);\n\t}\n\n\t/**\n\t * Create a new {@code AnnotationTypeFilter} for the given annotation type.\n\t * @param annotationType the annotation type to match\n\t * @param considerMetaAnnotations whether to also match on meta-annotations\n\t * @param considerInterfaces whether to also match interfaces\n\t */\n\tpublic AnnotationTypeFilter(\n\t\t\tClass<? extends Annotation> annotationType, boolean considerMetaAnnotations, boolean considerInterfaces) {\n\n\t\tsuper(annotationType.isAnnotationPresent(Inherited.class), considerInterfaces);\n\t\tthis.annotationType = annotationType;\n\t\tthis.considerMetaAnnotations = considerMetaAnnotations;\n\t}\n\n\t/**\n\t * Return the {@link Annotation} that this instance is using to filter\n\t * candidates.\n\t * @since 5.0\n\t */\n\tpublic final Class<? extends Annotation> getAnnotationType() {\n\t\treturn this.annotationType;\n\t}\n\n\t@Override\n\tprotected boolean matchSelf(MetadataReader metadataReader) {\n\t\tAnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\n\t\treturn metadata.hasAnnotation(this.annotationType.getName()) ||\n\t\t\t\t(this.considerMetaAnnotations && metadata.hasMetaAnnotation(this.annotationType.getName()));\n\t}\n\n\t@Override\n\tprotected @Nullable Boolean matchSuperClass(String superClassName) {\n\t\treturn hasAnnotation(superClassName);\n\t}\n\n\t@Override\n\tprotected @Nullable Boolean matchInterface(String interfaceName) {\n\t\treturn hasAnnotation(interfaceName);\n\t}\n\n\tprotected @Nullable Boolean hasAnnotation(String typeName) {\n\t\tif (Object.class.getName().equals(typeName)) {\n\t\t\treturn false;\n\t\t}\n\t\telse if (typeName.startsWith(\"java\")) {\n\t\t\tif (!this.annotationType.getName().startsWith(\"java\")) {\n\t\t\t\t// Standard Java types do not have non-standard annotations on them ->\n\t\t\t\t// skip any load attempt, in particular for Java language interfaces.\n\t\t\t\treturn false;\n\t\t\t}\n\t\t\ttry {\n\t\t\t\tClass<?> clazz = ClassUtils.forName(typeName, getClass().getClassLoader());\n\t\t\t\treturn ((this.considerMetaAnnotations ? AnnotationUtils.getAnnotation(clazz, this.annotationType) :\n\t\t\t\t\t\tclazz.getAnnotation(this.annotationType)) != null);\n\t\t\t}\n\t\t\tcatch (Throwable ex) {\n\t\t\t\t// Class not regularly loadable - can't determine a match that way.\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter#annotationType",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#annotationType",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class<? extends Annotation>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter#considerMetaAnnotations",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#considerMetaAnnotations",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#getAnnotationType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the {@link Annotation} that this instance is using to filter\r\n * candidates.\r\n * @since 5.0\r\n */\r\npublic final Class<? extends Annotation> getAnnotationType() {\r\n    return this.annotationType;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter#getAnnotationType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSelf(MetadataReader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected boolean matchSelf(MetadataReader metadataReader) {\r\n    AnnotationMetadata metadata = metadataReader.getAnnotationMetadata();\r\n    return metadata.hasAnnotation(this.annotationType.getName()) || (this.considerMetaAnnotations && metadata.hasMetaAnnotation(this.annotationType.getName()));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSelf(MetadataReader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSelf(MetadataReader)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSuperClass(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\nprotected Boolean matchSuperClass(String superClassName) {\r\n    return hasAnnotation(superClassName);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSuperClass(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSuperClass(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#matchSuperClass(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter#matchInterface(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\nprotected Boolean matchInterface(String interfaceName) {\r\n    return hasAnnotation(interfaceName);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.filter.AnnotationTypeFilter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.filter.AnnotationTypeFilter#matchInterface(String)",
+    "tailType": "method"
+  }
+]

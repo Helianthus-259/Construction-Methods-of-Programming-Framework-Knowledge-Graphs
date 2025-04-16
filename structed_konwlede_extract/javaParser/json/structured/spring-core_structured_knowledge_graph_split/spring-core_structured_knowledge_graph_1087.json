@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.KotlinDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.KotlinDetector#isKotlinType(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.KotlinDetector#isSuspendingFunction(Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return {@code true} if the method is a suspending function.\r\n * @since 5.3\r\n */\r\npublic static boolean isSuspendingFunction(Method method) {\r\n    if (kotlinCoroutineContinuation == null) {\r\n        return false;\r\n    }\r\n    int parameterCount = method.getParameterCount();\r\n    return (parameterCount > 0 && method.getParameterTypes()[parameterCount - 1] == kotlinCoroutineContinuation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.KotlinDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.KotlinDetector#isSuspendingFunction(Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.KotlinDetector#isInlineClass(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the given {@code Class} is an inline class\r\n * (annotated with {@code @JvmInline}).\r\n * @since 6.1.5\r\n * @see <a href=\"https://kotlinlang.org/docs/inline-classes.html\">Kotlin inline value classes</a>\r\n */\r\npublic static boolean isInlineClass(Class<?> clazz) {\r\n    return (kotlinJvmInline != null && clazz.getDeclaredAnnotation(kotlinJvmInline) != null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.KotlinDetector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.KotlinDetector#isInlineClass(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.KotlinReflectionParameterNameDiscoverer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Method;\nimport java.util.List;\n\nimport kotlin.reflect.KFunction;\nimport kotlin.reflect.KParameter;\nimport kotlin.reflect.jvm.ReflectJvmMapping;\nimport org.jspecify.annotations.Nullable;\n\n/**\n * {@link ParameterNameDiscoverer} implementation which uses Kotlin's reflection facilities\n * for introspecting parameter names.\n *\n * <p>Compared to {@link StandardReflectionParameterNameDiscoverer}, it allows in addition to\n * determine interface parameter names without requiring Java 8 -parameters compiler flag.\n *\n * @author Sebastien Deleuze\n * @since 5.0\n * @see StandardReflectionParameterNameDiscoverer\n * @see DefaultParameterNameDiscoverer\n */\npublic class KotlinReflectionParameterNameDiscoverer implements ParameterNameDiscoverer {\n\n\t@Override\n\tpublic @Nullable String @Nullable [] getParameterNames(Method method) {\n\t\tif (!KotlinDetector.isKotlinType(method.getDeclaringClass())) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\tKFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\n\t\t\treturn (function != null ? getParameterNames(function.getParameters()) : null);\n\t\t}\n\t\tcatch (UnsupportedOperationException ex) {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable String @Nullable [] getParameterNames(Constructor<?> ctor) {\n\t\tif (ctor.getDeclaringClass().isEnum() || !KotlinDetector.isKotlinType(ctor.getDeclaringClass())) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\tKFunction<?> function = ReflectJvmMapping.getKotlinFunction(ctor);\n\t\t\treturn (function != null ? getParameterNames(function.getParameters()) : null);\n\t\t}\n\t\tcatch (UnsupportedOperationException ex) {\n\t\t\treturn null;\n\t\t}\n\t}\n\n\tprivate @Nullable String @Nullable [] getParameterNames(List<KParameter> parameters) {\n\t\tString[] parameterNames = parameters.stream()\n\t\t\t\t// Extension receivers of extension methods must be included as they appear as normal method parameters in Java\n\t\t\t\t.filter(p -> KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()))\n\t\t\t\t// extension receivers are not explicitly named, but require a name for Java interoperability\n\t\t\t\t// $receiver is not a valid Kotlin identifier, but valid in Java, so it can be used here\n\t\t\t\t.map(p -> KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()) ? \"$receiver\" : p.getName())\n\t\t\t\t.toArray(String[]::new);\n\t\tfor (String parameterName : parameterNames) {\n\t\t\tif (parameterName == null) {\n\t\t\t\treturn null;\n\t\t\t}\n\t\t}\n\t\treturn parameterNames;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Method method) {\r\n    if (!KotlinDetector.isKotlinType(method.getDeclaringClass())) {\r\n        return null;\r\n    }\r\n    try {\r\n        KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);\r\n        return (function != null ? getParameterNames(function.getParameters()) : null);\r\n    } catch (UnsupportedOperationException ex) {\r\n        return null;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Method)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Method)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\n@Nullable\r\npublic String @Nullable [] getParameterNames(Constructor<?> ctor) {\r\n    if (ctor.getDeclaringClass().isEnum() || !KotlinDetector.isKotlinType(ctor.getDeclaringClass())) {\r\n        return null;\r\n    }\r\n    try {\r\n        KFunction<?> function = ReflectJvmMapping.getKotlinFunction(ctor);\r\n        return (function != null ? getParameterNames(function.getParameters()) : null);\r\n    } catch (UnsupportedOperationException ex) {\r\n        return null;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(Constructor<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(List<KParameter>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate String @Nullable [] getParameterNames(List<KParameter> parameters) {\r\n    String[] parameterNames = parameters.stream().// Extension receivers of extension methods must be included as they appear as normal method parameters in Java\r\n    filter(p -> KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind())).// extension receivers are not explicitly named, but require a name for Java interoperability\r\n    // $receiver is not a valid Kotlin identifier, but valid in Java, so it can be used here\r\n    map(p -> KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()) ? \"$receiver\" : p.getName()).toArray(String[]::new);\r\n    for (String parameterName : parameterNames) {\r\n        if (parameterName == null) {\r\n            return null;\r\n        }\r\n    }\r\n    return parameterNames;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(List<KParameter>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.KotlinReflectionParameterNameDiscoverer#getParameterNames(List<KParameter>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.log",
+    "tailType": "package"
+  }
+]

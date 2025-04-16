@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.PooledDataBuffer#release()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Decrease the reference count for this buffer by one,\r\n * and deallocate it once the count reaches zero.\r\n * @return {@code true} if the buffer was deallocated;\r\n * {@code false} otherwise\r\n */\r\nboolean release();",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.PooledDataBuffer",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.PooledDataBuffer#release()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.PooledDataBuffer",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "TouchableDataBuffer",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.buffer;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.util.ConcurrentModificationException;\nimport java.util.Objects;\nimport java.util.Queue;\nimport java.util.concurrent.ArrayBlockingQueue;\nimport java.util.concurrent.Flow;\nimport java.util.concurrent.atomic.AtomicInteger;\nimport java.util.concurrent.atomic.AtomicReference;\nimport java.util.concurrent.locks.LockSupport;\nimport java.util.concurrent.locks.ReentrantLock;\n\nimport org.jspecify.annotations.Nullable;\nimport org.reactivestreams.Subscriber;\nimport org.reactivestreams.Subscription;\nimport reactor.core.Exceptions;\n\nimport org.springframework.util.Assert;\n\n/**\n * An {@link InputStream} backed by {@link Flow.Subscriber Flow.Subscriber}\n * receiving byte buffers from a {@link Flow.Publisher} source.\n *\n * <p>Byte buffers are stored in a queue. The {@code demand} constructor value\n * determines the number of buffers requested initially. When storage falls\n * below a {@code (demand - (demand >> 2))} limit, a request is made to refill\n * the queue.\n *\n * <p>The {@code InputStream} terminates after an onError or onComplete signal,\n * and stored buffers are read. If the {@code InputStream} is closed,\n * the {@link Flow.Subscription} is cancelled, and stored buffers released.\n *\n * <p>Note that this class has a near duplicate in\n * {@link org.springframework.http.client.SubscriberInputStream}.\n *\n * @author Oleh Dokuka\n * @author Rossen Stoyanchev\n * @since 6.2\n */\nfinal class SubscriberInputStream extends InputStream implements Subscriber<DataBuffer> {\n\n\tprivate static final Object READY = new Object();\n\n\tprivate static final DataBuffer DONE = DefaultDataBufferFactory.sharedInstance.allocateBuffer(0);\n\n\tprivate static final DataBuffer CLOSED = DefaultDataBufferFactory.sharedInstance.allocateBuffer(0);\n\n\n\tprivate final int prefetch;\n\n\tprivate final int limit;\n\n\tprivate final ReentrantLock lock;\n\n\tprivate final Queue<DataBuffer> queue;\n\n\tprivate final AtomicReference<Object> parkedThread = new AtomicReference<>();\n\n\tprivate final AtomicInteger workAmount = new AtomicInteger();\n\n\tprivate volatile boolean closed;\n\n\tprivate int consumed;\n\n\tprivate @Nullable DataBuffer available;\n\n\tprivate @Nullable Subscription subscription;\n\n\tprivate boolean done;\n\n\tprivate @Nullable Throwable error;\n\n\n\t/**\n\t * Create an instance.\n\t * @param demand the number of buffers to request initially, and buffer\n\t * internally on an ongoing basis.\n\t */\n\tSubscriberInputStream(int demand) {\n\t\tthis.prefetch = demand;\n\t\tthis.limit = (demand == Integer.MAX_VALUE ? Integer.MAX_VALUE : demand - (demand >> 2));\n\t\tthis.queue = new ArrayBlockingQueue<>(demand);\n\t\tthis.lock = new ReentrantLock(false);\n\t}\n\n\n\t@Override\n\tpublic void onSubscribe(Subscription subscription) {\n\t\tif (this.subscription != null) {\n\t\t\tsubscription.cancel();\n\t\t\treturn;\n\t\t}\n\n\t\tthis.subscription = subscription;\n\t\tsubscription.request(this.prefetch == Integer.MAX_VALUE ? Long.MAX_VALUE : this.prefetch);\n\t}\n\n\t@Override\n\tpublic void onNext(DataBuffer buffer) {\n\t\tAssert.notNull(buffer, \"DataBuffer must not be null\");\n\n\t\tif (this.done) {\n\t\t\tdiscard(buffer);\n\t\t\treturn;\n\t\t}\n\n\t\tif (!this.queue.offer(buffer)) {\n\t\t\tdiscard(buffer);\n\t\t\tthis.error = new RuntimeException(\"Buffer overflow\");\n\t\t\tthis.done = true;\n\t\t}\n\n\t\tint previousWorkState = addWork();\n\t\tif (previousWorkState == Integer.MIN_VALUE) {\n\t\t\tDataBuffer value = this.queue.poll();\n\t\t\tif (value != null) {\n\t\t\t\tdiscard(value);\n\t\t\t}\n\t\t\treturn;\n\t\t}\n\n\t\tif (previousWorkState == 0) {\n\t\t\tresume();\n\t\t}\n\t}\n\n\t@Override\n\tpublic void onError(Throwable throwable) {\n\t\tif (this.done) {\n\t\t\treturn;\n\t\t}\n\t\tthis.error = throwable;\n\t\tthis.done = true;\n\n\t\tif (addWork() == 0) {\n\t\t\tresume();\n\t\t}\n\t}\n\n\t@Override\n\tpublic void onComplete() {\n\t\tif (this.done) {\n\t\t\treturn;\n\t\t}\n\n\t\tthis.done = true;\n\n\t\tif (addWork() == 0) {\n\t\t\tresume();\n\t\t}\n\t}\n\n\tint addWork() {\n\t\tfor (;;) {\n\t\t\tint produced = this.workAmount.getPlain();\n\n\t\t\tif (produced == Integer.MIN_VALUE) {\n\t\t\t\treturn Integer.MIN_VALUE;\n\t\t\t}\n\n\t\t\tint nextProduced = (produced == Integer.MAX_VALUE ? 1 : produced + 1);\n\n\t\t\tif (this.workAmount.weakCompareAndSetRelease(produced, nextProduced)) {\n\t\t\t\treturn produced;\n\t\t\t}\n\t\t}\n\t}\n\n\tprivate void resume() {\n\t\tif (this.parkedThread != READY) {\n\t\t\tObject old = this.parkedThread.getAndSet(READY);\n\t\t\tif (old != READY) {\n\t\t\t\tLockSupport.unpark((Thread)old);\n\t\t\t}\n\t\t}\n\t}\n\n\t/* InputStream implementation */\n\n\t@Override\n\tpublic int read() throws IOException {\n\t\tif (!this.lock.tryLock()) {\n\t\t\tif (this.closed) {\n\t\t\t\treturn -1;\n\t\t\t}\n\t\t\tthrow new ConcurrentModificationException(\"Concurrent access is not allowed\");\n\t\t}\n\n\t\ttry {\n\t\t\tDataBuffer next = getNextOrAwait();\n\n\t\t\tif (next == DONE) {\n\t\t\t\tthis.closed = true;\n\t\t\t\tcleanAndFinalize();\n\t\t\t\tif (this.error == null) {\n\t\t\t\t\treturn -1;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tthrow Exceptions.propagate(this.error);\n\t\t\t\t}\n\t\t\t}\n\t\t\telse if (next == CLOSED) {\n\t\t\t\tcleanAndFinalize();\n\t\t\t\treturn -1;\n\t\t\t}\n\n\t\t\treturn next.read() & 0xFF;\n\t\t}\n\t\tcatch (Throwable ex) {\n\t\t\tthis.closed = true;\n\t\t\trequiredSubscriber().cancel();\n\t\t\tcleanAndFinalize();\n\t\t\tthrow Exceptions.propagate(ex);\n\t\t}\n\t\tfinally {\n\t\t\tthis.lock.unlock();\n\t\t}\n\t}\n\n\t@Override\n\tpublic int read(byte[] b, int off, int len) throws IOException {\n\t\tObjects.checkFromIndexSize(off, len, b.length);\n\t\tif (len == 0) {\n\t\t\treturn 0;\n\t\t}\n\n\t\tif (!this.lock.tryLock()) {\n\t\t\tif (this.closed) {\n\t\t\t\treturn -1;\n\t\t\t}\n\t\t\tthrow new ConcurrentModificationException(\"concurrent access is disallowed\");\n\t\t}\n\n\t\ttry {\n\t\t\tfor (int j = 0; j < len;) {\n\t\t\t\tDataBuffer next = getNextOrAwait();\n\n\t\t\t\tif (next == DONE) {\n\t\t\t\t\tcleanAndFinalize();\n\t\t\t\t\tif (this.error == null) {\n\t\t\t\t\t\tthis.closed = true;\n\t\t\t\t\t\treturn j == 0 ? -1 : j;\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\tif (j == 0) {\n\t\t\t\t\t\t\tthis.closed = true;\n\t\t\t\t\t\t\tthrow Exceptions.propagate(this.error);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\treturn j;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\telse if (next == CLOSED) {\n\t\t\t\t\trequiredSubscriber().cancel();\n\t\t\t\t\tcleanAndFinalize();\n\t\t\t\t\treturn -1;\n\t\t\t\t}\n\t\t\t\tint initialReadPosition = next.readPosition();\n\t\t\t\tnext.read(b, off + j, Math.min(len - j, next.readableByteCount()));\n\t\t\t\tj += next.readPosition() - initialReadPosition;\n\t\t\t}\n\n\t\t\treturn len;\n\t\t}\n\t\tcatch (Throwable ex) {\n\t\t\tthis.closed = true;\n\t\t\trequiredSubscriber().cancel();\n\t\t\tcleanAndFinalize();\n\t\t\tthrow Exceptions.propagate(ex);\n\t\t}\n\t\tfinally {\n\t\t\tthis.lock.unlock();\n\t\t}\n\t}\n\n\tprivate DataBuffer getNextOrAwait() {\n\t\tif (this.available == null || this.available.readableByteCount() == 0) {\n\t\t\tdiscard(this.available);\n\t\t\tthis.available = null;\n\n\t\t\tint actualWorkAmount = this.workAmount.getAcquire();\n\t\t\tfor (;;) {\n\t\t\t\tif (this.closed) {\n\t\t\t\t\treturn CLOSED;\n\t\t\t\t}\n\n\t\t\t\tboolean done = this.done;\n\t\t\t\tDataBuffer buffer = this.queue.poll();\n\t\t\t\tif (buffer != null) {\n\t\t\t\t\tint consumed = ++this.consumed;\n\t\t\t\t\tthis.available = buffer;\n\t\t\t\t\tif (consumed == this.limit) {\n\t\t\t\t\t\tthis.consumed = 0;\n\t\t\t\t\t\trequiredSubscriber().request(this.limit);\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\n\t\t\t\tif (done) {\n\t\t\t\t\treturn DONE;\n\t\t\t\t}\n\n\t\t\t\tactualWorkAmount = this.workAmount.addAndGet(-actualWorkAmount);\n\t\t\t\tif (actualWorkAmount == 0) {\n\t\t\t\t\tawait();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\treturn this.available;\n\t}\n\n\tprivate void cleanAndFinalize() {\n\t\tdiscard(this.available);\n\t\tthis.available = null;\n\n\t\tfor (;;) {\n\t\t\tint workAmount = this.workAmount.getPlain();\n\t\t\tDataBuffer value;\n\t\t\twhile ((value = this.queue.poll()) != null) {\n\t\t\t\tdiscard(value);\n\t\t\t}\n\n\t\t\tif (this.workAmount.weakCompareAndSetPlain(workAmount, Integer.MIN_VALUE)) {\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic void close() throws IOException {\n\t\tif (this.closed) {\n\t\t\treturn;\n\t\t}\n\n\t\tthis.closed = true;\n\n\t\tif (!this.lock.tryLock()) {\n\t\t\tif (addWork() == 0) {\n\t\t\t\tresume();\n\t\t\t}\n\t\t\treturn;\n\t\t}\n\n\t\ttry {\n\t\t\trequiredSubscriber().cancel();\n\t\t\tcleanAndFinalize();\n\t\t}\n\t\tfinally {\n\t\t\tthis.lock.unlock();\n\t\t}\n\t}\n\n\tprivate Subscription requiredSubscriber() {\n\t\tAssert.state(this.subscription != null, \"Subscriber must be subscribed to use InputStream\");\n\t\treturn this.subscription;\n\t}\n\n\tprivate void discard(@Nullable DataBuffer buffer) {\n\t\tDataBufferUtils.release(buffer);\n\t}\n\n\tprivate void await() {\n\t\tThread toUnpark = Thread.currentThread();\n\n\t\twhile (true) {\n\t\t\tObject current = this.parkedThread.get();\n\t\t\tif (current == READY) {\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tif (current != null && current != toUnpark) {\n\t\t\t\tthrow new IllegalStateException(\"Only one (Virtual)Thread can await!\");\n\t\t\t}\n\n\t\t\tif (this.parkedThread.compareAndSet( null, toUnpark)) {\n\t\t\t\tLockSupport.park();\n\t\t\t\t// we don't just break here because park() can wake up spuriously\n\t\t\t\t// if we got a proper resume, get() == READY and the loop will quit above\n\t\t\t}\n\t\t}\n\t\t// clear the resume indicator so that the next await call will park without a resume()\n\t\tthis.parkedThread.lazySet(null);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#READY",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#READY",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#DONE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#DONE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DataBuffer",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#CLOSED",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#CLOSED",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DataBuffer",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#prefetch",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#prefetch",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#limit",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#limit",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#lock",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#lock",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ReentrantLock",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.SubscriberInputStream#queue",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.SubscriberInputStream#queue",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Queue<DataBuffer>",
+    "tailType": "type"
+  }
+]

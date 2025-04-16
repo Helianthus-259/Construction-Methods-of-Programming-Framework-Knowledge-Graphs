@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.Segment#getReference(Object,int,Restructure)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.Segment#doTask(int,Object,Task<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Apply an update operation to this segment.\r\n * The segment will be locked during the update.\r\n * @param hash the hash of the key\r\n * @param key the key\r\n * @param task the update operation\r\n * @return the result of the operation\r\n */\r\n@Nullable\r\npublic <T> T doTask(final int hash, @Nullable final Object key, final Task<T> task) {\r\n    boolean resize = task.hasOption(TaskOption.RESIZE);\r\n    if (task.hasOption(TaskOption.RESTRUCTURE_BEFORE)) {\r\n        restructureIfNecessary(resize);\r\n    }\r\n    if (task.hasOption(TaskOption.SKIP_IF_EMPTY) && this.count.get() == 0) {\r\n        return task.execute(null, null, null);\r\n    }\r\n    lock();\r\n    try {\r\n        final int index = getIndex(hash, this.references);\r\n        final Reference<K, V> head = this.references[index];\r\n        Reference<K, V> ref = findInChain(head, key, hash);\r\n        Entry<K, V> entry = (ref != null ? ref.get() : null);\r\n        Entries<V> entries = value -> {\r\n            @SuppressWarnings(\"unchecked\")\r\n            Entry<K, V> newEntry = new Entry<>((K) key, value);\r\n            Reference<K, V> newReference = Segment.this.referenceManager.createReference(newEntry, hash, head);\r\n            Segment.this.references[index] = newReference;\r\n            Segment.this.count.incrementAndGet();\r\n        };\r\n        return task.execute(ref, entry, entries);\r\n    } finally {\r\n        unlock();\r\n        if (task.hasOption(TaskOption.RESTRUCTURE_AFTER)) {\r\n            restructureIfNecessary(resize);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#doTask(int,Object,Task<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#doTask(int,Object,Task<T>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.Segment#clear()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Clear all items from this segment.\r\n */\r\npublic void clear() {\r\n    if (this.count.get() == 0) {\r\n        return;\r\n    }\r\n    lock();\r\n    try {\r\n        this.references = createReferenceArray(this.initialSize);\r\n        this.resizeThreshold = (int) (this.references.length * getLoadFactor());\r\n        this.count.set(0);\r\n    } finally {\r\n        unlock();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#clear()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#restructureIfNecessary(boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Restructure the underlying data structure when it becomes necessary. This\r\n * method can increase the size of the references table as well as purge any\r\n * references that have been garbage collected.\r\n * @param allowResize if resizing is permitted\r\n */\r\nvoid restructureIfNecessary(boolean allowResize) {\r\n    int currCount = this.count.get();\r\n    boolean needsResize = allowResize && (currCount > 0 && currCount >= this.resizeThreshold);\r\n    Reference<K, V> ref = this.referenceManager.pollForPurge();\r\n    if (ref != null || (needsResize)) {\r\n        restructure(allowResize, ref);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#restructureIfNecessary(boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#restructure(boolean,Reference<K,V>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void restructure(boolean allowResize, @Nullable Reference<K, V> ref) {\r\n    boolean needsResize;\r\n    lock();\r\n    try {\r\n        int expectedCount = this.count.get();\r\n        Set<Reference<K, V>> toPurge = Collections.emptySet();\r\n        if (ref != null) {\r\n            toPurge = new HashSet<>();\r\n            while (ref != null) {\r\n                toPurge.add(ref);\r\n                ref = this.referenceManager.pollForPurge();\r\n            }\r\n        }\r\n        expectedCount -= toPurge.size();\r\n        // Estimate new count, taking into account count inside lock and items that\r\n        // will be purged.\r\n        needsResize = (expectedCount > 0 && expectedCount >= this.resizeThreshold);\r\n        boolean resizing = false;\r\n        int restructureSize = this.references.length;\r\n        if (allowResize && needsResize && restructureSize < MAXIMUM_SEGMENT_SIZE) {\r\n            restructureSize <<= 1;\r\n            resizing = true;\r\n        }\r\n        int newCount = 0;\r\n        // Restructure the resized reference array\r\n        if (resizing) {\r\n            Reference<K, V>[] restructured = createReferenceArray(restructureSize);\r\n            for (Reference<K, V> reference : this.references) {\r\n                ref = reference;\r\n                while (ref != null) {\r\n                    if (!toPurge.contains(ref)) {\r\n                        Entry<K, V> entry = ref.get();\r\n                        // Also filter out null references that are now null\r\n                        // they should be polled from the queue in a later restructure call.\r\n                        if (entry != null) {\r\n                            int index = getIndex(ref.getHash(), restructured);\r\n                            restructured[index] = this.referenceManager.createReference(entry, ref.getHash(), restructured[index]);\r\n                            newCount++;\r\n                        }\r\n                    }\r\n                    ref = ref.getNext();\r\n                }\r\n            }\r\n            // Replace volatile members\r\n            this.references = restructured;\r\n            this.resizeThreshold = (int) (this.references.length * getLoadFactor());\r\n        } else // Restructure the existing reference array \"in place\"\r\n        {\r\n            for (int i = 0; i < this.references.length; i++) {\r\n                Reference<K, V> purgedRef = null;\r\n                ref = this.references[i];\r\n                while (ref != null) {\r\n                    if (!toPurge.contains(ref)) {\r\n                        Entry<K, V> entry = ref.get();\r\n                        // Also filter out null references that are now null\r\n                        // they should be polled from the queue in a later restructure call.\r\n                        if (entry != null) {\r\n                            purgedRef = this.referenceManager.createReference(entry, ref.getHash(), purgedRef);\r\n                        }\r\n                        newCount++;\r\n                    }\r\n                    ref = ref.getNext();\r\n                }\r\n                this.references[i] = purgedRef;\r\n            }\r\n        }\r\n        this.count.set(Math.max(newCount, 0));\r\n    } finally {\r\n        unlock();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#restructure(boolean,Reference<K,V>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#findInChain(Reference<K,V>,Object,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Nullable\r\nprivate Reference<K, V> findInChain(@Nullable Reference<K, V> ref, @Nullable Object key, int hash) {\r\n    Reference<K, V> currRef = ref;\r\n    while (currRef != null) {\r\n        if (currRef.getHash() == hash) {\r\n            Entry<K, V> entry = currRef.get();\r\n            if (entry != null) {\r\n                K entryKey = entry.getKey();\r\n                if (ObjectUtils.nullSafeEquals(entryKey, key)) {\r\n                    return currRef;\r\n                }\r\n            }\r\n        }\r\n        currRef = currRef.getNext();\r\n    }\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#findInChain(Reference<K,V>,Object,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#findInChain(Reference<K,V>,Object,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.Segment#createReferenceArray(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@SuppressWarnings({ \"rawtypes\", \"unchecked\" })\r\nprivate Reference<K, V>[] createReferenceArray(int size) {\r\n    return new Reference[size];\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#createReferenceArray(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#createReferenceArray(int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.Segment#getIndex(int,Reference<K,V>[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private int getIndex(int hash, @Nullable Reference<K, V>[] references) {\r\n    return (hash & (references.length - 1));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#getIndex(int,Reference<K,V>[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Segment#getSize()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the size of the current references array.\r\n */\r\npublic int getSize() {\r\n    return this.references.length;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Segment",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Segment#getSize()",
+    "tailType": "method"
+  }
+]

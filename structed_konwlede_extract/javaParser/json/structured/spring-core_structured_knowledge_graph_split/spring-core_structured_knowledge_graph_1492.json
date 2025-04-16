@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.nio.charset.StandardCharsets;\nimport java.nio.file.Path;\nimport java.util.function.Function;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.io.TempDir;\n\nimport org.springframework.aot.generate.GeneratedFiles.FileHandler;\nimport org.springframework.aot.generate.GeneratedFiles.Kind;\nimport org.springframework.core.io.ByteArrayResource;\nimport org.springframework.util.function.ThrowingConsumer;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.assertj.core.api.Assertions.assertThatIllegalStateException;\n\n/**\n * Tests for {@link FileSystemGeneratedFiles}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n */\nclass FileSystemGeneratedFilesTests {\n\n\t@TempDir\n\tPath root;\n\n\t@Test\n\tvoid addFilesCopiesToFileSystem() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\n\t\tgeneratedFiles.addSourceFile(\"com.example.Test\", \"{}\");\n\t\tgeneratedFiles.addResourceFile(\"META-INF/test\", \"test\");\n\t\tgeneratedFiles.addClassFile(\"com/example/TestProxy.class\",\n\t\t\t\tnew ByteArrayResource(\"!\".getBytes(StandardCharsets.UTF_8)));\n\t\tassertThat(this.root.resolve(\"sources/com/example/Test.java\")).content().isEqualTo(\"{}\");\n\t\tassertThat(this.root.resolve(\"resources/META-INF/test\")).content().isEqualTo(\"test\");\n\t\tassertThat(this.root.resolve(\"classes/com/example/TestProxy.class\")).content().isEqualTo(\"!\");\n\t}\n\n\t@Test\n\tvoid addFilesWithCustomRootsCopiesToFileSystem() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(\n\t\t\t\tkind -> this.root.resolve(\"the-\" + kind));\n\t\tgeneratedFiles.addSourceFile(\"com.example.Test\", \"{}\");\n\t\tgeneratedFiles.addResourceFile(\"META-INF/test\", \"test\");\n\t\tgeneratedFiles.addClassFile(\"com/example/TestProxy.class\",\n\t\t\t\tnew ByteArrayResource(\"!\".getBytes(StandardCharsets.UTF_8)));\n\t\tassertThat(this.root.resolve(\"the-SOURCE/com/example/Test.java\")).content().isEqualTo(\"{}\");\n\t\tassertThat(this.root.resolve(\"the-RESOURCE/META-INF/test\")).content().isEqualTo(\"test\");\n\t\tassertThat(this.root.resolve(\"the-CLASS/com/example/TestProxy.class\")).content().isEqualTo(\"!\");\n\t}\n\n\t@Test\n\tvoid createWhenRootIsNullThrowsException() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> new FileSystemGeneratedFiles((Path) null))\n\t\t\t\t.withMessage(\"'root' must not be null\");\n\t}\n\n\t@Test\n\tvoid createWhenRootsIsNullThrowsException() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> new FileSystemGeneratedFiles((Function<Kind, Path>) null))\n\t\t\t\t.withMessage(\"'roots' must not be null\");\n\t}\n\n\t@Test\n\tvoid createWhenRootsResultsInNullThrowsException() {\n\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> new FileSystemGeneratedFiles(kind -> (kind != Kind.CLASS) ?\n\t\t\t\t\t\tthis.root.resolve(kind.toString()) : null))\n\t\t\t\t.withMessage(\"'roots' must return a value for all file kinds\");\n\t}\n\n\t@Test\n\tvoid addFileWhenPathIsOutsideOfRootThrowsException() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\n\t\tassertPathMustBeRelative(generatedFiles, \"/test\");\n\t\tassertPathMustBeRelative(generatedFiles, \"../test\");\n\t\tassertPathMustBeRelative(generatedFiles, \"test/../../test\");\n\t}\n\n\t@Test\n\tvoid addFileWhenFileAlreadyAddedThrowsException() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\n\t\tgeneratedFiles.addResourceFile(\"META-INF/mydir\", \"test\");\n\t\tassertThatIllegalStateException()\n\t\t\t\t.isThrownBy(() -> generatedFiles.addResourceFile(\"META-INF/mydir\", \"test\"))\n\t\t\t\t.withMessageContainingAll(\"META-INF\", \"mydir\", \"already exists\");\n\t}\n\n\t@Test\n\tvoid handleFileWhenFileExistsProvidesFileHandler() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\n\t\tgeneratedFiles.addResourceFile(\"META-INF/test\", \"test\");\n\t\tgeneratedFiles.handleFile(Kind.RESOURCE, \"META-INF/test\", handler -> {\n\t\t\tassertThat(handler.exists()).isTrue();\n\t\t\tassertThat(handler.getContent()).isNotNull();\n\t\t\tassertThat(handler.getContent().getInputStream()).hasContent(\"test\");\n\t\t});\n\t\tassertThat(this.root.resolve(\"resources/META-INF/test\")).content().isEqualTo(\"test\");\n\t}\n\n\t@Test\n\tvoid handleFileWhenFileExistsFailsToCreate() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\n\t\tgeneratedFiles.addResourceFile(\"META-INF/mydir\", \"test\");\n\t\tThrowingConsumer<FileHandler> consumer = handler ->\n\t\t\t\thandler.create(new ByteArrayResource(\"should fail\".getBytes(StandardCharsets.UTF_8)));\n\t\tassertThatIllegalStateException()\n\t\t\t\t.isThrownBy(() -> generatedFiles.handleFile(Kind.RESOURCE, \"META-INF/mydir\", consumer))\n\t\t\t\t.withMessageContainingAll(\"META-INF\", \"mydir\", \"already exists\");\n\t}\n\n\t@Test\n\tvoid handleFileWhenFileExistsCanOverrideContent() {\n\t\tFileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\n\t\tgeneratedFiles.addResourceFile(\"META-INF/mydir\", \"test\");\n\t\tgeneratedFiles.handleFile(Kind.RESOURCE, \"META-INF/mydir\", handler ->\n\t\t\t\thandler.override(new ByteArrayResource(\"overridden\".getBytes(StandardCharsets.UTF_8))));\n\t\tassertThat(this.root.resolve(\"resources/META-INF/mydir\")).content().isEqualTo(\"overridden\");\n\t}\n\n\tprivate void assertPathMustBeRelative(FileSystemGeneratedFiles generatedFiles, String path) {\n\t\tassertThatIllegalArgumentException()\n\t\t\t\t.isThrownBy(() -> generatedFiles.addResourceFile(path, \"test\"))\n\t\t\t\t.withMessage(\"'path' must be relative\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#root",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#root",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Path",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#addFilesCopiesToFileSystem()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid addFilesCopiesToFileSystem() {\r\n    FileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(this.root);\r\n    generatedFiles.addSourceFile(\"com.example.Test\", \";\");\r\n    generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    generatedFiles.addClassFile(\"com/example/TestProxy.class\", new ByteArrayResource(\"!\".getBytes(StandardCharsets.UTF_8)));\r\n    assertThat(this.root.resolve(\"sources/com/example/Test.java\")).content().isEqualTo(\";\");\r\n    assertThat(this.root.resolve(\"resources/META-INF/test\")).content().isEqualTo(\"test\");\r\n    assertThat(this.root.resolve(\"classes/com/example/TestProxy.class\")).content().isEqualTo(\"!\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#addFilesCopiesToFileSystem()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#addFilesCopiesToFileSystem()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#addFilesWithCustomRootsCopiesToFileSystem()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid addFilesWithCustomRootsCopiesToFileSystem() {\r\n    FileSystemGeneratedFiles generatedFiles = new FileSystemGeneratedFiles(kind -> this.root.resolve(\"the-\" + kind));\r\n    generatedFiles.addSourceFile(\"com.example.Test\", \";\");\r\n    generatedFiles.addResourceFile(\"META-INF/test\", \"test\");\r\n    generatedFiles.addClassFile(\"com/example/TestProxy.class\", new ByteArrayResource(\"!\".getBytes(StandardCharsets.UTF_8)));\r\n    assertThat(this.root.resolve(\"the-SOURCE/com/example/Test.java\")).content().isEqualTo(\";\");\r\n    assertThat(this.root.resolve(\"the-RESOURCE/META-INF/test\")).content().isEqualTo(\"test\");\r\n    assertThat(this.root.resolve(\"the-CLASS/com/example/TestProxy.class\")).content().isEqualTo(\"!\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#addFilesWithCustomRootsCopiesToFileSystem()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#addFilesWithCustomRootsCopiesToFileSystem()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootIsNullThrowsException()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid createWhenRootIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new FileSystemGeneratedFiles((Path) null)).withMessage(\"'root' must not be null\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootIsNullThrowsException()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootIsNullThrowsException()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootsIsNullThrowsException()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid createWhenRootsIsNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new FileSystemGeneratedFiles((Function<Kind, Path>) null)).withMessage(\"'roots' must not be null\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootsIsNullThrowsException()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootsIsNullThrowsException()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootsResultsInNullThrowsException()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid createWhenRootsResultsInNullThrowsException() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new FileSystemGeneratedFiles(kind -> (kind != Kind.CLASS) ? this.root.resolve(kind.toString()) : null)).withMessage(\"'roots' must return a value for all file kinds\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootsResultsInNullThrowsException()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFilesTests#createWhenRootsResultsInNullThrowsException()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

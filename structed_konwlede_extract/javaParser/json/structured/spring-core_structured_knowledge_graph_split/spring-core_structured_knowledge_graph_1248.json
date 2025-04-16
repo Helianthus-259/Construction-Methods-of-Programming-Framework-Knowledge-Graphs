@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#forName(String,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#resolveClassName(String,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given class name into a Class instance. Supports\r\n * primitives (like \"int\") and array class names (like \"String[]\").\r\n * <p>This is effectively equivalent to the {@code forName}\r\n * method with the same arguments, with the only difference being\r\n * the exceptions thrown in case of class loading failure.\r\n * @param className the name of the Class\r\n * @param classLoader the class loader to use\r\n * (can be {@code null}, which indicates the default class loader)\r\n * @return a class instance for the supplied name\r\n * @throws IllegalArgumentException if the class name was not resolvable\r\n * (that is, the class could not be found or the class file could not be loaded)\r\n * @throws IllegalStateException if the corresponding class is resolvable but there\r\n * was a readability mismatch in the inheritance hierarchy of the class (typically a\r\n * missing dependency declaration in a Java Module System module definition for a\r\n * superclass or interface implemented by the class to be loaded here)\r\n * @see #forName(String, ClassLoader)\r\n */\r\npublic static Class<?> resolveClassName(String className, @Nullable ClassLoader classLoader) throws IllegalArgumentException {\r\n    try {\r\n        return forName(className, classLoader);\r\n    } catch (IllegalAccessError err) {\r\n        throw new IllegalStateException(\"Readability mismatch in inheritance hierarchy of class [\" + className + \"]: \" + err.getMessage(), err);\r\n    } catch (LinkageError err) {\r\n        throw new IllegalArgumentException(\"Unresolvable class definition for class [\" + className + \"]\", err);\r\n    } catch (ClassNotFoundException ex) {\r\n        throw new IllegalArgumentException(\"Could not find class [\" + className + \"]\", ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#resolveClassName(String,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isPresent(String,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the {@link Class} identified by the supplied name is present\r\n * and can be loaded. Will return {@code false} if either the class or\r\n * one of its dependencies is not present or cannot be loaded.\r\n * @param className the name of the class to check\r\n * @param classLoader the class loader to use\r\n * (can be {@code null} which indicates the default class loader)\r\n * @return whether the specified class is present (including all of its\r\n * superclasses and interfaces)\r\n * @throws IllegalStateException if the corresponding class is resolvable but there\r\n * was a readability mismatch in the inheritance hierarchy of the class (typically a\r\n * missing dependency declaration in a Java Module System module definition for a\r\n * superclass or interface implemented by the class to be checked here)\r\n */\r\npublic static boolean isPresent(String className, @Nullable ClassLoader classLoader) {\r\n    try {\r\n        forName(className, classLoader);\r\n        return true;\r\n    } catch (IllegalAccessError err) {\r\n        throw new IllegalStateException(\"Readability mismatch in inheritance hierarchy of class [\" + className + \"]: \" + err.getMessage(), err);\r\n    } catch (Throwable ex) {\r\n        // Typically ClassNotFoundException or NoClassDefFoundError...\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isPresent(String,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isVisible(Class<?>,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Check whether the given class is visible in the given ClassLoader.\r\n * @param clazz the class to check (typically an interface)\r\n * @param classLoader the ClassLoader to check against\r\n * (can be {@code null} in which case this method will always return {@code true})\r\n */\r\npublic static boolean isVisible(Class<?> clazz, @Nullable ClassLoader classLoader) {\r\n    if (classLoader == null) {\r\n        return true;\r\n    }\r\n    try {\r\n        if (clazz.getClassLoader() == classLoader) {\r\n            return true;\r\n        }\r\n    } catch (SecurityException ex) {\r\n        // Fall through to loadable check below\r\n    }\r\n    // Visible if same Class can be loaded from given ClassLoader\r\n    return isLoadable(clazz, classLoader);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isVisible(Class<?>,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isCacheSafe(Class<?>,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Check whether the given class is cache-safe in the given context,\r\n * i.e. whether it is loaded by the given ClassLoader or a parent of it.\r\n * @param clazz the class to analyze\r\n * @param classLoader the ClassLoader to potentially cache metadata in\r\n * (can be {@code null} which indicates the system class loader)\r\n */\r\npublic static boolean isCacheSafe(Class<?> clazz, @Nullable ClassLoader classLoader) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    try {\r\n        ClassLoader target = clazz.getClassLoader();\r\n        // Common cases\r\n        if (target == classLoader || target == null) {\r\n            return true;\r\n        }\r\n        if (classLoader == null) {\r\n            return false;\r\n        }\r\n        // Check for match in ancestors -> positive\r\n        ClassLoader current = classLoader;\r\n        while (current != null) {\r\n            current = current.getParent();\r\n            if (current == target) {\r\n                return true;\r\n            }\r\n        }\r\n        // Check for match in children -> negative\r\n        while (target != null) {\r\n            target = target.getParent();\r\n            if (target == classLoader) {\r\n                return false;\r\n            }\r\n        }\r\n    } catch (SecurityException ex) {\r\n        // Fall through to loadable check below\r\n    }\r\n    // Fallback for ClassLoaders without parent/child relationship:\r\n    // safe if same Class can be loaded from given ClassLoader\r\n    return (classLoader != null && isLoadable(clazz, classLoader));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isCacheSafe(Class<?>,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isLoadable(Class<?>,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Check whether the given class is loadable in the given ClassLoader.\r\n * @param clazz the class to check (typically an interface)\r\n * @param classLoader the ClassLoader to check against\r\n * @since 5.0.6\r\n */\r\nprivate static boolean isLoadable(Class<?> clazz, ClassLoader classLoader) {\r\n    try {\r\n        return (clazz == classLoader.loadClass(clazz.getName()));\r\n        // Else: different class with same name found\r\n    } catch (ClassNotFoundException ex) {\r\n        // No corresponding class found at all\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isLoadable(Class<?>,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#resolvePrimitiveClassName(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given class name as primitive class, if appropriate,\r\n * according to the JVM's naming rules for primitive classes.\r\n * <p>Also supports the JVM's internal class names for primitive arrays.\r\n * Does <i>not</i> support the \"[]\" suffix notation for primitive arrays;\r\n * this is only supported by {@link #forName(String, ClassLoader)}.\r\n * @param name the name of the potentially primitive class\r\n * @return the primitive class, or {@code null} if the name does not denote\r\n * a primitive class or primitive array class\r\n */\r\n@Nullable\r\npublic static Class<?> resolvePrimitiveClassName(@Nullable String name) {\r\n    Class<?> result = null;\r\n    // Most class names will be quite long, considering that they\r\n    // SHOULD sit in a package, so a length check is worthwhile.\r\n    if (name != null && name.length() <= 7) {\r\n        // Could be a primitive - likely.\r\n        result = primitiveTypeNameMap.get(name);\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#resolvePrimitiveClassName(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#resolvePrimitiveClassName(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isPrimitiveWrapper(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Check if the given class represents a primitive wrapper,\r\n * i.e. Boolean, Byte, Character, Short, Integer, Long, Float, Double, or\r\n * Void.\r\n * @param clazz the class to check\r\n * @return whether the given class is a primitive wrapper class\r\n */\r\npublic static boolean isPrimitiveWrapper(Class<?> clazz) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    return primitiveWrapperTypeMap.containsKey(clazz);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isPrimitiveWrapper(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isPrimitiveOrWrapper(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Check if the given class represents a primitive (i.e. boolean, byte,\r\n * char, short, int, long, float, or double), {@code void}, or a wrapper for\r\n * those types (i.e. Boolean, Byte, Character, Short, Integer, Long, Float,\r\n * Double, or Void).\r\n * @param clazz the class to check\r\n * @return {@code true} if the given class represents a primitive, void, or\r\n * a wrapper class\r\n */\r\npublic static boolean isPrimitiveOrWrapper(Class<?> clazz) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    return (clazz.isPrimitive() || isPrimitiveWrapper(clazz));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isPrimitiveOrWrapper(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils#isPrimitiveArray(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Check if the given class represents an array of primitives,\r\n * i.e. boolean, byte, char, short, int, long, float, or double.\r\n * @param clazz the class to check\r\n * @return whether the given class is a primitive array class\r\n */\r\npublic static boolean isPrimitiveArray(Class<?> clazz) {\r\n    Assert.notNull(clazz, \"Class must not be null\");\r\n    return (clazz.isArray() && clazz.componentType().isPrimitive());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ClassUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ClassUtils#isPrimitiveArray(Class<?>)",
+    "tailType": "method"
+  }
+]

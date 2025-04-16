@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.KeySet#remove(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.KeySet#clear()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void clear() {\r\n    LinkedCaseInsensitiveMap.this.clear();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.KeySet",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.KeySet#clear()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.KeySet#clear()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.KeySet#spliterator()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Spliterator<String> spliterator() {\r\n    return this.delegate.spliterator();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.KeySet",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.KeySet#spliterator()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.KeySet#spliterator()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.KeySet#forEach(Consumer<? super String>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void forEach(Consumer<? super String> action) {\r\n    this.delegate.forEach(action);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.KeySet",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.KeySet#forEach(Consumer<? super String>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.KeySet#forEach(Consumer<? super String>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.KeySet",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractSet",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.Values",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.Values",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.Serializable;\nimport java.util.AbstractCollection;\nimport java.util.AbstractSet;\nimport java.util.Collection;\nimport java.util.HashMap;\nimport java.util.Iterator;\nimport java.util.LinkedHashMap;\nimport java.util.Locale;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.Spliterator;\nimport java.util.function.BiConsumer;\nimport java.util.function.Consumer;\nimport java.util.function.Function;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * {@link LinkedHashMap} variant that stores String keys in a case-insensitive\n * manner, for example for key-based access in a results table.\n *\n * <p>Preserves the original order as well as the original casing of keys,\n * while allowing for contains, get and remove calls with any case of key.\n *\n * <p>Does <i>not</i> support {@code null} keys.\n *\n * @author Juergen Hoeller\n * @author Phillip Webb\n * @since 3.0\n * @param <V> the value type\n */\n@SuppressWarnings(\"serial\")\npublic class LinkedCaseInsensitiveMap<V> implements Map<String, V>, Serializable, Cloneable {\n\n\tprivate final LinkedHashMap<String, V> targetMap;\n\n\tprivate final HashMap<String, String> caseInsensitiveKeys;\n\n\tprivate final Locale locale;\n\n\tprivate transient volatile @Nullable Set<String> keySet;\n\n\tprivate transient volatile @Nullable Collection<V> values;\n\n\tprivate transient volatile @Nullable Set<Entry<String, V>> entrySet;\n\n\n\t/**\n\t * Create a new LinkedCaseInsensitiveMap that stores case-insensitive keys\n\t * according to the default Locale (by default in lower case).\n\t * @see #convertKey(String)\n\t */\n\tpublic LinkedCaseInsensitiveMap() {\n\t\tthis((Locale) null);\n\t}\n\n\t/**\n\t * Create a new LinkedCaseInsensitiveMap that stores case-insensitive keys\n\t * according to the given Locale (in lower case).\n\t * @param locale the Locale to use for case-insensitive key conversion\n\t * @see #convertKey(String)\n\t */\n\tpublic LinkedCaseInsensitiveMap(@Nullable Locale locale) {\n\t\tthis(12, locale);  // equivalent to LinkedHashMap's initial capacity of 16\n\t}\n\n\t/**\n\t * Create a new LinkedCaseInsensitiveMap that wraps a {@link LinkedHashMap}\n\t * with an initial capacity that can accommodate the specified number of\n\t * elements without any immediate resize/rehash operations to be expected,\n\t * storing case-insensitive keys according to the default Locale (in lower case).\n\t * @param expectedSize the expected number of elements (with a corresponding\n\t * capacity to be derived so that no resize/rehash operations are needed)\n\t * @see CollectionUtils#newHashMap(int)\n\t * @see #convertKey(String)\n\t */\n\tpublic LinkedCaseInsensitiveMap(int expectedSize) {\n\t\tthis(expectedSize, null);\n\t}\n\n\t/**\n\t * Create a new LinkedCaseInsensitiveMap that wraps a {@link LinkedHashMap}\n\t * with an initial capacity that can accommodate the specified number of\n\t * elements without any immediate resize/rehash operations to be expected,\n\t * storing case-insensitive keys according to the given Locale (in lower case).\n\t * @param expectedSize the expected number of elements (with a corresponding\n\t * capacity to be derived so that no resize/rehash operations are needed)\n\t * @param locale the Locale to use for case-insensitive key conversion\n\t * @see CollectionUtils#newHashMap(int)\n\t * @see #convertKey(String)\n\t */\n\tpublic LinkedCaseInsensitiveMap(int expectedSize, @Nullable Locale locale) {\n\t\tthis.targetMap = new LinkedHashMap<>(\n\t\t\t\t(int) (expectedSize / CollectionUtils.DEFAULT_LOAD_FACTOR), CollectionUtils.DEFAULT_LOAD_FACTOR) {\n\t\t\t@Override\n\t\t\tpublic boolean containsKey(Object key) {\n\t\t\t\treturn LinkedCaseInsensitiveMap.this.containsKey(key);\n\t\t\t}\n\t\t\t@Override\n\t\t\tprotected boolean removeEldestEntry(Map.Entry<String, V> eldest) {\n\t\t\t\tboolean doRemove = LinkedCaseInsensitiveMap.this.removeEldestEntry(eldest);\n\t\t\t\tif (doRemove) {\n\t\t\t\t\tremoveCaseInsensitiveKey(eldest.getKey());\n\t\t\t\t}\n\t\t\t\treturn doRemove;\n\t\t\t}\n\t\t};\n\t\tthis.caseInsensitiveKeys = CollectionUtils.newHashMap(expectedSize);\n\t\tthis.locale = (locale != null ? locale : Locale.getDefault());\n\t}\n\n\t/**\n\t * Copy constructor.\n\t */\n\t@SuppressWarnings(\"unchecked\")\n\tprivate LinkedCaseInsensitiveMap(LinkedCaseInsensitiveMap<V> other) {\n\t\tthis.targetMap = (LinkedHashMap<String, V>) other.targetMap.clone();\n\t\tthis.caseInsensitiveKeys = (HashMap<String, String>) other.caseInsensitiveKeys.clone();\n\t\tthis.locale = other.locale;\n\t}\n\n\n\t// Implementation of java.util.Map\n\n\t@Override\n\tpublic int size() {\n\t\treturn this.targetMap.size();\n\t}\n\n\t@Override\n\tpublic boolean isEmpty() {\n\t\treturn this.targetMap.isEmpty();\n\t}\n\n\t@Override\n\tpublic boolean containsKey(Object key) {\n\t\treturn (key instanceof String string && this.caseInsensitiveKeys.containsKey(convertKey(string)));\n\t}\n\n\t@Override\n\tpublic boolean containsValue(Object value) {\n\t\treturn this.targetMap.containsValue(value);\n\t}\n\n\t@Override\n\tpublic @Nullable V get(Object key) {\n\t\tif (key instanceof String string) {\n\t\t\tString caseInsensitiveKey = this.caseInsensitiveKeys.get(convertKey(string));\n\t\t\tif (caseInsensitiveKey != null) {\n\t\t\t\treturn this.targetMap.get(caseInsensitiveKey);\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\t@Override\n\tpublic @Nullable V getOrDefault(Object key, V defaultValue) {\n\t\tif (key instanceof String string) {\n\t\t\tString caseInsensitiveKey = this.caseInsensitiveKeys.get(convertKey(string));\n\t\t\tif (caseInsensitiveKey != null) {\n\t\t\t\treturn this.targetMap.get(caseInsensitiveKey);\n\t\t\t}\n\t\t}\n\t\treturn defaultValue;\n\t}\n\n\t@Override\n\tpublic @Nullable V put(String key, @Nullable V value) {\n\t\tString oldKey = this.caseInsensitiveKeys.put(convertKey(key), key);\n\t\tV oldKeyValue = null;\n\t\tif (oldKey != null && !oldKey.equals(key)) {\n\t\t\toldKeyValue = this.targetMap.remove(oldKey);\n\t\t}\n\t\tV oldValue = this.targetMap.put(key, value);\n\t\treturn (oldKeyValue != null ? oldKeyValue : oldValue);\n\t}\n\n\t@Override\n\tpublic void putAll(Map<? extends String, ? extends V> map) {\n\t\tif (map.isEmpty()) {\n\t\t\treturn;\n\t\t}\n\t\tmap.forEach(this::put);\n\t}\n\n\t@Override\n\tpublic @Nullable V putIfAbsent(String key, @Nullable V value) {\n\t\tString oldKey = this.caseInsensitiveKeys.putIfAbsent(convertKey(key), key);\n\t\tif (oldKey != null) {\n\t\t\tV oldKeyValue = this.targetMap.get(oldKey);\n\t\t\tif (oldKeyValue != null) {\n\t\t\t\treturn oldKeyValue;\n\t\t\t}\n\t\t\telse {\n\t\t\t\tkey = oldKey;\n\t\t\t}\n\t\t}\n\t\treturn this.targetMap.putIfAbsent(key, value);\n\t}\n\n\t@Override\n\tpublic @Nullable V computeIfAbsent(String key, Function<? super String, ? extends V> mappingFunction) {\n\t\tString oldKey = this.caseInsensitiveKeys.putIfAbsent(convertKey(key), key);\n\t\tif (oldKey != null) {\n\t\t\tV oldKeyValue = this.targetMap.get(oldKey);\n\t\t\tif (oldKeyValue != null) {\n\t\t\t\treturn oldKeyValue;\n\t\t\t}\n\t\t\telse {\n\t\t\t\tkey = oldKey;\n\t\t\t}\n\t\t}\n\t\treturn this.targetMap.computeIfAbsent(key, mappingFunction);\n\t}\n\n\t@Override\n\tpublic @Nullable V remove(Object key) {\n\t\tif (key instanceof String string) {\n\t\t\tString caseInsensitiveKey = removeCaseInsensitiveKey(string);\n\t\t\tif (caseInsensitiveKey != null) {\n\t\t\t\treturn this.targetMap.remove(caseInsensitiveKey);\n\t\t\t}\n\t\t}\n\t\treturn null;\n\t}\n\n\t@Override\n\tpublic void clear() {\n\t\tthis.caseInsensitiveKeys.clear();\n\t\tthis.targetMap.clear();\n\t}\n\n\t@Override\n\tpublic Set<String> keySet() {\n\t\tSet<String> keySet = this.keySet;\n\t\tif (keySet == null) {\n\t\t\tkeySet = new KeySet(this.targetMap.keySet());\n\t\t\tthis.keySet = keySet;\n\t\t}\n\t\treturn keySet;\n\t}\n\n\t@Override\n\tpublic Collection<V> values() {\n\t\tCollection<V> values = this.values;\n\t\tif (values == null) {\n\t\t\tvalues = new Values(this.targetMap.values());\n\t\t\tthis.values = values;\n\t\t}\n\t\treturn values;\n\t}\n\n\t@Override\n\tpublic Set<Entry<String, V>> entrySet() {\n\t\tSet<Entry<String, V>> entrySet = this.entrySet;\n\t\tif (entrySet == null) {\n\t\t\tentrySet = new EntrySet(this.targetMap.entrySet());\n\t\t\tthis.entrySet = entrySet;\n\t\t}\n\t\treturn entrySet;\n\t}\n\n\t@Override\n\tpublic void forEach(BiConsumer<? super String, ? super V> action) {\n\t\tthis.targetMap.forEach(action);\n\t}\n\n\t@Override\n\tpublic LinkedCaseInsensitiveMap<V> clone() {\n\t\treturn new LinkedCaseInsensitiveMap<>(this);\n\t}\n\n\t@Override\n\tpublic boolean equals(@Nullable Object other) {\n\t\treturn (this == other || this.targetMap.equals(other));\n\t}\n\n\t@Override\n\tpublic int hashCode() {\n\t\treturn this.targetMap.hashCode();\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\treturn this.targetMap.toString();\n\t}\n\n\n\t// Specific to LinkedCaseInsensitiveMap\n\n\t/**\n\t * Return the locale used by this {@code LinkedCaseInsensitiveMap}.\n\t * Used for case-insensitive key conversion.\n\t * @since 4.3.10\n\t * @see #LinkedCaseInsensitiveMap(Locale)\n\t * @see #convertKey(String)\n\t */\n\tpublic Locale getLocale() {\n\t\treturn this.locale;\n\t}\n\n\t/**\n\t * Convert the given key to a case-insensitive key.\n\t * <p>The default implementation converts the key\n\t * to lower-case according to this Map's Locale.\n\t * @param key the user-specified key\n\t * @return the key to use for storing\n\t * @see String#toLowerCase(Locale)\n\t */\n\tprotected String convertKey(String key) {\n\t\treturn key.toLowerCase(getLocale());\n\t}\n\n\t/**\n\t * Determine whether this map should remove the given eldest entry.\n\t * @param eldest the candidate entry\n\t * @return {@code true} for removing it, {@code false} for keeping it\n\t * @see LinkedHashMap#removeEldestEntry\n\t */\n\tprotected boolean removeEldestEntry(Map.Entry<String, V> eldest) {\n\t\treturn false;\n\t}\n\n\tprivate @Nullable String removeCaseInsensitiveKey(String key) {\n\t\treturn this.caseInsensitiveKeys.remove(convertKey(key));\n\t}\n\n\n\tprivate class KeySet extends AbstractSet<String> {\n\n\t\tprivate final Set<String> delegate;\n\n\t\tKeySet(Set<String> delegate) {\n\t\t\tthis.delegate = delegate;\n\t\t}\n\n\t\t@Override\n\t\tpublic int size() {\n\t\t\treturn this.delegate.size();\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean contains(Object o) {\n\t\t\treturn this.delegate.contains(o);\n\t\t}\n\n\t\t@Override\n\t\tpublic Iterator<String> iterator() {\n\t\t\treturn new KeySetIterator();\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean remove(Object o) {\n\t\t\treturn LinkedCaseInsensitiveMap.this.remove(o) != null;\n\t\t}\n\n\t\t@Override\n\t\tpublic void clear() {\n\t\t\tLinkedCaseInsensitiveMap.this.clear();\n\t\t}\n\n\t\t@Override\n\t\tpublic Spliterator<String> spliterator() {\n\t\t\treturn this.delegate.spliterator();\n\t\t}\n\n\t\t@Override\n\t\tpublic void forEach(Consumer<? super String> action) {\n\t\t\tthis.delegate.forEach(action);\n\t\t}\n\t}\n\n\n\tprivate class Values extends AbstractCollection<V> {\n\n\t\tprivate final Collection<V> delegate;\n\n\t\tValues(Collection<V> delegate) {\n\t\t\tthis.delegate = delegate;\n\t\t}\n\n\t\t@Override\n\t\tpublic int size() {\n\t\t\treturn this.delegate.size();\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean contains(Object o) {\n\t\t\treturn this.delegate.contains(o);\n\t\t}\n\n\t\t@Override\n\t\tpublic Iterator<V> iterator() {\n\t\t\treturn new ValuesIterator();\n\t\t}\n\n\t\t@Override\n\t\tpublic void clear() {\n\t\t\tLinkedCaseInsensitiveMap.this.clear();\n\t\t}\n\n\t\t@Override\n\t\tpublic Spliterator<V> spliterator() {\n\t\t\treturn this.delegate.spliterator();\n\t\t}\n\n\t\t@Override\n\t\tpublic void forEach(Consumer<? super V> action) {\n\t\t\tthis.delegate.forEach(action);\n\t\t}\n\t}\n\n\n\tprivate class EntrySet extends AbstractSet<Entry<String, V>> {\n\n\t\tprivate final Set<Entry<String, V>> delegate;\n\n\t\tpublic EntrySet(Set<Entry<String, V>> delegate) {\n\t\t\tthis.delegate = delegate;\n\t\t}\n\n\t\t@Override\n\t\tpublic int size() {\n\t\t\treturn this.delegate.size();\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean contains(Object o) {\n\t\t\treturn this.delegate.contains(o);\n\t\t}\n\n\t\t@Override\n\t\tpublic Iterator<Entry<String, V>> iterator() {\n\t\t\treturn new EntrySetIterator();\n\t\t}\n\n\t\t@Override\n\t\t@SuppressWarnings(\"unchecked\")\n\t\tpublic boolean remove(Object o) {\n\t\t\tif (this.delegate.remove(o)) {\n\t\t\t\tremoveCaseInsensitiveKey(((Map.Entry<String, V>) o).getKey());\n\t\t\t\treturn true;\n\t\t\t}\n\t\t\treturn false;\n\t\t}\n\n\t\t@Override\n\t\tpublic void clear() {\n\t\t\tthis.delegate.clear();\n\t\t\tcaseInsensitiveKeys.clear();\n\t\t}\n\n\t\t@Override\n\t\tpublic Spliterator<Entry<String, V>> spliterator() {\n\t\t\treturn this.delegate.spliterator();\n\t\t}\n\n\t\t@Override\n\t\tpublic void forEach(Consumer<? super Entry<String, V>> action) {\n\t\t\tthis.delegate.forEach(action);\n\t\t}\n\t}\n\n\n\tprivate abstract class EntryIterator<T> implements Iterator<T> {\n\n\t\tprivate final Iterator<Entry<String, V>> delegate;\n\n\t\tprivate @Nullable Entry<String, V> last;\n\n\t\tpublic EntryIterator() {\n\t\t\tthis.delegate = targetMap.entrySet().iterator();\n\t\t}\n\n\t\tprotected Entry<String, V> nextEntry() {\n\t\t\tEntry<String, V> entry = this.delegate.next();\n\t\t\tthis.last = entry;\n\t\t\treturn entry;\n\t\t}\n\n\t\t@Override\n\t\tpublic boolean hasNext() {\n\t\t\treturn this.delegate.hasNext();\n\t\t}\n\n\t\t@Override\n\t\tpublic void remove() {\n\t\t\tthis.delegate.remove();\n\t\t\tif (this.last != null) {\n\t\t\t\tremoveCaseInsensitiveKey(this.last.getKey());\n\t\t\t\tthis.last = null;\n\t\t\t}\n\t\t}\n\t}\n\n\n\tprivate class KeySetIterator extends EntryIterator<String> {\n\n\t\t@Override\n\t\tpublic String next() {\n\t\t\treturn nextEntry().getKey();\n\t\t}\n\t}\n\n\n\tprivate class ValuesIterator extends EntryIterator<V> {\n\n\t\t@Override\n\t\tpublic V next() {\n\t\t\treturn nextEntry().getValue();\n\t\t}\n\t}\n\n\n\tprivate class EntrySetIterator extends EntryIterator<Entry<String, V>> {\n\n\t\t@Override\n\t\tpublic Entry<String, V> next() {\n\t\t\treturn nextEntry();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.Values",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.Values#delegate",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.Values#delegate",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Collection<V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.Values#size()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int size() {\r\n    return this.delegate.size();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Values",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Values#size()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Values#size()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.Values#contains(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean contains(Object o) {\r\n    return this.delegate.contains(o);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Values",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Values#contains(Object)",
+    "tailType": "method"
+  }
+]

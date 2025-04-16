@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.UpdateMessageDigestInputStream",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.UpdateMessageDigestInputStream#updateMessageDigest(MessageDigest,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.UpdateMessageDigestInputStream",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "InputStream",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2017 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\n\nimport javax.xml.XMLConstants;\nimport javax.xml.namespace.QName;\nimport javax.xml.stream.XMLStreamException;\n\nimport org.jspecify.annotations.Nullable;\nimport org.xml.sax.Attributes;\nimport org.xml.sax.ContentHandler;\nimport org.xml.sax.SAXException;\nimport org.xml.sax.ext.LexicalHandler;\n\n/**\n * Abstract base class for SAX {@code ContentHandler} and {@code LexicalHandler}\n * implementations that use StAX as a basis. All methods delegate to internal template\n * methods, capable of throwing a {@code XMLStreamException}. Additionally, a namespace\n * context stack is used to keep track of declared namespaces.\n *\n * @author Arjen Poutsma\n * @since 4.0.3\n */\nabstract class AbstractStaxHandler implements ContentHandler, LexicalHandler {\n\n\tprivate final List<Map<String, String>> namespaceMappings = new ArrayList<>();\n\n\tprivate boolean inCData;\n\n\n\t@Override\n\tpublic final void startDocument() throws SAXException {\n\t\tremoveAllNamespaceMappings();\n\t\tnewNamespaceMapping();\n\t\ttry {\n\t\t\tstartDocumentInternal();\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle startDocument: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void endDocument() throws SAXException {\n\t\tremoveAllNamespaceMappings();\n\t\ttry {\n\t\t\tendDocumentInternal();\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle endDocument: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void startPrefixMapping(String prefix, String uri) {\n\t\tcurrentNamespaceMapping().put(prefix, uri);\n\t}\n\n\t@Override\n\tpublic final void endPrefixMapping(String prefix) {\n\t}\n\n\t@Override\n\tpublic final void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException {\n\t\ttry {\n\t\t\tstartElementInternal(toQName(uri, qName), atts, currentNamespaceMapping());\n\t\t\tnewNamespaceMapping();\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle startElement: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void endElement(String uri, String localName, String qName) throws SAXException {\n\t\ttry {\n\t\t\tendElementInternal(toQName(uri, qName), currentNamespaceMapping());\n\t\t\tremoveNamespaceMapping();\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle endElement: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void characters(char[] ch, int start, int length) throws SAXException {\n\t\ttry {\n\t\t\tString data = new String(ch, start, length);\n\t\t\tif (!this.inCData) {\n\t\t\t\tcharactersInternal(data);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcDataInternal(data);\n\t\t\t}\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle characters: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void ignorableWhitespace(char[] ch, int start, int length) throws SAXException {\n\t\ttry {\n\t\t\tignorableWhitespaceInternal(new String(ch, start, length));\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\n\t\t\t\t\t\"Could not handle ignorableWhitespace:\" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void processingInstruction(String target, String data) throws SAXException {\n\t\ttry {\n\t\t\tprocessingInstructionInternal(target, data);\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle processingInstruction: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void skippedEntity(String name) throws SAXException {\n\t\ttry {\n\t\t\tskippedEntityInternal(name);\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle skippedEntity: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void startDTD(String name, @Nullable String publicId, String systemId) throws SAXException {\n\t\ttry {\n\t\t\tStringBuilder builder = new StringBuilder(\"<!DOCTYPE \");\n\t\t\tbuilder.append(name);\n\t\t\tif (publicId != null) {\n\t\t\t\tbuilder.append(\" PUBLIC \\\"\");\n\t\t\t\tbuilder.append(publicId);\n\t\t\t\tbuilder.append(\"\\\" \\\"\");\n\t\t\t}\n\t\t\telse {\n\t\t\t\tbuilder.append(\" SYSTEM \\\"\");\n\t\t\t}\n\t\t\tbuilder.append(systemId);\n\t\t\tbuilder.append(\"\\\">\");\n\n\t\t\tdtdInternal(builder.toString());\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle startDTD: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic final void endDTD() throws SAXException {\n\t}\n\n\t@Override\n\tpublic final void startCDATA() throws SAXException {\n\t\tthis.inCData = true;\n\t}\n\n\t@Override\n\tpublic final void endCDATA() throws SAXException {\n\t\tthis.inCData = false;\n\t}\n\n\t@Override\n\tpublic final void comment(char[] ch, int start, int length) throws SAXException {\n\t\ttry {\n\t\t\tcommentInternal(new String(ch, start, length));\n\t\t}\n\t\tcatch (XMLStreamException ex) {\n\t\t\tthrow new SAXException(\"Could not handle comment: \" + ex.getMessage(), ex);\n\t\t}\n\t}\n\n\t@Override\n\tpublic void startEntity(String name) throws SAXException {\n\t}\n\n\t@Override\n\tpublic void endEntity(String name) throws SAXException {\n\t}\n\n\t/**\n\t * Convert a namespace URI and DOM or SAX qualified name to a {@code QName}. The\n\t * qualified name can have the form {@code prefix:localname} or {@code localName}.\n\t * @param namespaceUri the namespace URI\n\t * @param qualifiedName the qualified name\n\t * @return a QName\n\t */\n\tprotected QName toQName(String namespaceUri, String qualifiedName) {\n\t\tint idx = qualifiedName.indexOf(':');\n\t\tif (idx == -1) {\n\t\t\treturn new QName(namespaceUri, qualifiedName);\n\t\t}\n\t\telse {\n\t\t\tString prefix = qualifiedName.substring(0, idx);\n\t\t\tString localPart = qualifiedName.substring(idx + 1);\n\t\t\treturn new QName(namespaceUri, localPart, prefix);\n\t\t}\n\t}\n\n\tprotected boolean isNamespaceDeclaration(QName qName) {\n\t\tString prefix = qName.getPrefix();\n\t\tString localPart = qName.getLocalPart();\n\t\treturn (XMLConstants.XMLNS_ATTRIBUTE.equals(localPart) && prefix.isEmpty()) ||\n\t\t\t\t(XMLConstants.XMLNS_ATTRIBUTE.equals(prefix) && !localPart.isEmpty());\n\t}\n\n\n\tprivate Map<String, String> currentNamespaceMapping() {\n\t\treturn this.namespaceMappings.get(this.namespaceMappings.size() - 1);\n\t}\n\n\tprivate void newNamespaceMapping() {\n\t\tthis.namespaceMappings.add(new HashMap<>());\n\t}\n\n\tprivate void removeNamespaceMapping() {\n\t\tthis.namespaceMappings.remove(this.namespaceMappings.size() - 1);\n\t}\n\n\tprivate void removeAllNamespaceMappings() {\n\t\tthis.namespaceMappings.clear();\n\t}\n\n\n\tprotected abstract void startDocumentInternal() throws XMLStreamException;\n\n\tprotected abstract void endDocumentInternal() throws XMLStreamException;\n\n\tprotected abstract void startElementInternal(QName name, Attributes attributes,\n\t\t\tMap<String, String> namespaceMapping) throws XMLStreamException;\n\n\tprotected abstract void endElementInternal(QName name, Map<String, String> namespaceMapping)\n\t\t\tthrows XMLStreamException;\n\n\tprotected abstract void charactersInternal(String data) throws XMLStreamException;\n\n\tprotected abstract void cDataInternal(String data) throws XMLStreamException;\n\n\tprotected abstract void ignorableWhitespaceInternal(String data) throws XMLStreamException;\n\n\tprotected abstract void processingInstructionInternal(String target, String data)\n\t\t\tthrows XMLStreamException;\n\n\tprotected abstract void skippedEntityInternal(String name) throws XMLStreamException;\n\n\tprotected abstract void dtdInternal(String dtd) throws XMLStreamException;\n\n\tprotected abstract void commentInternal(String comment) throws XMLStreamException;\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler#namespaceMappings",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#namespaceMappings",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<Map<String, String>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler#inCData",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#inCData",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#startDocument()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final void startDocument() throws SAXException {\r\n    removeAllNamespaceMappings();\r\n    newNamespaceMapping();\r\n    try {\r\n        startDocumentInternal();\r\n    } catch (XMLStreamException ex) {\r\n        throw new SAXException(\"Could not handle startDocument: \" + ex.getMessage(), ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler#startDocument()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#startDocument()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#endDocument()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final void endDocument() throws SAXException {\r\n    removeAllNamespaceMappings();\r\n    try {\r\n        endDocumentInternal();\r\n    } catch (XMLStreamException ex) {\r\n        throw new SAXException(\"Could not handle endDocument: \" + ex.getMessage(), ex);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler#endDocument()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#endDocument()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#startPrefixMapping(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final void startPrefixMapping(String prefix, String uri) {\r\n    currentNamespaceMapping().put(prefix, uri);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler#startPrefixMapping(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#startPrefixMapping(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler#endPrefixMapping(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final void endPrefixMapping(String prefix) ;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.AbstractStaxHandler#endPrefixMapping(String)",
+    "tailType": "method"
+  }
+]

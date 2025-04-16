@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.ByteArrayOutputStream;\nimport java.io.FilterInputStream;\nimport java.io.FilterOutputStream;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.InputStreamReader;\nimport java.io.OutputStream;\nimport java.nio.charset.Charset;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.lang.Contract;\n\n/**\n * Simple utility methods for dealing with streams. The copy methods of this class are\n * similar to those defined in {@link FileCopyUtils} except that all affected streams are\n * left open when done. All copy methods use a block size of 8192 bytes.\n *\n * <p>Mainly for use within the framework, but also useful for application code.\n *\n * @author Juergen Hoeller\n * @author Phillip Webb\n * @author Brian Clozel\n * @since 3.2.2\n * @see FileCopyUtils\n */\npublic abstract class StreamUtils {\n\n\t/**\n\t * The default buffer size used when copying bytes.\n\t */\n\tpublic static final int BUFFER_SIZE = 8192;\n\n\tprivate static final byte[] EMPTY_CONTENT = new byte[0];\n\n\n\t/**\n\t * Copy the contents of the given InputStream into a new byte array.\n\t * <p>Leaves the stream open when done.\n\t * @param in the stream to copy from (may be {@code null} or empty)\n\t * @return the new byte array that has been copied to (possibly empty)\n\t * @throws IOException in case of I/O errors\n\t */\n\tpublic static byte[] copyToByteArray(@Nullable InputStream in) throws IOException {\n\t\tif (in == null) {\n\t\t\treturn EMPTY_CONTENT;\n\t\t}\n\n\t\treturn in.readAllBytes();\n\t}\n\n\t/**\n\t * Copy the contents of the given InputStream into a String.\n\t * <p>Leaves the stream open when done.\n\t * @param in the InputStream to copy from (may be {@code null} or empty)\n\t * @param charset the {@link Charset} to use to decode the bytes\n\t * @return the String that has been copied to (possibly empty)\n\t * @throws IOException in case of I/O errors\n\t */\n\tpublic static String copyToString(@Nullable InputStream in, Charset charset) throws IOException {\n\t\tif (in == null) {\n\t\t\treturn \"\";\n\t\t}\n\n\t\tStringBuilder out = new StringBuilder();\n\t\tInputStreamReader reader = new InputStreamReader(in, charset);\n\t\tchar[] buffer = new char[BUFFER_SIZE];\n\t\tint charsRead;\n\t\twhile ((charsRead = reader.read(buffer)) != -1) {\n\t\t\tout.append(buffer, 0, charsRead);\n\t\t}\n\t\treturn out.toString();\n\t}\n\n\t/**\n\t * Copy the contents of the given {@link ByteArrayOutputStream} into a {@link String}.\n\t * <p>This is a more effective equivalent of {@code new String(baos.toByteArray(), charset)}.\n\t * @param baos the {@code ByteArrayOutputStream} to be copied into a String\n\t * @param charset the {@link Charset} to use to decode the bytes\n\t * @return the String that has been copied to (possibly empty)\n\t * @since 5.2.6\n\t */\n\tpublic static String copyToString(ByteArrayOutputStream baos, Charset charset) {\n\t\tAssert.notNull(baos, \"No ByteArrayOutputStream specified\");\n\t\tAssert.notNull(charset, \"No Charset specified\");\n\n\t\treturn baos.toString(charset);\n\t}\n\n\t/**\n\t * Copy the contents of the given byte array to the given OutputStream.\n\t * <p>Leaves the stream open when done.\n\t * @param in the byte array to copy from\n\t * @param out the OutputStream to copy to\n\t * @throws IOException in case of I/O errors\n\t */\n\tpublic static void copy(byte[] in, OutputStream out) throws IOException {\n\t\tAssert.notNull(in, \"No input byte array specified\");\n\t\tAssert.notNull(out, \"No OutputStream specified\");\n\n\t\tout.write(in);\n\t\tout.flush();\n\t}\n\n\t/**\n\t * Copy the contents of the given String to the given OutputStream.\n\t * <p>Leaves the stream open when done.\n\t * @param in the String to copy from\n\t * @param charset the Charset\n\t * @param out the OutputStream to copy to\n\t * @throws IOException in case of I/O errors\n\t */\n\tpublic static void copy(String in, Charset charset, OutputStream out) throws IOException {\n\t\tAssert.notNull(in, \"No input String specified\");\n\t\tAssert.notNull(charset, \"No Charset specified\");\n\t\tAssert.notNull(out, \"No OutputStream specified\");\n\n\t\tout.write(in.getBytes(charset));\n\t\tout.flush();\n\t}\n\n\t/**\n\t * Copy the contents of the given InputStream to the given OutputStream.\n\t * <p>Leaves both streams open when done.\n\t * @param in the InputStream to copy from\n\t * @param out the OutputStream to copy to\n\t * @return the number of bytes copied\n\t * @throws IOException in case of I/O errors\n\t */\n\tpublic static int copy(InputStream in, OutputStream out) throws IOException {\n\t\tAssert.notNull(in, \"No InputStream specified\");\n\t\tAssert.notNull(out, \"No OutputStream specified\");\n\n\t\tint count = (int) in.transferTo(out);\n\t\tout.flush();\n\t\treturn count;\n\t}\n\n\t/**\n\t * Copy a range of content of the given InputStream to the given OutputStream.\n\t * <p>If the specified range exceeds the length of the InputStream, this copies\n\t * up to the end of the stream and returns the actual number of copied bytes.\n\t * <p>Leaves both streams open when done.\n\t * @param in the InputStream to copy from\n\t * @param out the OutputStream to copy to\n\t * @param start the position to start copying from\n\t * @param end the position to end copying\n\t * @return the number of bytes copied\n\t * @throws IOException in case of I/O errors\n\t * @since 4.3\n\t */\n\tpublic static long copyRange(InputStream in, OutputStream out, long start, long end) throws IOException {\n\t\tAssert.notNull(in, \"No InputStream specified\");\n\t\tAssert.notNull(out, \"No OutputStream specified\");\n\n\t\tlong skipped = in.skip(start);\n\t\tif (skipped < start) {\n\t\t\tthrow new IOException(\"Skipped only \" + skipped + \" bytes out of \" + start + \" required\");\n\t\t}\n\n\t\tlong bytesToCopy = end - start + 1;\n\t\tbyte[] buffer = new byte[(int) Math.min(StreamUtils.BUFFER_SIZE, bytesToCopy)];\n\t\twhile (bytesToCopy > 0) {\n\t\t\tint bytesRead = (bytesToCopy < buffer.length ? in.read(buffer, 0, (int) bytesToCopy) :\n\t\t\t\t\tin.read(buffer));\n\t\t\tif (bytesRead == -1) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tout.write(buffer, 0, bytesRead);\n\t\t\tbytesToCopy -= bytesRead;\n\t\t}\n\t\treturn (end - start + 1 - bytesToCopy);\n\t}\n\n\t/**\n\t * Drain the remaining content of the given InputStream.\n\t * <p>Leaves the InputStream open when done.\n\t * @param in the InputStream to drain\n\t * @return the number of bytes read\n\t * @throws IOException in case of I/O errors\n\t * @since 4.3\n\t */\n\t@Contract(\"null -> fail\")\n\tpublic static int drain(@Nullable InputStream in) throws IOException {\n\t\tif (in == null) {\n\t\t\treturn 0;\n\t\t}\n\t\treturn (int) in.transferTo(OutputStream.nullOutputStream());\n\t}\n\n\t/**\n\t * Return an efficient empty {@link InputStream}.\n\t * @return an InputStream which contains no bytes\n\t * @since 4.2.2\n\t * @deprecated as of 6.0 in favor of {@link InputStream#nullInputStream()}\n\t */\n\t@Deprecated(since = \"6.0\")\n\tpublic static InputStream emptyInput() {\n\t\treturn InputStream.nullInputStream();\n\t}\n\n\t/**\n\t * Return a variant of the given {@link InputStream} where calling\n\t * {@link InputStream#close() close()} has no effect.\n\t * @param in the InputStream to decorate\n\t * @return a version of the InputStream that ignores calls to close\n\t */\n\tpublic static InputStream nonClosing(InputStream in) {\n\t\tAssert.notNull(in, \"No InputStream specified\");\n\t\treturn new NonClosingInputStream(in);\n\t}\n\n\t/**\n\t * Return a variant of the given {@link OutputStream} where calling\n\t * {@link OutputStream#close() close()} has no effect.\n\t * @param out the OutputStream to decorate\n\t * @return a version of the OutputStream that ignores calls to close\n\t */\n\tpublic static OutputStream nonClosing(OutputStream out) {\n\t\tAssert.notNull(out, \"No OutputStream specified\");\n\t\treturn new NonClosingOutputStream(out);\n\t}\n\n\n\tprivate static class NonClosingInputStream extends FilterInputStream {\n\n\t\tpublic NonClosingInputStream(InputStream in) {\n\t\t\tsuper(in);\n\t\t}\n\n\t\t@Override\n\t\tpublic void close() throws IOException {\n\t\t}\n\t}\n\n\n\tprivate static class NonClosingOutputStream extends FilterOutputStream {\n\n\t\tpublic NonClosingOutputStream(OutputStream out) {\n\t\t\tsuper(out);\n\t\t}\n\n\t\t@Override\n\t\tpublic void write(byte[] b, int off, int let) throws IOException {\n\t\t\t// It is critical that we override this method for performance\n\t\t\tthis.out.write(b, off, let);\n\t\t}\n\n\t\t@Override\n\t\tpublic void close() throws IOException {\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.StreamUtils#BUFFER_SIZE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#BUFFER_SIZE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.StreamUtils#EMPTY_CONTENT",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#EMPTY_CONTENT",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "byte",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copyToByteArray(InputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy the contents of the given InputStream into a new byte array.\r\n * <p>Leaves the stream open when done.\r\n * @param in the stream to copy from (may be {@code null} or empty)\r\n * @return the new byte array that has been copied to (possibly empty)\r\n * @throws IOException in case of I/O errors\r\n */\r\npublic static byte[] copyToByteArray(@Nullable InputStream in) throws IOException {\r\n    if (in == null) {\r\n        return EMPTY_CONTENT;\r\n    }\r\n    return in.readAllBytes();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copyToByteArray(InputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copyToString(InputStream,Charset)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy the contents of the given InputStream into a String.\r\n * <p>Leaves the stream open when done.\r\n * @param in the InputStream to copy from (may be {@code null} or empty)\r\n * @param charset the {@link Charset} to use to decode the bytes\r\n * @return the String that has been copied to (possibly empty)\r\n * @throws IOException in case of I/O errors\r\n */\r\npublic static String copyToString(@Nullable InputStream in, Charset charset) throws IOException {\r\n    if (in == null) {\r\n        return \"\";\r\n    }\r\n    StringBuilder out = new StringBuilder();\r\n    InputStreamReader reader = new InputStreamReader(in, charset);\r\n    char[] buffer = new char[BUFFER_SIZE];\r\n    int charsRead;\r\n    while ((charsRead = reader.read(buffer)) != -1) {\r\n        out.append(buffer, 0, charsRead);\r\n    }\r\n    return out.toString();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copyToString(InputStream,Charset)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copyToString(ByteArrayOutputStream,Charset)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy the contents of the given {@link ByteArrayOutputStream} into a {@link String}.\r\n * <p>This is a more effective equivalent of {@code new String(baos.toByteArray(), charset)}.\r\n * @param baos the {@code ByteArrayOutputStream} to be copied into a String\r\n * @param charset the {@link Charset} to use to decode the bytes\r\n * @return the String that has been copied to (possibly empty)\r\n * @since 5.2.6\r\n */\r\npublic static String copyToString(ByteArrayOutputStream baos, Charset charset) {\r\n    Assert.notNull(baos, \"No ByteArrayOutputStream specified\");\r\n    Assert.notNull(charset, \"No Charset specified\");\r\n    return baos.toString(charset);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copyToString(ByteArrayOutputStream,Charset)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copy(byte[],OutputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy the contents of the given byte array to the given OutputStream.\r\n * <p>Leaves the stream open when done.\r\n * @param in the byte array to copy from\r\n * @param out the OutputStream to copy to\r\n * @throws IOException in case of I/O errors\r\n */\r\npublic static void copy(byte[] in, OutputStream out) throws IOException {\r\n    Assert.notNull(in, \"No input byte array specified\");\r\n    Assert.notNull(out, \"No OutputStream specified\");\r\n    out.write(in);\r\n    out.flush();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copy(byte[],OutputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copy(String,Charset,OutputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy the contents of the given String to the given OutputStream.\r\n * <p>Leaves the stream open when done.\r\n * @param in the String to copy from\r\n * @param charset the Charset\r\n * @param out the OutputStream to copy to\r\n * @throws IOException in case of I/O errors\r\n */\r\npublic static void copy(String in, Charset charset, OutputStream out) throws IOException {\r\n    Assert.notNull(in, \"No input String specified\");\r\n    Assert.notNull(charset, \"No Charset specified\");\r\n    Assert.notNull(out, \"No OutputStream specified\");\r\n    out.write(in.getBytes(charset));\r\n    out.flush();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copy(String,Charset,OutputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copy(InputStream,OutputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy the contents of the given InputStream to the given OutputStream.\r\n * <p>Leaves both streams open when done.\r\n * @param in the InputStream to copy from\r\n * @param out the OutputStream to copy to\r\n * @return the number of bytes copied\r\n * @throws IOException in case of I/O errors\r\n */\r\npublic static int copy(InputStream in, OutputStream out) throws IOException {\r\n    Assert.notNull(in, \"No InputStream specified\");\r\n    Assert.notNull(out, \"No OutputStream specified\");\r\n    int count = (int) in.transferTo(out);\r\n    out.flush();\r\n    return count;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copy(InputStream,OutputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#copyRange(InputStream,OutputStream,long,long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Copy a range of content of the given InputStream to the given OutputStream.\r\n * <p>If the specified range exceeds the length of the InputStream, this copies\r\n * up to the end of the stream and returns the actual number of copied bytes.\r\n * <p>Leaves both streams open when done.\r\n * @param in the InputStream to copy from\r\n * @param out the OutputStream to copy to\r\n * @param start the position to start copying from\r\n * @param end the position to end copying\r\n * @return the number of bytes copied\r\n * @throws IOException in case of I/O errors\r\n * @since 4.3\r\n */\r\npublic static long copyRange(InputStream in, OutputStream out, long start, long end) throws IOException {\r\n    Assert.notNull(in, \"No InputStream specified\");\r\n    Assert.notNull(out, \"No OutputStream specified\");\r\n    long skipped = in.skip(start);\r\n    if (skipped < start) {\r\n        throw new IOException(\"Skipped only \" + skipped + \" bytes out of \" + start + \" required\");\r\n    }\r\n    long bytesToCopy = end - start + 1;\r\n    byte[] buffer = new byte[(int) Math.min(StreamUtils.BUFFER_SIZE, bytesToCopy)];\r\n    while (bytesToCopy > 0) {\r\n        int bytesRead = (bytesToCopy < buffer.length ? in.read(buffer, 0, (int) bytesToCopy) : in.read(buffer));\r\n        if (bytesRead == -1) {\r\n            break;\r\n        }\r\n        out.write(buffer, 0, bytesRead);\r\n        bytesToCopy -= bytesRead;\r\n    }\r\n    return (end - start + 1 - bytesToCopy);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtils#copyRange(InputStream,OutputStream,long,long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtils#drain(InputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Drain the remaining content of the given InputStream.\r\n * <p>Leaves the InputStream open when done.\r\n * @param in the InputStream to drain\r\n * @return the number of bytes read\r\n * @throws IOException in case of I/O errors\r\n * @since 4.3\r\n */\r\n@Contract(\"null -> fail\")\r\npublic static int drain(@Nullable InputStream in) throws IOException {\r\n    if (in == null) {\r\n        return 0;\r\n    }\r\n    return (int) in.transferTo(OutputStream.nullOutputStream());\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.CompositeMap",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.Collection;\nimport java.util.Iterator;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.function.BiFunction;\nimport java.util.function.Consumer;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Composite map that combines two other maps.\n *\n * <p>This type is created via\n * {@link CollectionUtils#compositeMap(Map, Map, BiFunction, Consumer)}.\n *\n * @author Arjen Poutsma\n * @since 6.2\n * @param <K> the type of keys maintained by this map\n * @param <V> the type of mapped values\n */\nfinal class CompositeMap<K, V> implements Map<K, V> {\n\n\tprivate final Map<K,V> first;\n\n\tprivate final Map<K,V> second;\n\n\tprivate final @Nullable BiFunction<K,V,V> putFunction;\n\n\tprivate final @Nullable Consumer<Map<K, V>> putAllFunction;\n\n\n\tCompositeMap(Map<K, V> first, Map<K, V> second) {\n\t\tthis(first, second, null, null);\n\t}\n\n\tCompositeMap(Map<K, V> first, Map<K, V> second,\n\t\t\t@Nullable BiFunction<K, V, V> putFunction,\n\t\t\t@Nullable Consumer<Map<K,V>> putAllFunction) {\n\n\t\tAssert.notNull(first, \"First must not be null\");\n\t\tAssert.notNull(second, \"Second must not be null\");\n\t\tthis.first = first;\n\t\tthis.second = new FilteredMap<>(second, key -> !this.first.containsKey(key));\n\t\tthis.putFunction = putFunction;\n\t\tthis.putAllFunction = putAllFunction;\n\t}\n\n\n\t@Override\n\tpublic int size() {\n\t\treturn this.first.size() + this.second.size();\n\t}\n\n\t@Override\n\tpublic boolean isEmpty() {\n\t\treturn this.first.isEmpty() && this.second.isEmpty();\n\t}\n\n\t@Override\n\tpublic boolean containsKey(Object key) {\n\t\tif (this.first.containsKey(key)) {\n\t\t\treturn true;\n\t\t}\n\t\telse {\n\t\t\treturn this.second.containsKey(key);\n\t\t}\n\t}\n\n\t@Override\n\tpublic boolean containsValue(Object value) {\n\t\tif (this.first.containsValue(value)) {\n\t\t\treturn true;\n\t\t}\n\t\telse {\n\t\t\treturn this.second.containsValue(value);\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable V get(Object key) {\n\t\tV firstResult = this.first.get(key);\n\t\tif (firstResult != null) {\n\t\t\treturn firstResult;\n\t\t}\n\t\telse {\n\t\t\treturn this.second.get(key);\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable V put(K key, V value) {\n\t\tif (this.putFunction == null) {\n\t\t\tthrow new UnsupportedOperationException();\n\t\t}\n\t\telse {\n\t\t\treturn this.putFunction.apply(key, value);\n\t\t}\n\t}\n\n\t@Override\n\tpublic @Nullable V remove(Object key) {\n\t\tV firstResult = this.first.remove(key);\n\t\tV secondResult = this.second.remove(key);\n\t\tif (firstResult != null) {\n\t\t\treturn firstResult;\n\t\t}\n\t\telse {\n\t\t\treturn secondResult;\n\t\t}\n\t}\n\n\t@Override\n\t@SuppressWarnings(\"unchecked\")\n\tpublic void putAll(Map<? extends K, ? extends V> m) {\n\t\tif (this.putAllFunction != null) {\n\t\t\tthis.putAllFunction.accept((Map<K, V>) m);\n\t\t}\n\t\telse {\n\t\t\tfor (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {\n\t\t\t\tput(e.getKey(), e.getValue());\n\t\t\t}\n\t\t}\n\t}\n\n\t@Override\n\tpublic void clear() {\n\t\tthis.first.clear();\n\t\tthis.second.clear();\n\t}\n\n\t@Override\n\tpublic Set<K> keySet() {\n\t\treturn new CompositeSet<>(this.first.keySet(), this.second.keySet());\n\t}\n\n\t@Override\n\tpublic Collection<V> values() {\n\t\treturn new CompositeCollection<>(this.first.values(), this.second.values());\n\t}\n\n\t@Override\n\tpublic Set<Entry<K, V>> entrySet() {\n\t\treturn new CompositeSet<>(this.first.entrySet(), this.second.entrySet());\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\tIterator<Entry<K, V>> i = entrySet().iterator();\n\t\tif (!i.hasNext()) {\n\t\t\treturn \"{}\";\n\t\t}\n\n\t\tStringBuilder sb = new StringBuilder();\n\t\tsb.append('{');\n\t\twhile (true) {\n\t\t\tEntry<K, V> e = i.next();\n\t\t\tK key = e.getKey();\n\t\t\tV value = e.getValue();\n\t\t\tsb.append(key == this ? \"(this Map)\" : key);\n\t\t\tsb.append('=');\n\t\t\tsb.append(value == this ? \"(this Map)\" : value);\n\t\t\tif (!i.hasNext()) {\n\t\t\t\treturn sb.append('}').toString();\n\t\t\t}\n\t\t\tsb.append(',').append(' ');\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.CompositeMap#first",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#first",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.CompositeMap#second",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#second",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.CompositeMap#putFunction",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#putFunction",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "BiFunction<K, V, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.CompositeMap#putAllFunction",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#putAllFunction",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Consumer<Map<K, V>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#size()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int size() {\r\n    return this.first.size() + this.second.size();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMap#size()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#size()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#isEmpty()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isEmpty() {\r\n    return this.first.isEmpty() && this.second.isEmpty();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMap#isEmpty()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#isEmpty()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#containsKey(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean containsKey(Object key) {\r\n    if (this.first.containsKey(key)) {\r\n        return true;\r\n    } else {\r\n        return this.second.containsKey(key);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMap#containsKey(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMap#containsKey(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

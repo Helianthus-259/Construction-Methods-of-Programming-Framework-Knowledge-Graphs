@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.FileSystemUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.File;\nimport java.io.IOException;\nimport java.nio.file.FileVisitResult;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.SimpleFileVisitor;\nimport java.nio.file.StandardCopyOption;\nimport java.nio.file.attribute.BasicFileAttributes;\nimport java.util.EnumSet;\n\nimport org.jspecify.annotations.Nullable;\n\nimport static java.nio.file.FileVisitOption.FOLLOW_LINKS;\n\n/**\n * Utility methods for working with the file system.\n *\n * @author Rob Harrop\n * @author Juergen Hoeller\n * @since 2.5.3\n * @see java.io.File\n * @see java.nio.file.Path\n * @see java.nio.file.Files\n */\npublic abstract class FileSystemUtils {\n\n\t/**\n\t * Delete the supplied {@link File} - for directories,\n\t * recursively delete any nested directories or files as well.\n\t * <p>Note: Like {@link File#delete()}, this method does not throw any\n\t * exception but rather silently returns {@code false} in case of I/O\n\t * errors. Consider using {@link #deleteRecursively(Path)} for NIO-style\n\t * handling of I/O errors, clearly differentiating between non-existence\n\t * and failure to delete an existing file.\n\t * @param root the root {@code File} to delete\n\t * @return {@code true} if the {@code File} was successfully deleted,\n\t * otherwise {@code false}\n\t */\n\tpublic static boolean deleteRecursively(@Nullable File root) {\n\t\tif (root == null) {\n\t\t\treturn false;\n\t\t}\n\n\t\ttry {\n\t\t\treturn deleteRecursively(root.toPath());\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t/**\n\t * Delete the supplied {@link Path} &mdash; for directories,\n\t * recursively delete any nested directories or files as well.\n\t * @param root the root {@code Path} to delete\n\t * @return {@code true} if the {@code Path} existed and was deleted,\n\t * or {@code false} if it did not exist\n\t * @throws IOException in the case of I/O errors\n\t * @since 5.0\n\t */\n\tpublic static boolean deleteRecursively(@Nullable Path root) throws IOException {\n\t\tif (root == null) {\n\t\t\treturn false;\n\t\t}\n\t\tif (!Files.exists(root)) {\n\t\t\treturn false;\n\t\t}\n\n\t\tFiles.walkFileTree(root, new SimpleFileVisitor<>() {\n\t\t\t@Override\n\t\t\tpublic FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {\n\t\t\t\tFiles.delete(file);\n\t\t\t\treturn FileVisitResult.CONTINUE;\n\t\t\t}\n\n\t\t\t@Override\n\t\t\tpublic FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {\n\t\t\t\tFiles.delete(dir);\n\t\t\t\treturn FileVisitResult.CONTINUE;\n\t\t\t}\n\t\t});\n\t\treturn true;\n\t}\n\n\t/**\n\t * Recursively copy the contents of the {@code src} file/directory\n\t * to the {@code dest} file/directory.\n\t * @param src the source directory\n\t * @param dest the destination directory\n\t * @throws IOException in the case of I/O errors\n\t */\n\tpublic static void copyRecursively(File src, File dest) throws IOException {\n\t\tAssert.notNull(src, \"Source File must not be null\");\n\t\tAssert.notNull(dest, \"Destination File must not be null\");\n\t\tcopyRecursively(src.toPath(), dest.toPath());\n\t}\n\n\t/**\n\t * Recursively copy the contents of the {@code src} file/directory\n\t * to the {@code dest} file/directory.\n\t * @param src the source directory\n\t * @param dest the destination directory\n\t * @throws IOException in the case of I/O errors\n\t * @since 5.0\n\t */\n\tpublic static void copyRecursively(Path src, Path dest) throws IOException {\n\t\tAssert.notNull(src, \"Source Path must not be null\");\n\t\tAssert.notNull(dest, \"Destination Path must not be null\");\n\t\tBasicFileAttributes srcAttr = Files.readAttributes(src, BasicFileAttributes.class);\n\n\t\tif (srcAttr.isDirectory()) {\n\t\t\tFiles.walkFileTree(src, EnumSet.of(FOLLOW_LINKS), Integer.MAX_VALUE, new SimpleFileVisitor<>() {\n\t\t\t\t@Override\n\t\t\t\tpublic FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {\n\t\t\t\t\tFiles.createDirectories(dest.resolve(src.relativize(dir)));\n\t\t\t\t\treturn FileVisitResult.CONTINUE;\n\t\t\t\t}\n\n\t\t\t\t@Override\n\t\t\t\tpublic FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {\n\t\t\t\t\tFiles.copy(file, dest.resolve(src.relativize(file)), StandardCopyOption.REPLACE_EXISTING);\n\t\t\t\t\treturn FileVisitResult.CONTINUE;\n\t\t\t\t}\n\t\t\t});\n\t\t}\n\t\telse if (srcAttr.isRegularFile()) {\n\t\t\tFiles.copy(src, dest);\n\t\t}\n\t\telse {\n\t\t\tthrow new IllegalArgumentException(\"Source File must denote a directory or file\");\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils#deleteRecursively(File)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Delete the supplied {@link File} - for directories,\r\n * recursively delete any nested directories or files as well.\r\n * <p>Note: Like {@link File#delete()}, this method does not throw any\r\n * exception but rather silently returns {@code false} in case of I/O\r\n * errors. Consider using {@link #deleteRecursively(Path)} for NIO-style\r\n * handling of I/O errors, clearly differentiating between non-existence\r\n * and failure to delete an existing file.\r\n * @param root the root {@code File} to delete\r\n * @return {@code true} if the {@code File} was successfully deleted,\r\n * otherwise {@code false}\r\n */\r\npublic static boolean deleteRecursively(@Nullable File root) {\r\n    if (root == null) {\r\n        return false;\r\n    }\r\n    try {\r\n        return deleteRecursively(root.toPath());\r\n    } catch (IOException ex) {\r\n        return false;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FileSystemUtils#deleteRecursively(File)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils#deleteRecursively(Path)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Delete the supplied {@link Path} &mdash; for directories,\r\n * recursively delete any nested directories or files as well.\r\n * @param root the root {@code Path} to delete\r\n * @return {@code true} if the {@code Path} existed and was deleted,\r\n * or {@code false} if it did not exist\r\n * @throws IOException in the case of I/O errors\r\n * @since 5.0\r\n */\r\npublic static boolean deleteRecursively(@Nullable Path root) throws IOException {\r\n    if (root == null) {\r\n        return false;\r\n    }\r\n    if (!Files.exists(root)) {\r\n        return false;\r\n    }\r\n    Files.walkFileTree(root, new SimpleFileVisitor<>() {\r\n\r\n        @Override\r\n        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {\r\n            Files.delete(file);\r\n            return FileVisitResult.CONTINUE;\r\n        }\r\n\r\n        @Override\r\n        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {\r\n            Files.delete(dir);\r\n            return FileVisitResult.CONTINUE;\r\n        }\r\n    });\r\n    return true;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FileSystemUtils#deleteRecursively(Path)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils#copyRecursively(File,File)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Recursively copy the contents of the {@code src} file/directory\r\n * to the {@code dest} file/directory.\r\n * @param src the source directory\r\n * @param dest the destination directory\r\n * @throws IOException in the case of I/O errors\r\n */\r\npublic static void copyRecursively(File src, File dest) throws IOException {\r\n    Assert.notNull(src, \"Source File must not be null\");\r\n    Assert.notNull(dest, \"Destination File must not be null\");\r\n    copyRecursively(src.toPath(), dest.toPath());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FileSystemUtils#copyRecursively(File,File)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils#copyRecursively(Path,Path)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Recursively copy the contents of the {@code src} file/directory\r\n * to the {@code dest} file/directory.\r\n * @param src the source directory\r\n * @param dest the destination directory\r\n * @throws IOException in the case of I/O errors\r\n * @since 5.0\r\n */\r\npublic static void copyRecursively(Path src, Path dest) throws IOException {\r\n    Assert.notNull(src, \"Source Path must not be null\");\r\n    Assert.notNull(dest, \"Destination Path must not be null\");\r\n    BasicFileAttributes srcAttr = Files.readAttributes(src, BasicFileAttributes.class);\r\n    if (srcAttr.isDirectory()) {\r\n        Files.walkFileTree(src, EnumSet.of(FOLLOW_LINKS), Integer.MAX_VALUE, new SimpleFileVisitor<>() {\r\n\r\n            @Override\r\n            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {\r\n                Files.createDirectories(dest.resolve(src.relativize(dir)));\r\n                return FileVisitResult.CONTINUE;\r\n            }\r\n\r\n            @Override\r\n            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {\r\n                Files.copy(file, dest.resolve(src.relativize(file)), StandardCopyOption.REPLACE_EXISTING);\r\n                return FileVisitResult.CONTINUE;\r\n            }\r\n        });\r\n    } else if (srcAttr.isRegularFile()) {\r\n        Files.copy(src, dest);\r\n    } else {\r\n        throw new IllegalArgumentException(\"Source File must denote a directory or file\");\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FileSystemUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FileSystemUtils#copyRecursively(Path,Path)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.FilteredCollection",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.AbstractCollection;\nimport java.util.Collection;\nimport java.util.Iterator;\nimport java.util.function.Predicate;\n\n/**\n * Collection that filters out values that do not match a predicate.\n * This type is used by {@link CompositeMap}.\n *\n * @author Arjen Poutsma\n * @since 6.2\n * @param <E> the type of elements maintained by this collection\n */\nclass FilteredCollection<E> extends AbstractCollection<E> {\n\n\tprivate final Collection<E> delegate;\n\n\tprivate final Predicate<E> filter;\n\n\n\tpublic FilteredCollection(Collection<E> delegate, Predicate<E> filter) {\n\t\tAssert.notNull(delegate, \"Delegate must not be null\");\n\t\tAssert.notNull(filter, \"Filter must not be null\");\n\t\tthis.delegate = delegate;\n\t\tthis.filter = filter;\n\t}\n\n\n\t@Override\n\tpublic int size() {\n\t\tint size = 0;\n\t\tfor (E e : this.delegate) {\n\t\t\tif (this.filter.test(e)) {\n\t\t\t\tsize++;\n\t\t\t}\n\t\t}\n\t\treturn size;\n\t}\n\n\t@Override\n\tpublic Iterator<E> iterator() {\n\t\treturn new FilteredIterator<>(this.delegate.iterator(), this.filter);\n\t}\n\n\t@Override\n\tpublic boolean add(E e) {\n\t\tboolean added = this.delegate.add(e);\n\t\treturn added && this.filter.test(e);\n\t}\n\n\t@Override\n\t@SuppressWarnings(\"unchecked\")\n\tpublic boolean remove(Object o) {\n\t\tboolean removed = this.delegate.remove(o);\n\t\treturn removed && this.filter.test((E) o);\n\t}\n\n\t@Override\n\t@SuppressWarnings(\"unchecked\")\n\tpublic boolean contains(Object o) {\n\t\tif (this.delegate.contains(o)) {\n\t\t\treturn this.filter.test((E) o);\n\t\t}\n\t\telse {\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t@Override\n\tpublic void clear() {\n\t\tthis.delegate.clear();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.FilteredCollection#delegate",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection#delegate",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Collection<E>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.FilteredCollection#filter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection#filter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Predicate<E>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection#size()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int size() {\r\n    int size = 0;\r\n    for (E e : this.delegate) {\r\n        if (this.filter.test(e)) {\r\n            size++;\r\n        }\r\n    }\r\n    return size;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FilteredCollection#size()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FilteredCollection#size()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

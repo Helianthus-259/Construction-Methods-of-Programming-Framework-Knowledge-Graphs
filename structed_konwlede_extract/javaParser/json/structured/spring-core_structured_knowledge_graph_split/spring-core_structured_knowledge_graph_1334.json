@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.MethodInvoker#getArguments()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the arguments for the method invocation.\r\n */\r\n@Nullable\r\npublic Object[] getArguments() {\r\n    return (this.arguments != null ? this.arguments : EMPTY_ARGUMENTS);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#getArguments()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#getArguments()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#prepare()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Prepare the specified method.\r\n * The method can be invoked any number of times afterwards.\r\n * @see #getPreparedMethod\r\n * @see #invoke\r\n */\r\npublic void prepare() throws ClassNotFoundException, NoSuchMethodException {\r\n    if (this.staticMethod != null) {\r\n        int lastDotIndex = this.staticMethod.lastIndexOf('.');\r\n        if (lastDotIndex == -1 || lastDotIndex == this.staticMethod.length() - 1) {\r\n            throw new IllegalArgumentException(\"staticMethod must be a fully qualified class plus method name: \" + \"for example, 'example.MyExampleClass.myExampleMethod'\");\r\n        }\r\n        String className = this.staticMethod.substring(0, lastDotIndex);\r\n        String methodName = this.staticMethod.substring(lastDotIndex + 1);\r\n        if (this.targetClass == null || !this.targetClass.getName().equals(className)) {\r\n            this.targetClass = resolveClassName(className);\r\n        }\r\n        this.targetMethod = methodName;\r\n    }\r\n    Class<?> targetClass = getTargetClass();\r\n    String targetMethod = getTargetMethod();\r\n    Assert.notNull(targetClass, \"Either 'targetClass' or 'targetObject' is required\");\r\n    Assert.notNull(targetMethod, \"Property 'targetMethod' is required\");\r\n    @Nullable\r\n    Object[] arguments = getArguments();\r\n    Class<?>[] argTypes = new Class<?>[arguments.length];\r\n    for (int i = 0; i < arguments.length; ++i) {\r\n        argTypes[i] = (arguments[i] != null ? arguments[i].getClass() : Object.class);\r\n    }\r\n    // Try to get the exact method first.\r\n    try {\r\n        this.methodObject = targetClass.getMethod(targetMethod, argTypes);\r\n    } catch (NoSuchMethodException ex) {\r\n        // Just rethrow exception if we can't get any match.\r\n        this.methodObject = findMatchingMethod();\r\n        if (this.methodObject == null) {\r\n            throw ex;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#prepare()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#resolveClassName(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Resolve the given class name into a Class.\r\n * <p>The default implementations uses {@code ClassUtils.forName},\r\n * using the thread context class loader.\r\n * @param className the class name to resolve\r\n * @return the resolved Class\r\n * @throws ClassNotFoundException if the class name was invalid\r\n */\r\nprotected Class<?> resolveClassName(String className) throws ClassNotFoundException {\r\n    return ClassUtils.forName(className, ClassUtils.getDefaultClassLoader());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#resolveClassName(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#findMatchingMethod()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Find a matching method with the specified name for the specified arguments.\r\n * @return a matching method, or {@code null} if none\r\n * @see #getTargetClass()\r\n * @see #getTargetMethod()\r\n * @see #getArguments()\r\n */\r\n@Nullable\r\nprotected Method findMatchingMethod() {\r\n    String targetMethod = getTargetMethod();\r\n    @Nullable\r\n    Object[] arguments = getArguments();\r\n    int argCount = arguments.length;\r\n    Class<?> targetClass = getTargetClass();\r\n    Assert.state(targetClass != null, \"No target class set\");\r\n    Method[] candidates = ReflectionUtils.getAllDeclaredMethods(targetClass);\r\n    int minTypeDiffWeight = Integer.MAX_VALUE;\r\n    Method matchingMethod = null;\r\n    for (Method candidate : candidates) {\r\n        if (candidate.getName().equals(targetMethod) && candidate.getParameterCount() == argCount) {\r\n            Class<?>[] paramTypes = candidate.getParameterTypes();\r\n            int typeDiffWeight = getTypeDifferenceWeight(paramTypes, arguments);\r\n            if (typeDiffWeight < minTypeDiffWeight) {\r\n                minTypeDiffWeight = typeDiffWeight;\r\n                matchingMethod = candidate;\r\n            }\r\n        }\r\n    }\r\n    return matchingMethod;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#findMatchingMethod()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#findMatchingMethod()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#getPreparedMethod()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the prepared Method object that will be invoked.\r\n * <p>Can for example be used to determine the return type.\r\n * @return the prepared Method object (never {@code null})\r\n * @throws IllegalStateException if the invoker hasn't been prepared yet\r\n * @see #prepare\r\n * @see #invoke\r\n */\r\npublic Method getPreparedMethod() throws IllegalStateException {\r\n    if (this.methodObject == null) {\r\n        throw new IllegalStateException(\"prepare() must be called prior to invoke() on MethodInvoker\");\r\n    }\r\n    return this.methodObject;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#getPreparedMethod()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#isPrepared()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return whether this invoker has been prepared already,\r\n * i.e. whether it allows access to {@link #getPreparedMethod()} already.\r\n */\r\npublic boolean isPrepared() {\r\n    return (this.methodObject != null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#isPrepared()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#invoke()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Invoke the specified method.\r\n * <p>The invoker needs to have been prepared before.\r\n * @return the object (possibly null) returned by the method invocation,\r\n * or {@code null} if the method has a void return type\r\n * @throws InvocationTargetException if the target method threw an exception\r\n * @throws IllegalAccessException if the target method couldn't be accessed\r\n * @see #prepare\r\n */\r\n@Nullable\r\npublic Object invoke() throws InvocationTargetException, IllegalAccessException {\r\n    // In the static case, target will simply be {@code null}.\r\n    Object targetObject = getTargetObject();\r\n    Method preparedMethod = getPreparedMethod();\r\n    if (targetObject == null && !Modifier.isStatic(preparedMethod.getModifiers())) {\r\n        throw new IllegalArgumentException(\"Target method must not be non-static without a target\");\r\n    }\r\n    ReflectionUtils.makeAccessible(preparedMethod);\r\n    return preparedMethod.invoke(targetObject, getArguments());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#invoke()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#invoke()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker#getTypeDifferenceWeight(Class<?>[],Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Algorithm that judges the match between the declared parameter types of a candidate method\r\n * and a specific list of arguments that this method is supposed to be invoked with.\r\n * <p>Determines a weight that represents the class hierarchy difference between types and\r\n * arguments. A direct match, i.e. type Integer &rarr; arg of class Integer, does not increase\r\n * the result - all direct matches means weight 0. A match between type Object and arg of\r\n * class Integer would increase the weight by 2, due to the superclass 2 steps up in the\r\n * hierarchy (i.e. Object) being the last one that still matches the required type Object.\r\n * Type Number and class Integer would increase the weight by 1 accordingly, due to the\r\n * superclass 1 step up the hierarchy (i.e. Number) still matching the required type Number.\r\n * Therefore, with an arg of type Integer, a constructor (Integer) would be preferred to a\r\n * constructor (Number) which would in turn be preferred to a constructor (Object).\r\n * All argument weights get accumulated.\r\n * <p>Note: This is the algorithm used by MethodInvoker itself and also the algorithm\r\n * used for constructor and factory method selection in Spring's bean container (in case\r\n * of lenient constructor resolution which is the default for regular bean definitions).\r\n * @param paramTypes the parameter types to match\r\n * @param args the arguments to match\r\n * @return the accumulated weight for all arguments\r\n */\r\npublic static int getTypeDifferenceWeight(Class<?>[] paramTypes, @Nullable Object[] args) {\r\n    int result = 0;\r\n    for (int i = 0; i < paramTypes.length; i++) {\r\n        if (!ClassUtils.isAssignableValue(paramTypes[i], args[i])) {\r\n            return Integer.MAX_VALUE;\r\n        }\r\n        if (args[i] != null) {\r\n            Class<?> paramType = paramTypes[i];\r\n            Class<?> superClass = args[i].getClass().getSuperclass();\r\n            while (superClass != null) {\r\n                if (paramType.equals(superClass)) {\r\n                    result = result + 2;\r\n                    superClass = null;\r\n                } else if (ClassUtils.isAssignable(paramType, superClass)) {\r\n                    result = result + 2;\r\n                    superClass = superClass.getSuperclass();\r\n                } else {\r\n                    superClass = null;\r\n                }\r\n            }\r\n            if (paramType.isInterface()) {\r\n                result = result + 1;\r\n            }\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MethodInvoker",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MethodInvoker#getTypeDifferenceWeight(Class<?>[],Object[])",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  }
+]

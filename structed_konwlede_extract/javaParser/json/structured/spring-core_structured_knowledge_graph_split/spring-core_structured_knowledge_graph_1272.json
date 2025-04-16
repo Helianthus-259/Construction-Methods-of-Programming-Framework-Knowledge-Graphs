@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyCount",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#concurrencyCount",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#setConcurrencyLimit(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Set the maximum number of concurrent access attempts allowed.\r\n * The default of -1 indicates no concurrency limit at all.\r\n * <p>In principle, this limit can be changed at runtime,\r\n * although it is generally designed as a config time setting.\r\n * <p>NOTE: Do not switch between -1 and any concrete limit at runtime,\r\n * as this will lead to inconsistent concurrency counts: A limit\r\n * of -1 effectively turns off concurrency counting completely.\r\n */\r\npublic void setConcurrencyLimit(int concurrencyLimit) {\r\n    this.concurrencyLimit = concurrencyLimit;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#setConcurrencyLimit(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#getConcurrencyLimit()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the maximum number of concurrent access attempts allowed.\r\n */\r\npublic int getConcurrencyLimit() {\r\n    return this.concurrencyLimit;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#getConcurrencyLimit()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#isThrottleActive()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return whether this throttle is currently active.\r\n * @return {@code true} if the concurrency limit for this instance is active\r\n * @see #getConcurrencyLimit()\r\n */\r\npublic boolean isThrottleActive() {\r\n    return (this.concurrencyLimit >= 0);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#isThrottleActive()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#beforeAccess()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * To be invoked before the main execution logic of concrete subclasses.\r\n * <p>This implementation applies the concurrency throttle.\r\n * @see #afterAccess()\r\n */\r\nprotected void beforeAccess() {\r\n    if (this.concurrencyLimit == NO_CONCURRENCY) {\r\n        throw new IllegalStateException(\"Currently no invocations allowed - concurrency limit set to NO_CONCURRENCY\");\r\n    }\r\n    if (this.concurrencyLimit > 0) {\r\n        boolean debug = logger.isDebugEnabled();\r\n        this.concurrencyLock.lock();\r\n        try {\r\n            boolean interrupted = false;\r\n            while (this.concurrencyCount >= this.concurrencyLimit) {\r\n                if (interrupted) {\r\n                    throw new IllegalStateException(\"Thread was interrupted while waiting for invocation access, \" + \"but concurrency limit still does not allow for entering\");\r\n                }\r\n                if (debug) {\r\n                    logger.debug(\"Concurrency count \" + this.concurrencyCount + \" has reached limit \" + this.concurrencyLimit + \" - blocking\");\r\n                }\r\n                try {\r\n                    this.concurrencyCondition.await();\r\n                } catch (InterruptedException ex) {\r\n                    // Re-interrupt current thread, to allow other threads to react.\r\n                    Thread.currentThread().interrupt();\r\n                    interrupted = true;\r\n                }\r\n            }\r\n            if (debug) {\r\n                logger.debug(\"Entering throttle at concurrency count \" + this.concurrencyCount);\r\n            }\r\n            this.concurrencyCount++;\r\n        } finally {\r\n            this.concurrencyLock.unlock();\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#beforeAccess()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#afterAccess()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * To be invoked after the main execution logic of concrete subclasses.\r\n * @see #beforeAccess()\r\n */\r\nprotected void afterAccess() {\r\n    if (this.concurrencyLimit >= 0) {\r\n        boolean debug = logger.isDebugEnabled();\r\n        this.concurrencyLock.lock();\r\n        try {\r\n            this.concurrencyCount--;\r\n            if (debug) {\r\n                logger.debug(\"Returning from throttle at concurrency count \" + this.concurrencyCount);\r\n            }\r\n            this.concurrencyCondition.signal();\r\n        } finally {\r\n            this.concurrencyLock.unlock();\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#afterAccess()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport#readObject(ObjectInputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "//---------------------------------------------------------------------\r\n// Serialization support\r\n//---------------------------------------------------------------------\r\nprivate void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {\r\n    // Rely on default serialization, just initialize state after deserialization.\r\n    ois.defaultReadObject();\r\n    // Initialize transient fields.\r\n    this.logger = LogFactory.getLog(getClass());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrencyThrottleSupport",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrencyThrottleSupport#readObject(ObjectInputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.concurrent",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.concurrent",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.concurrent.DelegatingCompletableFuture",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2018 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.concurrent;\n\nimport java.util.concurrent.CompletableFuture;\nimport java.util.concurrent.Future;\n\nimport org.springframework.util.Assert;\n\n/**\n * Extension of {@link CompletableFuture} which allows for cancelling\n * a delegate along with the {@link CompletableFuture} itself.\n *\n * @author Juergen Hoeller\n * @since 5.0\n * @param <T> the result type returned by this Future's {@code get} method\n */\nclass DelegatingCompletableFuture<T> extends CompletableFuture<T> {\n\n\tprivate final Future<T> delegate;\n\n\n\tpublic DelegatingCompletableFuture(Future<T> delegate) {\n\t\tAssert.notNull(delegate, \"Delegate must not be null\");\n\t\tthis.delegate = delegate;\n\t}\n\n\n\t@Override\n\tpublic boolean cancel(boolean mayInterruptIfRunning) {\n\t\tboolean result = this.delegate.cancel(mayInterruptIfRunning);\n\t\tsuper.cancel(mayInterruptIfRunning);\n\t\treturn result;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.concurrent.DelegatingCompletableFuture#delegate",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture#delegate",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Future<T>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture#cancel(boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean cancel(boolean mayInterruptIfRunning) {\r\n    boolean result = this.delegate.cancel(mayInterruptIfRunning);\r\n    super.cancel(mayInterruptIfRunning);\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  }
+]

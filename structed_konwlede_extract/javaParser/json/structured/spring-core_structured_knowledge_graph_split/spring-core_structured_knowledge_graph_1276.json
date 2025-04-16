@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#cache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConcurrentMap<K, Node<K, V>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCache#generator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#generator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCache#readOperations",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#readOperations",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ReadOperations<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCache#writeOperations",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#writeOperations",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "WriteOperations",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCache#evictionLock",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#evictionLock",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Lock",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCache#evictionQueue",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#evictionQueue",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "EvictionQueue<K, V>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCache#drainStatus",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#drainStatus",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AtomicReference<DrainStatus>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#get(K)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve an entry from the cache, potentially triggering generation of the value.\r\n * @param key the key to retrieve the entry for\r\n * @return the cached or newly generated value\r\n */\r\npublic V get(K key) {\r\n    if (this.capacity == 0) {\r\n        return this.generator.apply(key);\r\n    }\r\n    final Node<K, V> node = this.cache.get(key);\r\n    if (node == null) {\r\n        V value = this.generator.apply(key);\r\n        put(key, value);\r\n        return value;\r\n    }\r\n    processRead(node);\r\n    return node.getValue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrentLruCache#get(K)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#put(K,V)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void put(K key, V value) {\r\n    Assert.notNull(key, \"key must not be null\");\r\n    Assert.notNull(value, \"value must not be null\");\r\n    final CacheEntry<V> cacheEntry = new CacheEntry<>(value, CacheEntryState.ACTIVE);\r\n    final Node<K, V> node = new Node<>(key, cacheEntry);\r\n    final Node<K, V> prior = this.cache.putIfAbsent(node.key, node);\r\n    if (prior == null) {\r\n        processWrite(new AddTask(node));\r\n    } else {\r\n        processRead(prior);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrentLruCache#put(K,V)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#processRead(Node<K,V>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void processRead(Node<K, V> node) {\r\n    boolean drainRequested = this.readOperations.recordRead(node);\r\n    final DrainStatus status = this.drainStatus.get();\r\n    if (status.shouldDrainBuffers(drainRequested)) {\r\n        drainOperations();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrentLruCache#processRead(Node<K,V>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCache#processWrite(Runnable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void processWrite(Runnable task) {\r\n    this.writeOperations.add(task);\r\n    this.drainStatus.lazySet(DrainStatus.REQUIRED);\r\n    drainOperations();\r\n}",
+    "tailType": "method_code"
+  }
+]

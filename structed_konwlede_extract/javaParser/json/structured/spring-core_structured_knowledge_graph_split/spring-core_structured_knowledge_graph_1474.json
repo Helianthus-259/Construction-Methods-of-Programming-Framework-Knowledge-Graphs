@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamWriter#writeEndDocument()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter#writeEndDocument()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter#flush()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void flush() throws XMLStreamException {\r\n    this.eventWriter.flush();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamWriter#flush()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter#flush()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter#close()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void close() throws XMLStreamException {\r\n    closeEmptyElementIfNecessary();\r\n    this.eventWriter.close();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.XMLEventStreamWriter#close()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamWriter#close()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.io.BufferedReader;\nimport java.io.CharConversionException;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.io.InputStreamReader;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.StringUtils;\n\n/**\n * Detects whether an XML stream is using DTD- or XSD-based validation.\n *\n * @author Rob Harrop\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 2.0\n */\npublic class XmlValidationModeDetector {\n\n\t/**\n\t * Indicates that the validation should be disabled.\n\t */\n\tpublic static final int VALIDATION_NONE = 0;\n\n\t/**\n\t * Indicates that the validation mode should be auto-guessed, since we cannot find\n\t * a clear indication (probably choked on some special characters, or the like).\n\t */\n\tpublic static final int VALIDATION_AUTO = 1;\n\n\t/**\n\t * Indicates that DTD validation should be used (we found a \"DOCTYPE\" declaration).\n\t */\n\tpublic static final int VALIDATION_DTD = 2;\n\n\t/**\n\t * Indicates that XSD validation should be used (found no \"DOCTYPE\" declaration).\n\t */\n\tpublic static final int VALIDATION_XSD = 3;\n\n\n\t/**\n\t * The token in an XML document that declares the DTD to use for validation\n\t * and thus that DTD validation is being used.\n\t */\n\tprivate static final String DOCTYPE = \"DOCTYPE\";\n\n\t/**\n\t * The token that indicates the start of an XML comment.\n\t */\n\tprivate static final String START_COMMENT = \"<!--\";\n\n\t/**\n\t * The token that indicates the end of an XML comment.\n\t */\n\tprivate static final String END_COMMENT = \"-->\";\n\n\n\t/**\n\t * Indicates whether the current parse position is inside an XML comment.\n\t */\n\tprivate boolean inComment;\n\n\n\t/**\n\t * Detect the validation mode for the XML document in the supplied {@link InputStream}.\n\t * <p>Note that the supplied {@link InputStream} is closed by this method before returning.\n\t * @param inputStream the InputStream to parse\n\t * @throws IOException in case of I/O failure\n\t * @see #VALIDATION_DTD\n\t * @see #VALIDATION_XSD\n\t */\n\tpublic int detectValidationMode(InputStream inputStream) throws IOException {\n\t\tthis.inComment = false;\n\n\t\t// Peek into the file to look for DOCTYPE.\n\t\ttry (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {\n\t\t\tboolean isDtdValidated = false;\n\t\t\tString content;\n\t\t\twhile ((content = reader.readLine()) != null) {\n\t\t\t\tcontent = consumeCommentTokens(content);\n\t\t\t\tif (!StringUtils.hasText(content)) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tif (hasDoctype(content)) {\n\t\t\t\t\tisDtdValidated = true;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tif (hasOpeningTag(content)) {\n\t\t\t\t\t// End of meaningful data...\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn (isDtdValidated ? VALIDATION_DTD : VALIDATION_XSD);\n\t\t}\n\t\tcatch (CharConversionException ex) {\n\t\t\t// Choked on some character encoding...\n\t\t\t// Leave the decision up to the caller.\n\t\t\treturn VALIDATION_AUTO;\n\t\t}\n\t}\n\n\n\t/**\n\t * Does the content contain the DTD DOCTYPE declaration?\n\t */\n\tprivate boolean hasDoctype(String content) {\n\t\treturn content.contains(DOCTYPE);\n\t}\n\n\t/**\n\t * Determine if the supplied content contains an XML opening tag.\n\t * <p>It is expected that all comment tokens will have been consumed for the\n\t * supplied content before passing the remainder to this method. However, as\n\t * a sanity check, if the parse state is currently in an XML comment this\n\t * method always returns {@code false}.\n\t */\n\tprivate boolean hasOpeningTag(String content) {\n\t\tif (this.inComment) {\n\t\t\treturn false;\n\t\t}\n\t\tint openTagIndex = content.indexOf('<');\n\t\treturn (openTagIndex > -1 && (content.length() > openTagIndex + 1) &&\n\t\t\t\tCharacter.isLetter(content.charAt(openTagIndex + 1)));\n\t}\n\n\t/**\n\t * Consume all comments in the given String and return the remaining content,\n\t * which may be empty since the supplied content might be all comment data.\n\t * <p>This method takes the current \"in comment\" parsing state into account.\n\t */\n\tprivate String consumeCommentTokens(String line) {\n\t\tint indexOfStartComment = line.indexOf(START_COMMENT);\n\t\tif (indexOfStartComment == -1 && !line.contains(END_COMMENT)) {\n\t\t\treturn line;\n\t\t}\n\n\t\tString result = \"\";\n\t\tString currLine = line;\n\t\tif (!this.inComment && (indexOfStartComment >= 0)) {\n\t\t\tresult = line.substring(0, indexOfStartComment);\n\t\t\tcurrLine = line.substring(indexOfStartComment);\n\t\t}\n\n\t\tif ((currLine = consume(currLine)) != null) {\n\t\t\tresult += consumeCommentTokens(currLine);\n\t\t}\n\t\treturn result;\n\t}\n\n\t/**\n\t * Consume the next comment token, update the \"inComment\" flag,\n\t * and return the remaining content.\n\t */\n\tprivate @Nullable String consume(String line) {\n\t\tint index = (this.inComment ? endComment(line) : startComment(line));\n\t\treturn (index == -1 ? null : line.substring(index));\n\t}\n\n\t/**\n\t * Try to consume the {@link #START_COMMENT} token.\n\t * @see #commentToken(String, String, boolean)\n\t */\n\tprivate int startComment(String line) {\n\t\treturn commentToken(line, START_COMMENT, true);\n\t}\n\n\t/**\n\t * Try to consume the {@link #END_COMMENT} token.\n\t * @see #commentToken(String, String, boolean)\n\t */\n\tprivate int endComment(String line) {\n\t\treturn commentToken(line, END_COMMENT, false);\n\t}\n\n\t/**\n\t * Try to consume the supplied token against the supplied content and update the\n\t * \"in comment\" parse state to the supplied value.\n\t * <p>Returns the index into the content which is after the token or -1 if the\n\t * token is not found.\n\t */\n\tprivate int commentToken(String line, String token, boolean inCommentIfPresent) {\n\t\tint index = line.indexOf(token);\n\t\tif (index > - 1) {\n\t\t\tthis.inComment = inCommentIfPresent;\n\t\t}\n\t\treturn (index == -1 ? index : index + token.length());\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_NONE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_NONE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_AUTO",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_AUTO",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_DTD",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_DTD",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_XSD",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector#VALIDATION_XSD",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XmlValidationModeDetector",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XmlValidationModeDetector#DOCTYPE",
+    "tailType": "field"
+  }
+]

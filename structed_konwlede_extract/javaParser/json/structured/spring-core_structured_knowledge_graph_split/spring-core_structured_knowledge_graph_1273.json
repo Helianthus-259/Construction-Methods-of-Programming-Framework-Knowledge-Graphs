@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.DelegatingCompletableFuture#cancel(boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture#cancel(boolean)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.concurrent.DelegatingCompletableFuture",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "CompletableFuture",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.concurrent",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.concurrent",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.concurrent.FutureAdapter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.concurrent;\n\nimport java.util.concurrent.ExecutionException;\nimport java.util.concurrent.Future;\nimport java.util.concurrent.TimeUnit;\nimport java.util.concurrent.TimeoutException;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\n\n/**\n * Abstract class that adapts a {@link Future} parameterized over S into a {@code Future}\n * parameterized over T. All methods are delegated to the adaptee, where {@link #get()}\n * and {@link #get(long, TimeUnit)} call {@link #adapt(Object)} on the adaptee's result.\n *\n * @author Arjen Poutsma\n * @since 4.0\n * @param <T> the type of this {@code Future}\n * @param <S> the type of the adaptee's {@code Future}\n * @deprecated as of 6.0, with no concrete replacement\n */\n@Deprecated(since = \"6.0\")\npublic abstract class FutureAdapter<T, S> implements Future<T> {\n\n\tprivate final Future<S> adaptee;\n\n\tprivate @Nullable Object result;\n\n\tprivate State state = State.NEW;\n\n\tprivate final Object mutex = new Object();\n\n\n\t/**\n\t * Constructs a new {@code FutureAdapter} with the given adaptee.\n\t * @param adaptee the future to delegate to\n\t */\n\tprotected FutureAdapter(Future<S> adaptee) {\n\t\tAssert.notNull(adaptee, \"Delegate must not be null\");\n\t\tthis.adaptee = adaptee;\n\t}\n\n\n\t/**\n\t * Returns the adaptee.\n\t */\n\tprotected Future<S> getAdaptee() {\n\t\treturn this.adaptee;\n\t}\n\n\t@Override\n\tpublic boolean cancel(boolean mayInterruptIfRunning) {\n\t\treturn this.adaptee.cancel(mayInterruptIfRunning);\n\t}\n\n\t@Override\n\tpublic boolean isCancelled() {\n\t\treturn this.adaptee.isCancelled();\n\t}\n\n\t@Override\n\tpublic boolean isDone() {\n\t\treturn this.adaptee.isDone();\n\t}\n\n\t@Override\n\tpublic @Nullable T get() throws InterruptedException, ExecutionException {\n\t\treturn adaptInternal(this.adaptee.get());\n\t}\n\n\t@Override\n\tpublic @Nullable T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {\n\t\treturn adaptInternal(this.adaptee.get(timeout, unit));\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tfinal @Nullable T adaptInternal(S adapteeResult) throws ExecutionException {\n\t\tsynchronized (this.mutex) {\n\t\t\treturn switch (this.state) {\n\t\t\t\tcase SUCCESS -> (T) this.result;\n\t\t\t\tcase FAILURE -> {\n\t\t\t\t\tAssert.state(this.result instanceof ExecutionException, \"Failure without exception\");\n\t\t\t\t\tthrow (ExecutionException) this.result;\n\t\t\t\t}\n\t\t\t\tcase NEW -> {\n\t\t\t\t\ttry {\n\t\t\t\t\t\tT adapted = adapt(adapteeResult);\n\t\t\t\t\t\tthis.result = adapted;\n\t\t\t\t\t\tthis.state = State.SUCCESS;\n\t\t\t\t\t\tyield adapted;\n\t\t\t\t\t}\n\t\t\t\t\tcatch (ExecutionException ex) {\n\t\t\t\t\t\tthis.result = ex;\n\t\t\t\t\t\tthis.state = State.FAILURE;\n\t\t\t\t\t\tthrow ex;\n\t\t\t\t\t}\n\t\t\t\t\tcatch (Throwable ex) {\n\t\t\t\t\t\tExecutionException execEx = new ExecutionException(ex);\n\t\t\t\t\t\tthis.result = execEx;\n\t\t\t\t\t\tthis.state = State.FAILURE;\n\t\t\t\t\t\tthrow execEx;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t};\n\t\t}\n\t}\n\n\t/**\n\t * Adapts the given adaptee's result into T.\n\t * @return the adapted result\n\t */\n\tprotected abstract @Nullable T adapt(S adapteeResult) throws ExecutionException;\n\n\n\tprivate enum State {NEW, SUCCESS, FAILURE}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.concurrent.FutureAdapter#adaptee",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#adaptee",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Future<S>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.concurrent.FutureAdapter#result",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#result",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.concurrent.FutureAdapter#state",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#state",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "State",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.concurrent.FutureAdapter#mutex",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#mutex",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Object",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#getAdaptee()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the adaptee.\r\n */\r\nprotected Future<S> getAdaptee() {\r\n    return this.adaptee;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.FutureAdapter#getAdaptee()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#cancel(boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean cancel(boolean mayInterruptIfRunning) {\r\n    return this.adaptee.cancel(mayInterruptIfRunning);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.FutureAdapter#cancel(boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureAdapter#cancel(boolean)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

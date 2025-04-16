@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory#wrap(Content.Chunk)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public JettyDataBuffer wrap(Content.Chunk chunk) {\r\n    ByteBuffer byteBuffer = chunk.getByteBuffer();\r\n    DefaultDataBuffer delegate = this.delegate.wrap(byteBuffer);\r\n    return new JettyDataBuffer(this, delegate, chunk);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.JettyDataBufferFactory#wrap(Content.Chunk)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory#join(List<? extends DataBuffer>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic JettyDataBuffer join(List<? extends DataBuffer> dataBuffers) {\r\n    DefaultDataBuffer delegate = this.delegate.join(dataBuffers);\r\n    return new JettyDataBuffer(this, delegate);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.JettyDataBufferFactory#join(List<? extends DataBuffer>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory#join(List<? extends DataBuffer>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory#isDirect()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean isDirect() {\r\n    return this.delegate.isDirect();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.JettyDataBufferFactory#isDirect()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.JettyDataBufferFactory#isDirect()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.io.buffer",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.io.buffer",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.io.buffer;\n\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.List;\nimport java.util.function.Predicate;\n\nimport reactor.core.publisher.Flux;\n\n/**\n * Custom {@link List} to collect data buffers with and enforce a\n * limit on the total number of bytes buffered. For use with \"collect\" or\n * other buffering operators in declarative APIs, for example, {@link Flux}.\n *\n * <p>Adding elements increases the byte count and if the limit is exceeded,\n * {@link DataBufferLimitException} is raised.  {@link #clear()} resets the\n * count. Remove and set are not supported.\n *\n * <p><strong>Note:</strong> This class does not automatically release the\n * buffers it contains. It is usually preferable to use hooks such as\n * {@link Flux#doOnDiscard} that also take care of cancel and error signals,\n * or otherwise {@link #releaseAndClear()} can be used.\n *\n * @author Rossen Stoyanchev\n * @since 5.1.11\n */\n@SuppressWarnings(\"serial\")\npublic class LimitedDataBufferList extends ArrayList<DataBuffer> {\n\n\tprivate final int maxByteCount;\n\n\tprivate int byteCount;\n\n\n\tpublic LimitedDataBufferList(int maxByteCount) {\n\t\tthis.maxByteCount = maxByteCount;\n\t}\n\n\n\t@Override\n\tpublic boolean add(DataBuffer buffer) {\n\t\tupdateCount(buffer.readableByteCount());\n\t\treturn super.add(buffer);\n\t}\n\n\t@Override\n\tpublic void add(int index, DataBuffer buffer) {\n\t\tsuper.add(index, buffer);\n\t\tupdateCount(buffer.readableByteCount());\n\t}\n\n\t@Override\n\tpublic boolean addAll(Collection<? extends DataBuffer> collection) {\n\t\tboolean result = super.addAll(collection);\n\t\tcollection.forEach(buffer -> updateCount(buffer.readableByteCount()));\n\t\treturn result;\n\t}\n\n\t@Override\n\tpublic boolean addAll(int index, Collection<? extends DataBuffer> collection) {\n\t\tboolean result = super.addAll(index, collection);\n\t\tcollection.forEach(buffer -> updateCount(buffer.readableByteCount()));\n\t\treturn result;\n\t}\n\n\tprivate void updateCount(int bytesToAdd) {\n\t\tif (this.maxByteCount < 0) {\n\t\t\treturn;\n\t\t}\n\t\tif (bytesToAdd > Integer.MAX_VALUE - this.byteCount) {\n\t\t\traiseLimitException();\n\t\t}\n\t\telse {\n\t\t\tthis.byteCount += bytesToAdd;\n\t\t\tif (this.byteCount > this.maxByteCount) {\n\t\t\t\traiseLimitException();\n\t\t\t}\n\t\t}\n\t}\n\n\tprivate void raiseLimitException() {\n\t\t// Do not release here, it's likely done via doOnDiscard\n\t\tthrow new DataBufferLimitException(\n\t\t\t\t\"Exceeded limit on max bytes to buffer : \" + this.maxByteCount);\n\t}\n\n\t@Override\n\tpublic DataBuffer remove(int index) {\n\t\tthrow new UnsupportedOperationException();\n\t}\n\n\t@Override\n\tpublic boolean remove(Object o) {\n\t\tthrow new UnsupportedOperationException();\n\t}\n\n\t@Override\n\tprotected void removeRange(int fromIndex, int toIndex) {\n\t\tthrow new UnsupportedOperationException();\n\t}\n\n\t@Override\n\tpublic boolean removeAll(Collection<?> c) {\n\t\tthrow new UnsupportedOperationException();\n\t}\n\n\t@Override\n\tpublic boolean removeIf(Predicate<? super DataBuffer> filter) {\n\t\tthrow new UnsupportedOperationException();\n\t}\n\n\t@Override\n\tpublic DataBuffer set(int index, DataBuffer element) {\n\t\tthrow new UnsupportedOperationException();\n\t}\n\n\t@Override\n\tpublic void clear() {\n\t\tthis.byteCount = 0;\n\t\tsuper.clear();\n\t}\n\n\t/**\n\t * Shortcut to {@link DataBufferUtils#release release} all data buffers and\n\t * then {@link #clear()}.\n\t */\n\tpublic void releaseAndClear() {\n\t\tforEach(buf -> {\n\t\t\ttry {\n\t\t\t\tDataBufferUtils.release(buf);\n\t\t\t}\n\t\t\tcatch (Throwable ex) {\n\t\t\t\t// Keep going..\n\t\t\t}\n\t\t});\n\t\tclear();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.LimitedDataBufferList#maxByteCount",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList#maxByteCount",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.io.buffer.LimitedDataBufferList#byteCount",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList#byteCount",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList#add(DataBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean add(DataBuffer buffer) {\r\n    updateCount(buffer.readableByteCount());\r\n    return super.add(buffer);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.io.buffer.LimitedDataBufferList#add(DataBuffer)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList#add(DataBuffer)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.io.buffer.LimitedDataBufferList#add(int,DataBuffer)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void add(int index, DataBuffer buffer) {\r\n    super.add(index, buffer);\r\n    updateCount(buffer.readableByteCount());\r\n}",
+    "tailType": "method_code"
+  }
+]

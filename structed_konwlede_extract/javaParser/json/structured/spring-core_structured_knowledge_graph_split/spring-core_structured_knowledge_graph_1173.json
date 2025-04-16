@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.task",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.task;\n\nimport java.util.concurrent.Callable;\nimport java.util.concurrent.CompletableFuture;\nimport java.util.concurrent.Future;\nimport java.util.concurrent.FutureTask;\n\nimport org.springframework.util.concurrent.FutureUtils;\n\n/**\n * Extended interface for asynchronous {@link TaskExecutor} implementations,\n * offering support for {@link java.util.concurrent.Callable}.\n *\n * <p>Note: The {@link java.util.concurrent.Executors} class includes a set of\n * methods that can convert some other common closure-like objects, for example,\n * {@link java.security.PrivilegedAction} to {@link Callable} before executing them.\n *\n * <p>Implementing this interface also indicates that the {@link #execute(Runnable)}\n * method will not execute its Runnable in the caller's thread but rather\n * asynchronously in some other thread.\n *\n * @author Juergen Hoeller\n * @since 2.0.3\n * @see SimpleAsyncTaskExecutor\n * @see org.springframework.scheduling.SchedulingTaskExecutor\n * @see java.util.concurrent.Callable\n * @see java.util.concurrent.Executors\n */\npublic interface AsyncTaskExecutor extends TaskExecutor {\n\n\t/**\n\t * Constant that indicates immediate execution.\n\t * @deprecated as of 5.3.16 along with {@link #execute(Runnable, long)}\n\t */\n\t@Deprecated\n\tlong TIMEOUT_IMMEDIATE = 0;\n\n\t/**\n\t * Constant that indicates no time limit.\n\t * @deprecated as of 5.3.16 along with {@link #execute(Runnable, long)}\n\t */\n\t@Deprecated\n\tlong TIMEOUT_INDEFINITE = Long.MAX_VALUE;\n\n\n\t/**\n\t * Execute the given {@code task}.\n\t * <p>As of 6.1, this method comes with a default implementation that simply\n\t * delegates to {@link #execute(Runnable)}, ignoring the timeout completely.\n\t * @param task the {@code Runnable} to execute (never {@code null})\n\t * @param startTimeout the time duration (milliseconds) within which the task is\n\t * supposed to start. This is intended as a hint to the executor, allowing for\n\t * preferred handling of immediate tasks. Typical values are {@link #TIMEOUT_IMMEDIATE}\n\t * or {@link #TIMEOUT_INDEFINITE} (the default as used by {@link #execute(Runnable)}).\n\t * @throws TaskTimeoutException in case of the task being rejected because\n\t * of the timeout (i.e. it cannot be started in time)\n\t * @throws TaskRejectedException if the given task was not accepted\n\t * @see #execute(Runnable)\n\t * @deprecated as of 5.3.16 since the common executors do not support start timeouts\n\t */\n\t@Deprecated\n\tdefault void execute(Runnable task, long startTimeout) {\n\t\texecute(task);\n\t}\n\n\t/**\n\t * Submit a Runnable task for execution, receiving a Future representing that task.\n\t * The Future will return a {@code null} result upon completion.\n\t * <p>As of 6.1, this method comes with a default implementation that delegates\n\t * to {@link #execute(Runnable)}.\n\t * @param task the {@code Runnable} to execute (never {@code null})\n\t * @return a Future representing pending completion of the task\n\t * @throws TaskRejectedException if the given task was not accepted\n\t * @since 3.0\n\t */\n\tdefault Future<?> submit(Runnable task) {\n\t\tFutureTask<Object> future = new FutureTask<>(task, null);\n\t\texecute(future);\n\t\treturn future;\n\t}\n\n\t/**\n\t * Submit a Callable task for execution, receiving a Future representing that task.\n\t * The Future will return the Callable's result upon completion.\n\t * <p>As of 6.1, this method comes with a default implementation that delegates\n\t * to {@link #execute(Runnable)}.\n\t * @param task the {@code Callable} to execute (never {@code null})\n\t * @return a Future representing pending completion of the task\n\t * @throws TaskRejectedException if the given task was not accepted\n\t * @since 3.0\n\t */\n\tdefault <T> Future<T> submit(Callable<T> task) {\n\t\tFutureTask<T> future = new FutureTask<>(task);\n\t\texecute(future, TIMEOUT_INDEFINITE);\n\t\treturn future;\n\t}\n\n\t/**\n\t * Submit a {@code Runnable} task for execution, receiving a {@code CompletableFuture}\n\t * representing that task. The Future will return a {@code null} result upon completion.\n\t * @param task the {@code Runnable} to execute (never {@code null})\n\t * @return a {@code CompletableFuture} representing pending completion of the task\n\t * @throws TaskRejectedException if the given task was not accepted\n\t * @since 6.0\n\t */\n\tdefault CompletableFuture<Void> submitCompletable(Runnable task) {\n\t\treturn CompletableFuture.runAsync(task, this);\n\t}\n\n\t/**\n\t * Submit a {@code Callable} task for execution, receiving a {@code CompletableFuture}\n\t * representing that task. The Future will return the Callable's result upon\n\t * completion.\n\t * @param task the {@code Callable} to execute (never {@code null})\n\t * @return a {@code CompletableFuture} representing pending completion of the task\n\t * @throws TaskRejectedException if the given task was not accepted\n\t * @since 6.0\n\t */\n\tdefault <T> CompletableFuture<T> submitCompletable(Callable<T> task) {\n\t\treturn FutureUtils.callAsync(task, this);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#TIMEOUT_IMMEDIATE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#TIMEOUT_IMMEDIATE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "long",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#TIMEOUT_INDEFINITE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#TIMEOUT_INDEFINITE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "long",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#execute(Runnable,long)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Execute the given {@code task}.\r\n * <p>As of 6.1, this method comes with a default implementation that simply\r\n * delegates to {@link #execute(Runnable)}, ignoring the timeout completely.\r\n * @param task the {@code Runnable} to execute (never {@code null})\r\n * @param startTimeout the time duration (milliseconds) within which the task is\r\n * supposed to start. This is intended as a hint to the executor, allowing for\r\n * preferred handling of immediate tasks. Typical values are {@link #TIMEOUT_IMMEDIATE}\r\n * or {@link #TIMEOUT_INDEFINITE} (the default as used by {@link #execute(Runnable)}).\r\n * @throws TaskTimeoutException in case of the task being rejected because\r\n * of the timeout (i.e. it cannot be started in time)\r\n * @throws TaskRejectedException if the given task was not accepted\r\n * @see #execute(Runnable)\r\n * @deprecated as of 5.3.16 since the common executors do not support start timeouts\r\n */\r\n@Deprecated\r\ndefault void execute(Runnable task, long startTimeout) {\r\n    execute(task);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#execute(Runnable,long)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#execute(Runnable,long)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Deprecated",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#submit(Runnable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Submit a Runnable task for execution, receiving a Future representing that task.\r\n * The Future will return a {@code null} result upon completion.\r\n * <p>As of 6.1, this method comes with a default implementation that delegates\r\n * to {@link #execute(Runnable)}.\r\n * @param task the {@code Runnable} to execute (never {@code null})\r\n * @return a Future representing pending completion of the task\r\n * @throws TaskRejectedException if the given task was not accepted\r\n * @since 3.0\r\n */\r\ndefault Future<?> submit(Runnable task) {\r\n    FutureTask<Object> future = new FutureTask<>(task, null);\r\n    execute(future);\r\n    return future;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#submit(Runnable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#submit(Callable<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Submit a Callable task for execution, receiving a Future representing that task.\r\n * The Future will return the Callable's result upon completion.\r\n * <p>As of 6.1, this method comes with a default implementation that delegates\r\n * to {@link #execute(Runnable)}.\r\n * @param task the {@code Callable} to execute (never {@code null})\r\n * @return a Future representing pending completion of the task\r\n * @throws TaskRejectedException if the given task was not accepted\r\n * @since 3.0\r\n */\r\ndefault <T> Future<T> submit(Callable<T> task) {\r\n    FutureTask<T> future = new FutureTask<>(task);\r\n    execute(future, TIMEOUT_INDEFINITE);\r\n    return future;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#submit(Callable<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#submitCompletable(Runnable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Submit a {@code Runnable} task for execution, receiving a {@code CompletableFuture}\r\n * representing that task. The Future will return a {@code null} result upon completion.\r\n * @param task the {@code Runnable} to execute (never {@code null})\r\n * @return a {@code CompletableFuture} representing pending completion of the task\r\n * @throws TaskRejectedException if the given task was not accepted\r\n * @since 6.0\r\n */\r\ndefault CompletableFuture<Void> submitCompletable(Runnable task) {\r\n    return CompletableFuture.runAsync(task, this);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#submitCompletable(Runnable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor#submitCompletable(Callable<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Submit a {@code Callable} task for execution, receiving a {@code CompletableFuture}\r\n * representing that task. The Future will return the Callable's result upon\r\n * completion.\r\n * @param task the {@code Callable} to execute (never {@code null})\r\n * @return a {@code CompletableFuture} representing pending completion of the task\r\n * @throws TaskRejectedException if the given task was not accepted\r\n * @since 6.0\r\n */\r\ndefault <T> CompletableFuture<T> submitCompletable(Callable<T> task) {\r\n    return FutureUtils.callAsync(task, this);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.AsyncTaskExecutor#submitCompletable(Callable<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.AsyncTaskExecutor",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "TaskExecutor",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task",
+    "tailType": "package"
+  }
+]

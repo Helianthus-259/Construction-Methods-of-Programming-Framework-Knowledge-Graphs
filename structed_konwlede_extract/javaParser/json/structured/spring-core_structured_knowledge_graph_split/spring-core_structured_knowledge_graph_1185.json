@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.type.AnnotatedTypeMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotatedTypeMetadata#getMergedRepeatableAnnotationAttributes(Class<? extends Annotation>,Class<? extends Annotation>,boolean,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotatedTypeMetadata#getMergedRepeatableAnnotationAttributes(Class<? extends Annotation>,Class<? extends Annotation>,Predicate<MergedAnnotation<? extends Annotation>>,boolean,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve all <em>repeatable annotations</em> of the given type within the\r\n * annotation hierarchy <em>above</em> the underlying element (as direct\r\n * annotation or meta-annotation); and for each annotation found, merge that\r\n * annotation's attributes with <em>matching</em> attributes from annotations\r\n * in lower levels of the annotation hierarchy and store the results in an\r\n * instance of {@link AnnotationAttributes}.\r\n * <p>{@link org.springframework.core.annotation.AliasFor @AliasFor} semantics\r\n * are fully supported, both within a single annotation and within annotation\r\n * hierarchies.\r\n * <p>The supplied {@link Predicate} will be used to filter the results. For\r\n * example, supply {@code mergedAnnotation -> true} to include all annotations\r\n * in the results; supply {@code MergedAnnotation::isDirectlyPresent} to limit\r\n * the results to directly declared annotations, etc.\r\n * <p>If the {@code sortByReversedMetaDistance} flag is set to {@code true},\r\n * the results will be sorted in {@link Comparator#reversed() reversed} order\r\n * based on each annotation's {@linkplain MergedAnnotation#getDistance()\r\n * meta distance}, which effectively orders meta-annotations before annotations\r\n * that are declared directly on the underlying element.\r\n * @param annotationType the annotation type to find\r\n * @param containerType the type of the container that holds the annotations\r\n * @param predicate a {@code Predicate} to apply to each {@code MergedAnnotation}\r\n * to determine if it should be included in the results\r\n * @param classValuesAsString whether to convert class references to {@code String}\r\n * class names for exposure as values in the returned {@code AnnotationAttributes},\r\n * instead of {@code Class} references which might potentially have to be loaded\r\n * first\r\n * @param sortByReversedMetaDistance {@code true} if the results should be\r\n * sorted in reversed order based on each annotation's meta distance\r\n * @return the set of all merged repeatable {@code AnnotationAttributes} found,\r\n * or an empty set if none were found\r\n * @since 6.1.2\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean)\r\n * @see #getMergedRepeatableAnnotationAttributes(Class, Class, boolean, boolean)\r\n */\r\ndefault Set<AnnotationAttributes> getMergedRepeatableAnnotationAttributes(Class<? extends Annotation> annotationType, Class<? extends Annotation> containerType, Predicate<MergedAnnotation<? extends Annotation>> predicate, boolean classValuesAsString, boolean sortByReversedMetaDistance) {\r\n    Stream<MergedAnnotation<Annotation>> stream = getAnnotations().stream().filter(predicate).filter(MergedAnnotationPredicates.typeIn(containerType, annotationType));\r\n    if (sortByReversedMetaDistance) {\r\n        stream = stream.sorted(reversedMetaDistance());\r\n    }\r\n    Adapt[] adaptations = Adapt.values(classValuesAsString, true);\r\n    return stream.map(annotation -> annotation.asAnnotationAttributes(adaptations)).flatMap(attributes -> {\r\n        if (containerType.equals(attributes.annotationType())) {\r\n            return Stream.of(attributes.getAnnotationArray(MergedAnnotation.VALUE));\r\n        }\r\n        return Stream.of(attributes);\r\n    }).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotatedTypeMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotatedTypeMetadata#getMergedRepeatableAnnotationAttributes(Class<? extends Annotation>,Class<? extends Annotation>,Predicate<MergedAnnotation<? extends Annotation>>,boolean,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotatedTypeMetadata#reversedMetaDistance()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Comparator<MergedAnnotation<Annotation>> reversedMetaDistance() {\r\n    return Comparator.<MergedAnnotation<Annotation>>comparingInt(MergedAnnotation::getDistance).reversed();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotatedTypeMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotatedTypeMetadata#reversedMetaDistance()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.type",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.type",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.type.AnnotationMetadata",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.type;\n\nimport java.util.Collections;\nimport java.util.LinkedHashSet;\nimport java.util.Set;\nimport java.util.stream.Collectors;\n\nimport org.springframework.core.annotation.MergedAnnotation;\nimport org.springframework.core.annotation.MergedAnnotations;\n\n/**\n * Interface that defines abstract access to the annotations of a specific\n * class, in a form that does not require that class to be loaded yet.\n *\n * @author Juergen Hoeller\n * @author Mark Fisher\n * @author Phillip Webb\n * @author Sam Brannen\n * @since 2.5\n * @see StandardAnnotationMetadata\n * @see org.springframework.core.type.classreading.MetadataReader#getAnnotationMetadata()\n * @see AnnotatedTypeMetadata\n */\npublic interface AnnotationMetadata extends ClassMetadata, AnnotatedTypeMetadata {\n\n\t/**\n\t * Get the fully-qualified class names of all annotation types that are\n\t * <em>directly present</em> on the underlying class.\n\t * @return the annotation type names\n\t */\n\tdefault Set<String> getAnnotationTypes() {\n\t\treturn getAnnotations().stream()\n\t\t\t\t.filter(MergedAnnotation::isDirectlyPresent)\n\t\t\t\t.map(annotation -> annotation.getType().getName())\n\t\t\t\t.collect(Collectors.toCollection(LinkedHashSet::new));\n\t}\n\n\t/**\n\t * Get the fully-qualified class names of all meta-annotation types that are\n\t * <em>present</em> on the given annotation type on the underlying class.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for meta-annotations on\n\t * @return the meta-annotation type names, or an empty set if none found\n\t */\n\tdefault Set<String> getMetaAnnotationTypes(String annotationName) {\n\t\tMergedAnnotation<?> annotation = getAnnotations().get(annotationName, MergedAnnotation::isDirectlyPresent);\n\t\tif (!annotation.isPresent()) {\n\t\t\treturn Collections.emptySet();\n\t\t}\n\t\treturn MergedAnnotations.from(annotation.getType()).stream()\n\t\t\t\t.map(mergedAnnotation -> mergedAnnotation.getType().getName())\n\t\t\t\t.collect(Collectors.toCollection(LinkedHashSet::new));\n\t}\n\n\t/**\n\t * Determine whether an annotation of the given type is <em>directly present</em>\n\t * on the underlying class.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return {@code true} if a matching annotation is directly present\n\t */\n\tdefault boolean hasAnnotation(String annotationName) {\n\t\treturn getAnnotations().isDirectlyPresent(annotationName);\n\t}\n\n\t/**\n\t * Determine whether the underlying class has an annotation that is itself\n\t * annotated with the meta-annotation of the given type.\n\t * @param metaAnnotationName the fully-qualified class name of the\n\t * meta-annotation type to look for\n\t * @return {@code true} if a matching meta-annotation is present\n\t */\n\tdefault boolean hasMetaAnnotation(String metaAnnotationName) {\n\t\treturn getAnnotations().get(metaAnnotationName,\n\t\t\t\tMergedAnnotation::isMetaPresent).isPresent();\n\t}\n\n\t/**\n\t * Determine whether the underlying class has any methods that are\n\t * annotated (or meta-annotated) with the given annotation type.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t */\n\tdefault boolean hasAnnotatedMethods(String annotationName) {\n\t\treturn !getAnnotatedMethods(annotationName).isEmpty();\n\t}\n\n\t/**\n\t * Retrieve the method metadata for all methods that are annotated\n\t * (or meta-annotated) with the given annotation type.\n\t * <p>For any returned method, {@link MethodMetadata#isAnnotated} will\n\t * return {@code true} for the given annotation type.\n\t * @param annotationName the fully-qualified class name of the annotation\n\t * type to look for\n\t * @return a set of {@link MethodMetadata} for methods that have a matching\n\t * annotation. The return value will be an empty set if no methods match\n\t * the annotation type.\n\t */\n\tSet<MethodMetadata> getAnnotatedMethods(String annotationName);\n\n\t/**\n\t * Retrieve the method metadata for all user-declared methods on the\n\t * underlying class, preserving declaration order as far as possible.\n\t * @return a set of {@link MethodMetadata}\n\t * @since 6.0\n\t */\n\tSet<MethodMetadata> getDeclaredMethods();\n\n\n\t/**\n\t * Factory method to create a new {@link AnnotationMetadata} instance\n\t * for the given class using standard reflection.\n\t * @param type the class to introspect\n\t * @return a new {@link AnnotationMetadata} instance\n\t * @since 5.2\n\t */\n\tstatic AnnotationMetadata introspect(Class<?> type) {\n\t\treturn StandardAnnotationMetadata.from(type);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata#getAnnotationTypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the fully-qualified class names of all annotation types that are\r\n * <em>directly present</em> on the underlying class.\r\n * @return the annotation type names\r\n */\r\ndefault Set<String> getAnnotationTypes() {\r\n    return getAnnotations().stream().filter(MergedAnnotation::isDirectlyPresent).map(annotation -> annotation.getType().getName()).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotationMetadata#getAnnotationTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata#getMetaAnnotationTypes(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the fully-qualified class names of all meta-annotation types that are\r\n * <em>present</em> on the given annotation type on the underlying class.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for meta-annotations on\r\n * @return the meta-annotation type names, or an empty set if none found\r\n */\r\ndefault Set<String> getMetaAnnotationTypes(String annotationName) {\r\n    MergedAnnotation<?> annotation = getAnnotations().get(annotationName, MergedAnnotation::isDirectlyPresent);\r\n    if (!annotation.isPresent()) {\r\n        return Collections.emptySet();\r\n    }\r\n    return MergedAnnotations.from(annotation.getType()).stream().map(mergedAnnotation -> mergedAnnotation.getType().getName()).collect(Collectors.toCollection(LinkedHashSet::new));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotationMetadata#getMetaAnnotationTypes(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata#hasAnnotation(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether an annotation of the given type is <em>directly present</em>\r\n * on the underlying class.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return {@code true} if a matching annotation is directly present\r\n */\r\ndefault boolean hasAnnotation(String annotationName) {\r\n    return getAnnotations().isDirectlyPresent(annotationName);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotationMetadata#hasAnnotation(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata#hasMetaAnnotation(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the underlying class has an annotation that is itself\r\n * annotated with the meta-annotation of the given type.\r\n * @param metaAnnotationName the fully-qualified class name of the\r\n * meta-annotation type to look for\r\n * @return {@code true} if a matching meta-annotation is present\r\n */\r\ndefault boolean hasMetaAnnotation(String metaAnnotationName) {\r\n    return getAnnotations().get(metaAnnotationName, MergedAnnotation::isMetaPresent).isPresent();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotationMetadata#hasMetaAnnotation(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata#hasAnnotatedMethods(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Determine whether the underlying class has any methods that are\r\n * annotated (or meta-annotated) with the given annotation type.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n */\r\ndefault boolean hasAnnotatedMethods(String annotationName) {\r\n    return !getAnnotatedMethods(annotationName).isEmpty();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotationMetadata#hasAnnotatedMethods(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata#getAnnotatedMethods(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Retrieve the method metadata for all methods that are annotated\r\n * (or meta-annotated) with the given annotation type.\r\n * <p>For any returned method, {@link MethodMetadata#isAnnotated} will\r\n * return {@code true} for the given annotation type.\r\n * @param annotationName the fully-qualified class name of the annotation\r\n * type to look for\r\n * @return a set of {@link MethodMetadata} for methods that have a matching\r\n * annotation. The return value will be an empty set if no methods match\r\n * the annotation type.\r\n */\r\nSet<MethodMetadata> getAnnotatedMethods(String annotationName);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.type.AnnotationMetadata",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.type.AnnotationMetadata#getAnnotatedMethods(String)",
+    "tailType": "method"
+  }
+]

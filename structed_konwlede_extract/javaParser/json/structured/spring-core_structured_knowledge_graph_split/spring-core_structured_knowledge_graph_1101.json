@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.MethodClassKey#hashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int hashCode() {\r\n    return this.method.hashCode() + (this.targetClass != null ? this.targetClass.hashCode() * 29 : 0);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodClassKey#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String toString() {\r\n    return this.method + (this.targetClass != null ? \" on \" + this.targetClass : \"\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodClassKey#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey#compareTo(MethodClassKey)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int compareTo(MethodClassKey other) {\r\n    int result = this.method.getName().compareTo(other.method.getName());\r\n    if (result == 0) {\r\n        result = this.method.toString().compareTo(other.method.toString());\r\n        if (result == 0 && this.targetClass != null && other.targetClass != null) {\r\n            result = this.targetClass.getName().compareTo(other.targetClass.getName());\r\n        }\r\n    }\r\n    return result;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodClassKey#compareTo(MethodClassKey)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.MethodClassKey#compareTo(MethodClassKey)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.MethodIntrospector",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Proxy;\nimport java.util.LinkedHashMap;\nimport java.util.LinkedHashSet;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.ReflectionUtils;\n\n/**\n * Defines the algorithm for searching for metadata-associated methods exhaustively\n * including interfaces and parent classes while also dealing with parameterized methods\n * as well as common scenarios encountered with interface and class-based proxies.\n *\n * <p>Typically, but not necessarily, used for finding annotated handler methods.\n *\n * @author Juergen Hoeller\n * @author Rossen Stoyanchev\n * @author Sam Brannen\n * @since 4.2.3\n */\npublic final class MethodIntrospector {\n\n\tprivate MethodIntrospector() {\n\t}\n\n\n\t/**\n\t * Select methods on the given target type based on the lookup of associated metadata.\n\t * <p>Callers define methods of interest through the {@link MetadataLookup} parameter,\n\t * allowing to collect the associated metadata into the result map.\n\t * @param targetType the target type to search methods on\n\t * @param metadataLookup a {@link MetadataLookup} callback to inspect methods of interest,\n\t * returning non-null metadata to be associated with a given method if there is a match,\n\t * or {@code null} for no match\n\t * @return the selected methods associated with their metadata (in the order of retrieval),\n\t * or an empty map in case of no match\n\t */\n\tpublic static <T> Map<Method, T> selectMethods(Class<?> targetType, final MetadataLookup<T> metadataLookup) {\n\t\tfinal Map<Method, T> methodMap = new LinkedHashMap<>();\n\t\tSet<Class<?>> handlerTypes = new LinkedHashSet<>();\n\t\tClass<?> specificHandlerType = null;\n\n\t\tif (!Proxy.isProxyClass(targetType)) {\n\t\t\tspecificHandlerType = ClassUtils.getUserClass(targetType);\n\t\t\thandlerTypes.add(specificHandlerType);\n\t\t}\n\t\thandlerTypes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetType));\n\n\t\tfor (Class<?> currentHandlerType : handlerTypes) {\n\t\t\tfinal Class<?> targetClass = (specificHandlerType != null ? specificHandlerType : currentHandlerType);\n\n\t\t\tReflectionUtils.doWithMethods(currentHandlerType, method -> {\n\t\t\t\tMethod specificMethod = ClassUtils.getMostSpecificMethod(method, targetClass);\n\t\t\t\tT result = metadataLookup.inspect(specificMethod);\n\t\t\t\tif (result != null) {\n\t\t\t\t\tMethod bridgedMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);\n\t\t\t\t\tif (bridgedMethod == specificMethod || bridgedMethod == method ||\n\t\t\t\t\t\t\tbridgedMethod.equals(specificMethod) || bridgedMethod.equals(method) ||\n\t\t\t\t\t\t\tmetadataLookup.inspect(bridgedMethod) == null) {\n\t\t\t\t\t\tmethodMap.put(specificMethod, result);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}, ReflectionUtils.USER_DECLARED_METHODS);\n\t\t}\n\n\t\treturn methodMap;\n\t}\n\n\t/**\n\t * Select methods on the given target type based on a filter.\n\t * <p>Callers define methods of interest through the {@code MethodFilter} parameter.\n\t * @param targetType the target type to search methods on\n\t * @param methodFilter a {@code MethodFilter} to help\n\t * recognize handler methods of interest\n\t * @return the selected methods, or an empty set in case of no match\n\t */\n\tpublic static Set<Method> selectMethods(Class<?> targetType, final ReflectionUtils.MethodFilter methodFilter) {\n\t\treturn selectMethods(targetType,\n\t\t\t\t(MetadataLookup<Boolean>) method -> (methodFilter.matches(method) ? Boolean.TRUE : null)).keySet();\n\t}\n\n\t/**\n\t * Select an invocable method on the target type: either the given method itself\n\t * if actually exposed on the target type, or otherwise a corresponding method\n\t * on one of the target type's interfaces or on the target type itself.\n\t * <p>Matches on user-declared interfaces will be preferred since they are likely\n\t * to contain relevant metadata that corresponds to the method on the target class.\n\t * @param method the method to check\n\t * @param targetType the target type to search methods on\n\t * (typically an interface-based JDK proxy)\n\t * @return a corresponding invocable method on the target type\n\t * @throws IllegalStateException if the given method is not invocable on the given\n\t * target type (typically due to a proxy mismatch)\n\t */\n\tpublic static Method selectInvocableMethod(Method method, Class<?> targetType) {\n\t\tif (method.getDeclaringClass().isAssignableFrom(targetType)) {\n\t\t\treturn method;\n\t\t}\n\t\ttry {\n\t\t\tString methodName = method.getName();\n\t\t\tClass<?>[] parameterTypes = method.getParameterTypes();\n\t\t\tfor (Class<?> ifc : targetType.getInterfaces()) {\n\t\t\t\ttry {\n\t\t\t\t\treturn ifc.getMethod(methodName, parameterTypes);\n\t\t\t\t}\n\t\t\t\tcatch (NoSuchMethodException ex) {\n\t\t\t\t\t// Alright, not on this interface then...\n\t\t\t\t}\n\t\t\t}\n\t\t\t// A final desperate attempt on the proxy class itself...\n\t\t\treturn targetType.getMethod(methodName, parameterTypes);\n\t\t}\n\t\tcatch (NoSuchMethodException ex) {\n\t\t\tthrow new IllegalStateException(String.format(\n\t\t\t\t\t\"Need to invoke method '%s' declared on target class '%s', \" +\n\t\t\t\t\t\"but not found in any interface(s) of the exposed proxy type. \" +\n\t\t\t\t\t\"Either pull the method up to an interface or switch to CGLIB \" +\n\t\t\t\t\t\"proxies by enforcing proxy-target-class mode in your configuration.\",\n\t\t\t\t\tmethod.getName(), method.getDeclaringClass().getSimpleName()));\n\t\t}\n\t}\n\n\n\t/**\n\t * A callback interface for metadata lookup on a given method.\n\t * @param <T> the type of metadata returned\n\t */\n\t@FunctionalInterface\n\tpublic interface MetadataLookup<T> {\n\n\t\t/**\n\t\t * Perform a lookup on the given method and return associated metadata, if any.\n\t\t * @param method the method to inspect\n\t\t * @return non-null metadata to be associated with a method if there is a match,\n\t\t * or {@code null} for no match\n\t\t */\n\t\t@Nullable T inspect(Method method);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector#selectMethods(Class<?>,MetadataLookup<T>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Select methods on the given target type based on the lookup of associated metadata.\r\n * <p>Callers define methods of interest through the {@link MetadataLookup} parameter,\r\n * allowing to collect the associated metadata into the result map.\r\n * @param targetType the target type to search methods on\r\n * @param metadataLookup a {@link MetadataLookup} callback to inspect methods of interest,\r\n * returning non-null metadata to be associated with a given method if there is a match,\r\n * or {@code null} for no match\r\n * @return the selected methods associated with their metadata (in the order of retrieval),\r\n * or an empty map in case of no match\r\n */\r\npublic static <T> Map<Method, T> selectMethods(Class<?> targetType, final MetadataLookup<T> metadataLookup) {\r\n    final Map<Method, T> methodMap = new LinkedHashMap<>();\r\n    Set<Class<?>> handlerTypes = new LinkedHashSet<>();\r\n    Class<?> specificHandlerType = null;\r\n    if (!Proxy.isProxyClass(targetType)) {\r\n        specificHandlerType = ClassUtils.getUserClass(targetType);\r\n        handlerTypes.add(specificHandlerType);\r\n    }\r\n    handlerTypes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetType));\r\n    for (Class<?> currentHandlerType : handlerTypes) {\r\n        final Class<?> targetClass = (specificHandlerType != null ? specificHandlerType : currentHandlerType);\r\n        ReflectionUtils.doWithMethods(currentHandlerType, method -> {\r\n            Method specificMethod = ClassUtils.getMostSpecificMethod(method, targetClass);\r\n            T result = metadataLookup.inspect(specificMethod);\r\n            if (result != null) {\r\n                Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);\r\n                if (bridgedMethod == specificMethod || bridgedMethod == method || bridgedMethod.equals(specificMethod) || bridgedMethod.equals(method) || metadataLookup.inspect(bridgedMethod) == null) {\r\n                    methodMap.put(specificMethod, result);\r\n                }\r\n            }\r\n        }, ReflectionUtils.USER_DECLARED_METHODS);\r\n    }\r\n    return methodMap;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodIntrospector#selectMethods(Class<?>,MetadataLookup<T>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector#selectMethods(Class<?>,ReflectionUtils.MethodFilter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Select methods on the given target type based on a filter.\r\n * <p>Callers define methods of interest through the {@code MethodFilter} parameter.\r\n * @param targetType the target type to search methods on\r\n * @param methodFilter a {@code MethodFilter} to help\r\n * recognize handler methods of interest\r\n * @return the selected methods, or an empty set in case of no match\r\n */\r\npublic static Set<Method> selectMethods(Class<?> targetType, final ReflectionUtils.MethodFilter methodFilter) {\r\n    return selectMethods(targetType, (MetadataLookup<Boolean>) method -> (methodFilter.matches(method) ? Boolean.TRUE : null)).keySet();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodIntrospector#selectMethods(Class<?>,ReflectionUtils.MethodFilter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector#selectInvocableMethod(Method,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Select an invocable method on the target type: either the given method itself\r\n * if actually exposed on the target type, or otherwise a corresponding method\r\n * on one of the target type's interfaces or on the target type itself.\r\n * <p>Matches on user-declared interfaces will be preferred since they are likely\r\n * to contain relevant metadata that corresponds to the method on the target class.\r\n * @param method the method to check\r\n * @param targetType the target type to search methods on\r\n * (typically an interface-based JDK proxy)\r\n * @return a corresponding invocable method on the target type\r\n * @throws IllegalStateException if the given method is not invocable on the given\r\n * target type (typically due to a proxy mismatch)\r\n */\r\npublic static Method selectInvocableMethod(Method method, Class<?> targetType) {\r\n    if (method.getDeclaringClass().isAssignableFrom(targetType)) {\r\n        return method;\r\n    }\r\n    try {\r\n        String methodName = method.getName();\r\n        Class<?>[] parameterTypes = method.getParameterTypes();\r\n        for (Class<?> ifc : targetType.getInterfaces()) {\r\n            try {\r\n                return ifc.getMethod(methodName, parameterTypes);\r\n            } catch (NoSuchMethodException ex) {\r\n                // Alright, not on this interface then...\r\n            }\r\n        }\r\n        // A final desperate attempt on the proxy class itself...\r\n        return targetType.getMethod(methodName, parameterTypes);\r\n    } catch (NoSuchMethodException ex) {\r\n        throw new IllegalStateException(String.format(\"Need to invoke method '%s' declared on target class '%s', \" + \"but not found in any interface(s) of the exposed proxy type. \" + \"Either pull the method up to an interface or switch to CGLIB \" + \"proxies by enforcing proxy-target-class mode in your configuration.\", method.getName(), method.getDeclaringClass().getSimpleName()));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.MethodIntrospector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.MethodIntrospector#selectInvocableMethod(Method,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.MetadataLookup",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.MetadataLookup",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@FunctionalInterface",
+    "tailType": "annotation"
+  }
+]

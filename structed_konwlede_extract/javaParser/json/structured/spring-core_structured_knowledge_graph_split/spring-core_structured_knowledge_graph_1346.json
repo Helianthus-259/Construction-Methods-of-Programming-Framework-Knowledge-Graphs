@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String toString() {\r\n    return this.targetMap.toString();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiToSingleValueMapAdapter#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiToSingleValueMapAdapter#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.MultiValueMap",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.List;\nimport java.util.Map;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * Extension of the {@code Map} interface that stores multiple values.\n *\n * @author Arjen Poutsma\n * @since 3.0\n * @param <K> the key type\n * @param <V> the value element type\n */\npublic interface MultiValueMap<K, V extends @Nullable Object> extends Map<K, List<V>> {\n\n\t/**\n\t * Return the first value for the given key.\n\t * @param key the key\n\t * @return the first value for the specified key, or {@code null} if none\n\t */\n\t@Nullable V getFirst(K key);\n\n\t/**\n\t * Add the given single value to the current list of values for the given key.\n\t * @param key the key\n\t * @param value the value to be added\n\t */\n\tvoid add(K key, @Nullable V value);\n\n\t/**\n\t * Add all the values of the given list to the current list of values for the given key.\n\t * @param key they key\n\t * @param values the values to be added\n\t * @since 5.0\n\t */\n\tvoid addAll(K key, List<? extends V> values);\n\n\t/**\n\t * Add all the values of the given {@code MultiValueMap} to the current values.\n\t * @param values the values to be added\n\t * @since 5.0\n\t */\n\tvoid addAll(MultiValueMap<K, V> values);\n\n\t/**\n\t * {@link #add(Object, Object) Add} the given value, only when the map does not\n\t * {@link #containsKey(Object) contain} the given key.\n\t * @param key the key\n\t * @param value the value to be added\n\t * @since 5.2\n\t */\n\tdefault void addIfAbsent(K key, @Nullable V value) {\n\t\tif (!containsKey(key)) {\n\t\t\tadd(key, value);\n\t\t}\n\t}\n\n\t/**\n\t * Set the given single value under the given key.\n\t * @param key the key\n\t * @param value the value to set\n\t */\n\tvoid set(K key, @Nullable V value);\n\n\t/**\n\t * Set the given values under.\n\t * @param values the values.\n\t */\n\tvoid setAll(Map<K, V> values);\n\n\t/**\n\t * Return a {@code Map} with the first values contained in this {@code MultiValueMap}.\n\t * The difference between this method and {@link #asSingleValueMap()} is\n\t * that this method returns a copy of the entries of this map, whereas\n\t * the latter returns a view.\n\t * @return a single value representation of this map\n\t */\n\tMap<K, V> toSingleValueMap();\n\n\t/**\n\t * Return this map as a {@code Map} with the first values contained in this\n\t * {@code MultiValueMap}.\n\t * <p>The difference between this method and {@link #toSingleValueMap()} is\n\t * that this method returns a view of the entries of this map, whereas\n\t * the latter returns a copy.\n\t * @return a single value representation of this map\n\t * @since 6.2\n\t */\n\tdefault Map<K, V> asSingleValueMap() {\n\t\treturn new MultiToSingleValueMapAdapter<>(this);\n\t}\n\n\n\t/**\n\t * Return a {@code MultiValueMap<K, V>} that adapts the given single-value\n\t * {@code Map<K, V>}.\n\t * <p>The returned map cannot map multiple values to the same key,\n\t * and doing so results in an {@link UnsupportedOperationException}.\n\t * Use {@link #fromMultiValue(Map)} to support multiple values.\n\t * @param map the map to be adapted\n\t * @param <K> the key type\n\t * @param <V> the value element type\n\t * @return a multi-value-map that delegates to {@code map}\n\t * @since 6.2\n\t * @see #fromMultiValue(Map)\n\t */\n\tstatic <K, V> MultiValueMap<K, V> fromSingleValue(Map<K, V> map) {\n\t\tAssert.notNull(map, \"Map must not be null\");\n\t\treturn new SingleToMultiValueMapAdapter<>(map);\n\t}\n\n\t/**\n\t * Return a {@code MultiValueMap<K, V>} that adapts the given multi-value\n\t * {@code Map<K, List<V>>}.\n\t * @param map the map to be adapted\n\t * @param <K> the key type\n\t * @param <V> the value element type\n\t * @return a multi-value-map that delegates to {@code map}\n\t * @since 6.2\n\t * @see #fromSingleValue(Map)\n\t */\n\tstatic <K, V> MultiValueMap<K, V> fromMultiValue(Map<K, List<V>> map) {\n\t\tAssert.notNull(map, \"Map must not be null\");\n\t\treturn new MultiValueMapAdapter<>(map);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#getFirst(K)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the first value for the given key.\r\n * @param key the key\r\n * @return the first value for the specified key, or {@code null} if none\r\n */\r\n@Nullable\r\nV getFirst(K key);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiValueMap#getFirst(K)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#getFirst(K)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#add(K,V)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add the given single value to the current list of values for the given key.\r\n * @param key the key\r\n * @param value the value to be added\r\n */\r\nvoid add(K key, @Nullable V value);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiValueMap#add(K,V)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#addAll(K,List<? extends V>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add all the values of the given list to the current list of values for the given key.\r\n * @param key they key\r\n * @param values the values to be added\r\n * @since 5.0\r\n */\r\nvoid addAll(K key, List<? extends V> values);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiValueMap#addAll(K,List<? extends V>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#addAll(MultiValueMap<K,V>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add all the values of the given {@code MultiValueMap} to the current values.\r\n * @param values the values to be added\r\n * @since 5.0\r\n */\r\nvoid addAll(MultiValueMap<K, V> values);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiValueMap#addAll(MultiValueMap<K,V>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#addIfAbsent(K,V)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * {@link #add(Object, Object) Add} the given value, only when the map does not\r\n * {@link #containsKey(Object) contain} the given key.\r\n * @param key the key\r\n * @param value the value to be added\r\n * @since 5.2\r\n */\r\ndefault void addIfAbsent(K key, @Nullable V value) {\r\n    if (!containsKey(key)) {\r\n        add(key, value);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MultiValueMap#addIfAbsent(K,V)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MultiValueMap#set(K,V)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Set the given single value under the given key.\r\n * @param key the key\r\n * @param value the value to set\r\n */\r\nvoid set(K key, @Nullable V value);",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.FilteredSet#equals(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.FilteredSet#hashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int hashCode() {\r\n    int hashCode = 0;\r\n    for (E obj : this) {\r\n        if (obj != null) {\r\n            hashCode += obj.hashCode();\r\n        }\r\n    }\r\n    return hashCode;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FilteredSet",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FilteredSet#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FilteredSet#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.FilteredSet",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "FilteredCollection",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.function",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.function",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.function",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.function.SingletonSupplier",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.function;\n\nimport java.util.concurrent.locks.Lock;\nimport java.util.concurrent.locks.ReentrantLock;\nimport java.util.function.Supplier;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.lang.Contract;\nimport org.springframework.util.Assert;\n\n/**\n * A {@link java.util.function.Supplier} decorator that caches a singleton result and\n * makes it available from {@link #get()} (nullable) and {@link #obtain()} (null-safe).\n *\n * <p>A {@code SingletonSupplier} can be constructed via {@code of} factory methods\n * or via constructors that provide a default supplier as a fallback. This is\n * particularly useful for method reference suppliers, falling back to a default\n * supplier for a method that returned {@code null} and caching the result.\n *\n * @author Juergen Hoeller\n * @author Yanming Zhou\n * @since 5.1\n * @param <T> the type of results supplied by this supplier\n */\npublic class SingletonSupplier<T> implements Supplier<@Nullable T> {\n\n\tprivate final @Nullable Supplier<? extends @Nullable T> instanceSupplier;\n\n\tprivate final @Nullable Supplier<? extends @Nullable T> defaultSupplier;\n\n\tprivate volatile @Nullable T singletonInstance;\n\n\t/**\n\t * Guards access to write operations on the {@code singletonInstance} field.\n\t */\n\tprivate final Lock writeLock = new ReentrantLock();\n\n\n\t/**\n\t * Build a {@code SingletonSupplier} with the given singleton instance\n\t * and a default supplier for the case when the instance is {@code null}.\n\t * @param instance the singleton instance (potentially {@code null})\n\t * @param defaultSupplier the default supplier as a fallback\n\t */\n\tpublic SingletonSupplier(@Nullable T instance, Supplier<? extends @Nullable T> defaultSupplier) {\n\t\tthis.instanceSupplier = null;\n\t\tthis.defaultSupplier = defaultSupplier;\n\t\tthis.singletonInstance = instance;\n\t}\n\n\t/**\n\t * Build a {@code SingletonSupplier} with the given instance supplier\n\t * and a default supplier for the case when the instance is {@code null}.\n\t * @param instanceSupplier the immediate instance supplier\n\t * @param defaultSupplier the default supplier as a fallback\n\t */\n\tpublic SingletonSupplier(@Nullable Supplier<? extends @Nullable T> instanceSupplier, Supplier<? extends @Nullable T> defaultSupplier) {\n\t\tthis.instanceSupplier = instanceSupplier;\n\t\tthis.defaultSupplier = defaultSupplier;\n\t}\n\n\tprivate SingletonSupplier(Supplier<? extends @Nullable T> supplier) {\n\t\tthis.instanceSupplier = supplier;\n\t\tthis.defaultSupplier = null;\n\t}\n\n\tprivate SingletonSupplier(@Nullable T singletonInstance) {\n\t\tthis.instanceSupplier = null;\n\t\tthis.defaultSupplier = null;\n\t\tthis.singletonInstance = singletonInstance;\n\t}\n\n\n\t/**\n\t * Get the shared singleton instance for this supplier.\n\t * @return the singleton instance (or {@code null} if none)\n\t */\n\t@Override\n\tpublic @Nullable T get() {\n\t\tT instance = this.singletonInstance;\n\t\tif (instance == null) {\n\t\t\tthis.writeLock.lock();\n\t\t\ttry {\n\t\t\t\tinstance = this.singletonInstance;\n\t\t\t\tif (instance == null) {\n\t\t\t\t\tif (this.instanceSupplier != null) {\n\t\t\t\t\t\tinstance = this.instanceSupplier.get();\n\t\t\t\t\t}\n\t\t\t\t\tif (instance == null && this.defaultSupplier != null) {\n\t\t\t\t\t\tinstance = this.defaultSupplier.get();\n\t\t\t\t\t}\n\t\t\t\t\tthis.singletonInstance = instance;\n\t\t\t\t}\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tthis.writeLock.unlock();\n\t\t\t}\n\t\t}\n\t\treturn instance;\n\t}\n\n\t/**\n\t * Obtain the shared singleton instance for this supplier.\n\t * @return the singleton instance (never {@code null})\n\t * @throws IllegalStateException in case of no instance\n\t */\n\tpublic T obtain() {\n\t\tT instance = get();\n\t\tAssert.state(instance != null, \"No instance from Supplier\");\n\t\treturn instance;\n\t}\n\n\n\t/**\n\t * Build a {@code SingletonSupplier} with the given singleton instance.\n\t * @param instance the singleton instance (never {@code null})\n\t * @return the singleton supplier (never {@code null})\n\t */\n\tpublic static <T> SingletonSupplier<T> of(T instance) {\n\t\treturn new SingletonSupplier<>(instance);\n\t}\n\n\t/**\n\t * Build a {@code SingletonSupplier} with the given singleton instance.\n\t * @param instance the singleton instance (potentially {@code null})\n\t * @return the singleton supplier, or {@code null} if the instance was {@code null}\n\t */\n\t@Contract(\"null -> null; !null -> !null\")\n\tpublic static <T> @Nullable SingletonSupplier<T> ofNullable(@Nullable T instance) {\n\t\treturn (instance != null ? new SingletonSupplier<>(instance) : null);\n\t}\n\n\t/**\n\t * Build a {@code SingletonSupplier} with the given supplier.\n\t * @param supplier the instance supplier (never {@code null})\n\t * @return the singleton supplier (never {@code null})\n\t */\n\tpublic static <T> SingletonSupplier<T> of(Supplier<T> supplier) {\n\t\treturn new SingletonSupplier<>(supplier);\n\t}\n\n\t/**\n\t * Build a {@code SingletonSupplier} with the given supplier.\n\t * @param supplier the instance supplier (potentially {@code null})\n\t * @return the singleton supplier, or {@code null} if the instance supplier was {@code null}\n\t */\n\t@Contract(\"null -> null; !null -> !null\")\n\tpublic static <T> @Nullable SingletonSupplier<T> ofNullable(@Nullable Supplier<? extends @Nullable T> supplier) {\n\t\treturn (supplier != null ? new SingletonSupplier<>(supplier) : null);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.function.SingletonSupplier#instanceSupplier",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier#instanceSupplier",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Supplier<? extends @Nullable T>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.function.SingletonSupplier#defaultSupplier",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier#defaultSupplier",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Supplier<? extends @Nullable T>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.function.SingletonSupplier#singletonInstance",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier#singletonInstance",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "T",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.function.SingletonSupplier#writeLock",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier#writeLock",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Lock",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier#get()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get the shared singleton instance for this supplier.\r\n * @return the singleton instance (or {@code null} if none)\r\n */\r\n@Override\r\n@Nullable\r\npublic T get() {\r\n    T instance = this.singletonInstance;\r\n    if (instance == null) {\r\n        this.writeLock.lock();\r\n        try {\r\n            instance = this.singletonInstance;\r\n            if (instance == null) {\r\n                if (this.instanceSupplier != null) {\r\n                    instance = this.instanceSupplier.get();\r\n                }\r\n                if (instance == null && this.defaultSupplier != null) {\r\n                    instance = this.defaultSupplier.get();\r\n                }\r\n                this.singletonInstance = instance;\r\n            }\r\n        } finally {\r\n            this.writeLock.unlock();\r\n        }\r\n    }\r\n    return instance;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.function.SingletonSupplier#get()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.function.SingletonSupplier#get()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

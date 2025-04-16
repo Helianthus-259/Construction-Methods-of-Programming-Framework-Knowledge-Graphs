@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.task.TaskTrackingRunnable#run()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.task.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecorator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecorator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.task.support;\n\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.List;\n\nimport org.springframework.core.task.TaskDecorator;\nimport org.springframework.util.Assert;\n\n/**\n * Composite {@link TaskDecorator} that delegates to other task decorators.\n *\n * @author Tadaya Tsuyukubo\n * @since 6.1\n */\npublic class CompositeTaskDecorator implements TaskDecorator {\n\n\tprivate final List<TaskDecorator> taskDecorators;\n\n\t/**\n\t * Create a new instance.\n\t * @param taskDecorators the taskDecorators to delegate to\n\t */\n\tpublic CompositeTaskDecorator(Collection<? extends TaskDecorator> taskDecorators) {\n\t\tAssert.notNull(taskDecorators, \"TaskDecorators must not be null\");\n\t\tthis.taskDecorators = new ArrayList<>(taskDecorators);\n\t}\n\n\t@Override\n\tpublic Runnable decorate(Runnable runnable) {\n\t\tAssert.notNull(runnable, \"Runnable must not be null\");\n\t\tfor (TaskDecorator taskDecorator : this.taskDecorators) {\n\t\t\trunnable = taskDecorator.decorate(runnable);\n\t\t}\n\t\treturn runnable;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecorator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecorator#taskDecorators",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecorator#taskDecorators",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<TaskDecorator>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecorator#decorate(Runnable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Runnable decorate(Runnable runnable) {\r\n    Assert.notNull(runnable, \"Runnable must not be null\");\r\n    for (TaskDecorator taskDecorator : this.taskDecorators) {\r\n        runnable = taskDecorator.decorate(runnable);\r\n    }\r\n    return runnable;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecorator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecorator#decorate(Runnable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecorator#decorate(Runnable)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.task.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.task.support.ContextPropagatingTaskDecorator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.task.support.ContextPropagatingTaskDecorator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.task.support;\n\nimport io.micrometer.context.ContextSnapshot;\nimport io.micrometer.context.ContextSnapshotFactory;\n\nimport org.springframework.core.task.TaskDecorator;\n\n/**\n * {@link TaskDecorator} that {@link ContextSnapshot#wrap(Runnable) wraps the execution}\n * of tasks, assisting with context propagation.\n *\n * <p>This operation is only useful when the task execution is scheduled on a different\n * thread than the original call stack; this depends on the choice of\n * {@link org.springframework.core.task.TaskExecutor}. This is particularly useful for\n * restoring a logging context or an observation context for the task execution. Note that\n * this decorator will cause some overhead for task execution and is not recommended for\n * applications that run lots of very small tasks.\n *\n * @author Brian Clozel\n * @since 6.1\n * @see CompositeTaskDecorator\n */\npublic class ContextPropagatingTaskDecorator implements TaskDecorator {\n\n\tprivate final ContextSnapshotFactory factory;\n\n\n\t/**\n\t * Create a new decorator that uses a default instance of the {@link ContextSnapshotFactory}.\n\t */\n\tpublic ContextPropagatingTaskDecorator() {\n\t\tthis(ContextSnapshotFactory.builder().build());\n\t}\n\n\t/**\n\t * Create a new decorator using the given {@link ContextSnapshotFactory}.\n\t * @param factory the context snapshot factory to use.\n\t */\n\tpublic ContextPropagatingTaskDecorator(ContextSnapshotFactory factory) {\n\t\tthis.factory = factory;\n\t}\n\n\n\t@Override\n\tpublic Runnable decorate(Runnable runnable) {\n\t\treturn this.factory.captureAll().wrap(runnable);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.ContextPropagatingTaskDecorator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.task.support.ContextPropagatingTaskDecorator#factory",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.task.support.ContextPropagatingTaskDecorator#factory",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ContextSnapshotFactory",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.task.support.ContextPropagatingTaskDecorator#decorate(Runnable)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic Runnable decorate(Runnable runnable) {\r\n    return this.factory.captureAll().wrap(runnable);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.ContextPropagatingTaskDecorator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.ContextPropagatingTaskDecorator#decorate(Runnable)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.ContextPropagatingTaskDecorator#decorate(Runnable)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.task.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.task.support.ExecutorServiceAdapter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.task.support.ExecutorServiceAdapter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.task.support;\n\nimport java.util.List;\nimport java.util.concurrent.AbstractExecutorService;\nimport java.util.concurrent.TimeUnit;\n\nimport org.springframework.core.task.TaskExecutor;\nimport org.springframework.util.Assert;\n\n/**\n * Adapter that takes a Spring {@link org.springframework.core.task.TaskExecutor}\n * and exposes a full {@code java.util.concurrent.ExecutorService} for it.\n *\n * <p>This is primarily for adapting to client components that communicate via the\n * {@code java.util.concurrent.ExecutorService} API. It can also be used as\n * common ground between a local Spring {@code TaskExecutor} backend and a\n * JNDI-located {@code ManagedExecutorService} in a Jakarta EE environment.\n *\n * <p><b>NOTE:</b> This ExecutorService adapter does <em>not</em> support the\n * lifecycle methods in the {@code java.util.concurrent.ExecutorService} API\n * (\"shutdown()\" etc.), similar to a server-wide {@code ManagedExecutorService}\n * in a Jakarta EE environment. The lifecycle is always up to the backend pool,\n * with this adapter acting as an access-only proxy for that target pool.\n *\n * @author Juergen Hoeller\n * @since 3.0\n * @see java.util.concurrent.ExecutorService\n */\npublic class ExecutorServiceAdapter extends AbstractExecutorService {\n\n\tprivate final TaskExecutor taskExecutor;\n\n\n\t/**\n\t * Create a new ExecutorServiceAdapter, using the given target executor.\n\t * @param taskExecutor the target executor to delegate to\n\t */\n\tpublic ExecutorServiceAdapter(TaskExecutor taskExecutor) {\n\t\tAssert.notNull(taskExecutor, \"TaskExecutor must not be null\");\n\t\tthis.taskExecutor = taskExecutor;\n\t}\n\n\n\t@Override\n\tpublic void execute(Runnable task) {\n\t\tthis.taskExecutor.execute(task);\n\t}\n\n\t@Override\n\tpublic void shutdown() {\n\t\tthrow new IllegalStateException(\n\t\t\t\t\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\n\t}\n\n\t@Override\n\tpublic List<Runnable> shutdownNow() {\n\t\tthrow new IllegalStateException(\n\t\t\t\t\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\n\t}\n\n\t@Override\n\tpublic boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {\n\t\tthrow new IllegalStateException(\n\t\t\t\t\"Manual shutdown not supported - ExecutorServiceAdapter is dependent on an external lifecycle\");\n\t}\n\n\t@Override\n\tpublic boolean isShutdown() {\n\t\treturn false;\n\t}\n\n\t@Override\n\tpublic boolean isTerminated() {\n\t\treturn false;\n\t}\n\n\t// @Override on JDK 19\n\tpublic void close() {\n\t\t// no-op in order to avoid container-triggered shutdown call which would lead to exception logging\n\t}\n\n}\n",
+    "tailType": "class_code"
+  }
+]
