@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.ByteArrayInputStream;\nimport java.io.ByteArrayOutputStream;\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.nio.charset.StandardCharsets;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIOException;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link FastByteArrayOutputStream}.\n *\n * @author Craig Andrews\n */\nclass FastByteArrayOutputStreamTests {\n\n\tprivate final FastByteArrayOutputStream os = new FastByteArrayOutputStream();\n\n\tprivate final byte[] helloBytes = \"Hello World\".getBytes(StandardCharsets.UTF_8);\n\n\n\t@Test\n\tvoid size() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertThat(this.helloBytes).hasSize(this.os.size());\n\t}\n\n\t@Test\n\tvoid resize() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tint sizeBefore = this.os.size();\n\t\tthis.os.resize(64);\n\t\tassertByteArrayEqualsString(this.os);\n\t\tassertThat(this.os.size()).isEqualTo(sizeBefore);\n\t}\n\n\t@Test\n\tvoid stringConversion() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertThat(this.os.toString()).isEqualTo(\"Hello World\");\n\t\tassertThat(this.os.toString(StandardCharsets.UTF_8)).isEqualTo(\"Hello World\");\n\n\t\t@SuppressWarnings(\"resource\")\n\t\tFastByteArrayOutputStream empty = new FastByteArrayOutputStream();\n\t\tassertThat(empty.toString()).isEqualTo(\"\");\n\t\tassertThat(empty.toString(StandardCharsets.US_ASCII)).isEqualTo(\"\");\n\n\t\t@SuppressWarnings(\"resource\")\n\t\tFastByteArrayOutputStream outputStream = new FastByteArrayOutputStream(5);\n\t\t// Add bytes in multiple writes to ensure we get more than one buffer internally\n\t\toutputStream.write(this.helloBytes, 0, 5);\n\t\toutputStream.write(this.helloBytes, 5, 6);\n\t\tassertThat(outputStream.toString()).isEqualTo(\"Hello World\");\n\t\tassertThat(outputStream.toString(StandardCharsets.UTF_8)).isEqualTo(\"Hello World\");\n\t}\n\n\t@Test\n\tvoid autoGrow() throws IOException {\n\t\tthis.os.resize(1);\n\t\tfor (int i = 0; i < 10; i++) {\n\t\t\tthis.os.write(1);\n\t\t}\n\t\tassertThat(this.os.size()).isEqualTo(10);\n\t\tassertThat(new byte[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}).isEqualTo(this.os.toByteArray());\n\t}\n\n\t@Test\n\tvoid write() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertByteArrayEqualsString(this.os);\n\t}\n\n\t@Test\n\tvoid reset() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertByteArrayEqualsString(this.os);\n\t\tthis.os.reset();\n\t\tassertThat(this.os.size()).isEqualTo(0);\n\t\tthis.os.write(this.helloBytes);\n\t\tassertByteArrayEqualsString(this.os);\n\t}\n\n\t@Test\n\tvoid close() {\n\t\tthis.os.close();\n\t\tassertThatIOException().isThrownBy(() -> this.os.write(this.helloBytes));\n\t}\n\n\t@Test\n\tvoid toByteArrayUnsafe() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertByteArrayEqualsString(this.os);\n\t\tassertThat(this.os.toByteArrayUnsafe()).isSameAs(this.os.toByteArrayUnsafe());\n\t\tassertThat(this.helloBytes).isEqualTo(this.os.toByteArray());\n\t}\n\n\t@Test\n\tvoid writeTo() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertByteArrayEqualsString(this.os);\n\t\tByteArrayOutputStream baos = new ByteArrayOutputStream();\n\t\tthis.os.writeTo(baos);\n\t\tassertThat(this.helloBytes).isEqualTo(baos.toByteArray());\n\t}\n\n\t@Test\n\tvoid failResize() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertThatIllegalArgumentException()\n\t\t\t.isThrownBy(() -> this.os.resize(5))\n\t\t\t.withMessage(\"New capacity must not be smaller than current size\");\n\t}\n\n\t@Test\n\tvoid getInputStream() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertThat(this.os.getInputStream()).isNotNull();\n\t}\n\n\t@Test\n\tvoid getInputStreamAvailable() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tassertThat(this.helloBytes).hasSize(this.os.getInputStream().available());\n\t}\n\n\t@Test\n\tvoid getInputStreamRead() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tassertThat(this.helloBytes[0]).isEqualTo((byte) inputStream.read());\n\t\tassertThat(this.helloBytes[1]).isEqualTo((byte) inputStream.read());\n\t\tassertThat(this.helloBytes[2]).isEqualTo((byte) inputStream.read());\n\t\tassertThat(this.helloBytes[3]).isEqualTo((byte) inputStream.read());\n\t}\n\n\t@Test\n\tvoid getInputStreamReadBytePromotion() throws Exception {\n\t\tbyte[] bytes = { -1 };\n\t\tthis.os.write(bytes);\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tByteArrayInputStream bais = new ByteArrayInputStream(bytes);\n\t\tassertThat(inputStream.read()).isEqualTo(bais.read());\n\t}\n\n\t@Test\n\tvoid getInputStreamReadAll() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tbyte[] actual = new byte[inputStream.available()];\n\t\tint bytesRead = inputStream.read(actual);\n\t\tassertThat(bytesRead).isEqualTo(this.helloBytes.length);\n\t\tassertThat(actual).isEqualTo(this.helloBytes);\n\t\tassertThat(inputStream.available()).isEqualTo(0);\n\t}\n\n\t@Test\n\tvoid getInputStreamReadBeyondEndOfStream() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tInputStream inputStream = os.getInputStream();\n\t\tbyte[] actual = new byte[inputStream.available() + 1];\n\t\tint bytesRead = inputStream.read(actual);\n\t\tassertThat(bytesRead).isEqualTo(this.helloBytes.length);\n\t\tfor (int i = 0; i < bytesRead; i++) {\n\t\t\tassertThat(actual[i]).isEqualTo(this.helloBytes[i]);\n\t\t}\n\t\tassertThat(actual[this.helloBytes.length]).isEqualTo((byte) 0);\n\t\tassertThat(inputStream.available()).isEqualTo(0);\n\t}\n\n\t@Test\n\tvoid getInputStreamSkip() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tassertThat(this.helloBytes[0]).isEqualTo((byte) inputStream.read());\n\t\tassertThat(inputStream.skip(1)).isEqualTo(1);\n\t\tassertThat(this.helloBytes[2]).isEqualTo((byte) inputStream.read());\n\t\tassertThat(inputStream.available()).isEqualTo((this.helloBytes.length - 3));\n\t}\n\n\t@Test\n\tvoid getInputStreamSkipAll() throws Exception {\n\t\tthis.os.write(this.helloBytes);\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tassertThat(this.helloBytes.length).isEqualTo(inputStream.skip(1000));\n\t\tassertThat(inputStream.available()).isEqualTo(0);\n\t}\n\n\t@Test\n\tvoid updateMessageDigest() throws Exception {\n\t\tStringBuilder builder = new StringBuilder(\"\\\"0\");\n\t\tthis.os.write(this.helloBytes);\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tDigestUtils.appendMd5DigestAsHex(inputStream, builder);\n\t\tbuilder.append('\"');\n\t\tString actual = builder.toString();\n\t\tassertThat(actual).isEqualTo(\"\\\"0b10a8db164e0754105b7a99be72e3fe5\\\"\");\n\t}\n\n\t@Test\n\tvoid updateMessageDigestManyBuffers() throws Exception {\n\t\tStringBuilder builder = new StringBuilder(\"\\\"0\");\n\t\t// filling at least one 256 buffer\n\t\tfor ( int i = 0; i < 30; i++) {\n\t\t\tthis.os.write(this.helloBytes);\n\t\t}\n\t\tInputStream inputStream = this.os.getInputStream();\n\t\tDigestUtils.appendMd5DigestAsHex(inputStream, builder);\n\t\tbuilder.append('\"');\n\t\tString actual = builder.toString();\n\t\tassertThat(actual).isEqualTo(\"\\\"06225ca1e4533354c516e74512065331d\\\"\");\n\t}\n\n\n\tprivate void assertByteArrayEqualsString(FastByteArrayOutputStream actual) {\n\t\tassertThat(actual.toByteArray()).isEqualTo(this.helloBytes);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#os",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#os",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "FastByteArrayOutputStream",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#helloBytes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#helloBytes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "byte",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#size()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid size() throws Exception {\r\n    this.os.write(this.helloBytes);\r\n    assertThat(this.helloBytes).hasSize(this.os.size());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#size()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#size()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#resize()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid resize() throws Exception {\r\n    this.os.write(this.helloBytes);\r\n    int sizeBefore = this.os.size();\r\n    this.os.resize(64);\r\n    assertByteArrayEqualsString(this.os);\r\n    assertThat(this.os.size()).isEqualTo(sizeBefore);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#resize()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#resize()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#stringConversion()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid stringConversion() throws Exception {\r\n    this.os.write(this.helloBytes);\r\n    assertThat(this.os.toString()).isEqualTo(\"Hello World\");\r\n    assertThat(this.os.toString(StandardCharsets.UTF_8)).isEqualTo(\"Hello World\");\r\n    @SuppressWarnings(\"resource\")\r\n    FastByteArrayOutputStream empty = new FastByteArrayOutputStream();\r\n    assertThat(empty.toString()).isEqualTo(\"\");\r\n    assertThat(empty.toString(StandardCharsets.US_ASCII)).isEqualTo(\"\");\r\n    @SuppressWarnings(\"resource\")\r\n    FastByteArrayOutputStream outputStream = new FastByteArrayOutputStream(5);\r\n    // Add bytes in multiple writes to ensure we get more than one buffer internally\r\n    outputStream.write(this.helloBytes, 0, 5);\r\n    outputStream.write(this.helloBytes, 5, 6);\r\n    assertThat(outputStream.toString()).isEqualTo(\"Hello World\");\r\n    assertThat(outputStream.toString(StandardCharsets.UTF_8)).isEqualTo(\"Hello World\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#stringConversion()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#stringConversion()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#autoGrow()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid autoGrow() throws IOException {\r\n    this.os.resize(1);\r\n    for (int i = 0; i < 10; i++) {\r\n        this.os.write(1);\r\n    }\r\n    assertThat(this.os.size()).isEqualTo(10);\r\n    assertThat(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }).isEqualTo(this.os.toByteArray());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#autoGrow()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#autoGrow()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#write()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid write() throws Exception {\r\n    this.os.write(this.helloBytes);\r\n    assertByteArrayEqualsString(this.os);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.FastByteArrayOutputStreamTests#write()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.FastByteArrayOutputStreamTests#write()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

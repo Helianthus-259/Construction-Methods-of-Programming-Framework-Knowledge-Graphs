@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.testfixture.TestGroupTests#setTestGroups(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void setTestGroups(String testGroups) {\r\n    System.setProperty(TEST_GROUPS_SYSTEM_PROPERTY, testGroups);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.testfixture.TestGroupTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.testfixture.TestGroupTests#setTestGroups(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.testfixture.TestGroupTests#assumeGroup(TestGroup)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Assume that a particular {@link TestGroup} is active.\r\n * @param group the group that must be active\r\n * @throws org.opentest4j.TestAbortedException if the assumption fails\r\n */\r\nprivate static void assumeGroup(TestGroup group) {\r\n    Set<TestGroup> testGroups = TestGroup.loadTestGroups();\r\n    assumeTrue(testGroups.contains(group), () -> \"Requires inactive test group \" + group + \"; active test groups: \" + testGroups);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.testfixture.TestGroupTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.testfixture.TestGroupTests#assumeGroup(TestGroup)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.DefaultMethodReference",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.util.ArrayList;\nimport java.util.List;\n\nimport javax.lang.model.element.Modifier;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.javapoet.ClassName;\nimport org.springframework.javapoet.CodeBlock;\nimport org.springframework.javapoet.MethodSpec;\nimport org.springframework.javapoet.TypeName;\nimport org.springframework.util.Assert;\n\n/**\n * Default {@link MethodReference} implementation based on a {@link MethodSpec}.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @since 6.0\n */\npublic class DefaultMethodReference implements MethodReference {\n\n\tprivate final MethodSpec method;\n\n\tprivate final @Nullable ClassName declaringClass;\n\n\n\tpublic DefaultMethodReference(MethodSpec method, @Nullable ClassName declaringClass) {\n\t\tthis.method = method;\n\t\tthis.declaringClass = declaringClass;\n\t}\n\n\n\t@Override\n\tpublic CodeBlock toCodeBlock() {\n\t\tString methodName = this.method.name;\n\t\tif (isStatic()) {\n\t\t\tAssert.state(this.declaringClass != null, \"Static method reference must define a declaring class\");\n\t\t\treturn CodeBlock.of(\"$T::$L\", this.declaringClass, methodName);\n\t\t}\n\t\telse {\n\t\t\treturn CodeBlock.of(\"this::$L\", methodName);\n\t\t}\n\t}\n\n\t@Override\n\tpublic CodeBlock toInvokeCodeBlock(ArgumentCodeGenerator argumentCodeGenerator,\n\t\t\t@Nullable ClassName targetClassName) {\n\n\t\tString methodName = this.method.name;\n\t\tCodeBlock.Builder code = CodeBlock.builder();\n\t\tif (isStatic()) {\n\t\t\tAssert.state(this.declaringClass != null, \"Static method reference must define a declaring class\");\n\t\t\tif (this.declaringClass.equals(targetClassName)) {\n\t\t\t\tcode.add(\"$L\", methodName);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcode.add(\"$T.$L\", this.declaringClass, methodName);\n\t\t\t}\n\t\t}\n\t\telse {\n\t\t\tif (this.declaringClass != null && !this.declaringClass.equals(targetClassName)) {\n\t\t\t\tcode.add(instantiateDeclaringClass(this.declaringClass));\n\t\t\t}\n\t\t\tcode.add(\"$L\", methodName);\n\t\t}\n\t\tcode.add(\"(\");\n\t\taddArguments(code, argumentCodeGenerator);\n\t\tcode.add(\")\");\n\t\treturn code.build();\n\t}\n\n\t/**\n\t * Add the code for the method arguments using the specified\n\t * {@link ArgumentCodeGenerator} if necessary.\n\t * @param code the code builder to use to add method arguments\n\t * @param argumentCodeGenerator the code generator to use\n\t */\n\tprotected void addArguments(CodeBlock.Builder code, ArgumentCodeGenerator argumentCodeGenerator) {\n\t\tList<CodeBlock> arguments = new ArrayList<>();\n\t\tTypeName[] argumentTypes = this.method.parameters.stream()\n\t\t\t\t.map(parameter -> parameter.type).toArray(TypeName[]::new);\n\t\tfor (int i = 0; i < argumentTypes.length; i++) {\n\t\t\tTypeName argumentType = argumentTypes[i];\n\t\t\tCodeBlock argumentCode = argumentCodeGenerator.generateCode(argumentType);\n\t\t\tif (argumentCode == null) {\n\t\t\t\tthrow new IllegalArgumentException(\"Could not generate code for \" + this\n\t\t\t\t\t\t+ \": parameter \" + i + \" of type \" + argumentType + \" is not supported\");\n\t\t\t}\n\t\t\targuments.add(argumentCode);\n\t\t}\n\t\tcode.add(CodeBlock.join(arguments, \", \"));\n\t}\n\n\tprotected CodeBlock instantiateDeclaringClass(ClassName declaringClass) {\n\t\treturn CodeBlock.of(\"new $T().\", declaringClass);\n\t}\n\n\tprivate boolean isStatic() {\n\t\treturn this.method.modifiers.contains(Modifier.STATIC);\n\t}\n\n\t@Override\n\tpublic String toString() {\n\t\tString methodName = this.method.name;\n\t\tif (isStatic()) {\n\t\t\treturn this.declaringClass + \"::\" + methodName;\n\t\t}\n\t\telse {\n\t\t\treturn (this.declaringClass != null ?\n\t\t\t\t\t\"<\" + this.declaringClass + \">\" : \"<instance>\") + \"::\" + methodName;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.DefaultMethodReference#method",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#method",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "MethodSpec",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.DefaultMethodReference#declaringClass",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#declaringClass",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ClassName",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#toCodeBlock()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic CodeBlock toCodeBlock() {\r\n    String methodName = this.method.name;\r\n    if (isStatic()) {\r\n        Assert.state(this.declaringClass != null, \"Static method reference must define a declaring class\");\r\n        return CodeBlock.of(\"$T::$L\", this.declaringClass, methodName);\r\n    } else {\r\n        return CodeBlock.of(\"this::$L\", methodName);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.DefaultMethodReference#toCodeBlock()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#toCodeBlock()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#toInvokeCodeBlock(ArgumentCodeGenerator,ClassName)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic CodeBlock toInvokeCodeBlock(ArgumentCodeGenerator argumentCodeGenerator, @Nullable ClassName targetClassName) {\r\n    String methodName = this.method.name;\r\n    CodeBlock.Builder code = CodeBlock.builder();\r\n    if (isStatic()) {\r\n        Assert.state(this.declaringClass != null, \"Static method reference must define a declaring class\");\r\n        if (this.declaringClass.equals(targetClassName)) {\r\n            code.add(\"$L\", methodName);\r\n        } else {\r\n            code.add(\"$T.$L\", this.declaringClass, methodName);\r\n        }\r\n    } else {\r\n        if (this.declaringClass != null && !this.declaringClass.equals(targetClassName)) {\r\n            code.add(instantiateDeclaringClass(this.declaringClass));\r\n        }\r\n        code.add(\"$L\", methodName);\r\n    }\r\n    code.add(\"(\");\r\n    addArguments(code, argumentCodeGenerator);\r\n    code.add(\")\");\r\n    return code.build();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.DefaultMethodReference#toInvokeCodeBlock(ArgumentCodeGenerator,ClassName)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#toInvokeCodeBlock(ArgumentCodeGenerator,ClassName)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#addArguments(CodeBlock.Builder,ArgumentCodeGenerator)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add the code for the method arguments using the specified\r\n * {@link ArgumentCodeGenerator} if necessary.\r\n * @param code the code builder to use to add method arguments\r\n * @param argumentCodeGenerator the code generator to use\r\n */\r\nprotected void addArguments(CodeBlock.Builder code, ArgumentCodeGenerator argumentCodeGenerator) {\r\n    List<CodeBlock> arguments = new ArrayList<>();\r\n    TypeName[] argumentTypes = this.method.parameters.stream().map(parameter -> parameter.type).toArray(TypeName[]::new);\r\n    for (int i = 0; i < argumentTypes.length; i++) {\r\n        TypeName argumentType = argumentTypes[i];\r\n        CodeBlock argumentCode = argumentCodeGenerator.generateCode(argumentType);\r\n        if (argumentCode == null) {\r\n            throw new IllegalArgumentException(\"Could not generate code for \" + this + \": parameter \" + i + \" of type \" + argumentType + \" is not supported\");\r\n        }\r\n        arguments.add(argumentCode);\r\n    }\r\n    code.add(CodeBlock.join(arguments, \", \"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.DefaultMethodReference#addArguments(CodeBlock.Builder,ArgumentCodeGenerator)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.DefaultMethodReference#instantiateDeclaringClass(ClassName)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "protected CodeBlock instantiateDeclaringClass(ClassName declaringClass) {\r\n    return CodeBlock.of(\"new $T().\", declaringClass);\r\n}",
+    "tailType": "method_code"
+  }
+]

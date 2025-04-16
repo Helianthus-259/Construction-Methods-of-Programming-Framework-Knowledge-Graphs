@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.Frame#copyFrom(Frame)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Sets this frame to the value of the given frame.\r\n *\r\n * <p>WARNING: after this method is called the two frames share the same data structures. It is\r\n * recommended to discard the given frame to avoid unexpected side effects.\r\n *\r\n * @param frame The new frame value.\r\n */\r\nfinal void copyFrom(final Frame frame) {\r\n    inputLocals = frame.inputLocals;\r\n    inputStack = frame.inputStack;\r\n    outputStackStart = 0;\r\n    outputLocals = frame.outputLocals;\r\n    outputStack = frame.outputStack;\r\n    outputStackTop = frame.outputStackTop;\r\n    initializationCount = frame.initializationCount;\r\n    initializations = frame.initializations;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#copyFrom(Frame)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#getAbstractTypeFromApiFormat(SymbolTable,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Static methods to get abstract types from other type formats\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Returns the abstract type corresponding to the given public API frame element type.\r\n *\r\n * @param symbolTable the type table to use to lookup and store type {@link Symbol}.\r\n * @param type a frame element type described using the same format as in {@link\r\n *     MethodVisitor#visitFrame}, i.e. either {@link Opcodes#TOP}, {@link Opcodes#INTEGER}, {@link\r\n *     Opcodes#FLOAT}, {@link Opcodes#LONG}, {@link Opcodes#DOUBLE}, {@link Opcodes#NULL}, or\r\n *     {@link Opcodes#UNINITIALIZED_THIS}, or the internal name of a class, or a Label designating\r\n *     a NEW instruction (for uninitialized types).\r\n * @return the abstract type corresponding to the given frame element type.\r\n */\r\nstatic int getAbstractTypeFromApiFormat(final SymbolTable symbolTable, final Object type) {\r\n    if (type instanceof Integer) {\r\n        return CONSTANT_KIND | ((Integer) type).intValue();\r\n    } else if (type instanceof String) {\r\n        String descriptor = Type.getObjectType((String) type).getDescriptor();\r\n        return getAbstractTypeFromDescriptor(symbolTable, descriptor, 0);\r\n    } else {\r\n        Label label = (Label) type;\r\n        if ((label.flags & Label.FLAG_RESOLVED) != 0) {\r\n            return UNINITIALIZED_KIND | symbolTable.addUninitializedType(\"\", label.bytecodeOffset);\r\n        } else {\r\n            return FORWARD_UNINITIALIZED_KIND | symbolTable.addForwardUninitializedType(\"\", label);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#getAbstractTypeFromApiFormat(SymbolTable,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#getAbstractTypeFromInternalName(SymbolTable,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the abstract type corresponding to the internal name of a class.\r\n *\r\n * @param symbolTable the type table to use to lookup and store type {@link Symbol}.\r\n * @param internalName the internal name of a class. This must <i>not</i> be an array type\r\n *     descriptor.\r\n * @return the abstract type value corresponding to the given internal name.\r\n */\r\nstatic int getAbstractTypeFromInternalName(final SymbolTable symbolTable, final String internalName) {\r\n    return REFERENCE_KIND | symbolTable.addType(internalName);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#getAbstractTypeFromInternalName(SymbolTable,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#getAbstractTypeFromDescriptor(SymbolTable,String,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the abstract type corresponding to the given type descriptor.\r\n *\r\n * @param symbolTable the type table to use to lookup and store type {@link Symbol}.\r\n * @param buffer a string ending with a type descriptor.\r\n * @param offset the start offset of the type descriptor in buffer.\r\n * @return the abstract type corresponding to the given type descriptor.\r\n */\r\nprivate static int getAbstractTypeFromDescriptor(final SymbolTable symbolTable, final String buffer, final int offset) {\r\n    String internalName;\r\n    switch(buffer.charAt(offset)) {\r\n        case 'V':\r\n            return 0;\r\n        case 'Z':\r\n        case 'C':\r\n        case 'B':\r\n        case 'S':\r\n        case 'I':\r\n            return INTEGER;\r\n        case 'F':\r\n            return FLOAT;\r\n        case 'J':\r\n            return LONG;\r\n        case 'D':\r\n            return DOUBLE;\r\n        case 'L':\r\n            internalName = buffer.substring(offset + 1, buffer.length() - 1);\r\n            return REFERENCE_KIND | symbolTable.addType(internalName);\r\n        case '[':\r\n            int elementDescriptorOffset = offset + 1;\r\n            while (buffer.charAt(elementDescriptorOffset) == '[') {\r\n                ++elementDescriptorOffset;\r\n            }\r\n            int typeValue;\r\n            switch(buffer.charAt(elementDescriptorOffset)) {\r\n                case 'Z':\r\n                    typeValue = BOOLEAN;\r\n                    break;\r\n                case 'C':\r\n                    typeValue = CHAR;\r\n                    break;\r\n                case 'B':\r\n                    typeValue = BYTE;\r\n                    break;\r\n                case 'S':\r\n                    typeValue = SHORT;\r\n                    break;\r\n                case 'I':\r\n                    typeValue = INTEGER;\r\n                    break;\r\n                case 'F':\r\n                    typeValue = FLOAT;\r\n                    break;\r\n                case 'J':\r\n                    typeValue = LONG;\r\n                    break;\r\n                case 'D':\r\n                    typeValue = DOUBLE;\r\n                    break;\r\n                case 'L':\r\n                    internalName = buffer.substring(elementDescriptorOffset + 1, buffer.length() - 1);\r\n                    typeValue = REFERENCE_KIND | symbolTable.addType(internalName);\r\n                    break;\r\n                default:\r\n                    throw new IllegalArgumentException(\"Invalid descriptor fragment: \" + buffer.substring(elementDescriptorOffset));\r\n            }\r\n            return ((elementDescriptorOffset - offset) << DIM_SHIFT) | typeValue;\r\n        default:\r\n            throw new IllegalArgumentException(\"Invalid descriptor: \" + buffer.substring(offset));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#getAbstractTypeFromDescriptor(SymbolTable,String,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#setInputFrameFromDescriptor(SymbolTable,int,String,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Methods related to the input frame\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Sets the input frame from the given method description. This method is used to initialize the\r\n * first frame of a method, which is implicit (i.e. not stored explicitly in the StackMapTable\r\n * attribute).\r\n *\r\n * @param symbolTable the type table to use to lookup and store type {@link Symbol}.\r\n * @param access the method's access flags.\r\n * @param descriptor the method descriptor.\r\n * @param maxLocals the maximum number of local variables of the method.\r\n */\r\nfinal void setInputFrameFromDescriptor(final SymbolTable symbolTable, final int access, final String descriptor, final int maxLocals) {\r\n    inputLocals = new int[maxLocals];\r\n    inputStack = new int[0];\r\n    int inputLocalIndex = 0;\r\n    if ((access & Opcodes.ACC_STATIC) == 0) {\r\n        if ((access & Constants.ACC_CONSTRUCTOR) == 0) {\r\n            inputLocals[inputLocalIndex++] = REFERENCE_KIND | symbolTable.addType(symbolTable.getClassName());\r\n        } else {\r\n            inputLocals[inputLocalIndex++] = UNINITIALIZED_THIS;\r\n        }\r\n    }\r\n    for (Type argumentType : Type.getArgumentTypes(descriptor)) {\r\n        int abstractType = getAbstractTypeFromDescriptor(symbolTable, argumentType.getDescriptor(), 0);\r\n        inputLocals[inputLocalIndex++] = abstractType;\r\n        if (abstractType == LONG || abstractType == DOUBLE) {\r\n            inputLocals[inputLocalIndex++] = TOP;\r\n        }\r\n    }\r\n    while (inputLocalIndex < maxLocals) {\r\n        inputLocals[inputLocalIndex++] = TOP;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#setInputFrameFromDescriptor(SymbolTable,int,String,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#setInputFrameFromApiFormat(SymbolTable,int,Object[],int,Object[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Sets the input frame from the given public API frame description.\r\n *\r\n * @param symbolTable the type table to use to lookup and store type {@link Symbol}.\r\n * @param numLocal the number of local variables.\r\n * @param local the local variable types, described using the same format as in {@link\r\n *     MethodVisitor#visitFrame}.\r\n * @param numStack the number of operand stack elements.\r\n * @param stack the operand stack types, described using the same format as in {@link\r\n *     MethodVisitor#visitFrame}.\r\n */\r\nfinal void setInputFrameFromApiFormat(final SymbolTable symbolTable, final int numLocal, final Object[] local, final int numStack, final Object[] stack) {\r\n    int inputLocalIndex = 0;\r\n    for (int i = 0; i < numLocal; ++i) {\r\n        inputLocals[inputLocalIndex++] = getAbstractTypeFromApiFormat(symbolTable, local[i]);\r\n        if (local[i] == Opcodes.LONG || local[i] == Opcodes.DOUBLE) {\r\n            inputLocals[inputLocalIndex++] = TOP;\r\n        }\r\n    }\r\n    while (inputLocalIndex < inputLocals.length) {\r\n        inputLocals[inputLocalIndex++] = TOP;\r\n    }\r\n    int numStackTop = 0;\r\n    for (int i = 0; i < numStack; ++i) {\r\n        if (stack[i] == Opcodes.LONG || stack[i] == Opcodes.DOUBLE) {\r\n            ++numStackTop;\r\n        }\r\n    }\r\n    inputStack = new int[numStack + numStackTop];\r\n    int inputStackIndex = 0;\r\n    for (int i = 0; i < numStack; ++i) {\r\n        inputStack[inputStackIndex++] = getAbstractTypeFromApiFormat(symbolTable, stack[i]);\r\n        if (stack[i] == Opcodes.LONG || stack[i] == Opcodes.DOUBLE) {\r\n            inputStack[inputStackIndex++] = TOP;\r\n        }\r\n    }\r\n    outputStackTop = 0;\r\n    initializationCount = 0;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#setInputFrameFromApiFormat(SymbolTable,int,Object[],int,Object[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#getInputStackSize()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "final int getInputStackSize() {\r\n    return inputStack.length;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#getInputStackSize()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#getLocal(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Methods related to the output frame\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Returns the abstract type stored at the given local variable index in the output frame.\r\n *\r\n * @param localIndex the index of the local variable whose value must be returned.\r\n * @return the abstract type stored at the given local variable index in the output frame.\r\n */\r\nprivate int getLocal(final int localIndex) {\r\n    if (outputLocals == null || localIndex >= outputLocals.length) {\r\n        // If this local has never been assigned in this basic block, it is still equal to its value\r\n        // in the input frame.\r\n        return LOCAL_KIND | localIndex;\r\n    } else {\r\n        int abstractType = outputLocals[localIndex];\r\n        if (abstractType == 0) {\r\n            // If this local has never been assigned in this basic block, so it is still equal to its\r\n            // value in the input frame.\r\n            abstractType = outputLocals[localIndex] = LOCAL_KIND | localIndex;\r\n        }\r\n        return abstractType;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#getLocal(int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#setLocal(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Replaces the abstract type stored at the given local variable index in the output frame.\r\n *\r\n * @param localIndex the index of the output frame local variable that must be set.\r\n * @param abstractType the value that must be set.\r\n */\r\nprivate void setLocal(final int localIndex, final int abstractType) {\r\n    // Create and/or resize the output local variables array if necessary.\r\n    if (outputLocals == null) {\r\n        outputLocals = new int[10];\r\n    }\r\n    int outputLocalsLength = outputLocals.length;\r\n    if (localIndex >= outputLocalsLength) {\r\n        int[] newOutputLocals = new int[Math.max(localIndex + 1, 2 * outputLocalsLength)];\r\n        System.arraycopy(outputLocals, 0, newOutputLocals, 0, outputLocalsLength);\r\n        outputLocals = newOutputLocals;\r\n    }\r\n    // Set the local variable.\r\n    outputLocals[localIndex] = abstractType;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#setLocal(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#push(int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Pushes the given abstract type on the output frame stack.\r\n *\r\n * @param abstractType an abstract type.\r\n */\r\nprivate void push(final int abstractType) {\r\n    // Create and/or resize the output stack array if necessary.\r\n    if (outputStack == null) {\r\n        outputStack = new int[10];\r\n    }\r\n    int outputStackLength = outputStack.length;\r\n    if (outputStackTop >= outputStackLength) {\r\n        int[] newOutputStack = new int[Math.max(outputStackTop + 1, 2 * outputStackLength)];\r\n        System.arraycopy(outputStack, 0, newOutputStack, 0, outputStackLength);\r\n        outputStack = newOutputStack;\r\n    }\r\n    // Pushes the abstract type on the output stack.\r\n    outputStack[outputStackTop++] = abstractType;\r\n    // Updates the maximum size reached by the output stack, if needed (note that this size is\r\n    // relative to the input stack size, which is not known yet).\r\n    short outputStackSize = (short) (outputStackStart + outputStackTop);\r\n    if (outputStackSize > owner.outputStackMax) {\r\n        owner.outputStackMax = outputStackSize;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#push(int)",
+    "tailType": "method"
+  }
+]

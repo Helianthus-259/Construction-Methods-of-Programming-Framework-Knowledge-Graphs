@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.generate.GeneratedClass#assertSameType(Consumer<TypeSpec.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "void assertSameType(Consumer<TypeSpec.Builder> type) {\r\n    Assert.state(type == this.type || getBuilder(this.type).build().equals(getBuilder(type).build()), \"'type' consumer generated different result\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClass",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.GeneratedClass#assertSameType(Consumer<TypeSpec.Builder>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.GeneratedClasses",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.util.ArrayList;\nimport java.util.Comparator;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.concurrent.ConcurrentHashMap;\nimport java.util.function.Consumer;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.javapoet.ClassName;\nimport org.springframework.javapoet.TypeSpec;\nimport org.springframework.util.Assert;\n\n/**\n * A managed collection of generated classes.\n *\n * <p>This class is stateful, so the same instance should be used for all class\n * generation.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n * @see GeneratedClass\n */\npublic class GeneratedClasses {\n\n\tprivate final ClassNameGenerator classNameGenerator;\n\n\tprivate final List<GeneratedClass> classes;\n\n\tprivate final Map<Owner, GeneratedClass> classesByOwner;\n\n\n\t/**\n\t * Create a new instance using the specified naming conventions.\n\t * @param classNameGenerator the class name generator to use\n\t */\n\tGeneratedClasses(ClassNameGenerator classNameGenerator) {\n\t\tthis(classNameGenerator, new ArrayList<>(), new ConcurrentHashMap<>());\n\t}\n\n\tprivate GeneratedClasses(ClassNameGenerator classNameGenerator,\n\t\t\tList<GeneratedClass> classes, Map<Owner, GeneratedClass> classesByOwner) {\n\t\tAssert.notNull(classNameGenerator, \"'classNameGenerator' must not be null\");\n\t\tthis.classNameGenerator = classNameGenerator;\n\t\tthis.classes = classes;\n\t\tthis.classesByOwner = classesByOwner;\n\t}\n\n\n\t/**\n\t * Get or add a generated class for the specified {@code featureName} and no\n\t * particular component. If this method has previously been called with the\n\t * given {@code featureName} the existing class will be returned, otherwise\n\t * a new class will be generated.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class\n\t */\n\tpublic GeneratedClass getOrAddForFeature(String featureName,\n\t\t\tConsumer<TypeSpec.Builder> type) {\n\n\t\tAssert.hasLength(featureName, \"'featureName' must not be empty\");\n\t\tAssert.notNull(type, \"'type' must not be null\");\n\t\tOwner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, null);\n\t\tGeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, null, type));\n\t\tgeneratedClass.assertSameType(type);\n\t\treturn generatedClass;\n\t}\n\n\t/**\n\t * Get or add a generated class for the specified {@code featureName}\n\t * targeting the specified {@code component}. If this method has previously\n\t * been called with the given {@code featureName}/{@code target} the\n\t * existing class will be returned, otherwise a new class will be generated,\n\t * otherwise a new class will be generated.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class\n\t */\n\tpublic GeneratedClass getOrAddForFeatureComponent(String featureName,\n\t\t\tClassName targetComponent, Consumer<TypeSpec.Builder> type) {\n\n\t\tAssert.hasLength(featureName, \"'featureName' must not be empty\");\n\t\tAssert.notNull(targetComponent, \"'targetComponent' must not be null\");\n\t\tAssert.notNull(type, \"'type' must not be null\");\n\t\tOwner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, targetComponent);\n\t\tGeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key ->\n\t\t\t\tcreateAndAddGeneratedClass(featureName, targetComponent, type));\n\t\tgeneratedClass.assertSameType(type);\n\t\treturn generatedClass;\n\t}\n\n\t/**\n\t * Get or add a generated class for the specified {@code featureName}\n\t * targeting the specified {@code component}. If this method has previously\n\t * been called with the given {@code featureName}/{@code target} the\n\t * existing class will be returned, otherwise a new class will be generated,\n\t * otherwise a new class will be generated.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return an existing or newly generated class\n\t */\n\tpublic GeneratedClass getOrAddForFeatureComponent(String featureName,\n\t\t\tClass<?> targetComponent, Consumer<TypeSpec.Builder> type) {\n\n\t\treturn getOrAddForFeatureComponent(featureName, ClassName.get(targetComponent), type);\n\t}\n\n\t/**\n\t * Add a new generated class for the specified {@code featureName} and no\n\t * particular component.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param type a {@link Consumer} used to build the type\n\t * @return the newly generated class\n\t */\n\tpublic GeneratedClass addForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\n\t\tAssert.hasLength(featureName, \"'featureName' must not be empty\");\n\t\tAssert.notNull(type, \"'type' must not be null\");\n\t\treturn createAndAddGeneratedClass(featureName, null, type);\n\t}\n\n\t/**\n\t * Add a new generated class for the specified {@code featureName} targeting\n\t * the specified {@code component}.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return the newly generated class\n\t */\n\tpublic GeneratedClass addForFeatureComponent(String featureName,\n\t\t\tClassName targetComponent, Consumer<TypeSpec.Builder> type) {\n\n\t\tAssert.hasLength(featureName, \"'featureName' must not be empty\");\n\t\tAssert.notNull(targetComponent, \"'targetComponent' must not be null\");\n\t\tAssert.notNull(type, \"'type' must not be null\");\n\t\treturn createAndAddGeneratedClass(featureName, targetComponent, type);\n\t}\n\n\t/**\n\t * Add a new generated class for the specified {@code featureName} targeting\n\t * the specified {@code component}.\n\t * @param featureName the name of the feature to associate with the\n\t * generated class\n\t * @param targetComponent the target component\n\t * @param type a {@link Consumer} used to build the type\n\t * @return the newly generated class\n\t */\n\tpublic GeneratedClass addForFeatureComponent(String featureName,\n\t\t\tClass<?> targetComponent, Consumer<TypeSpec.Builder> type) {\n\n\t\treturn addForFeatureComponent(featureName, ClassName.get(targetComponent), type);\n\t}\n\n\tprivate GeneratedClass createAndAddGeneratedClass(String featureName,\n\t\t\t@Nullable ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\n\n\t\tClassName className = this.classNameGenerator.generateClassName(featureName, targetComponent);\n\t\tGeneratedClass generatedClass = new GeneratedClass(className, type);\n\t\tthis.classes.add(generatedClass);\n\t\treturn generatedClass;\n\t}\n\n\t/**\n\t * Write the {@link GeneratedClass generated classes} using the given\n\t * {@link GeneratedFiles} instance.\n\t * @param generatedFiles where to write the generated classes\n\t */\n\tvoid writeTo(GeneratedFiles generatedFiles) {\n\t\tAssert.notNull(generatedFiles, \"'generatedFiles' must not be null\");\n\t\tList<GeneratedClass> generatedClasses = new ArrayList<>(this.classes);\n\t\tgeneratedClasses.sort(Comparator.comparing(GeneratedClass::getName));\n\t\tfor (GeneratedClass generatedClass : generatedClasses) {\n\t\t\tgeneratedFiles.addSourceFile(generatedClass.generateJavaFile());\n\t\t}\n\t}\n\n\t/**\n\t * Create a new {@link GeneratedClasses} instance using the specified feature\n\t * name prefix to qualify generated class names for a dedicated round of code\n\t * generation.\n\t * @param featureNamePrefix the feature name prefix to use\n\t * @return a new instance for the specified feature name prefix\n\t */\n\tGeneratedClasses withFeatureNamePrefix(String featureNamePrefix) {\n\t\treturn new GeneratedClasses(this.classNameGenerator.withFeatureNamePrefix(featureNamePrefix),\n\t\t\t\tthis.classes, this.classesByOwner);\n\t}\n\n\tprivate record Owner(String featureNamePrefix, String featureName, @Nullable ClassName target) {\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#classNameGenerator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#classNameGenerator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ClassNameGenerator",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#classes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#classes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<GeneratedClass>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#classesByOwner",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#classesByOwner",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<Owner, GeneratedClass>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeature(String,Consumer<TypeSpec.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get or add a generated class for the specified {@code featureName} and no\r\n * particular component. If this method has previously been called with the\r\n * given {@code featureName} the existing class will be returned, otherwise\r\n * a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    Owner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, null);\r\n    GeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, null, type));\r\n    generatedClass.assertSameType(type);\r\n    return generatedClass;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeature(String,Consumer<TypeSpec.Builder>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeatureComponent(String,ClassName,Consumer<TypeSpec.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get or add a generated class for the specified {@code featureName}\r\n * targeting the specified {@code component}. If this method has previously\r\n * been called with the given {@code featureName}/{@code target} the\r\n * existing class will be returned, otherwise a new class will be generated,\r\n * otherwise a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeatureComponent(String featureName, ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(targetComponent, \"'targetComponent' must not be null\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    Owner owner = new Owner(this.classNameGenerator.getFeatureNamePrefix(), featureName, targetComponent);\r\n    GeneratedClass generatedClass = this.classesByOwner.computeIfAbsent(owner, key -> createAndAddGeneratedClass(featureName, targetComponent, type));\r\n    generatedClass.assertSameType(type);\r\n    return generatedClass;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeatureComponent(String,ClassName,Consumer<TypeSpec.Builder>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeatureComponent(String,Class<?>,Consumer<TypeSpec.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Get or add a generated class for the specified {@code featureName}\r\n * targeting the specified {@code component}. If this method has previously\r\n * been called with the given {@code featureName}/{@code target} the\r\n * existing class will be returned, otherwise a new class will be generated,\r\n * otherwise a new class will be generated.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return an existing or newly generated class\r\n */\r\npublic GeneratedClass getOrAddForFeatureComponent(String featureName, Class<?> targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    return getOrAddForFeatureComponent(featureName, ClassName.get(targetComponent), type);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#getOrAddForFeatureComponent(String,Class<?>,Consumer<TypeSpec.Builder>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#addForFeature(String,Consumer<TypeSpec.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add a new generated class for the specified {@code featureName} and no\r\n * particular component.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeature(String featureName, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return createAndAddGeneratedClass(featureName, null, type);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.GeneratedClasses#addForFeature(String,Consumer<TypeSpec.Builder>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.GeneratedClasses#addForFeatureComponent(String,ClassName,Consumer<TypeSpec.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Add a new generated class for the specified {@code featureName} targeting\r\n * the specified {@code component}.\r\n * @param featureName the name of the feature to associate with the\r\n * generated class\r\n * @param targetComponent the target component\r\n * @param type a {@link Consumer} used to build the type\r\n * @return the newly generated class\r\n */\r\npublic GeneratedClass addForFeatureComponent(String featureName, ClassName targetComponent, Consumer<TypeSpec.Builder> type) {\r\n    Assert.hasLength(featureName, \"'featureName' must not be empty\");\r\n    Assert.notNull(targetComponent, \"'targetComponent' must not be null\");\r\n    Assert.notNull(type, \"'type' must not be null\");\r\n    return createAndAddGeneratedClass(featureName, targetComponent, type);\r\n}",
+    "tailType": "method_code"
+  }
+]

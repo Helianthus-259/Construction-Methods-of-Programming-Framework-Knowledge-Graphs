@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.OnlyPlaceholderTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.OnlyPlaceholderTests#textWithInvalidPlaceholderIsMerged()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.OnlyPlaceholderTests#textWithInvalidPlaceholderIsMerged()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.DefaultValueTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Nested",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.Properties;\nimport java.util.stream.Stream;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.Arguments;\nimport org.junit.jupiter.params.provider.MethodSource;\nimport org.mockito.InOrder;\n\nimport org.springframework.util.PlaceholderParser.ParsedValue;\nimport org.springframework.util.PlaceholderParser.TextPart;\nimport org.springframework.util.PropertyPlaceholderHelper.PlaceholderResolver;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\nimport static org.mockito.BDDMockito.given;\nimport static org.mockito.Mockito.inOrder;\nimport static org.mockito.Mockito.mock;\nimport static org.mockito.Mockito.verify;\nimport static org.mockito.Mockito.verifyNoMoreInteractions;\n\n/**\n * Tests for {@link PlaceholderParser}.\n *\n * @author Stephane Nicoll\n */\nclass PlaceholderParserTests {\n\n\t@Nested // Tests with only the basic placeholder feature enabled\n\tclass OnlyPlaceholderTests {\n\n\t\tprivate final PlaceholderParser parser = new PlaceholderParser(\"${\", \"}\", null, null, true);\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"placeholders\")\n\t\tvoid placeholderIsReplaced(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"firstName\", \"John\");\n\t\t\tproperties.setProperty(\"nested0\", \"first\");\n\t\t\tproperties.setProperty(\"nested1\", \"Name\");\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> placeholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${firstName}\", \"John\"),\n\t\t\t\t\tArguments.of(\"$${firstName}\", \"$John\"),\n\t\t\t\t\tArguments.of(\"}${firstName}\", \"}John\"),\n\t\t\t\t\tArguments.of(\"${firstName}$\", \"John$\"),\n\t\t\t\t\tArguments.of(\"${firstName}}\", \"John}\"),\n\t\t\t\t\tArguments.of(\"${firstName} ${firstName}\", \"John John\"),\n\t\t\t\t\tArguments.of(\"First name: ${firstName}\", \"First name: John\"),\n\t\t\t\t\tArguments.of(\"${firstName} is the first name\", \"John is the first name\"),\n\t\t\t\t\tArguments.of(\"${first${nested1}}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${${nested0}${nested1}}\", \"John\")\n\t\t\t);\n\t\t}\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"nestedPlaceholders\")\n\t\tvoid nestedPlaceholdersAreReplaced(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"p1\", \"v1\");\n\t\t\tproperties.setProperty(\"p2\", \"v2\");\n\t\t\tproperties.setProperty(\"p3\", \"${p1}:${p2}\");              // nested placeholders\n\t\t\tproperties.setProperty(\"p4\", \"${p3}\");                    // deeply nested placeholders\n\t\t\tproperties.setProperty(\"p5\", \"${p1}:${p2}:${bogus}\");     // unresolvable placeholder\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> nestedPlaceholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${p1}:${p2}\", \"v1:v2\"),\n\t\t\t\t\tArguments.of(\"${p3}\", \"v1:v2\"),\n\t\t\t\t\tArguments.of(\"${p4}\", \"v1:v2\"),\n\t\t\t\t\tArguments.of(\"${p5}\", \"v1:v2:${bogus}\"),\n\t\t\t\t\tArguments.of(\"${p0${p0}}\", \"${p0${p0}}\")\n\t\t\t);\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithSinglePlaceholder() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"firstName\", \"John\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${firstName}\", resolver))\n\t\t\t\t\t.isEqualTo(\"John\");\n\t\t\tverify(resolver).resolvePlaceholder(\"firstName\");\n\t\t\tverifyNoMoreInteractions(resolver);\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithPlaceholderAndPrefixText() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"firstName\", \"John\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"This is ${firstName}\", resolver))\n\t\t\t\t\t.isEqualTo(\"This is John\");\n\t\t\tverify(resolver).resolvePlaceholder(\"firstName\");\n\t\t\tverifyNoMoreInteractions(resolver);\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithMultiplePlaceholdersAndText() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"firstName\", \"John\", \"lastName\", \"Smith\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"User: ${firstName} - ${lastName}.\", resolver))\n\t\t\t\t\t.isEqualTo(\"User: John - Smith.\");\n\t\t\tverify(resolver).resolvePlaceholder(\"firstName\");\n\t\t\tverify(resolver).resolvePlaceholder(\"lastName\");\n\t\t\tverifyNoMoreInteractions(resolver);\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithNestedPlaceholderInKey() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\n\t\t\t\t\t\"nested\", \"Name\", \"firstName\", \"John\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${first${nested}}\", resolver))\n\t\t\t\t\t.isEqualTo(\"John\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"nested\", \"firstName\");\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithMultipleNestedPlaceholdersInKey() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\n\t\t\t\t\t\"nested0\", \"first\", \"nested1\", \"Name\", \"firstName\", \"John\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${${nested0}${nested1}}\", resolver))\n\t\t\t\t\t.isEqualTo(\"John\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"nested0\", \"nested1\", \"firstName\");\n\t\t}\n\n\t\t@Test\n\t\tvoid placeholdersWithSeparatorAreHandledAsIs() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"my:test\", \"value\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${my:test}\", resolver)).isEqualTo(\"value\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"my:test\");\n\t\t}\n\n\t\t@Test\n\t\tvoid placeholdersWithoutEscapeCharAreNotEscaped() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"test\", \"value\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"\\\\${test}\", resolver)).isEqualTo(\"\\\\value\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"test\");\n\t\t}\n\n\t\t@Test\n\t\tvoid textWithInvalidPlaceholderIsMerged() {\n\t\t\tString text = \"test${of${with${and${\";\n\t\t\tParsedValue parsedValue = this.parser.parse(text);\n\t\t\tassertThat(parsedValue.parts()).singleElement().isInstanceOfSatisfying(\n\t\t\t\t\tTextPart.class, textPart -> assertThat(textPart.text()).isEqualTo(text));\n\t\t}\n\n\t}\n\n\t@Nested // Tests with the use of a separator\n\tclass DefaultValueTests {\n\n\t\tprivate final PlaceholderParser parser = new PlaceholderParser(\"${\", \"}\", \":\", null, true);\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"placeholders\")\n\t\tvoid placeholderIsReplaced(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"firstName\", \"John\");\n\t\t\tproperties.setProperty(\"nested0\", \"first\");\n\t\t\tproperties.setProperty(\"nested1\", \"Name\");\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> placeholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${invalid:John}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${first${invalid:Name}}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${invalid:${firstName}}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${invalid:${${nested0}${nested1}}}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${invalid:$${firstName}}\", \"$John\"),\n\t\t\t\t\tArguments.of(\"${invalid: }${firstName}\", \" John\"),\n\t\t\t\t\tArguments.of(\"${invalid:}\", \"\"),\n\t\t\t\t\tArguments.of(\"${:}\", \"\")\n\t\t\t);\n\t\t}\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"nestedPlaceholders\")\n\t\tvoid nestedPlaceholdersAreReplaced(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"p1\", \"v1\");\n\t\t\tproperties.setProperty(\"p2\", \"v2\");\n\t\t\tproperties.setProperty(\"p3\", \"${p1}:${p2}\");              // nested placeholders\n\t\t\tproperties.setProperty(\"p4\", \"${p3}\");                    // deeply nested placeholders\n\t\t\tproperties.setProperty(\"p5\", \"${p1}:${p2}:${bogus}\");     // unresolvable placeholder\n\t\t\tproperties.setProperty(\"p6\", \"${p1}:${p2}:${bogus:def}\"); // unresolvable w/ default\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> nestedPlaceholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${p6}\", \"v1:v2:def\"),\n\t\t\t\t\tArguments.of(\"${p6:not-used}\", \"v1:v2:def\"),\n\t\t\t\t\tArguments.of(\"${p6:${invalid}}\", \"v1:v2:def\"),\n\t\t\t\t\tArguments.of(\"${invalid:${p1}:${p2}}\", \"v1:v2\"),\n\t\t\t\t\tArguments.of(\"${invalid:${p3}}\", \"v1:v2\"),\n\t\t\t\t\tArguments.of(\"${invalid:${p4}}\", \"v1:v2\"),\n\t\t\t\t\tArguments.of(\"${invalid:${p5}}\", \"v1:v2:${bogus}\"),\n\t\t\t\t\tArguments.of(\"${invalid:${p6}}\", \"v1:v2:def\")\n\t\t\t);\n\t\t}\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"exactMatchPlaceholders\")\n\t\tvoid placeholdersWithExactMatchAreConsidered(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"prefix://my-service\", \"example-service\");\n\t\t\tproperties.setProperty(\"px\", \"prefix\");\n\t\t\tproperties.setProperty(\"p1\", \"${prefix://my-service}\");\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> exactMatchPlaceholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${prefix://my-service}\", \"example-service\"),\n\t\t\t\t\tArguments.of(\"${p1}\", \"example-service\")\n\t\t\t);\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithKeyEqualsToText() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"firstName\", \"Steve\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${firstName}\", resolver))\n\t\t\t\t\t.isEqualTo(\"Steve\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"firstName\");\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithHardcodedFallback() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver();\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${firstName:Steve}\", resolver))\n\t\t\t\t\t.isEqualTo(\"Steve\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"firstName:Steve\", \"firstName\");\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithNestedPlaceholderInKeyUsingFallback() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"firstName\", \"John\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${first${invalid:Name}}\", resolver))\n\t\t\t\t\t.isEqualTo(\"John\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"invalid:Name\", \"invalid\", \"firstName\");\n\t\t}\n\n\t\t@Test\n\t\tvoid parseWithFallbackUsingPlaceholder() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"firstName\", \"John\");\n\t\t\tassertThat(this.parser.replacePlaceholders(\"${invalid:${firstName}}\", resolver))\n\t\t\t\t\t.isEqualTo(\"John\");\n\t\t\tverifyPlaceholderResolutions(resolver, \"invalid\", \"firstName\");\n\t\t}\n\n\t}\n\n\t@Nested // Tests with the use of the escape character\n\tclass EscapedTests {\n\n\t\tprivate final PlaceholderParser parser = new PlaceholderParser(\"${\", \"}\", \":\", '\\\\', true);\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"escapedInNestedPlaceholders\")\n\t\tvoid escapedSeparatorInNestedPlaceholder(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"app.environment\", \"qa\");\n\t\t\tproperties.setProperty(\"app.service\", \"protocol\");\n\t\t\tproperties.setProperty(\"protocol://host/qa/name\", \"protocol://example.com/qa/name\");\n\t\t\tproperties.setProperty(\"service/host/qa/name\", \"https://example.com/qa/name\");\n\t\t\tproperties.setProperty(\"service/host/qa/name:value\", \"https://example.com/qa/name-value\");\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> escapedInNestedPlaceholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${protocol\\\\://host/${app.environment}/name}\", \"protocol://example.com/qa/name\"),\n\t\t\t\t\tArguments.of(\"${${app.service}\\\\://host/${app.environment}/name}\", \"protocol://example.com/qa/name\"),\n\t\t\t\t\tArguments.of(\"${service/host/${app.environment}/name:\\\\value}\", \"https://example.com/qa/name\"),\n\t\t\t\t\tArguments.of(\"${service/host/${name\\\\:value}/}\", \"${service/host/${name:value}/}\"));\n\t\t}\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"escapedPlaceholders\")\n\t\tvoid escapedPlaceholderIsNotReplaced(String text, String expected) {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\n\t\t\t\t\t\"firstName\", \"John\", \"nested0\", \"first\", \"nested1\", \"Name\",\n\t\t\t\t\t\"${test}\", \"John\",\n\t\t\t\t\t\"p1\", \"v1\", \"p2\", \"\\\\${p1:default}\", \"p3\", \"${p2}\",\n\t\t\t\t\t\"p4\", \"adc${p0:\\\\${p1}}\",\n\t\t\t\t\t\"p5\", \"adc${\\\\${p0}:${p1}}\",\n\t\t\t\t\t\"p6\", \"adc${p0:def\\\\${p1}}\",\n\t\t\t\t\t\"p7\", \"adc\\\\${\");\n\t\t\tassertThat(this.parser.replacePlaceholders(text, resolver)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> escapedPlaceholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"\\\\${firstName}\", \"${firstName}\"),\n\t\t\t\t\tArguments.of(\"First name: \\\\${firstName}\", \"First name: ${firstName}\"),\n\t\t\t\t\tArguments.of(\"$\\\\${firstName}\", \"$${firstName}\"),\n\t\t\t\t\tArguments.of(\"\\\\}${firstName}\", \"\\\\}John\"),\n\t\t\t\t\tArguments.of(\"${\\\\${test}}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${p2}\", \"${p1:default}\"),\n\t\t\t\t\tArguments.of(\"${p3}\", \"${p1:default}\"),\n\t\t\t\t\tArguments.of(\"${p4}\", \"adc${p1}\"),\n\t\t\t\t\tArguments.of(\"${p5}\", \"adcv1\"),\n\t\t\t\t\tArguments.of(\"${p6}\", \"adcdef${p1}\"),\n\t\t\t\t\tArguments.of(\"${p7}\", \"adc\\\\${\"));\n\n\t\t}\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"escapedSeparators\")\n\t\tvoid escapedSeparatorIsNotReplaced(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"first:Name\", \"John\");\n\t\t\tproperties.setProperty(\"nested0\", \"first\");\n\t\t\tproperties.setProperty(\"nested1\", \"Name\");\n\t\t\tassertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> escapedSeparators() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${first\\\\:Name}\", \"John\"),\n\t\t\t\t\tArguments.of(\"${last\\\\:Name}\", \"${last:Name}\")\n\t\t\t);\n\t\t}\n\n\t}\n\n\t@Nested\n\tclass ExceptionTests {\n\n\t\tprivate final PlaceholderParser parser = new PlaceholderParser(\"${\", \"}\", \":\", null, false);\n\n\t\t@Test\n\t\tvoid textWithCircularReference() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"pL\", \"${pR}\", \"pR\", \"${pL}\");\n\t\t\tassertThatThrownBy(() -> this.parser.replacePlaceholders(\"${pL}\", resolver))\n\t\t\t\t\t.isInstanceOf(PlaceholderResolutionException.class)\n\t\t\t\t\t.hasMessage(\"Circular placeholder reference 'pL' in value \\\"${pL}\\\" <-- \\\"${pR}\\\" <-- \\\"${pL}\\\"\");\n\t\t}\n\n\t\t@Test\n\t\tvoid unresolvablePlaceholderIsReported() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver();\n\t\t\tassertThatExceptionOfType(PlaceholderResolutionException.class)\n\t\t\t\t\t.isThrownBy(() -> this.parser.replacePlaceholders(\"${bogus}\", resolver))\n\t\t\t\t\t.withMessage(\"Could not resolve placeholder 'bogus' in value \\\"${bogus}\\\"\")\n\t\t\t\t\t.withNoCause();\n\t\t}\n\n\t\t@Test\n\t\tvoid unresolvablePlaceholderInNestedPlaceholderIsReportedWithChain() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"p1\", \"v1\", \"p2\", \"v2\",\n\t\t\t\t\t\"p3\", \"${p1}:${p2}:${bogus}\");\n\t\t\tassertThatExceptionOfType(PlaceholderResolutionException.class)\n\t\t\t\t\t.isThrownBy(() -> this.parser.replacePlaceholders(\"${p3}\", resolver))\n\t\t\t\t\t.withMessage(\"Could not resolve placeholder 'bogus' in value \\\"${p1}:${p2}:${bogus}\\\" <-- \\\"${p3}\\\"\")\n\t\t\t\t\t.withNoCause();\n\t\t}\n\n\t}\n\n\tPlaceholderResolver mockPlaceholderResolver(String... pairs) {\n\t\tif (pairs.length % 2 == 1) {\n\t\t\tthrow new IllegalArgumentException(\"size must be even, it is a set of key=value pairs\");\n\t\t}\n\t\tPlaceholderResolver resolver = mock();\n\t\tfor (int i = 0; i < pairs.length; i += 2) {\n\t\t\tString key = pairs[i];\n\t\t\tString value = pairs[i + 1];\n\t\t\tgiven(resolver.resolvePlaceholder(key)).willReturn(value);\n\t\t}\n\t\treturn resolver;\n\t}\n\n\tvoid verifyPlaceholderResolutions(PlaceholderResolver mock, String... placeholders) {\n\t\tInOrder ordered = inOrder(mock);\n\t\tfor (String placeholder : placeholders) {\n\t\t\tordered.verify(mock).resolvePlaceholder(placeholder);\n\t\t}\n\t\tverifyNoMoreInteractions(mock);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.DefaultValueTests#parser",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#parser",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "PlaceholderParser",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#placeholderIsReplaced(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"placeholders\")\r\nvoid placeholderIsReplaced(String text, String expected) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"firstName\", \"John\");\r\n    properties.setProperty(\"nested0\", \"first\");\r\n    properties.setProperty(\"nested1\", \"Name\");\r\n    assertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#placeholderIsReplaced(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#placeholderIsReplaced(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#placeholderIsReplaced(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@MethodSource",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#placeholders()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static Stream<Arguments> placeholders() {\r\n    return Stream.of(Arguments.of(\"${invalid:John}\", \"John\"), Arguments.of(\"${first${invalid:Name}}\", \"John\"), Arguments.of(\"${invalid:${firstName}}\", \"John\"), Arguments.of(\"${invalid:${${nested0}${nested1}}}\", \"John\"), Arguments.of(\"${invalid:$${firstName}}\", \"$John\"), Arguments.of(\"${invalid: }${firstName}\", \" John\"), Arguments.of(\"${invalid:}\", \"\"), Arguments.of(\"${:}\", \"\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#placeholders()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#nestedPlaceholdersAreReplaced(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"nestedPlaceholders\")\r\nvoid nestedPlaceholdersAreReplaced(String text, String expected) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"p1\", \"v1\");\r\n    properties.setProperty(\"p2\", \"v2\");\r\n    // nested placeholders\r\n    properties.setProperty(\"p3\", \"${p1}:${p2}\");\r\n    // deeply nested placeholders\r\n    properties.setProperty(\"p4\", \"${p3}\");\r\n    // unresolvable placeholder\r\n    properties.setProperty(\"p5\", \"${p1}:${p2}:${bogus}\");\r\n    // unresolvable w/ default\r\n    properties.setProperty(\"p6\", \"${p1}:${p2}:${bogus:def}\");\r\n    assertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#nestedPlaceholdersAreReplaced(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#nestedPlaceholdersAreReplaced(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#nestedPlaceholdersAreReplaced(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@MethodSource",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#nestedPlaceholders()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static Stream<Arguments> nestedPlaceholders() {\r\n    return Stream.of(Arguments.of(\"${p6}\", \"v1:v2:def\"), Arguments.of(\"${p6:not-used}\", \"v1:v2:def\"), Arguments.of(\"${p6:${invalid}}\", \"v1:v2:def\"), Arguments.of(\"${invalid:${p1}:${p2}}\", \"v1:v2\"), Arguments.of(\"${invalid:${p3}}\", \"v1:v2\"), Arguments.of(\"${invalid:${p4}}\", \"v1:v2\"), Arguments.of(\"${invalid:${p5}}\", \"v1:v2:${bogus}\"), Arguments.of(\"${invalid:${p6}}\", \"v1:v2:def\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#nestedPlaceholders()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#placeholdersWithExactMatchAreConsidered(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"exactMatchPlaceholders\")\r\nvoid placeholdersWithExactMatchAreConsidered(String text, String expected) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"prefix://my-service\", \"example-service\");\r\n    properties.setProperty(\"px\", \"prefix\");\r\n    properties.setProperty(\"p1\", \"${prefix://my-service}\");\r\n    assertThat(this.parser.replacePlaceholders(text, properties::getProperty)).isEqualTo(expected);\r\n}",
+    "tailType": "method_code"
+  }
+]

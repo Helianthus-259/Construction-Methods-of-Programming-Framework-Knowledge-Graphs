@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter#hasAnyHint(RuntimeHints)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private boolean hasAnyHint(RuntimeHints hints) {\r\n    return (hints.serialization().javaSerializationHints().findAny().isPresent() || hints.proxies().jdkProxyHints().findAny().isPresent() || hints.reflection().typeHints().findAny().isPresent() || hints.resources().resourcePatternHints().findAny().isPresent() || hints.resources().resourceBundleHints().findAny().isPresent() || hints.jni().typeHints().findAny().isPresent());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.NativeConfigurationWriter#hasAnyHint(RuntimeHints)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter#writeTo(String,Consumer<BasicJsonWriter>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the specified GraalVM native configuration file, using the\r\n * provided {@link BasicJsonWriter}.\r\n * @param fileName the name of the file\r\n * @param writer a consumer for the writer to use\r\n */\r\nprotected abstract void writeTo(String fileName, Consumer<BasicJsonWriter> writer);",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.NativeConfigurationWriter#writeTo(String,Consumer<BasicJsonWriter>)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.nativex",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.MimeTypeTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.nio.charset.StandardCharsets;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Random;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.convert.ConversionService;\nimport org.springframework.core.convert.support.DefaultConversionService;\nimport org.springframework.core.testfixture.io.SerializationTestUtils;\n\nimport static java.util.Collections.singletonMap;\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link MimeType}.\n *\n * @author Arjen Poutsma\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @author Dimitrios Liapis\n */\nclass MimeTypeTests {\n\n\t@Test\n\tvoid slashInSubtype() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tnew MimeType(\"text\", \"/\"));\n\t}\n\n\t@Test\n\tvoid valueOfNoSubtype() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeType.valueOf(\"audio\"));\n\t}\n\n\t@Test\n\tvoid valueOfNoSubtypeSlash() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeType.valueOf(\"audio/\"));\n\t}\n\n\t@Test\n\tvoid valueOfIllegalType() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeType.valueOf(\"audio(/basic\"));\n\t}\n\n\t@Test\n\tvoid valueOfIllegalSubtype() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeType.valueOf(\"audio/basic)\"));\n\t}\n\n\t@Test\n\tvoid valueOfIllegalCharset() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeType.valueOf(\"text/html; charset=foo-bar\"));\n\t}\n\n\t@Test\n\tvoid parseCharset() {\n\t\tString s = \"text/html; charset=iso-8859-1\";\n\t\tMimeType mimeType = MimeType.valueOf(s);\n\t\tassertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"text\");\n\t\tassertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"html\");\n\t\tassertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.ISO_8859_1);\n\t}\n\n\t@Test\n\tvoid parseQuotedCharset() {\n\t\tString s = \"application/xml;charset=\\\"utf-8\\\"\";\n\t\tMimeType mimeType = MimeType.valueOf(s);\n\t\tassertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"application\");\n\t\tassertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"xml\");\n\t\tassertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.UTF_8);\n\t}\n\n\t@Test\n\tvoid parseQuotedSeparator() {\n\t\tString s = \"application/xop+xml;charset=utf-8;type=\\\"application/soap+xml;action=\\\\\\\"https://x.y.z\\\\\\\"\\\"\";\n\t\tMimeType mimeType = MimeType.valueOf(s);\n\t\tassertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"application\");\n\t\tassertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"xop+xml\");\n\t\tassertThat(mimeType.getCharset()).as(\"Invalid charset\").isEqualTo(StandardCharsets.UTF_8);\n\t\tassertThat(mimeType.getParameter(\"type\")).isEqualTo(\"\\\"application/soap+xml;action=\\\\\\\"https://x.y.z\\\\\\\"\\\"\");\n\t}\n\n\t@Test\n\tvoid withConversionService() {\n\t\tConversionService conversionService = new DefaultConversionService();\n\t\tassertThat(conversionService.canConvert(String.class, MimeType.class)).isTrue();\n\t\tMimeType mimeType = MimeType.valueOf(\"application/xml\");\n\t\tassertThat(conversionService.convert(\"application/xml\", MimeType.class)).isEqualTo(mimeType);\n\t}\n\n\t@Test\n\tvoid includes() {\n\t\tMimeType textPlain = MimeTypeUtils.TEXT_PLAIN;\n\t\tassertThat(textPlain.includes(textPlain)).as(\"Equal types is not inclusive\").isTrue();\n\t\tMimeType allText = new MimeType(\"text\");\n\n\t\tassertThat(allText.includes(textPlain)).as(\"All subtypes is not inclusive\").isTrue();\n\t\tassertThat(textPlain.includes(allText)).as(\"All subtypes is inclusive\").isFalse();\n\n\t\tassertThat(MimeTypeUtils.ALL.includes(textPlain)).as(\"All types is not inclusive\").isTrue();\n\t\tassertThat(textPlain.includes(MimeTypeUtils.ALL)).as(\"All types is inclusive\").isFalse();\n\n\t\tassertThat(MimeTypeUtils.ALL.includes(textPlain)).as(\"All types is not inclusive\").isTrue();\n\t\tassertThat(textPlain.includes(MimeTypeUtils.ALL)).as(\"All types is inclusive\").isFalse();\n\n\t\tMimeType applicationSoapXml = new MimeType(\"application\", \"soap+xml\");\n\t\tMimeType applicationWildcardXml = new MimeType(\"application\", \"*+xml\");\n\t\tMimeType suffixXml = new MimeType(\"application\", \"x.y+z+xml\"); // SPR-15795\n\n\t\tassertThat(applicationSoapXml.includes(applicationSoapXml)).isTrue();\n\t\tassertThat(applicationWildcardXml.includes(applicationWildcardXml)).isTrue();\n\t\tassertThat(applicationWildcardXml.includes(suffixXml)).isTrue();\n\n\t\tassertThat(applicationWildcardXml.includes(applicationSoapXml)).isTrue();\n\t\tassertThat(applicationSoapXml.includes(applicationWildcardXml)).isFalse();\n\t\tassertThat(suffixXml.includes(applicationWildcardXml)).isFalse();\n\n\t\tassertThat(applicationWildcardXml.includes(MimeTypeUtils.APPLICATION_JSON)).isFalse();\n\t}\n\n\t@Test\n\tvoid isCompatible() {\n\t\tMimeType textPlain = MimeTypeUtils.TEXT_PLAIN;\n\t\tassertThat(textPlain.isCompatibleWith(textPlain)).as(\"Equal types is not compatible\").isTrue();\n\t\tMimeType allText = new MimeType(\"text\");\n\n\t\tassertThat(allText.isCompatibleWith(textPlain)).as(\"All subtypes is not compatible\").isTrue();\n\t\tassertThat(textPlain.isCompatibleWith(allText)).as(\"All subtypes is not compatible\").isTrue();\n\n\t\tassertThat(MimeTypeUtils.ALL.isCompatibleWith(textPlain)).as(\"All types is not compatible\").isTrue();\n\t\tassertThat(textPlain.isCompatibleWith(MimeTypeUtils.ALL)).as(\"All types is not compatible\").isTrue();\n\n\t\tassertThat(MimeTypeUtils.ALL.isCompatibleWith(textPlain)).as(\"All types is not compatible\").isTrue();\n\t\tassertThat(textPlain.isCompatibleWith(MimeTypeUtils.ALL)).as(\"All types is compatible\").isTrue();\n\n\t\tMimeType applicationSoapXml = new MimeType(\"application\", \"soap+xml\");\n\t\tMimeType applicationWildcardXml = new MimeType(\"application\", \"*+xml\");\n\t\tMimeType suffixXml = new MimeType(\"application\", \"x.y+z+xml\"); // SPR-15795\n\n\t\tassertThat(applicationSoapXml.isCompatibleWith(applicationSoapXml)).isTrue();\n\t\tassertThat(applicationWildcardXml.isCompatibleWith(applicationWildcardXml)).isTrue();\n\t\tassertThat(applicationWildcardXml.isCompatibleWith(suffixXml)).isTrue();\n\n\t\tassertThat(applicationWildcardXml.isCompatibleWith(applicationSoapXml)).isTrue();\n\t\tassertThat(applicationSoapXml.isCompatibleWith(applicationWildcardXml)).isTrue();\n\t\tassertThat(suffixXml.isCompatibleWith(applicationWildcardXml)).isTrue();\n\n\t\tassertThat(applicationWildcardXml.isCompatibleWith(MimeTypeUtils.APPLICATION_JSON)).isFalse();\n\t}\n\n\t@Test\n\tvoid testToString() {\n\t\tMimeType mimeType = new MimeType(\"text\", \"plain\");\n\t\tString result = mimeType.toString();\n\t\tassertThat(result).as(\"Invalid toString() returned\").isEqualTo(\"text/plain\");\n\t}\n\n\t@Test\n\tvoid parseMimeType() {\n\t\tString s = \"audio/*\";\n\t\tMimeType mimeType = MimeTypeUtils.parseMimeType(s);\n\t\tassertThat(mimeType.getType()).as(\"Invalid type\").isEqualTo(\"audio\");\n\t\tassertThat(mimeType.getSubtype()).as(\"Invalid subtype\").isEqualTo(\"*\");\n\t}\n\n\t@Test\n\tvoid parseMimeTypeNoSubtype() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeNoSubtypeSlash() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeTypeRange() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"*/json\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeIllegalType() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio(/basic\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeIllegalSubtype() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/basic)\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeMissingTypeAndSubtype() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"     ;a=b\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeEmptyParameterAttribute() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/*;=value\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeEmptyParameterValue() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/*;attr=\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeIllegalParameterAttribute() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/*;attr<=value\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeIllegalParameterValue() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/*;attr=v>alue\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeIllegalCharset() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"text/html; charset=foo-bar\"));\n\t}\n\n\t@Test  // SPR-8917\n\tvoid parseMimeTypeQuotedParameterValue() {\n\t\tMimeType mimeType = MimeTypeUtils.parseMimeType(\"audio/*;attr=\\\"v>alue\\\"\");\n\t\tassertThat(mimeType.getParameter(\"attr\")).isEqualTo(\"\\\"v>alue\\\"\");\n\t}\n\n\t@Test  // SPR-8917\n\tvoid parseMimeTypeSingleQuotedParameterValue() {\n\t\tMimeType mimeType = MimeTypeUtils.parseMimeType(\"audio/*;attr='v>alue'\");\n\t\tassertThat(mimeType.getParameter(\"attr\")).isEqualTo(\"'v>alue'\");\n\t}\n\n\t@Test  // SPR-16630\n\tvoid parseMimeTypeWithSpacesAroundEquals() {\n\t\tMimeType mimeType = MimeTypeUtils.parseMimeType(\"multipart/x-mixed-replace;boundary = --myboundary\");\n\t\tassertThat(mimeType.getParameter(\"boundary\")).isEqualTo(\"--myboundary\");\n\t}\n\n\t@Test  // SPR-16630\n\tvoid parseMimeTypeWithSpacesAroundEqualsAndQuotedValue() {\n\t\tMimeType mimeType = MimeTypeUtils.parseMimeType(\"text/plain; foo = \\\" bar \\\" \");\n\t\tassertThat(mimeType.getParameter(\"foo\")).isEqualTo(\"\\\" bar \\\"\");\n\t}\n\n\t@Test\n\tvoid parseMimeTypeIllegalQuotedParameterValue() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(\"audio/*;attr=\\\"\"));\n\t}\n\n\t@Test\n\tvoid parseMimeTypeNull() {\n\t\tassertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() ->\n\t\t\t\tMimeTypeUtils.parseMimeType(null));\n\t}\n\n\t@Test\n\tvoid parseMimeTypes() {\n\t\tString s = \"text/plain, text/html, text/x-dvi, text/x-c\";\n\t\tList<MimeType> mimeTypes = MimeTypeUtils.parseMimeTypes(s);\n\t\tassertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\n\t\tassertThat(mimeTypes).as(\"Invalid amount of mime types\").hasSize(4);\n\n\t\tmimeTypes = MimeTypeUtils.parseMimeTypes(null);\n\t\tassertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\n\t\tassertThat(mimeTypes).as(\"Invalid amount of mime types\").isEmpty();\n\t}\n\n\t@Test  // gh-23241\n\tvoid parseMimeTypesWithTrailingComma() {\n\t\tList<MimeType> mimeTypes = MimeTypeUtils.parseMimeTypes(\"text/plain, text/html,\");\n\t\tassertThat(mimeTypes).as(\"No mime types returned\").isNotNull();\n\t\tassertThat(mimeTypes).as(\"Incorrect number of mime types\").hasSize(2);\n\t}\n\n\t@Test  // SPR-17459\n\tvoid parseMimeTypesWithQuotedParameters() {\n\t\ttestWithQuotedParameters(\"foo/bar;param=\\\",\\\"\");\n\t\ttestWithQuotedParameters(\"foo/bar;param=\\\"s,a,\\\"\");\n\t\ttestWithQuotedParameters(\"foo/bar;param=\\\"s,\\\"\", \"text/x-c\");\n\t\ttestWithQuotedParameters(\"foo/bar;param=\\\"a\\\\\\\"b,c\\\"\");\n\t\ttestWithQuotedParameters(\"foo/bar;param=\\\"\\\\\\\\\\\"\");\n\t\ttestWithQuotedParameters(\"foo/bar;param=\\\"\\\\,\\\\\\\"\");\n\t}\n\n\t@Test\n\tvoid parseSubtypeSuffix() {\n\t\tMimeType type = new MimeType(\"application\", \"vdn.something+json\");\n\t\tassertThat(type.getSubtypeSuffix()).isEqualTo(\"json\");\n\t\ttype = new MimeType(\"application\", \"vdn.something\");\n\t\tassertThat(type.getSubtypeSuffix()).isNull();\n\t\ttype = new MimeType(\"application\", \"vdn.something+\");\n\t\tassertThat(type.getSubtypeSuffix()).isEmpty();\n\t\ttype = new MimeType(\"application\", \"vdn.some+thing+json\");\n\t\tassertThat(type.getSubtypeSuffix()).isEqualTo(\"json\");\n\t}\n\n\t@Test  // gh-25350\n\tvoid wildcardSubtypeCompatibleWithSuffix() {\n\t\tMimeType applicationStar = new MimeType(\"application\", \"*\");\n\t\tMimeType applicationVndJson = new MimeType(\"application\", \"vnd.something+json\");\n\t\tassertThat(applicationStar.isCompatibleWith(applicationVndJson)).isTrue();\n\t}\n\n\tprivate void testWithQuotedParameters(String... mimeTypes) {\n\t\tString s = String.join(\",\", mimeTypes);\n\t\tList<MimeType> actual = MimeTypeUtils.parseMimeTypes(s);\n\n\t\tassertThat(actual).hasSameSizeAs(mimeTypes);\n\t\tfor (int i = 0; i < mimeTypes.length; i++) {\n\t\t\tassertThat(actual.get(i).toString()).isEqualTo(mimeTypes[i]);\n\t\t}\n\t}\n\n\t@Test\n\tvoid compareTo() {\n\t\tMimeType audioBasic = new MimeType(\"audio\", \"basic\");\n\t\tMimeType audio = new MimeType(\"audio\");\n\t\tMimeType audioWave = new MimeType(\"audio\", \"wave\");\n\t\tMimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\n\n\t\t// equal\n\t\tassertThat(audioBasic.compareTo(audioBasic)).as(\"Invalid comparison result\").isEqualTo(0);\n\t\tassertThat(audio.compareTo(audio)).as(\"Invalid comparison result\").isEqualTo(0);\n\t\tassertThat(audioBasicLevel.compareTo(audioBasicLevel)).as(\"Invalid comparison result\").isEqualTo(0);\n\n\t\tassertThat(audioBasicLevel.compareTo(audio)).as(\"Invalid comparison result\").isGreaterThan(0);\n\n\t\tList<MimeType> expected = new ArrayList<>();\n\t\texpected.add(audio);\n\t\texpected.add(audioBasic);\n\t\texpected.add(audioBasicLevel);\n\t\texpected.add(audioWave);\n\n\t\tList<MimeType> result = new ArrayList<>(expected);\n\t\tRandom rnd = new Random();\n\n\t\t// shuffle & sort 10 times\n\t\tfor (int i = 0; i < 10; i++) {\n\t\t\tCollections.shuffle(result, rnd);\n\t\t\tCollections.sort(result);\n\n\t\t\tfor (int j = 0; j < result.size(); j++) {\n\t\t\t\tassertThat(result.get(j)).as(\"Invalid media type at \" + j + \", run \" + i).isSameAs(expected.get(j));\n\t\t\t}\n\t\t}\n\t}\n\n\t@Test\n\tvoid compareToCaseSensitivity() {\n\t\tMimeType m1 = new MimeType(\"audio\", \"basic\");\n\t\tMimeType m2 = new MimeType(\"Audio\", \"Basic\");\n\t\tassertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isEqualTo(0);\n\t\tassertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isEqualTo(0);\n\n\t\tm1 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"bar\"));\n\t\tm2 = new MimeType(\"audio\", \"basic\", singletonMap(\"Foo\", \"bar\"));\n\t\tassertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isEqualTo(0);\n\t\tassertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isEqualTo(0);\n\n\t\tm1 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"bar\"));\n\t\tm2 = new MimeType(\"audio\", \"basic\", singletonMap(\"foo\", \"Bar\"));\n\t\tassertThat(m1.compareTo(m2)).as(\"Invalid comparison result\").isNotEqualTo(0);\n\t\tassertThat(m2.compareTo(m1)).as(\"Invalid comparison result\").isNotEqualTo(0);\n\t}\n\n\t@Test\n\tvoid isMoreSpecific() {\n\t\tMimeType audioBasic = new MimeType(\"audio\", \"basic\");\n\t\tMimeType audio = new MimeType(\"audio\");\n\t\tMimeType audioWave = new MimeType(\"audio\", \"wave\");\n\t\tMimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\n\n\t\tassertThat(audioBasic.isMoreSpecific(audioBasicLevel)).isFalse();\n\t\tassertThat(audioBasicLevel.isMoreSpecific(audioBasic)).isTrue();\n\n\t\tassertThat(audio.isMoreSpecific(MimeTypeUtils.ALL)).isTrue();\n\t\tassertThat(MimeTypeUtils.ALL.isMoreSpecific(audio)).isFalse();\n\n\t\tassertThat(audioBasicLevel.isMoreSpecific(audioBasic)).isTrue();\n\t\tassertThat(audioBasic.isMoreSpecific(audioBasicLevel)).isFalse();\n\n\t\tassertThat(audioBasic.isMoreSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\n\t\tassertThat(audioBasic.isMoreSpecific(audioWave)).isFalse();\n\t\tassertThat(audioBasicLevel.isMoreSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\n\t}\n\n\t@Test\n\tvoid isLessSpecific() {\n\t\tMimeType audioBasic = new MimeType(\"audio\", \"basic\");\n\t\tMimeType audio = new MimeType(\"audio\");\n\t\tMimeType audioWave = new MimeType(\"audio\", \"wave\");\n\t\tMimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\n\n\t\tassertThat(audioBasic.isLessSpecific(audioBasicLevel)).isTrue();\n\t\tassertThat(audioBasicLevel.isLessSpecific(audioBasic)).isFalse();\n\n\t\tassertThat(audio.isLessSpecific(MimeTypeUtils.ALL)).isFalse();\n\t\tassertThat(MimeTypeUtils.ALL.isLessSpecific(audio)).isTrue();\n\n\t\tassertThat(audioBasicLevel.isLessSpecific(audioBasic)).isFalse();\n\t\tassertThat(audioBasic.isLessSpecific(audioBasicLevel)).isTrue();\n\n\t\tassertThat(audioBasic.isLessSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\n\t\tassertThat(audioBasic.isLessSpecific(audioWave)).isFalse();\n\t\tassertThat(audioBasicLevel.isLessSpecific(MimeTypeUtils.TEXT_HTML)).isFalse();\n\t}\n\n\t@Test\n\tvoid sortBySpecificity() {\n\t\tMimeType audioBasic = new MimeType(\"audio\", \"basic\");\n\t\tMimeType audio = new MimeType(\"audio\");\n\t\tMimeType audioWave = new MimeType(\"audio\", \"wave\");\n\t\tMimeType audioBasicLevel = new MimeType(\"audio\", \"basic\", singletonMap(\"level\", \"1\"));\n\n\t\tList<MimeType> mimeTypes = new ArrayList<>(\n\t\t\t\tList.of(MimeTypeUtils.ALL, audio, audioWave, audioBasic, audioBasicLevel));\n\n\t\tMimeTypeUtils.sortBySpecificity(mimeTypes);\n\n\t\tassertThat(mimeTypes).containsExactly(audioWave, audioBasicLevel, audioBasic, audio, MimeTypeUtils.ALL);\n\t}\n\n\t@Test\n\tvoid bubbleSort() {\n\t\tList<Integer> list = new ArrayList<>(List.of(10, 9, 8, 7, 6, 5, 4, 3, 2, 1));\n\t\tMimeTypeUtils.bubbleSort(list, (i1, i2) -> i1 > i2);\n\t\tassertThat(list).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);\n\t}\n\n\t@Test  // SPR-13157\n\tvoid equalsIsCaseInsensitiveForCharsets() {\n\t\tMimeType m1 = new MimeType(\"text\", \"plain\", singletonMap(\"charset\", \"UTF-8\"));\n\t\tMimeType m2 = new MimeType(\"text\", \"plain\", singletonMap(\"charset\", \"utf-8\"));\n\t\tassertThat(m2).isEqualTo(m1);\n\t\tassertThat(m1).isEqualTo(m2);\n\t\tassertThat(m1.compareTo(m2)).isEqualTo(0);\n\t\tassertThat(m2.compareTo(m1)).isEqualTo(0);\n\t}\n\n\t@Test  // gh-26127\n\tvoid serialize() throws Exception {\n\t\tMimeType original = new MimeType(\"text\", \"plain\", StandardCharsets.UTF_8);\n\t\tMimeType deserialized = SerializationTestUtils.serializeAndDeserialize(original);\n\t\tassertThat(deserialized).isEqualTo(original);\n\t\tassertThat(original).isEqualTo(deserialized);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#slashInSubtype()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid slashInSubtype() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new MimeType(\"text\", \"/\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeTests#slashInSubtype()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#slashInSubtype()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#valueOfNoSubtype()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid valueOfNoSubtype() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeTests#valueOfNoSubtype()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#valueOfNoSubtype()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#valueOfNoSubtypeSlash()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid valueOfNoSubtypeSlash() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio/\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeTests#valueOfNoSubtypeSlash()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#valueOfNoSubtypeSlash()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#valueOfIllegalType()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid valueOfIllegalType() {\r\n    assertThatExceptionOfType(InvalidMimeTypeException.class).isThrownBy(() -> MimeType.valueOf(\"audio(/basic\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeTests#valueOfIllegalType()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#valueOfIllegalType()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

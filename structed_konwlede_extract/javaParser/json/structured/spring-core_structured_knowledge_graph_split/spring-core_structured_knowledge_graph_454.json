@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLineNumber(int,Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitLineNumber(final int line, final Label start) {\r\n    if (lineNumberTable == null) {\r\n        lineNumberTable = new ByteVector();\r\n    }\r\n    ++lineNumberTableLength;\r\n    lineNumberTable.putShort(start.bytecodeOffset);\r\n    lineNumberTable.putShort(line);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitLineNumber(int,Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLineNumber(int,Label)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitMaxs(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitMaxs(final int maxStack, final int maxLocals) {\r\n    if (compute == COMPUTE_ALL_FRAMES) {\r\n        computeAllFrames();\r\n    } else if (compute == COMPUTE_MAX_STACK_AND_LOCAL) {\r\n        computeMaxStackAndLocal();\r\n    } else if (compute == COMPUTE_MAX_STACK_AND_LOCAL_FROM_FRAMES) {\r\n        this.maxStack = maxRelativeStackSize;\r\n    } else {\r\n        this.maxStack = maxStack;\r\n        this.maxLocals = maxLocals;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitMaxs(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitMaxs(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#computeAllFrames()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Computes all the stack map frames of the method, from scratch.\r\n */\r\nprivate void computeAllFrames() {\r\n    // Complete the control flow graph with exception handler blocks.\r\n    Handler handler = firstHandler;\r\n    while (handler != null) {\r\n        String catchTypeDescriptor = handler.catchTypeDescriptor == null ? \"java/lang/Throwable\" : handler.catchTypeDescriptor;\r\n        int catchType = Frame.getAbstractTypeFromInternalName(symbolTable, catchTypeDescriptor);\r\n        // Mark handlerBlock as an exception handler.\r\n        Label handlerBlock = handler.handlerPc.getCanonicalInstance();\r\n        handlerBlock.flags |= Label.FLAG_JUMP_TARGET;\r\n        // Add handlerBlock as a successor of all the basic blocks in the exception handler range.\r\n        Label handlerRangeBlock = handler.startPc.getCanonicalInstance();\r\n        Label handlerRangeEnd = handler.endPc.getCanonicalInstance();\r\n        while (handlerRangeBlock != handlerRangeEnd) {\r\n            handlerRangeBlock.outgoingEdges = new Edge(catchType, handlerBlock, handlerRangeBlock.outgoingEdges);\r\n            handlerRangeBlock = handlerRangeBlock.nextBasicBlock;\r\n        }\r\n        handler = handler.nextHandler;\r\n    }\r\n    // Create and visit the first (implicit) frame.\r\n    Frame firstFrame = firstBasicBlock.frame;\r\n    firstFrame.setInputFrameFromDescriptor(symbolTable, accessFlags, descriptor, this.maxLocals);\r\n    firstFrame.accept(this);\r\n    // Fix point algorithm: add the first basic block to a list of blocks to process (i.e. blocks\r\n    // whose stack map frame has changed) and, while there are blocks to process, remove one from\r\n    // the list and update the stack map frames of its successor blocks in the control flow graph\r\n    // (which might change them, in which case these blocks must be processed too, and are thus\r\n    // added to the list of blocks to process). Also compute the maximum stack size of the method,\r\n    // as a by-product.\r\n    Label listOfBlocksToProcess = firstBasicBlock;\r\n    listOfBlocksToProcess.nextListElement = Label.EMPTY_LIST;\r\n    int maxStackSize = 0;\r\n    while (listOfBlocksToProcess != Label.EMPTY_LIST) {\r\n        // Remove a basic block from the list of blocks to process.\r\n        Label basicBlock = listOfBlocksToProcess;\r\n        listOfBlocksToProcess = listOfBlocksToProcess.nextListElement;\r\n        basicBlock.nextListElement = null;\r\n        // By definition, basicBlock is reachable.\r\n        basicBlock.flags |= Label.FLAG_REACHABLE;\r\n        // Update the (absolute) maximum stack size.\r\n        int maxBlockStackSize = basicBlock.frame.getInputStackSize() + basicBlock.outputStackMax;\r\n        if (maxBlockStackSize > maxStackSize) {\r\n            maxStackSize = maxBlockStackSize;\r\n        }\r\n        // Update the successor blocks of basicBlock in the control flow graph.\r\n        Edge outgoingEdge = basicBlock.outgoingEdges;\r\n        while (outgoingEdge != null) {\r\n            Label successorBlock = outgoingEdge.successor.getCanonicalInstance();\r\n            boolean successorBlockChanged = basicBlock.frame.merge(symbolTable, successorBlock.frame, outgoingEdge.info);\r\n            if (successorBlockChanged && successorBlock.nextListElement == null) {\r\n                // If successorBlock has changed it must be processed. Thus, if it is not already in the\r\n                // list of blocks to process, add it to this list.\r\n                successorBlock.nextListElement = listOfBlocksToProcess;\r\n                listOfBlocksToProcess = successorBlock;\r\n            }\r\n            outgoingEdge = outgoingEdge.nextEdge;\r\n        }\r\n    }\r\n    // Loop over all the basic blocks and visit the stack map frames that must be stored in the\r\n    // StackMapTable attribute. Also replace unreachable code with NOP* ATHROW, and remove it from\r\n    // exception handler ranges.\r\n    Label basicBlock = firstBasicBlock;\r\n    while (basicBlock != null) {\r\n        if ((basicBlock.flags & (Label.FLAG_JUMP_TARGET | Label.FLAG_REACHABLE)) == (Label.FLAG_JUMP_TARGET | Label.FLAG_REACHABLE)) {\r\n            basicBlock.frame.accept(this);\r\n        }\r\n        if ((basicBlock.flags & Label.FLAG_REACHABLE) == 0) {\r\n            // Find the start and end bytecode offsets of this unreachable block.\r\n            Label nextBasicBlock = basicBlock.nextBasicBlock;\r\n            int startOffset = basicBlock.bytecodeOffset;\r\n            int endOffset = (nextBasicBlock == null ? code.length : nextBasicBlock.bytecodeOffset) - 1;\r\n            if (endOffset >= startOffset) {\r\n                // Replace its instructions with NOP ... NOP ATHROW.\r\n                for (int i = startOffset; i < endOffset; ++i) {\r\n                    code.data[i] = Opcodes.NOP;\r\n                }\r\n                code.data[endOffset] = (byte) Opcodes.ATHROW;\r\n                // Emit a frame for this unreachable block, with no local and a Throwable on the stack\r\n                // (so that the ATHROW could consume this Throwable if it were reachable).\r\n                int frameIndex = visitFrameStart(startOffset, /* numLocal = */\r\n                0, /* numStack = */\r\n                1);\r\n                currentFrame[frameIndex] = Frame.getAbstractTypeFromInternalName(symbolTable, \"java/lang/Throwable\");\r\n                visitFrameEnd();\r\n                // Remove this unreachable basic block from the exception handler ranges.\r\n                firstHandler = Handler.removeRange(firstHandler, basicBlock, nextBasicBlock);\r\n                // The maximum stack size is now at least one, because of the Throwable declared above.\r\n                maxStackSize = Math.max(maxStackSize, 1);\r\n            }\r\n        }\r\n        basicBlock = basicBlock.nextBasicBlock;\r\n    }\r\n    this.maxStack = maxStackSize;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#computeAllFrames()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#computeMaxStackAndLocal()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Computes the maximum stack size of the method.\r\n */\r\nprivate void computeMaxStackAndLocal() {\r\n    // Complete the control flow graph with exception handler blocks.\r\n    Handler handler = firstHandler;\r\n    while (handler != null) {\r\n        Label handlerBlock = handler.handlerPc;\r\n        Label handlerRangeBlock = handler.startPc;\r\n        Label handlerRangeEnd = handler.endPc;\r\n        // Add handlerBlock as a successor of all the basic blocks in the exception handler range.\r\n        while (handlerRangeBlock != handlerRangeEnd) {\r\n            if ((handlerRangeBlock.flags & Label.FLAG_SUBROUTINE_CALLER) == 0) {\r\n                handlerRangeBlock.outgoingEdges = new Edge(Edge.EXCEPTION, handlerBlock, handlerRangeBlock.outgoingEdges);\r\n            } else {\r\n                // If handlerRangeBlock is a JSR block, add handlerBlock after the first two outgoing\r\n                // edges to preserve the hypothesis about JSR block successors order (see\r\n                // {@link #visitJumpInsn}).\r\n                handlerRangeBlock.outgoingEdges.nextEdge.nextEdge = new Edge(Edge.EXCEPTION, handlerBlock, handlerRangeBlock.outgoingEdges.nextEdge.nextEdge);\r\n            }\r\n            handlerRangeBlock = handlerRangeBlock.nextBasicBlock;\r\n        }\r\n        handler = handler.nextHandler;\r\n    }\r\n    // Complete the control flow graph with the successor blocks of subroutines, if needed.\r\n    if (hasSubroutines) {\r\n        // First step: find the subroutines. This step determines, for each basic block, to which\r\n        // subroutine(s) it belongs. Start with the main \"subroutine\":\r\n        short numSubroutines = 1;\r\n        firstBasicBlock.markSubroutine(numSubroutines);\r\n        // Then, mark the subroutines called by the main subroutine, then the subroutines called by\r\n        // those called by the main subroutine, etc.\r\n        for (short currentSubroutine = 1; currentSubroutine <= numSubroutines; ++currentSubroutine) {\r\n            Label basicBlock = firstBasicBlock;\r\n            while (basicBlock != null) {\r\n                if ((basicBlock.flags & Label.FLAG_SUBROUTINE_CALLER) != 0 && basicBlock.subroutineId == currentSubroutine) {\r\n                    Label jsrTarget = basicBlock.outgoingEdges.nextEdge.successor;\r\n                    if (jsrTarget.subroutineId == 0) {\r\n                        // If this subroutine has not been marked yet, find its basic blocks.\r\n                        jsrTarget.markSubroutine(++numSubroutines);\r\n                    }\r\n                }\r\n                basicBlock = basicBlock.nextBasicBlock;\r\n            }\r\n        }\r\n        // Second step: find the successors in the control flow graph of each subroutine basic block\r\n        // 'r' ending with a RET instruction. These successors are the virtual successors of the basic\r\n        // blocks ending with JSR instructions (see {@link #visitJumpInsn)} that can reach 'r'.\r\n        Label basicBlock = firstBasicBlock;\r\n        while (basicBlock != null) {\r\n            if ((basicBlock.flags & Label.FLAG_SUBROUTINE_CALLER) != 0) {\r\n                // By construction, jsr targets are stored in the second outgoing edge of basic blocks\r\n                // that ends with a jsr instruction (see {@link #FLAG_SUBROUTINE_CALLER}).\r\n                Label subroutine = basicBlock.outgoingEdges.nextEdge.successor;\r\n                subroutine.addSubroutineRetSuccessors(basicBlock);\r\n            }\r\n            basicBlock = basicBlock.nextBasicBlock;\r\n        }\r\n    }\r\n    // Data flow algorithm: put the first basic block in a list of blocks to process (i.e. blocks\r\n    // whose input stack size has changed) and, while there are blocks to process, remove one\r\n    // from the list, update the input stack size of its successor blocks in the control flow\r\n    // graph, and add these blocks to the list of blocks to process (if not already done).\r\n    Label listOfBlocksToProcess = firstBasicBlock;\r\n    listOfBlocksToProcess.nextListElement = Label.EMPTY_LIST;\r\n    int maxStackSize = maxStack;\r\n    while (listOfBlocksToProcess != Label.EMPTY_LIST) {\r\n        // Remove a basic block from the list of blocks to process. Note that we don't reset\r\n        // basicBlock.nextListElement to null on purpose, to make sure we don't reprocess already\r\n        // processed basic blocks.\r\n        Label basicBlock = listOfBlocksToProcess;\r\n        listOfBlocksToProcess = listOfBlocksToProcess.nextListElement;\r\n        // Compute the (absolute) input stack size and maximum stack size of this block.\r\n        int inputStackTop = basicBlock.inputStackSize;\r\n        int maxBlockStackSize = inputStackTop + basicBlock.outputStackMax;\r\n        // Update the absolute maximum stack size of the method.\r\n        if (maxBlockStackSize > maxStackSize) {\r\n            maxStackSize = maxBlockStackSize;\r\n        }\r\n        // Update the input stack size of the successor blocks of basicBlock in the control flow\r\n        // graph, and add these blocks to the list of blocks to process, if not already done.\r\n        Edge outgoingEdge = basicBlock.outgoingEdges;\r\n        if ((basicBlock.flags & Label.FLAG_SUBROUTINE_CALLER) != 0) {\r\n            // Ignore the first outgoing edge of the basic blocks ending with a jsr: these are virtual\r\n            // edges which lead to the instruction just after the jsr, and do not correspond to a\r\n            // possible execution path (see {@link #visitJumpInsn} and\r\n            // {@link Label#FLAG_SUBROUTINE_CALLER}).\r\n            outgoingEdge = outgoingEdge.nextEdge;\r\n        }\r\n        while (outgoingEdge != null) {\r\n            Label successorBlock = outgoingEdge.successor;\r\n            if (successorBlock.nextListElement == null) {\r\n                successorBlock.inputStackSize = (short) (outgoingEdge.info == Edge.EXCEPTION ? 1 : inputStackTop + outgoingEdge.info);\r\n                successorBlock.nextListElement = listOfBlocksToProcess;\r\n                listOfBlocksToProcess = successorBlock;\r\n            }\r\n            outgoingEdge = outgoingEdge.nextEdge;\r\n        }\r\n    }\r\n    this.maxStack = maxStackSize;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#computeMaxStackAndLocal()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitEnd()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitEnd() {\r\n    // Nothing to do.\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitEnd()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitEnd()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#addSuccessorToCurrentBasicBlock(int,Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Utility methods: control flow analysis algorithm\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Adds a successor to {@link #currentBasicBlock} in the control flow graph.\r\n *\r\n * @param info information about the control flow edge to be added.\r\n * @param successor the successor block to be added to the current basic block.\r\n */\r\nprivate void addSuccessorToCurrentBasicBlock(final int info, final Label successor) {\r\n    currentBasicBlock.outgoingEdges = new Edge(info, successor, currentBasicBlock.outgoingEdges);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#addSuccessorToCurrentBasicBlock(int,Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#endCurrentBasicBlockWithNoSuccessor()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Ends the current basic block. This method must be used in the case where the current basic\r\n * block does not have any successor.\r\n *\r\n * <p>WARNING: this method must be called after the currently visited instruction has been put in\r\n * {@link #code} (if frames are computed, this method inserts a new Label to start a new basic\r\n * block after the current instruction).\r\n */\r\nprivate void endCurrentBasicBlockWithNoSuccessor() {\r\n    if (compute == COMPUTE_ALL_FRAMES) {\r\n        Label nextBasicBlock = new Label();\r\n        nextBasicBlock.frame = new Frame(nextBasicBlock);\r\n        nextBasicBlock.resolve(code.data, stackMapTableEntries, code.length);\r\n        lastBasicBlock.nextBasicBlock = nextBasicBlock;\r\n        lastBasicBlock = nextBasicBlock;\r\n        currentBasicBlock = null;\r\n    } else if (compute == COMPUTE_MAX_STACK_AND_LOCAL) {\r\n        currentBasicBlock.outputStackMax = (short) maxRelativeStackSize;\r\n        currentBasicBlock = null;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#endCurrentBasicBlockWithNoSuccessor()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitFrameStart(int,int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Utility methods: stack map frames\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Starts the visit of a new stack map frame, stored in {@link #currentFrame}.\r\n *\r\n * @param offset the bytecode offset of the instruction to which the frame corresponds.\r\n * @param numLocal the number of local variables in the frame.\r\n * @param numStack the number of stack elements in the frame.\r\n * @return the index of the next element to be written in this frame.\r\n */\r\nint visitFrameStart(final int offset, final int numLocal, final int numStack) {\r\n    int frameLength = 3 + numLocal + numStack;\r\n    if (currentFrame == null || currentFrame.length < frameLength) {\r\n        currentFrame = new int[frameLength];\r\n    }\r\n    currentFrame[0] = offset;\r\n    currentFrame[1] = numLocal;\r\n    currentFrame[2] = numStack;\r\n    return 3;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitFrameStart(int,int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitAbstractType(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Sets an abstract type in {@link #currentFrame}.\r\n *\r\n * @param frameIndex the index of the element to be set in {@link #currentFrame}.\r\n * @param abstractType an abstract type.\r\n */\r\nvoid visitAbstractType(final int frameIndex, final int abstractType) {\r\n    currentFrame[frameIndex] = abstractType;\r\n}",
+    "tailType": "method_code"
+  }
+]

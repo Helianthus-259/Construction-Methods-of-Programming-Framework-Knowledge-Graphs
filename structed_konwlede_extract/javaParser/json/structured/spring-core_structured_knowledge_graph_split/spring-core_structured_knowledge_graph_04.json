@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistryTests#checkForAliasCircle()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests#checkForAliasCircle()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesPreconditions()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid resolveAliasesPreconditions() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> registry.resolveAliases(null));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesPreconditions()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesPreconditions()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithoutPlaceholderReplacement()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid resolveAliasesWithoutPlaceholderReplacement() {\r\n    StringValueResolver valueResolver = new StubStringValueResolver();\r\n    registerAlias(NAME1, ALIAS1);\r\n    registerAlias(NAME1, ALIAS3);\r\n    registerAlias(NAME2, ALIAS2);\r\n    registerAlias(NAME2, ALIAS4);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).containsExactlyInAnyOrder(ALIAS1, ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n    registry.removeAlias(ALIAS1);\r\n    registry.resolveAliases(valueResolver);\r\n    assertThat(registry.getAliases(NAME1)).containsExactly(ALIAS3);\r\n    assertThat(registry.getAliases(NAME2)).containsExactlyInAnyOrder(ALIAS2, ALIAS4);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithoutPlaceholderReplacement()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SimpleAliasRegistryTests#resolveAliasesWithoutPlaceholderReplacement()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.codec;\n\nimport java.nio.charset.Charset;\nimport java.nio.charset.StandardCharsets;\nimport java.util.Arrays;\nimport java.util.Collections;\nimport java.util.List;\n\nimport org.openjdk.jmh.annotations.Benchmark;\nimport org.openjdk.jmh.annotations.BenchmarkMode;\nimport org.openjdk.jmh.annotations.Level;\nimport org.openjdk.jmh.annotations.Mode;\nimport org.openjdk.jmh.annotations.Param;\nimport org.openjdk.jmh.annotations.Scope;\nimport org.openjdk.jmh.annotations.Setup;\nimport org.openjdk.jmh.annotations.State;\nimport org.openjdk.jmh.infra.Blackhole;\nimport reactor.core.publisher.Flux;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.core.io.buffer.DataBuffer;\nimport org.springframework.core.io.buffer.DataBufferFactory;\nimport org.springframework.core.io.buffer.DataBufferUtils;\nimport org.springframework.core.io.buffer.DefaultDataBufferFactory;\nimport org.springframework.util.MimeType;\n\n/**\n * Benchmarks for {@link DataBufferUtils}.\n *\n * @author Rossen Stoyanchev\n */\n@BenchmarkMode(Mode.Throughput)\npublic class StringDecoderBenchmark {\n\n\t@Benchmark\n\tpublic void parseSseLines(SseLinesState state, Blackhole blackhole) {\n\t\tblackhole.consume(state.parseLines().blockLast());\n\t}\n\n\n\t@State(Scope.Benchmark)\n\t@SuppressWarnings({\"NotNullFieldNotInitialized\", \"ConstantConditions\"})\n\tpublic static class SseLinesState {\n\n\t\tprivate static final Charset CHARSET = StandardCharsets.UTF_8;\n\n\t\tprivate static final ResolvableType ELEMENT_TYPE = ResolvableType.forClass(String.class);\n\n\n\t\t@Param(\"10240\")\n\t\tint totalSize;\n\n\t\t@Param(\"2000\")\n\t\tint chunkSize;\n\n\t\tList<DataBuffer> chunks;\n\n\t\tStringDecoder decoder = StringDecoder.textPlainOnly(Arrays.asList(\"\\r\\n\", \"\\n\"), false);\n\n\t\tMimeType mimeType = new MimeType(\"text\", \"plain\", CHARSET);\n\n\n\t\t@Setup(Level.Trial)\n\t\tpublic void setup() {\n\t\t\tString eventTemplate = \"\"\"\n\t\t\t\t\tid:$1\n\t\t\t\t\tevent:some-event\n\t\t\t\t\t:some-comment-$1-aa\n\t\t\t\t\t:some-comment-$1-bb\n\t\t\t\t\tdata:abcdefg-$1-hijklmnop-$1-qrstuvw-$1-xyz-$1\n\n\t\t\t\t\t\"\"\";\n\n\t\t\tint eventLength = String.format(eventTemplate, String.format(\"%05d\", 1)).length();\n\t\t\tint eventCount = this.totalSize / eventLength;\n\t\t\tDataBufferFactory bufferFactory = new DefaultDataBufferFactory();\n\n\t\t\tthis.chunks = Flux.range(1, eventCount)\n\t\t\t\t\t.map(index -> String.format(eventTemplate, String.format(\"%05d\", index)))\n\t\t\t\t\t.buffer(this.chunkSize > eventLength ? this.chunkSize / eventLength : 1)\n\t\t\t\t\t.map(strings -> String.join(\"\", strings))\n\t\t\t\t\t.map(chunk -> {\n\t\t\t\t\t\tbyte[] bytes = chunk.getBytes(CHARSET);\n\t\t\t\t\t\tDataBuffer buffer = bufferFactory.allocateBuffer(bytes.length);\n\t\t\t\t\t\tbuffer.write(bytes);\n\t\t\t\t\t\treturn buffer;\n\t\t\t\t\t})\n\t\t\t\t\t.collectList()\n\t\t\t\t\t.block();\n\t\t}\n\n\t\tpublic Flux<String> parseLines() {\n\t\t\tFlux<DataBuffer> input = Flux.fromIterable(this.chunks).doOnNext(DataBufferUtils::retain);\n\t\t\treturn this.decoder.decode(input, ELEMENT_TYPE, this.mimeType, Collections.emptyMap());\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.SseLinesState#CHARSET",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState#CHARSET",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Charset",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.SseLinesState#ELEMENT_TYPE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState#ELEMENT_TYPE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ResolvableType",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.SseLinesState#totalSize",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState#totalSize",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.SseLinesState#chunkSize",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState#chunkSize",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.SseLinesState#chunks",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState#chunks",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<DataBuffer>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.codec.SseLinesState",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.codec.SseLinesState#decoder",
+    "tailType": "field"
+  }
+]

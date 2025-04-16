@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.CompositeCollectionTests#retainAll()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid retainAll() {\r\n    List<String> first = new ArrayList<>(List.of(\"foo\", \"bar\"));\r\n    List<String> second = new ArrayList<>(List.of(\"baz\", \"qux\"));\r\n    CompositeCollection<String> composite = new CompositeCollection<>(first, second);\r\n    assertThat(composite.retainAll(List.of(\"bar\", \"baz\"))).isTrue();\r\n    assertThat(composite).containsExactly(\"bar\", \"baz\");\r\n    assertThat(first).containsExactly(\"bar\");\r\n    assertThat(second).containsExactly(\"baz\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeCollectionTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeCollectionTests#retainAll()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeCollectionTests#retainAll()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeCollectionTests#clear()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid clear() {\r\n    List<String> first = new ArrayList<>(List.of(\"foo\", \"bar\"));\r\n    List<String> second = new ArrayList<>(List.of(\"baz\", \"qux\"));\r\n    CompositeCollection<String> composite = new CompositeCollection<>(first, second);\r\n    composite.clear();\r\n    assertThat(composite).isEmpty();\r\n    assertThat(first).isEmpty();\r\n    assertThat(second).isEmpty();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeCollectionTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeCollectionTests#clear()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeCollectionTests#clear()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.ReflectionHints",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Executable;\nimport java.lang.reflect.Field;\nimport java.lang.reflect.Method;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.function.Consumer;\nimport java.util.stream.Stream;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.aot.hint.TypeHint.Builder;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\n\n/**\n * Gather the need for reflection at runtime.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @author Andy Wilkinson\n * @author Sebastien Deleuze\n * @since 6.0\n */\npublic class ReflectionHints {\n\n\tprivate final Map<TypeReference, TypeHint.Builder> types = new HashMap<>();\n\n\n\t/**\n\t * Return the types that require reflection.\n\t * @return the type hints\n\t */\n\tpublic Stream<TypeHint> typeHints() {\n\t\treturn this.types.values().stream().map(TypeHint.Builder::build);\n\t}\n\n\t/**\n\t * Return the reflection hints for the type defined by the specified\n\t * {@link TypeReference}.\n\t * @param type the type to inspect\n\t * @return the reflection hints for this type, or {@code null}\n\t */\n\tpublic @Nullable TypeHint getTypeHint(TypeReference type) {\n\t\tBuilder typeHintBuilder = this.types.get(type);\n\t\treturn (typeHintBuilder != null ? typeHintBuilder.build() : null);\n\t}\n\n\t/**\n\t * Return the reflection hints for the specified type.\n\t * @param type the type to inspect\n\t * @return the reflection hints for this type, or {@code null}\n\t */\n\tpublic @Nullable TypeHint getTypeHint(Class<?> type) {\n\t\treturn getTypeHint(TypeReference.of(type));\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the type defined by the\n\t * specified {@link TypeReference}.\n\t * @param type the type to customize\n\t * @param typeHint a builder to further customize hints for that type\n\t * @return {@code this}, to facilitate method chaining\n\t * @see #registerType(TypeReference, MemberCategory...)\n\t */\n\tpublic ReflectionHints registerType(TypeReference type, Consumer<TypeHint.Builder> typeHint) {\n\t\tBuilder builder = this.types.computeIfAbsent(type, TypeHint.Builder::new);\n\t\ttypeHint.accept(builder);\n\t\treturn this;\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the specified type\n\t * using the specified {@link MemberCategory MemberCategories}.\n\t * @param type the type to customize\n\t * @param memberCategories the member categories to apply\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerType(TypeReference type, MemberCategory... memberCategories) {\n\t\treturn registerType(type, TypeHint.builtWith(memberCategories));\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the specified type.\n\t * @param type the type to customize\n\t * @param typeHint a builder to further customize hints for that type\n\t * @return {@code this}, to facilitate method chaining\n\t * @see #registerType(Class, MemberCategory...)\n\t */\n\tpublic ReflectionHints registerType(Class<?> type, Consumer<TypeHint.Builder> typeHint) {\n\t\tAssert.notNull(type, \"'type' must not be null\");\n\t\tif (type.getCanonicalName() != null) {\n\t\t\tregisterType(TypeReference.of(type), typeHint);\n\t\t}\n\t\treturn this;\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the specified type\n\t * using the specified {@link MemberCategory MemberCategories}.\n\t * @param type the type to customize\n\t * @param memberCategories the member categories to apply\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerType(Class<?> type, MemberCategory... memberCategories) {\n\t\tAssert.notNull(type, \"'type' must not be null\");\n\t\tif (type.getCanonicalName() != null) {\n\t\t\tregisterType(TypeReference.of(type), memberCategories);\n\t\t}\n\t\treturn this;\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the specified type if it\n\t * is available using the specified {@link ClassLoader}.\n\t * @param classLoader the classloader to use to check if the type is present\n\t * @param typeName the type to customize\n\t * @param typeHint a builder to further customize hints for that type\n\t * @return {@code this}, to facilitate method chaining\n\t * @see #registerTypeIfPresent(ClassLoader, String, MemberCategory...)\n\t */\n\tpublic ReflectionHints registerTypeIfPresent(@Nullable ClassLoader classLoader,\n\t\t\tString typeName, Consumer<TypeHint.Builder> typeHint) {\n\n\t\tif (ClassUtils.isPresent(typeName, classLoader)) {\n\t\t\tregisterType(TypeReference.of(typeName), typeHint);\n\t\t}\n\t\treturn this;\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the specified type if it\n\t * is available using the specified {@link ClassLoader}.\n\t * @param classLoader the classloader to use to check if the type is present\n\t * @param typeName the type to customize\n\t * @param memberCategories the member categories to apply\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerTypeIfPresent(@Nullable ClassLoader classLoader,\n\t\t\tString typeName, MemberCategory... memberCategories) {\n\n\t\treturn registerTypeIfPresent(classLoader, typeName, TypeHint.builtWith(memberCategories));\n\t}\n\n\t/**\n\t * Register or customize reflection hints for the types defined by the\n\t * specified list of {@link TypeReference type references}. The specified\n\t * {@code typeHint} consumer is invoked for each type.\n\t * @param types the types to customize\n\t * @param typeHint a builder to further customize hints for each type\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerTypes(Iterable<TypeReference> types, Consumer<TypeHint.Builder> typeHint) {\n\t\ttypes.forEach(type -> registerType(type, typeHint));\n\t\treturn this;\n\t}\n\n\t/**\n\t * Register or customize reflection hints for all the interfaces implemented by\n\t * the given type and its parent classes, ignoring the common Java language interfaces.\n\t * The specified {@code typeHint} consumer is invoked for each type.\n\t * @param type the type to consider\n\t * @param typeHint a builder to further customize hints for each type\n\t * @return {@code this}, to facilitate method chaining\n\t * @since 6.2\n\t */\n\tpublic ReflectionHints registerForInterfaces(Class<?> type, Consumer<TypeHint.Builder> typeHint) {\n\t\tClass<?> currentClass = type;\n\t\twhile (currentClass != null && currentClass != Object.class) {\n\t\t\tfor (Class<?> interfaceType : currentClass.getInterfaces()) {\n\t\t\t\tif (!ClassUtils.isJavaLanguageInterface(interfaceType)) {\n\t\t\t\t\tthis.registerType(interfaceType, typeHint);\n\t\t\t\t\tregisterForInterfaces(interfaceType, typeHint);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcurrentClass = currentClass.getSuperclass();\n\t\t}\n\t\treturn this;\n\t}\n\n\t/**\n\t * Register the need for reflective field access on the specified {@link Field}.\n\t * @param field the field that requires reflective access\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerField(Field field) {\n\t\treturn registerType(TypeReference.of(field.getDeclaringClass()),\n\t\t\t\ttypeHint -> typeHint.withField(field.getName()));\n\t}\n\n\t/**\n\t * Register the need for reflection on the specified {@link Constructor},\n\t * using the specified {@link ExecutableMode}.\n\t * @param constructor the constructor that requires reflection\n\t * @param mode the requested mode\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerConstructor(Constructor<?> constructor, ExecutableMode mode) {\n\t\treturn registerType(TypeReference.of(constructor.getDeclaringClass()),\n\t\t\t\ttypeHint -> typeHint.withConstructor(mapParameters(constructor), mode));\n\t}\n\n\t/**\n\t * Register the need for reflection on the specified {@link Method},\n\t * using the specified {@link ExecutableMode}.\n\t * @param method the method that requires reflection\n\t * @param mode the requested mode\n\t * @return {@code this}, to facilitate method chaining\n\t */\n\tpublic ReflectionHints registerMethod(Method method, ExecutableMode mode) {\n\t\treturn registerType(TypeReference.of(method.getDeclaringClass()),\n\t\t\t\ttypeHint -> typeHint.withMethod(method.getName(), mapParameters(method), mode));\n\t}\n\n\tprivate List<TypeReference> mapParameters(Executable executable) {\n\t\treturn TypeReference.listOf(executable.getParameterTypes());\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.ReflectionHints#types",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#types",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<TypeReference, TypeHint.Builder>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#typeHints()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the types that require reflection.\r\n * @return the type hints\r\n */\r\npublic Stream<TypeHint> typeHints() {\r\n    return this.types.values().stream().map(TypeHint.Builder::build);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ReflectionHints#typeHints()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#getTypeHint(TypeReference)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the reflection hints for the type defined by the specified\r\n * {@link TypeReference}.\r\n * @param type the type to inspect\r\n * @return the reflection hints for this type, or {@code null}\r\n */\r\n@Nullable\r\npublic TypeHint getTypeHint(TypeReference type) {\r\n    Builder typeHintBuilder = this.types.get(type);\r\n    return (typeHintBuilder != null ? typeHintBuilder.build() : null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ReflectionHints#getTypeHint(TypeReference)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#getTypeHint(TypeReference)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#getTypeHint(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the reflection hints for the specified type.\r\n * @param type the type to inspect\r\n * @return the reflection hints for this type, or {@code null}\r\n */\r\n@Nullable\r\npublic TypeHint getTypeHint(Class<?> type) {\r\n    return getTypeHint(TypeReference.of(type));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ReflectionHints#getTypeHint(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#getTypeHint(Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Nullable",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ReflectionHints#registerType(TypeReference,Consumer<TypeHint.Builder>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Register or customize reflection hints for the type defined by the\r\n * specified {@link TypeReference}.\r\n * @param type the type to customize\r\n * @param typeHint a builder to further customize hints for that type\r\n * @return {@code this}, to facilitate method chaining\r\n * @see #registerType(TypeReference, MemberCategory...)\r\n */\r\npublic ReflectionHints registerType(TypeReference type, Consumer<TypeHint.Builder> typeHint) {\r\n    Builder builder = this.types.computeIfAbsent(type, TypeHint.Builder::new);\r\n    typeHint.accept(builder);\r\n    return this;\r\n}",
+    "tailType": "method_code"
+  }
+]

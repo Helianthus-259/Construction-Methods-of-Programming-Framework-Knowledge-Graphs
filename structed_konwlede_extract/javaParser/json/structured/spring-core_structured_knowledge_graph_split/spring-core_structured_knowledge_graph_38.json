@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.style.SomeObject#someMethod()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.task",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.AccessControl",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.task;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.util.ConcurrencyThrottleSupport;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.assertj.core.api.Assertions.assertThatIllegalStateException;\n\n/**\n * @author Rick Evans\n * @author Juergen Hoeller\n * @author Sam Brannen\n */\nclass SimpleAsyncTaskExecutorTests {\n\n\t@Test\n\tvoid cannotExecuteWhenConcurrencyIsSwitchedOff() {\n\t\ttry (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\n\t\t\texecutor.setConcurrencyLimit(ConcurrencyThrottleSupport.NO_CONCURRENCY);\n\t\t\tassertThat(executor.isThrottleActive()).isTrue();\n\t\t\tassertThatIllegalStateException().isThrownBy(() -> executor.execute(new NoOpRunnable()));\n\t\t}\n\t}\n\n\t@Test\n\tvoid throttleIsNotActiveByDefault() {\n\t\ttry (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\n\t\t\tassertThat(executor.isThrottleActive()).as(\"Concurrency throttle must not default to being active (on)\").isFalse();\n\t\t}\n\t}\n\n\t@Test\n\tvoid threadNameGetsSetCorrectly() {\n\t\tfinal String customPrefix = \"chankPop#\";\n\t\tfinal Object monitor = new Object();\n\t\tSimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(customPrefix);\n\t\tThreadNameHarvester task = new ThreadNameHarvester(monitor);\n\t\texecuteAndWait(executor, task, monitor);\n\t\tassertThat(task.getThreadName()).startsWith(customPrefix);\n\t}\n\n\t@Test\n\tvoid threadFactoryOverridesDefaults() {\n\t\tfinal Object monitor = new Object();\n\t\tSimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(runnable -> new Thread(runnable, \"test\"));\n\t\tThreadNameHarvester task = new ThreadNameHarvester(monitor);\n\t\texecuteAndWait(executor, task, monitor);\n\t\tassertThat(task.getThreadName()).isEqualTo(\"test\");\n\t}\n\n\t@Test\n\tvoid throwsExceptionWhenSuppliedWithNullRunnable() {\n\t\ttry (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\n\t\t\tassertThatIllegalArgumentException().isThrownBy(() -> executor.execute(null));\n\t\t}\n\t}\n\n\tprivate void executeAndWait(SimpleAsyncTaskExecutor executor, Runnable task, Object monitor) {\n\t\tsynchronized (monitor) {\n\t\t\texecutor.execute(task);\n\t\t\ttry {\n\t\t\t\tmonitor.wait();\n\t\t\t}\n\t\t\tcatch (InterruptedException ignored) {\n\t\t\t}\n\t\t}\n\t}\n\n\n\tprivate static final class NoOpRunnable implements Runnable {\n\n\t\t@Override\n\t\tpublic void run() {\n\t\t\t// no-op\n\t\t}\n\t}\n\n\n\tprivate abstract static class AbstractNotifyingRunnable implements Runnable {\n\n\t\tprivate final Object monitor;\n\n\t\tprotected AbstractNotifyingRunnable(Object monitor) {\n\t\t\tthis.monitor = monitor;\n\t\t}\n\n\t\t@Override\n\t\tpublic final void run() {\n\t\t\tsynchronized (this.monitor) {\n\t\t\t\ttry {\n\t\t\t\t\tdoRun();\n\t\t\t\t}\n\t\t\t\tfinally {\n\t\t\t\t\tthis.monitor.notifyAll();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\tprotected abstract void doRun();\n\t}\n\n\n\tprivate static final class ThreadNameHarvester extends AbstractNotifyingRunnable {\n\n\t\tprivate String threadName;\n\n\t\tprotected ThreadNameHarvester(Object monitor) {\n\t\t\tsuper(monitor);\n\t\t}\n\n\t\tpublic String getThreadName() {\n\t\t\treturn this.threadName;\n\t\t}\n\n\t\t@Override\n\t\tprotected void doRun() {\n\t\t\tthis.threadName = Thread.currentThread().getName();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#cannotExecuteWhenConcurrencyIsSwitchedOff()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid cannotExecuteWhenConcurrencyIsSwitchedOff() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        executor.setConcurrencyLimit(ConcurrencyThrottleSupport.NO_CONCURRENCY);\r\n        assertThat(executor.isThrottleActive()).isTrue();\r\n        assertThatIllegalStateException().isThrownBy(() -> executor.execute(new NoOpRunnable()));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#cannotExecuteWhenConcurrencyIsSwitchedOff()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#cannotExecuteWhenConcurrencyIsSwitchedOff()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throttleIsNotActiveByDefault()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid throttleIsNotActiveByDefault() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        assertThat(executor.isThrottleActive()).as(\"Concurrency throttle must not default to being active (on)\").isFalse();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throttleIsNotActiveByDefault()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throttleIsNotActiveByDefault()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadNameGetsSetCorrectly()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid threadNameGetsSetCorrectly() {\r\n    final String customPrefix = \"chankPop#\";\r\n    final Object monitor = new Object();\r\n    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(customPrefix);\r\n    ThreadNameHarvester task = new ThreadNameHarvester(monitor);\r\n    executeAndWait(executor, task, monitor);\r\n    assertThat(task.getThreadName()).startsWith(customPrefix);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadNameGetsSetCorrectly()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadNameGetsSetCorrectly()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadFactoryOverridesDefaults()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid threadFactoryOverridesDefaults() {\r\n    final Object monitor = new Object();\r\n    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(runnable -> new Thread(runnable, \"test\"));\r\n    ThreadNameHarvester task = new ThreadNameHarvester(monitor);\r\n    executeAndWait(executor, task, monitor);\r\n    assertThat(task.getThreadName()).isEqualTo(\"test\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadFactoryOverridesDefaults()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#threadFactoryOverridesDefaults()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throwsExceptionWhenSuppliedWithNullRunnable()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid throwsExceptionWhenSuppliedWithNullRunnable() {\r\n    try (SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor()) {\r\n        assertThatIllegalArgumentException().isThrownBy(() -> executor.execute(null));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.SimpleAsyncTaskExecutorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.SimpleAsyncTaskExecutorTests#throwsExceptionWhenSuppliedWithNullRunnable()",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.ClassReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassReader#readStream(InputStream,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader#readStream(InputStream,boolean)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader#computeBufferSize(InputStream)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static int computeBufferSize(final InputStream inputStream) throws IOException {\r\n    int expectedLength = inputStream.available();\r\n    /*\r\n     * Some implementations can return 0 while holding available data (e.g. new\r\n     * FileInputStream(\"/proc/a_file\")). Also in some pathological cases a very small number might\r\n     * be returned, and in this case we use a default size.\r\n     */\r\n    if (expectedLength < 256) {\r\n        return INPUT_STREAM_DATA_CHUNK_SIZE;\r\n    }\r\n    return Math.min(expectedLength, MAX_BUFFER_SIZE);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassReader#computeBufferSize(InputStream)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.io.ByteArrayInputStream;\nimport java.io.ByteArrayOutputStream;\nimport java.io.InputStream;\nimport java.io.OutputStream;\nimport java.nio.charset.Charset;\nimport java.util.Arrays;\nimport java.util.Random;\nimport java.util.UUID;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.mockito.InOrder;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.mockito.Mockito.inOrder;\nimport static org.mockito.Mockito.mock;\nimport static org.mockito.Mockito.never;\n\n/**\n * Tests for {@link StreamUtils}.\n *\n * @author Phillip Webb\n * @author Juergen Hoeller\n */\nclass StreamUtilsTests {\n\n\tprivate byte[] bytes = new byte[StreamUtils.BUFFER_SIZE + 10];\n\n\tprivate String string = \"\";\n\n\n\t@BeforeEach\n\tvoid setup() {\n\t\tnew Random().nextBytes(bytes);\n\t\twhile (string.length() < StreamUtils.BUFFER_SIZE + 10) {\n\t\t\tstring += UUID.randomUUID().toString();\n\t\t}\n\t}\n\n\n\t@Test\n\tvoid copyToByteArray() throws Exception {\n\t\tInputStream inputStream = new ByteArrayInputStream(bytes);\n\t\tbyte[] actual = StreamUtils.copyToByteArray(inputStream);\n\t\tassertThat(actual).isEqualTo(bytes);\n\t}\n\n\t@Test\n\tvoid copyToString() throws Exception {\n\t\tCharset charset = Charset.defaultCharset();\n\t\tInputStream inputStream = new ByteArrayInputStream(string.getBytes(charset));\n\t\tString actual = StreamUtils.copyToString(inputStream, charset);\n\t\tassertThat(actual).isEqualTo(string);\n\t}\n\n\t@Test\n\tvoid copyBytes() throws Exception {\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream();\n\t\tStreamUtils.copy(bytes, out);\n\t\tassertThat(out.toByteArray()).isEqualTo(bytes);\n\t}\n\n\t@Test\n\tvoid copyString() throws Exception {\n\t\tCharset charset = Charset.defaultCharset();\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream();\n\t\tStreamUtils.copy(string, charset, out);\n\t\tassertThat(out.toByteArray()).isEqualTo(string.getBytes(charset));\n\t}\n\n\t@Test\n\tvoid copyStream() throws Exception {\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream();\n\t\tStreamUtils.copy(new ByteArrayInputStream(bytes), out);\n\t\tassertThat(out.toByteArray()).isEqualTo(bytes);\n\t}\n\n\t@Test\n\tvoid copyRangeWithinBuffer() throws Exception {\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream();\n\t\tByteArrayInputStream in = new ByteArrayInputStream(bytes);\n\t\tStreamUtils.copyRange(in, out, 0, 100);\n\t\tassertThat(in.available()).isEqualTo(bytes.length - 101);\n\t\tassertThat(out.toByteArray()).isEqualTo(Arrays.copyOfRange(bytes, 0, 101));\n\t}\n\n\t@Test\n\tvoid copyRangeBeyondBuffer() throws Exception {\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream();\n\t\tByteArrayInputStream in = new ByteArrayInputStream(bytes);\n\t\tStreamUtils.copyRange(in, out, 0, 8200);\n\t\tassertThat(in.available()).isEqualTo(1);\n\t\tassertThat(out.toByteArray()).isEqualTo(Arrays.copyOfRange(bytes, 0, 8201));\n\t}\n\n\t@Test\n\tvoid copyRangeBeyondAvailable() throws Exception {\n\t\tByteArrayOutputStream out = new ByteArrayOutputStream();\n\t\tByteArrayInputStream in = new ByteArrayInputStream(bytes);\n\t\tStreamUtils.copyRange(in, out, 0, 8300);\n\t\tassertThat(in.available()).isEqualTo(0);\n\t\tassertThat(out.toByteArray()).isEqualTo(Arrays.copyOfRange(bytes, 0, 8202));\n\t}\n\n\t@Test\n\tvoid nonClosingInputStream() throws Exception {\n\t\tInputStream source = mock();\n\t\tInputStream nonClosing = StreamUtils.nonClosing(source);\n\t\tnonClosing.read();\n\t\tnonClosing.read(bytes);\n\t\tnonClosing.read(bytes, 1, 2);\n\t\tnonClosing.close();\n\t\tInOrder ordered = inOrder(source);\n\t\tordered.verify(source).read();\n\t\tordered.verify(source).read(bytes, 0, bytes.length);\n\t\tordered.verify(source).read(bytes, 1, 2);\n\t\tordered.verify(source, never()).close();\n\t}\n\n\t@Test\n\tvoid nonClosingOutputStream() throws Exception {\n\t\tOutputStream source = mock();\n\t\tOutputStream nonClosing = StreamUtils.nonClosing(source);\n\t\tnonClosing.write(1);\n\t\tnonClosing.write(bytes);\n\t\tnonClosing.write(bytes, 1, 2);\n\t\tnonClosing.close();\n\t\tInOrder ordered = inOrder(source);\n\t\tordered.verify(source).write(1);\n\t\tordered.verify(source).write(bytes, 0, bytes.length);\n\t\tordered.verify(source).write(bytes, 1, 2);\n\t\tordered.verify(source, never()).close();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.StreamUtilsTests#bytes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests#bytes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "byte",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.StreamUtilsTests#string",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests#string",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader#getAccess()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Accessors\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Returns the class's access flags (see {@link Opcodes}). This value may not reflect Deprecated\r\n * and Synthetic flags when bytecode is before 1.5 and those flags are represented by attributes.\r\n *\r\n * @return the class access flags.\r\n * @see ClassVisitor#visit(int, int, String, String, String, String[])\r\n */\r\npublic int getAccess() {\r\n    return readUnsignedShort(header);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassReader#getAccess()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader#getClassName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the internal name of the class (see {@link Type#getInternalName()}).\r\n *\r\n * @return the internal class name.\r\n * @see ClassVisitor#visit(int, int, String, String, String, String[])\r\n */\r\npublic String getClassName() {\r\n    // this_class is just after the access_flags field (using 2 bytes).\r\n    return readClass(header + 2, new char[maxStringLength]);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassReader#getClassName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests#setup()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@BeforeEach\r\nvoid setup() {\r\n    new Random().nextBytes(bytes);\r\n    while (string.length() < StreamUtils.BUFFER_SIZE + 10) {\r\n        string += UUID.randomUUID().toString();\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtilsTests#setup()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests#setup()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@BeforeEach",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader#getSuperName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the internal name of the super class (see {@link Type#getInternalName()}). For\r\n * interfaces, the super class is {@link Object}.\r\n *\r\n * @return the internal name of the super class, or {@literal null} for {@link Object} class.\r\n * @see ClassVisitor#visit(int, int, String, String, String, String[])\r\n */\r\npublic String getSuperName() {\r\n    // super_class is after the access_flags and this_class fields (2 bytes each).\r\n    return readClass(header + 4, new char[maxStringLength]);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassReader",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassReader#getSuperName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests#copyToByteArray()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid copyToByteArray() throws Exception {\r\n    InputStream inputStream = new ByteArrayInputStream(bytes);\r\n    byte[] actual = StreamUtils.copyToByteArray(inputStream);\r\n    assertThat(actual).isEqualTo(bytes);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.StreamUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.StreamUtilsTests#copyToByteArray()",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.ExceptionTypeFilterTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.ExceptionTypeFilterTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * @author Stephane Nicoll\n */\nclass ExceptionTypeFilterTests {\n\n\t@Test\n\tvoid subClassMatch() {\n\t\tExceptionTypeFilter filter = new ExceptionTypeFilter(List.of(RuntimeException.class), null, true);\n\t\tassertThat(filter.match(RuntimeException.class)).isTrue();\n\t\tassertThat(filter.match(IllegalStateException.class)).isTrue();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.ExceptionTypeFilterTests#subClassMatch()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid subClassMatch() {\r\n    ExceptionTypeFilter filter = new ExceptionTypeFilter(List.of(RuntimeException.class), null, true);\r\n    assertThat(filter.match(RuntimeException.class)).isTrue();\r\n    assertThat(filter.match(IllegalStateException.class)).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ExceptionTypeFilterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ExceptionTypeFilterTests#subClassMatch()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ExceptionTypeFilterTests#subClassMatch()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.support.ClassHintUtils",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint.support;\n\nimport java.lang.reflect.Proxy;\nimport java.util.function.Consumer;\n\nimport org.springframework.aot.hint.MemberCategory;\nimport org.springframework.aot.hint.RuntimeHints;\nimport org.springframework.aot.hint.TypeHint;\nimport org.springframework.util.ClassUtils;\n\n/**\n * Utilities for core hint inference on Spring-managed classes,\n * specifically for proxy types such as interface-based JDK proxies\n * and CGLIB-generated subclasses which need proxy/reflection hints.\n *\n * <p>Note that this class does not take specifics of Spring AOP or\n * any other framework arrangement into account. It just operates\n * on the JDK and CGLIB proxy facilities and their core conventions.\n *\n * @author Juergen Hoeller\n * @author Sebastien Deleuze\n * @since 6.0.3\n * @see org.springframework.aot.hint.ProxyHints\n * @see org.springframework.aot.hint.ReflectionHints\n */\npublic abstract class ClassHintUtils {\n\n\tprivate static final Consumer<TypeHint.Builder> asClassBasedProxy = hint ->\n\t\t\thint.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,\n\t\t\t\t\tMemberCategory.INVOKE_DECLARED_METHODS,\n\t\t\t\t\tMemberCategory.ACCESS_DECLARED_FIELDS);\n\n\tprivate static final Consumer<TypeHint.Builder> asProxiedUserClass = hint ->\n\t\t\thint.withMembers(MemberCategory.INVOKE_PUBLIC_METHODS,\n\t\t\t\t\tMemberCategory.INVOKE_DECLARED_METHODS);\n\n\n\t/**\n\t * Register a proxy hint for a JDK proxy or corresponding reflection hints\n\t * for a CGLIB-generated subclass, if necessary.\n\t * @param candidateClass the class to introspect\n\t * @param runtimeHints the RuntimeHints instance to register the hints on\n\t * @see Proxy#isProxyClass(Class)\n\t * @see ClassUtils#getUserClass(Class)\n\t */\n\tpublic static void registerProxyIfNecessary(Class<?> candidateClass, RuntimeHints runtimeHints) {\n\t\tif (Proxy.isProxyClass(candidateClass)) {\n\t\t\t// A JDK proxy class needs an explicit hint\n\t\t\truntimeHints.proxies().registerJdkProxy(candidateClass.getInterfaces());\n\t\t}\n\t\telse {\n\t\t\t// Potentially a CGLIB-generated subclass with reflection hints\n\t\t\tClass<?> userClass = ClassUtils.getUserClass(candidateClass);\n\t\t\tif (userClass != candidateClass) {\n\t\t\t\truntimeHints.reflection()\n\t\t\t\t\t\t.registerType(candidateClass, asClassBasedProxy)\n\t\t\t\t\t\t.registerType(userClass, asProxiedUserClass);\n\t\t\t}\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.support.ClassHintUtils#asClassBasedProxy",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils#asClassBasedProxy",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Consumer<TypeHint.Builder>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.support.ClassHintUtils#asProxiedUserClass",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils#asProxiedUserClass",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Consumer<TypeHint.Builder>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils#registerProxyIfNecessary(Class<?>,RuntimeHints)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Register a proxy hint for a JDK proxy or corresponding reflection hints\r\n * for a CGLIB-generated subclass, if necessary.\r\n * @param candidateClass the class to introspect\r\n * @param runtimeHints the RuntimeHints instance to register the hints on\r\n * @see Proxy#isProxyClass(Class)\r\n * @see ClassUtils#getUserClass(Class)\r\n */\r\npublic static void registerProxyIfNecessary(Class<?> candidateClass, RuntimeHints runtimeHints) {\r\n    if (Proxy.isProxyClass(candidateClass)) {\r\n        // A JDK proxy class needs an explicit hint\r\n        runtimeHints.proxies().registerJdkProxy(candidateClass.getInterfaces());\r\n    } else {\r\n        // Potentially a CGLIB-generated subclass with reflection hints\r\n        Class<?> userClass = ClassUtils.getUserClass(candidateClass);\r\n        if (userClass != candidateClass) {\r\n            runtimeHints.reflection().registerType(candidateClass, asClassBasedProxy).registerType(userClass, asProxiedUserClass);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.ClassHintUtils",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.support.ClassHintUtils#registerProxyIfNecessary(Class<?>,RuntimeHints)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.ExponentialBackOffTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.stream.IntStream;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.util.backoff.BackOffExecution;\nimport org.springframework.util.backoff.ExponentialBackOff;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\n\n/**\n * Tests for {@link ExponentialBackOff}.\n *\n * @author Stephane Nicoll\n */\nclass ExponentialBackOffTests {\n\n\t@Test\n\tvoid defaultInstance() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff();\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.nextBackOff()).isEqualTo(2000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(3000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(4500L);\n\t}\n\n\t@Test\n\tvoid simpleIncrease() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff(100L, 2.0);\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.nextBackOff()).isEqualTo(100L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(200L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(400L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(800L);\n\t}\n\n\t@Test\n\tvoid fixedIncrease() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff(100L, 1.0);\n\t\tbackOff.setMaxElapsedTime(300L);\n\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.nextBackOff()).isEqualTo(100L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(100L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(100L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\n\t}\n\n\t@Test\n\tvoid maxIntervalReached() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff(2000L, 2.0);\n\t\tbackOff.setMaxInterval(4000L);\n\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.nextBackOff()).isEqualTo(2000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(4000L);\n\t\t// max reached\n\t\tassertThat(execution.nextBackOff()).isEqualTo(4000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(4000L);\n\t}\n\n\t@Test\n\tvoid maxAttemptsReached() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff(2000L, 2.0);\n\t\tbackOff.setMaxElapsedTime(4000L);\n\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.nextBackOff()).isEqualTo(2000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(4000L);\n\t\t// > 4 sec wait in total\n\t\tassertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\n\t}\n\n\t@Test\n\tvoid startReturnDifferentInstances() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff();\n\t\tbackOff.setInitialInterval(2000L);\n\t\tbackOff.setMultiplier(2.0);\n\t\tbackOff.setMaxElapsedTime(4000L);\n\n\t\tBackOffExecution execution = backOff.start();\n\t\tBackOffExecution execution2 = backOff.start();\n\n\t\tassertThat(execution.nextBackOff()).isEqualTo(2000L);\n\t\tassertThat(execution2.nextBackOff()).isEqualTo(2000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(4000L);\n\t\tassertThat(execution2.nextBackOff()).isEqualTo(4000L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(BackOffExecution.STOP);\n\t\tassertThat(execution2.nextBackOff()).isEqualTo(BackOffExecution.STOP);\n\t}\n\n\t@Test\n\tvoid invalidInterval() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff();\n\t\tassertThatIllegalArgumentException().isThrownBy(() ->\n\t\t\t\tbackOff.setMultiplier(0.9));\n\t}\n\n\t@Test\n\tvoid maxIntervalReachedImmediately() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff(1000L, 2.0);\n\t\tbackOff.setMaxInterval(50L);\n\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.nextBackOff()).isEqualTo(50L);\n\t\tassertThat(execution.nextBackOff()).isEqualTo(50L);\n\t}\n\n\t@Test\n\tvoid executionToStringContent() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff(2000L, 2.0);\n\t\tBackOffExecution execution = backOff.start();\n\t\tassertThat(execution.toString()).isEqualTo(\"ExponentialBackOffExecution{currentInterval=n/a, multiplier=2.0, attempts=0}\");\n\t\texecution.nextBackOff();\n\t\tassertThat(execution.toString()).isEqualTo(\"ExponentialBackOffExecution{currentInterval=2000ms, multiplier=2.0, attempts=1}\");\n\t\texecution.nextBackOff();\n\t\tassertThat(execution.toString()).isEqualTo(\"ExponentialBackOffExecution{currentInterval=4000ms, multiplier=2.0, attempts=2}\");\n\t}\n\n\t@Test\n\tvoid maxAttempts() {\n\t\tExponentialBackOff backOff = new ExponentialBackOff();\n\t\tbackOff.setInitialInterval(1000L);\n\t\tbackOff.setMultiplier(2.0);\n\t\tbackOff.setMaxInterval(10000L);\n\t\tbackOff.setMaxAttempts(6);\n\t\tList<Long> delays = new ArrayList<>();\n\t\tBackOffExecution execution = backOff.start();\n\t\tIntStream.range(0, 7).forEach(i -> delays.add(execution.nextBackOff()));\n\t\tassertThat(delays).containsExactly(1000L, 2000L, 4000L, 8000L, 10000L, 10000L, BackOffExecution.STOP);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#defaultInstance()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid defaultInstance() {\r\n    ExponentialBackOff backOff = new ExponentialBackOff();\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.nextBackOff()).isEqualTo(2000L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(3000L);\r\n    assertThat(execution.nextBackOff()).isEqualTo(4500L);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ExponentialBackOffTests#defaultInstance()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#defaultInstance()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

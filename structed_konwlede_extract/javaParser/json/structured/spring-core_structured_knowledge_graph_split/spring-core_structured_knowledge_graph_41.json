@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.generate.AccessControl#getVisibility()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the lowest {@link Visibility} of this instance.\r\n * @return the visibility\r\n */\r\npublic Visibility getVisibility() {\r\n    return this.visibility;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#getVisibility()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#isPublic()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return whether the member or type signature backed by ths instance is\r\n * accessible from any package.\r\n * @return {@code true} if it is public\r\n */\r\npublic boolean isPublic() {\r\n    return this.visibility == Visibility.PUBLIC;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#isPublic()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#isAccessibleFrom(ClassName)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Specify whether the member or type signature backed by this instance is\r\n * accessible from the specified {@link ClassName}.\r\n * @param type the type to check\r\n * @return {@code true} if it is accessible\r\n */\r\npublic boolean isAccessibleFrom(ClassName type) {\r\n    if (this.visibility == Visibility.PRIVATE) {\r\n        return false;\r\n    }\r\n    if (this.visibility == Visibility.PUBLIC) {\r\n        return true;\r\n    }\r\n    return this.target.getPackageName().equals(type.packageName());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#isAccessibleFrom(ClassName)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.task.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.task.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.task.support;\n\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\nimport org.mockito.InOrder;\n\nimport org.springframework.core.task.TaskDecorator;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;\nimport static org.mockito.ArgumentMatchers.any;\nimport static org.mockito.BDDMockito.given;\nimport static org.mockito.Mockito.inOrder;\nimport static org.mockito.Mockito.mock;\nimport static org.mockito.Mockito.verify;\n\n/**\n * Tests for {@link CompositeTaskDecorator}.\n *\n * @author Tadaya Tsuyukubo\n * @author Stephane Nicoll\n */\nclass CompositeTaskDecoratorTests {\n\n\t@Test\n\tvoid createWithNullCollection() {\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> new CompositeTaskDecorator(null))\n\t\t\t\t.withMessage(\"TaskDecorators must not be null\");\n\t}\n\n\t@Test\n\tvoid decorateWithNullRunnable() {\n\t\tCompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of());\n\t\tassertThatIllegalArgumentException().isThrownBy(() -> taskDecorator.decorate(null))\n\t\t\t\t.withMessage(\"Runnable must not be null\");\n\t}\n\n\t@Test\n\tvoid decorate() {\n\t\tTaskDecorator first = mockNoOpTaskDecorator();\n\t\tTaskDecorator second = mockNoOpTaskDecorator();\n\t\tTaskDecorator third = mockNoOpTaskDecorator();\n\t\tCompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of(first, second, third));\n\t\tRunnable runnable = mock();\n\t\ttaskDecorator.decorate(runnable);\n\t\tInOrder ordered = inOrder(first, second, third);\n\t\tordered.verify(first).decorate(runnable);\n\t\tordered.verify(second).decorate(runnable);\n\t\tordered.verify(third).decorate(runnable);\n\t}\n\n\t@Test\n\tvoid decorateReusesResultOfPreviousRun() {\n\t\tRunnable original = mock();\n\t\tRunnable firstDecorated = mock();\n\t\tTaskDecorator first = mock();\n\t\tgiven(first.decorate(original)).willReturn(firstDecorated);\n\t\tRunnable secondDecorated = mock();\n\t\tTaskDecorator second = mock();\n\t\tgiven(second.decorate(firstDecorated)).willReturn(secondDecorated);\n\t\tRunnable result = new CompositeTaskDecorator(List.of(first, second)).decorate(original);\n\t\tassertThat(result).isSameAs(secondDecorated);\n\t\tverify(first).decorate(original);\n\t\tverify(second).decorate(firstDecorated);\n\t}\n\n\tprivate TaskDecorator mockNoOpTaskDecorator() {\n\t\tTaskDecorator mock = mock();\n\t\tgiven(mock.decorate(any())).willAnswer(invocation -> invocation.getArguments()[0]);\n\t\treturn mock;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#createWithNullCollection()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid createWithNullCollection() {\r\n    assertThatIllegalArgumentException().isThrownBy(() -> new CompositeTaskDecorator(null)).withMessage(\"TaskDecorators must not be null\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecoratorTests#createWithNullCollection()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#createWithNullCollection()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateWithNullRunnable()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid decorateWithNullRunnable() {\r\n    CompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of());\r\n    assertThatIllegalArgumentException().isThrownBy(() -> taskDecorator.decorate(null)).withMessage(\"Runnable must not be null\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateWithNullRunnable()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateWithNullRunnable()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorate()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid decorate() {\r\n    TaskDecorator first = mockNoOpTaskDecorator();\r\n    TaskDecorator second = mockNoOpTaskDecorator();\r\n    TaskDecorator third = mockNoOpTaskDecorator();\r\n    CompositeTaskDecorator taskDecorator = new CompositeTaskDecorator(List.of(first, second, third));\r\n    Runnable runnable = mock();\r\n    taskDecorator.decorate(runnable);\r\n    InOrder ordered = inOrder(first, second, third);\r\n    ordered.verify(first).decorate(runnable);\r\n    ordered.verify(second).decorate(runnable);\r\n    ordered.verify(third).decorate(runnable);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorate()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorate()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateReusesResultOfPreviousRun()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid decorateReusesResultOfPreviousRun() {\r\n    Runnable original = mock();\r\n    Runnable firstDecorated = mock();\r\n    TaskDecorator first = mock();\r\n    given(first.decorate(original)).willReturn(firstDecorated);\r\n    Runnable secondDecorated = mock();\r\n    TaskDecorator second = mock();\r\n    given(second.decorate(firstDecorated)).willReturn(secondDecorated);\r\n    Runnable result = new CompositeTaskDecorator(List.of(first, second)).decorate(original);\r\n    assertThat(result).isSameAs(secondDecorated);\r\n    verify(first).decorate(original);\r\n    verify(second).decorate(firstDecorated);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.CompositeTaskDecoratorTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.CompositeTaskDecoratorTests#decorateReusesResultOfPreviousRun()",
+    "tailType": "method"
+  }
+]

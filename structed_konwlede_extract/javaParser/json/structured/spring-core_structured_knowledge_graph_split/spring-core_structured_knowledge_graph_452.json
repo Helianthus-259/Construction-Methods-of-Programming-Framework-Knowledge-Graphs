@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitInvokeDynamicInsn(String,String,Handle,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitInvokeDynamicInsn(String,String,Handle,Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitJumpInsn(int,Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitJumpInsn(final int opcode, final Label label) {\r\n    lastBytecodeOffset = code.length;\r\n    // Add the instruction to the bytecode of the method.\r\n    // Compute the 'base' opcode, i.e. GOTO or JSR if opcode is GOTO_W or JSR_W, otherwise opcode.\r\n    int baseOpcode = opcode >= Constants.GOTO_W ? opcode - Constants.WIDE_JUMP_OPCODE_DELTA : opcode;\r\n    boolean nextInsnIsJumpTarget = false;\r\n    if ((label.flags & Label.FLAG_RESOLVED) != 0 && label.bytecodeOffset - code.length < Short.MIN_VALUE) {\r\n        // Case of a backward jump with an offset < -32768. In this case we automatically replace GOTO\r\n        // with GOTO_W, JSR with JSR_W and IFxxx <l> with IFNOTxxx <L> GOTO_W <l> L:..., where\r\n        // IFNOTxxx is the \"opposite\" opcode of IFxxx (for example, IFNE for IFEQ) and where <L> designates\r\n        // the instruction just after the GOTO_W.\r\n        if (baseOpcode == Opcodes.GOTO) {\r\n            code.putByte(Constants.GOTO_W);\r\n        } else if (baseOpcode == Opcodes.JSR) {\r\n            code.putByte(Constants.JSR_W);\r\n        } else {\r\n            // Put the \"opposite\" opcode of baseOpcode. This can be done by flipping the least\r\n            // significant bit for IFNULL and IFNONNULL, and similarly for IFEQ ... IF_ACMPEQ (with a\r\n            // pre and post offset by 1). The jump offset is 8 bytes (3 for IFNOTxxx, 5 for GOTO_W).\r\n            code.putByte(baseOpcode >= Opcodes.IFNULL ? baseOpcode ^ 1 : ((baseOpcode + 1) ^ 1) - 1);\r\n            code.putShort(8);\r\n            // Here we could put a GOTO_W in theory, but if ASM specific instructions are used in this\r\n            // method or another one, and if the class has frames, we will need to insert a frame after\r\n            // this GOTO_W during the additional ClassReader -> ClassWriter round trip to remove the ASM\r\n            // specific instructions. To not miss this additional frame, we need to use an ASM_GOTO_W\r\n            // here, which has the unfortunate effect of forcing this additional round trip (which in\r\n            // some case would not have been really necessary, but we can't know this at this point).\r\n            code.putByte(Constants.ASM_GOTO_W);\r\n            hasAsmInstructions = true;\r\n            // The instruction after the GOTO_W becomes the target of the IFNOT instruction.\r\n            nextInsnIsJumpTarget = true;\r\n        }\r\n        label.put(code, code.length - 1, true);\r\n    } else if (baseOpcode != opcode) {\r\n        // Case of a GOTO_W or JSR_W specified by the user (normally ClassReader when used to remove\r\n        // ASM specific instructions). In this case we keep the original instruction.\r\n        code.putByte(opcode);\r\n        label.put(code, code.length - 1, true);\r\n    } else {\r\n        // Case of a jump with an offset >= -32768, or of a jump with an unknown offset. In these\r\n        // cases we store the offset in 2 bytes (which will be increased via a ClassReader ->\r\n        // ClassWriter round trip if it turns out that 2 bytes are not sufficient).\r\n        code.putByte(baseOpcode);\r\n        label.put(code, code.length - 1, false);\r\n    }\r\n    // If needed, update the maximum stack size and number of locals, and stack map frames.\r\n    if (currentBasicBlock != null) {\r\n        Label nextBasicBlock = null;\r\n        if (compute == COMPUTE_ALL_FRAMES) {\r\n            currentBasicBlock.frame.execute(baseOpcode, 0, null, null);\r\n            // Record the fact that 'label' is the target of a jump instruction.\r\n            label.getCanonicalInstance().flags |= Label.FLAG_JUMP_TARGET;\r\n            // Add 'label' as a successor of the current basic block.\r\n            addSuccessorToCurrentBasicBlock(Edge.JUMP, label);\r\n            if (baseOpcode != Opcodes.GOTO) {\r\n                // The next instruction starts a new basic block (except for GOTO: by default the code\r\n                // following a goto is unreachable - unless there is an explicit label for it - and we\r\n                // should not compute stack frame types for its instructions).\r\n                nextBasicBlock = new Label();\r\n            }\r\n        } else if (compute == COMPUTE_INSERTED_FRAMES) {\r\n            currentBasicBlock.frame.execute(baseOpcode, 0, null, null);\r\n        } else if (compute == COMPUTE_MAX_STACK_AND_LOCAL_FROM_FRAMES) {\r\n            // No need to update maxRelativeStackSize (the stack size delta is always negative).\r\n            relativeStackSize += STACK_SIZE_DELTA[baseOpcode];\r\n        } else {\r\n            if (baseOpcode == Opcodes.JSR) {\r\n                // Record the fact that 'label' designates a subroutine, if not already done.\r\n                if ((label.flags & Label.FLAG_SUBROUTINE_START) == 0) {\r\n                    label.flags |= Label.FLAG_SUBROUTINE_START;\r\n                    hasSubroutines = true;\r\n                }\r\n                currentBasicBlock.flags |= Label.FLAG_SUBROUTINE_CALLER;\r\n                // Note that, by construction in this method, a block which calls a subroutine has at\r\n                // least two successors in the control flow graph: the first one (added below) leads to\r\n                // the instruction after the JSR, while the second one (added here) leads to the JSR\r\n                // target. Note that the first successor is virtual (it does not correspond to a possible\r\n                // execution path): it is only used to compute the successors of the basic blocks ending\r\n                // with a ret, in {@link Label#addSubroutineRetSuccessors}.\r\n                addSuccessorToCurrentBasicBlock(relativeStackSize + 1, label);\r\n                // The instruction after the JSR starts a new basic block.\r\n                nextBasicBlock = new Label();\r\n            } else {\r\n                // No need to update maxRelativeStackSize (the stack size delta is always negative).\r\n                relativeStackSize += STACK_SIZE_DELTA[baseOpcode];\r\n                addSuccessorToCurrentBasicBlock(relativeStackSize, label);\r\n            }\r\n        }\r\n        // If the next instruction starts a new basic block, call visitLabel to add the label of this\r\n        // instruction as a successor of the current block, and to start a new basic block.\r\n        if (nextBasicBlock != null) {\r\n            if (nextInsnIsJumpTarget) {\r\n                nextBasicBlock.flags |= Label.FLAG_JUMP_TARGET;\r\n            }\r\n            visitLabel(nextBasicBlock);\r\n        }\r\n        if (baseOpcode == Opcodes.GOTO) {\r\n            endCurrentBasicBlockWithNoSuccessor();\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitJumpInsn(int,Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitJumpInsn(int,Label)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLabel(Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitLabel(final Label label) {\r\n    // Resolve the forward references to this label, if any.\r\n    hasAsmInstructions |= label.resolve(code.data, stackMapTableEntries, code.length);\r\n    // visitLabel starts a new basic block (except for debug only labels), so we need to update the\r\n    // previous and current block references and list of successors.\r\n    if ((label.flags & Label.FLAG_DEBUG_ONLY) != 0) {\r\n        return;\r\n    }\r\n    if (compute == COMPUTE_ALL_FRAMES) {\r\n        if (currentBasicBlock != null) {\r\n            if (label.bytecodeOffset == currentBasicBlock.bytecodeOffset) {\r\n                // We use {@link Label#getCanonicalInstance} to store the state of a basic block in only\r\n                // one place, but this does not work for labels which have not been visited yet.\r\n                // Therefore, when we detect here two labels having the same bytecode offset, we need to\r\n                // - consolidate the state scattered in these two instances into the canonical instance:\r\n                currentBasicBlock.flags |= (label.flags & Label.FLAG_JUMP_TARGET);\r\n                // - make sure the two instances share the same Frame instance (the implementation of\r\n                // {@link Label#getCanonicalInstance} relies on this property; here label.frame should be\r\n                // null):\r\n                label.frame = currentBasicBlock.frame;\r\n                // - and make sure to NOT assign 'label' into 'currentBasicBlock' or 'lastBasicBlock', so\r\n                // that they still refer to the canonical instance for this bytecode offset.\r\n                return;\r\n            }\r\n            // End the current basic block (with one new successor).\r\n            addSuccessorToCurrentBasicBlock(Edge.JUMP, label);\r\n        }\r\n        // Append 'label' at the end of the basic block list.\r\n        if (lastBasicBlock != null) {\r\n            if (label.bytecodeOffset == lastBasicBlock.bytecodeOffset) {\r\n                // Same comment as above.\r\n                lastBasicBlock.flags |= (label.flags & Label.FLAG_JUMP_TARGET);\r\n                // Here label.frame should be null.\r\n                label.frame = lastBasicBlock.frame;\r\n                currentBasicBlock = lastBasicBlock;\r\n                return;\r\n            }\r\n            lastBasicBlock.nextBasicBlock = label;\r\n        }\r\n        lastBasicBlock = label;\r\n        // Make it the new current basic block.\r\n        currentBasicBlock = label;\r\n        // Here label.frame should be null.\r\n        label.frame = new Frame(label);\r\n    } else if (compute == COMPUTE_INSERTED_FRAMES) {\r\n        if (currentBasicBlock == null) {\r\n            // This case should happen only once, for the visitLabel call in the constructor. Indeed, if\r\n            // compute is equal to COMPUTE_INSERTED_FRAMES, currentBasicBlock stays unchanged.\r\n            currentBasicBlock = label;\r\n        } else {\r\n            // Update the frame owner so that a correct frame offset is computed in Frame.accept().\r\n            currentBasicBlock.frame.owner = label;\r\n        }\r\n    } else if (compute == COMPUTE_MAX_STACK_AND_LOCAL) {\r\n        if (currentBasicBlock != null) {\r\n            // End the current basic block (with one new successor).\r\n            currentBasicBlock.outputStackMax = (short) maxRelativeStackSize;\r\n            addSuccessorToCurrentBasicBlock(relativeStackSize, label);\r\n        }\r\n        // Start a new current basic block, and reset the current and maximum relative stack sizes.\r\n        currentBasicBlock = label;\r\n        relativeStackSize = 0;\r\n        maxRelativeStackSize = 0;\r\n        // Append the new basic block at the end of the basic block list.\r\n        if (lastBasicBlock != null) {\r\n            lastBasicBlock.nextBasicBlock = label;\r\n        }\r\n        lastBasicBlock = label;\r\n    } else if (compute == COMPUTE_MAX_STACK_AND_LOCAL_FROM_FRAMES && currentBasicBlock == null) {\r\n        // This case should happen only once, for the visitLabel call in the constructor. Indeed, if\r\n        // compute is equal to COMPUTE_MAX_STACK_AND_LOCAL_FROM_FRAMES, currentBasicBlock stays\r\n        // unchanged.\r\n        currentBasicBlock = label;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitLabel(Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLabel(Label)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLdcInsn(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitLdcInsn(final Object value) {\r\n    lastBytecodeOffset = code.length;\r\n    // Add the instruction to the bytecode of the method.\r\n    Symbol constantSymbol = symbolTable.addConstant(value);\r\n    int constantIndex = constantSymbol.index;\r\n    char firstDescriptorChar;\r\n    boolean isLongOrDouble = constantSymbol.tag == Symbol.CONSTANT_LONG_TAG || constantSymbol.tag == Symbol.CONSTANT_DOUBLE_TAG || (constantSymbol.tag == Symbol.CONSTANT_DYNAMIC_TAG && ((firstDescriptorChar = constantSymbol.value.charAt(0)) == 'J' || firstDescriptorChar == 'D'));\r\n    if (isLongOrDouble) {\r\n        code.put12(Constants.LDC2_W, constantIndex);\r\n    } else if (constantIndex >= 256) {\r\n        code.put12(Constants.LDC_W, constantIndex);\r\n    } else {\r\n        code.put11(Opcodes.LDC, constantIndex);\r\n    }\r\n    // If needed, update the maximum stack size and number of locals, and stack map frames.\r\n    if (currentBasicBlock != null) {\r\n        if (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES) {\r\n            currentBasicBlock.frame.execute(Opcodes.LDC, 0, constantSymbol, symbolTable);\r\n        } else {\r\n            int size = relativeStackSize + (isLongOrDouble ? 2 : 1);\r\n            if (size > maxRelativeStackSize) {\r\n                maxRelativeStackSize = size;\r\n            }\r\n            relativeStackSize = size;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitLdcInsn(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLdcInsn(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitIincInsn(int,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitIincInsn(final int varIndex, final int increment) {\r\n    lastBytecodeOffset = code.length;\r\n    // Add the instruction to the bytecode of the method.\r\n    if ((varIndex > 255) || (increment > 127) || (increment < -128)) {\r\n        code.putByte(Constants.WIDE).put12(Opcodes.IINC, varIndex).putShort(increment);\r\n    } else {\r\n        code.putByte(Opcodes.IINC).put11(varIndex, increment);\r\n    }\r\n    // If needed, update the maximum stack size and number of locals, and stack map frames.\r\n    if (currentBasicBlock != null && (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES)) {\r\n        currentBasicBlock.frame.execute(Opcodes.IINC, varIndex, null, null);\r\n    }\r\n    if (compute != COMPUTE_NOTHING) {\r\n        int currentMaxLocals = varIndex + 1;\r\n        if (currentMaxLocals > maxLocals) {\r\n            maxLocals = currentMaxLocals;\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitIincInsn(int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitIincInsn(int,int)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitTableSwitchInsn(int,int,Label,Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitTableSwitchInsn(final int min, final int max, final Label dflt, final Label... labels) {\r\n    lastBytecodeOffset = code.length;\r\n    // Add the instruction to the bytecode of the method.\r\n    code.putByte(Opcodes.TABLESWITCH).putByteArray(null, 0, (4 - code.length % 4) % 4);\r\n    dflt.put(code, lastBytecodeOffset, true);\r\n    code.putInt(min).putInt(max);\r\n    for (Label label : labels) {\r\n        label.put(code, lastBytecodeOffset, true);\r\n    }\r\n    // If needed, update the maximum stack size and number of locals, and stack map frames.\r\n    visitSwitchInsn(dflt, labels);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitTableSwitchInsn(int,int,Label,Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitTableSwitchInsn(int,int,Label,Label)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLookupSwitchInsn(Label,int[],Label[])",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] labels) {\r\n    lastBytecodeOffset = code.length;\r\n    // Add the instruction to the bytecode of the method.\r\n    code.putByte(Opcodes.LOOKUPSWITCH).putByteArray(null, 0, (4 - code.length % 4) % 4);\r\n    dflt.put(code, lastBytecodeOffset, true);\r\n    code.putInt(labels.length);\r\n    for (int i = 0; i < labels.length; ++i) {\r\n        code.putInt(keys[i]);\r\n        labels[i].put(code, lastBytecodeOffset, true);\r\n    }\r\n    // If needed, update the maximum stack size and number of locals, and stack map frames.\r\n    visitSwitchInsn(dflt, labels);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.MethodWriter#visitLookupSwitchInsn(Label,int[],Label[])",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.MethodWriter#visitLookupSwitchInsn(Label,int[],Label[])",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

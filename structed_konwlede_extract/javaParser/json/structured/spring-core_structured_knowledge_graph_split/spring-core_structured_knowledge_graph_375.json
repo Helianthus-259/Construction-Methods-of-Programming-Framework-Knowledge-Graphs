@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.ClassWriter#visitEnd()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic final void visitEnd() {\r\n    // Nothing to do.\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#visitEnd()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#visitEnd()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#toByteArray()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Other public methods\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Returns the content of the class file that was built by this ClassWriter.\r\n *\r\n * @return the binary content of the JVMS ClassFile structure that was built by this ClassWriter.\r\n * @throws ClassTooLargeException if the constant pool of the class is too large.\r\n * @throws MethodTooLargeException if the Code attribute of a method is too large.\r\n */\r\npublic byte[] toByteArray() {\r\n    // First step: compute the size in bytes of the ClassFile structure.\r\n    // The magic field uses 4 bytes, 10 mandatory fields (minor_version, major_version,\r\n    // constant_pool_count, access_flags, this_class, super_class, interfaces_count, fields_count,\r\n    // methods_count and attributes_count) use 2 bytes each, and each interface uses 2 bytes too.\r\n    int size = 24 + 2 * interfaceCount;\r\n    int fieldsCount = 0;\r\n    FieldWriter fieldWriter = firstField;\r\n    while (fieldWriter != null) {\r\n        ++fieldsCount;\r\n        size += fieldWriter.computeFieldInfoSize();\r\n        fieldWriter = (FieldWriter) fieldWriter.fv;\r\n    }\r\n    int methodsCount = 0;\r\n    MethodWriter methodWriter = firstMethod;\r\n    while (methodWriter != null) {\r\n        ++methodsCount;\r\n        size += methodWriter.computeMethodInfoSize();\r\n        methodWriter = (MethodWriter) methodWriter.mv;\r\n    }\r\n    // For ease of reference, we use here the same attribute order as in Section 4.7 of the JVMS.\r\n    int attributesCount = 0;\r\n    if (innerClasses != null) {\r\n        ++attributesCount;\r\n        size += 8 + innerClasses.length;\r\n        symbolTable.addConstantUtf8(Constants.INNER_CLASSES);\r\n    }\r\n    if (enclosingClassIndex != 0) {\r\n        ++attributesCount;\r\n        size += 10;\r\n        symbolTable.addConstantUtf8(Constants.ENCLOSING_METHOD);\r\n    }\r\n    if ((accessFlags & Opcodes.ACC_SYNTHETIC) != 0 && (version & 0xFFFF) < Opcodes.V1_5) {\r\n        ++attributesCount;\r\n        size += 6;\r\n        symbolTable.addConstantUtf8(Constants.SYNTHETIC);\r\n    }\r\n    if (signatureIndex != 0) {\r\n        ++attributesCount;\r\n        size += 8;\r\n        symbolTable.addConstantUtf8(Constants.SIGNATURE);\r\n    }\r\n    if (sourceFileIndex != 0) {\r\n        ++attributesCount;\r\n        size += 8;\r\n        symbolTable.addConstantUtf8(Constants.SOURCE_FILE);\r\n    }\r\n    if (debugExtension != null) {\r\n        ++attributesCount;\r\n        size += 6 + debugExtension.length;\r\n        symbolTable.addConstantUtf8(Constants.SOURCE_DEBUG_EXTENSION);\r\n    }\r\n    if ((accessFlags & Opcodes.ACC_DEPRECATED) != 0) {\r\n        ++attributesCount;\r\n        size += 6;\r\n        symbolTable.addConstantUtf8(Constants.DEPRECATED);\r\n    }\r\n    if (lastRuntimeVisibleAnnotation != null) {\r\n        ++attributesCount;\r\n        size += lastRuntimeVisibleAnnotation.computeAnnotationsSize(Constants.RUNTIME_VISIBLE_ANNOTATIONS);\r\n    }\r\n    if (lastRuntimeInvisibleAnnotation != null) {\r\n        ++attributesCount;\r\n        size += lastRuntimeInvisibleAnnotation.computeAnnotationsSize(Constants.RUNTIME_INVISIBLE_ANNOTATIONS);\r\n    }\r\n    if (lastRuntimeVisibleTypeAnnotation != null) {\r\n        ++attributesCount;\r\n        size += lastRuntimeVisibleTypeAnnotation.computeAnnotationsSize(Constants.RUNTIME_VISIBLE_TYPE_ANNOTATIONS);\r\n    }\r\n    if (lastRuntimeInvisibleTypeAnnotation != null) {\r\n        ++attributesCount;\r\n        size += lastRuntimeInvisibleTypeAnnotation.computeAnnotationsSize(Constants.RUNTIME_INVISIBLE_TYPE_ANNOTATIONS);\r\n    }\r\n    if (symbolTable.computeBootstrapMethodsSize() > 0) {\r\n        ++attributesCount;\r\n        size += symbolTable.computeBootstrapMethodsSize();\r\n    }\r\n    if (moduleWriter != null) {\r\n        attributesCount += moduleWriter.getAttributeCount();\r\n        size += moduleWriter.computeAttributesSize();\r\n    }\r\n    if (nestHostClassIndex != 0) {\r\n        ++attributesCount;\r\n        size += 8;\r\n        symbolTable.addConstantUtf8(Constants.NEST_HOST);\r\n    }\r\n    if (nestMemberClasses != null) {\r\n        ++attributesCount;\r\n        size += 8 + nestMemberClasses.length;\r\n        symbolTable.addConstantUtf8(Constants.NEST_MEMBERS);\r\n    }\r\n    if (permittedSubclasses != null) {\r\n        ++attributesCount;\r\n        size += 8 + permittedSubclasses.length;\r\n        symbolTable.addConstantUtf8(Constants.PERMITTED_SUBCLASSES);\r\n    }\r\n    int recordComponentCount = 0;\r\n    int recordSize = 0;\r\n    if ((accessFlags & Opcodes.ACC_RECORD) != 0 || firstRecordComponent != null) {\r\n        RecordComponentWriter recordComponentWriter = firstRecordComponent;\r\n        while (recordComponentWriter != null) {\r\n            ++recordComponentCount;\r\n            recordSize += recordComponentWriter.computeRecordComponentInfoSize();\r\n            recordComponentWriter = (RecordComponentWriter) recordComponentWriter.delegate;\r\n        }\r\n        ++attributesCount;\r\n        size += 8 + recordSize;\r\n        symbolTable.addConstantUtf8(Constants.RECORD);\r\n    }\r\n    if (firstAttribute != null) {\r\n        attributesCount += firstAttribute.getAttributeCount();\r\n        size += firstAttribute.computeAttributesSize(symbolTable);\r\n    }\r\n    // IMPORTANT: this must be the last part of the ClassFile size computation, because the previous\r\n    // statements can add attribute names to the constant pool, thereby changing its size!\r\n    size += symbolTable.getConstantPoolLength();\r\n    int constantPoolCount = symbolTable.getConstantPoolCount();\r\n    if (constantPoolCount > 0xFFFF) {\r\n        throw new ClassTooLargeException(symbolTable.getClassName(), constantPoolCount);\r\n    }\r\n    // Second step: allocate a ByteVector of the correct size (in order to avoid any array copy in\r\n    // dynamic resizes) and fill it with the ClassFile content.\r\n    ByteVector result = new ByteVector(size);\r\n    result.putInt(0xCAFEBABE).putInt(version);\r\n    symbolTable.putConstantPool(result);\r\n    int mask = (version & 0xFFFF) < Opcodes.V1_5 ? Opcodes.ACC_SYNTHETIC : 0;\r\n    result.putShort(accessFlags & ~mask).putShort(thisClass).putShort(superClass);\r\n    result.putShort(interfaceCount);\r\n    for (int i = 0; i < interfaceCount; ++i) {\r\n        result.putShort(interfaces[i]);\r\n    }\r\n    result.putShort(fieldsCount);\r\n    fieldWriter = firstField;\r\n    while (fieldWriter != null) {\r\n        fieldWriter.putFieldInfo(result);\r\n        fieldWriter = (FieldWriter) fieldWriter.fv;\r\n    }\r\n    result.putShort(methodsCount);\r\n    boolean hasFrames = false;\r\n    boolean hasAsmInstructions = false;\r\n    methodWriter = firstMethod;\r\n    while (methodWriter != null) {\r\n        hasFrames |= methodWriter.hasFrames();\r\n        hasAsmInstructions |= methodWriter.hasAsmInstructions();\r\n        methodWriter.putMethodInfo(result);\r\n        methodWriter = (MethodWriter) methodWriter.mv;\r\n    }\r\n    // For ease of reference, we use here the same attribute order as in Section 4.7 of the JVMS.\r\n    result.putShort(attributesCount);\r\n    if (innerClasses != null) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.INNER_CLASSES)).putInt(innerClasses.length + 2).putShort(numberOfInnerClasses).putByteArray(innerClasses.data, 0, innerClasses.length);\r\n    }\r\n    if (enclosingClassIndex != 0) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.ENCLOSING_METHOD)).putInt(4).putShort(enclosingClassIndex).putShort(enclosingMethodIndex);\r\n    }\r\n    if ((accessFlags & Opcodes.ACC_SYNTHETIC) != 0 && (version & 0xFFFF) < Opcodes.V1_5) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.SYNTHETIC)).putInt(0);\r\n    }\r\n    if (signatureIndex != 0) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.SIGNATURE)).putInt(2).putShort(signatureIndex);\r\n    }\r\n    if (sourceFileIndex != 0) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.SOURCE_FILE)).putInt(2).putShort(sourceFileIndex);\r\n    }\r\n    if (debugExtension != null) {\r\n        int length = debugExtension.length;\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.SOURCE_DEBUG_EXTENSION)).putInt(length).putByteArray(debugExtension.data, 0, length);\r\n    }\r\n    if ((accessFlags & Opcodes.ACC_DEPRECATED) != 0) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.DEPRECATED)).putInt(0);\r\n    }\r\n    AnnotationWriter.putAnnotations(symbolTable, lastRuntimeVisibleAnnotation, lastRuntimeInvisibleAnnotation, lastRuntimeVisibleTypeAnnotation, lastRuntimeInvisibleTypeAnnotation, result);\r\n    symbolTable.putBootstrapMethods(result);\r\n    if (moduleWriter != null) {\r\n        moduleWriter.putAttributes(result);\r\n    }\r\n    if (nestHostClassIndex != 0) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.NEST_HOST)).putInt(2).putShort(nestHostClassIndex);\r\n    }\r\n    if (nestMemberClasses != null) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.NEST_MEMBERS)).putInt(nestMemberClasses.length + 2).putShort(numberOfNestMemberClasses).putByteArray(nestMemberClasses.data, 0, nestMemberClasses.length);\r\n    }\r\n    if (permittedSubclasses != null) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.PERMITTED_SUBCLASSES)).putInt(permittedSubclasses.length + 2).putShort(numberOfPermittedSubclasses).putByteArray(permittedSubclasses.data, 0, permittedSubclasses.length);\r\n    }\r\n    if ((accessFlags & Opcodes.ACC_RECORD) != 0 || firstRecordComponent != null) {\r\n        result.putShort(symbolTable.addConstantUtf8(Constants.RECORD)).putInt(recordSize + 2).putShort(recordComponentCount);\r\n        RecordComponentWriter recordComponentWriter = firstRecordComponent;\r\n        while (recordComponentWriter != null) {\r\n            recordComponentWriter.putRecordComponentInfo(result);\r\n            recordComponentWriter = (RecordComponentWriter) recordComponentWriter.delegate;\r\n        }\r\n    }\r\n    if (firstAttribute != null) {\r\n        firstAttribute.putAttributes(symbolTable, result);\r\n    }\r\n    // Third step: replace the ASM specific instructions, if any.\r\n    if (hasAsmInstructions) {\r\n        return replaceAsmInstructions(result.data, hasFrames);\r\n    } else {\r\n        return result.data;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#toByteArray()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#replaceAsmInstructions(byte[],boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the equivalent of the given class file, with the ASM specific instructions replaced\r\n * with standard ones. This is done with a ClassReader -&gt; ClassWriter round trip.\r\n *\r\n * @param classFile a class file containing ASM specific instructions, generated by this\r\n *     ClassWriter.\r\n * @param hasFrames whether there is at least one stack map frames in 'classFile'.\r\n * @return an equivalent of 'classFile', with the ASM specific instructions replaced with standard\r\n *     ones.\r\n */\r\nprivate byte[] replaceAsmInstructions(final byte[] classFile, final boolean hasFrames) {\r\n    final Attribute[] attributes = getAttributePrototypes();\r\n    firstField = null;\r\n    lastField = null;\r\n    firstMethod = null;\r\n    lastMethod = null;\r\n    lastRuntimeVisibleAnnotation = null;\r\n    lastRuntimeInvisibleAnnotation = null;\r\n    lastRuntimeVisibleTypeAnnotation = null;\r\n    lastRuntimeInvisibleTypeAnnotation = null;\r\n    moduleWriter = null;\r\n    nestHostClassIndex = 0;\r\n    numberOfNestMemberClasses = 0;\r\n    nestMemberClasses = null;\r\n    numberOfPermittedSubclasses = 0;\r\n    permittedSubclasses = null;\r\n    firstRecordComponent = null;\r\n    lastRecordComponent = null;\r\n    firstAttribute = null;\r\n    compute = hasFrames ? MethodWriter.COMPUTE_INSERTED_FRAMES : MethodWriter.COMPUTE_NOTHING;\r\n    new ClassReader(classFile, 0, /* checkClassVersion= */\r\n    false).accept(this, attributes, (hasFrames ? ClassReader.EXPAND_FRAMES : 0) | ClassReader.EXPAND_ASM_INSNS);\r\n    return toByteArray();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#replaceAsmInstructions(byte[],boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#getAttributePrototypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the prototypes of the attributes used by this class, its fields and its methods.\r\n *\r\n * @return the prototypes of the attributes used by this class, its fields and its methods.\r\n */\r\nprivate Attribute[] getAttributePrototypes() {\r\n    Attribute.Set attributePrototypes = new Attribute.Set();\r\n    attributePrototypes.addAttributes(firstAttribute);\r\n    FieldWriter fieldWriter = firstField;\r\n    while (fieldWriter != null) {\r\n        fieldWriter.collectAttributePrototypes(attributePrototypes);\r\n        fieldWriter = (FieldWriter) fieldWriter.fv;\r\n    }\r\n    MethodWriter methodWriter = firstMethod;\r\n    while (methodWriter != null) {\r\n        methodWriter.collectAttributePrototypes(attributePrototypes);\r\n        methodWriter = (MethodWriter) methodWriter.mv;\r\n    }\r\n    RecordComponentWriter recordComponentWriter = firstRecordComponent;\r\n    while (recordComponentWriter != null) {\r\n        recordComponentWriter.collectAttributePrototypes(attributePrototypes);\r\n        recordComponentWriter = (RecordComponentWriter) recordComponentWriter.delegate;\r\n    }\r\n    return attributePrototypes.toArray();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#getAttributePrototypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#newConst(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Utility methods: constant pool management for Attribute sub classes\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Adds a number or string constant to the constant pool of the class being build. Does nothing if\r\n * the constant pool already contains a similar item. <i>This method is intended for {@link\r\n * Attribute} sub classes, and is normally not needed by class generators or adapters.</i>\r\n *\r\n * @param value the value of the constant to be added to the constant pool. This parameter must be\r\n *     an {@link Integer}, a {@link Float}, a {@link Long}, a {@link Double} or a {@link String}.\r\n * @return the index of a new or already existing constant item with the given value.\r\n */\r\npublic int newConst(final Object value) {\r\n    return symbolTable.addConstant(value).index;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#newConst(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#newUTF8(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Adds an UTF8 string to the constant pool of the class being build. Does nothing if the constant\r\n * pool already contains a similar item. <i>This method is intended for {@link Attribute} sub\r\n * classes, and is normally not needed by class generators or adapters.</i>\r\n *\r\n * @param value the String value.\r\n * @return the index of a new or already existing UTF8 item.\r\n */\r\n// DontCheck(AbbreviationAsWordInName): can't be renamed (for backward binary compatibility).\r\npublic int newUTF8(final String value) {\r\n    return symbolTable.addConstantUtf8(value);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#newUTF8(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#newClass(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Adds a class reference to the constant pool of the class being build. Does nothing if the\r\n * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}\r\n * sub classes, and is normally not needed by class generators or adapters.</i>\r\n *\r\n * @param value the internal name of the class (see {@link Type#getInternalName()}).\r\n * @return the index of a new or already existing class reference item.\r\n */\r\npublic int newClass(final String value) {\r\n    return symbolTable.addConstantClass(value).index;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#newClass(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#newMethodType(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Adds a method type reference to the constant pool of the class being build. Does nothing if the\r\n * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}\r\n * sub classes, and is normally not needed by class generators or adapters.</i>\r\n *\r\n * @param methodDescriptor method descriptor of the method type.\r\n * @return the index of a new or already existing method type reference item.\r\n */\r\npublic int newMethodType(final String methodDescriptor) {\r\n    return symbolTable.addConstantMethodType(methodDescriptor).index;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#newMethodType(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#newModule(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Adds a module reference to the constant pool of the class being build. Does nothing if the\r\n * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}\r\n * sub classes, and is normally not needed by class generators or adapters.</i>\r\n *\r\n * @param moduleName name of the module.\r\n * @return the index of a new or already existing module reference item.\r\n */\r\npublic int newModule(final String moduleName) {\r\n    return symbolTable.addConstantModule(moduleName).index;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#newModule(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter#newPackage(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Adds a package reference to the constant pool of the class being build. Does nothing if the\r\n * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}\r\n * sub classes, and is normally not needed by class generators or adapters.</i>\r\n *\r\n * @param packageName name of the package in its internal form.\r\n * @return the index of a new or already existing module reference item.\r\n */\r\npublic int newPackage(final String packageName) {\r\n    return symbolTable.addConstantPackage(packageName).index;\r\n}",
+    "tailType": "method_code"
+  }
+]

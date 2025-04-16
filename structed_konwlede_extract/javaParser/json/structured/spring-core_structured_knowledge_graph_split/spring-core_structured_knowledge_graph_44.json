@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void setValue(String value) {\r\n    TestThreadLocalHolder.setValue(value);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void setValue() {\r\n    TestThreadLocalHolder.reset();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor#setValue()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor#restore(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void restore(String previousValue) {\r\n    setValue(previousValue);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.support.TestThreadLocalAccessor#restore(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.support.TestThreadLocalAccessor#restore(String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.ClassNameGenerator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.util.Map;\nimport java.util.concurrent.ConcurrentHashMap;\nimport java.util.concurrent.atomic.AtomicInteger;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.javapoet.ClassName;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\nimport org.springframework.util.StringUtils;\n\n/**\n * Generate unique class names based on a target {@link ClassName} and a\n * feature name.\n *\n * <p>This class is stateful, so the same instance should be used for all name\n * generation.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n */\npublic final class ClassNameGenerator {\n\n\tprivate static final String SEPARATOR = \"__\";\n\n\tprivate static final String AOT_FEATURE = \"Aot\";\n\n\tprivate final ClassName defaultTarget;\n\n\tprivate final String featureNamePrefix;\n\n\tprivate final Map<String, AtomicInteger> sequenceGenerator;\n\n\n\t/**\n\t * Create a new instance using the specified {@code defaultTarget} and no\n\t * feature name prefix.\n\t * @param defaultTarget the default target class to use\n\t */\n\tpublic ClassNameGenerator(ClassName defaultTarget) {\n\t\tthis(defaultTarget, \"\");\n\t}\n\n\t/**\n\t * Create a new instance using the specified {@code defaultTarget} and\n\t * feature name prefix.\n\t * @param defaultTarget the default target class to use\n\t * @param featureNamePrefix the prefix to use to qualify feature names\n\t */\n\tpublic ClassNameGenerator(ClassName defaultTarget, String featureNamePrefix) {\n\t\tthis(defaultTarget, featureNamePrefix, new ConcurrentHashMap<>());\n\t}\n\n\tprivate ClassNameGenerator(ClassName defaultTarget, String featureNamePrefix,\n\t\t\tMap<String, AtomicInteger> sequenceGenerator) {\n\t\tAssert.notNull(defaultTarget, \"'defaultTarget' must not be null\");\n\t\tthis.defaultTarget = defaultTarget;\n\t\tthis.featureNamePrefix = (!StringUtils.hasText(featureNamePrefix) ? \"\" : featureNamePrefix);\n\t\tthis.sequenceGenerator = sequenceGenerator;\n\t}\n\n\tString getFeatureNamePrefix() {\n\t\treturn this.featureNamePrefix;\n\t}\n\n\t/**\n\t * Generate a unique {@link ClassName} based on the specified\n\t * {@code featureName} and {@code target}. If the {@code target} is\n\t * {@code null}, the configured main target of this instance is used.\n\t * <p>The class name is a suffixed version of the target. For instance, a\n\t * {@code com.example.Demo} target with an {@code Initializer} feature name\n\t * leads to a {@code com.example.Demo__Initializer} generated class name.\n\t * The feature name is qualified by the configured feature name prefix,\n\t * if any.\n\t * <p>Generated class names are unique. If such a feature was already\n\t * requested for this target, a counter is used to ensure uniqueness.\n\t * @param featureName the name of the feature that the generated class\n\t * supports\n\t * @param target the class the newly generated class relates to, or\n\t * {@code null} to use the main target\n\t * @return a unique generated class name\n\t */\n\tpublic ClassName generateClassName(String featureName, @Nullable ClassName target) {\n\t\treturn generateSequencedClassName(getRootName(featureName, target));\n\t}\n\n\tprivate String getRootName(String featureName, @Nullable ClassName target) {\n\t\tAssert.hasLength(featureName, \"'featureName' must not be empty\");\n\t\tfeatureName = clean(featureName);\n\t\tClassName targetToUse = (target != null ? target : this.defaultTarget);\n\t\tString featureNameToUse = this.featureNamePrefix + featureName;\n\t\treturn toName(targetToUse).replace(\"$\", \"_\") + SEPARATOR + StringUtils.capitalize(featureNameToUse);\n\t}\n\n\tprivate String clean(String name) {\n\t\tStringBuilder clean = new StringBuilder();\n\t\tboolean lastNotLetter = true;\n\t\tfor (char ch : name.toCharArray()) {\n\t\t\tif (!Character.isLetter(ch)) {\n\t\t\t\tlastNotLetter = true;\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tclean.append(lastNotLetter ? Character.toUpperCase(ch) : ch);\n\t\t\tlastNotLetter = false;\n\t\t}\n\t\treturn (!clean.isEmpty()) ? clean.toString() : AOT_FEATURE;\n\t}\n\n\tprivate ClassName generateSequencedClassName(String name) {\n\t\tint sequence = this.sequenceGenerator.computeIfAbsent(name, key ->\n\t\t\t\tnew AtomicInteger()).getAndIncrement();\n\t\tif (sequence > 0) {\n\t\t\tname = name + sequence;\n\t\t}\n\t\treturn ClassName.get(ClassUtils.getPackageName(name),\n\t\t\t\tClassUtils.getShortName(name));\n\t}\n\n\n\t/**\n\t * Create a new {@link ClassNameGenerator} instance for the specified\n\t * feature name prefix, keeping track of all the class names generated\n\t * by this instance.\n\t * @param featureNamePrefix the feature name prefix to use\n\t * @return a new instance for the specified feature name prefix\n\t */\n\tClassNameGenerator withFeatureNamePrefix(String featureNamePrefix) {\n\t\treturn new ClassNameGenerator(this.defaultTarget, featureNamePrefix,\n\t\t\t\tthis.sequenceGenerator);\n\t}\n\n\tprivate static String toName(ClassName className) {\n\t\treturn GeneratedTypeReference.of(className).getName();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ClassNameGenerator#SEPARATOR",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator#SEPARATOR",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ClassNameGenerator#AOT_FEATURE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator#AOT_FEATURE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ClassNameGenerator#defaultTarget",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator#defaultTarget",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ClassName",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ClassNameGenerator#featureNamePrefix",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ClassNameGenerator#featureNamePrefix",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  }
+]

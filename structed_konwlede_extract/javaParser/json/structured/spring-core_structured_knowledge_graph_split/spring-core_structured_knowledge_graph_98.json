@@ -1,0 +1,142 @@
+[
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleMethodMetadataTests#get(Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.type.classreading.SimpleMethodMetadataTests",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractMethodMetadataTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.javapoet.CodeBlock;\nimport org.springframework.util.Assert;\n\n/**\n * Code generator for a single value. Delegates code generation to a list of\n * configurable {@link Delegate} implementations.\n *\n * @author Stephane Nicoll\n * @since 6.1.2\n */\npublic final class ValueCodeGenerator {\n\n\tprivate static final ValueCodeGenerator INSTANCE =\n\t\t\tnew ValueCodeGenerator(ValueCodeGeneratorDelegates.INSTANCES, null);\n\n\tprivate static final CodeBlock NULL_VALUE_CODE_BLOCK = CodeBlock.of(\"null\");\n\n\n\tprivate final List<Delegate> delegates;\n\n\tprivate final @Nullable GeneratedMethods generatedMethods;\n\n\n\tprivate ValueCodeGenerator(List<Delegate> delegates, @Nullable GeneratedMethods generatedMethods) {\n\t\tthis.delegates = delegates;\n\t\tthis.generatedMethods = generatedMethods;\n\t}\n\n\n\t/**\n\t * Return an instance that provides support for {@linkplain\n\t * ValueCodeGeneratorDelegates#INSTANCES common value types}.\n\t * @return an instance with support for common value types\n\t */\n\tpublic static ValueCodeGenerator withDefaults() {\n\t\treturn INSTANCE;\n\t}\n\n\t/**\n\t * Create an instance with the specified {@link Delegate} implementations.\n\t * @param delegates the delegates to use\n\t * @return an instance with the specified delegates\n\t */\n\tpublic static ValueCodeGenerator with(Delegate... delegates) {\n\t\treturn with(Arrays.asList(delegates));\n\t}\n\n\t/**\n\t * Create an instance with the specified {@link Delegate} implementations.\n\t * @param delegates the delegates to use\n\t * @return an instance with the specified delegates\n\t */\n\tpublic static ValueCodeGenerator with(List<Delegate> delegates) {\n\t\tAssert.notEmpty(delegates, \"Delegates must not be empty\");\n\t\treturn new ValueCodeGenerator(new ArrayList<>(delegates), null);\n\t}\n\n\n\tpublic ValueCodeGenerator add(List<Delegate> additionalDelegates) {\n\t\tAssert.notEmpty(additionalDelegates, \"AdditionalDelegates must not be empty\");\n\t\tList<Delegate> allDelegates = new ArrayList<>(this.delegates);\n\t\tallDelegates.addAll(additionalDelegates);\n\t\treturn new ValueCodeGenerator(allDelegates, this.generatedMethods);\n\t}\n\n\t/**\n\t * Return a {@link ValueCodeGenerator} that is scoped for the specified\n\t * {@link GeneratedMethods}. This allows code generation to generate\n\t * additional methods if necessary, or perform some optimization in\n\t * case of visibility issues.\n\t * @param generatedMethods the generated methods to use\n\t * @return an instance scoped to the specified generated methods\n\t */\n\tpublic ValueCodeGenerator scoped(GeneratedMethods generatedMethods) {\n\t\treturn new ValueCodeGenerator(this.delegates, generatedMethods);\n\t}\n\n\t/**\n\t * Generate the code that represents the specified {@code value}.\n\t * @param value the value to generate\n\t * @return the code that represents the specified value\n\t */\n\tpublic CodeBlock generateCode(@Nullable Object value) {\n\t\tif (value == null) {\n\t\t\treturn NULL_VALUE_CODE_BLOCK;\n\t\t}\n\t\ttry {\n\t\t\tfor (Delegate delegate : this.delegates) {\n\t\t\t\tCodeBlock code = delegate.generateCode(this, value);\n\t\t\t\tif (code != null) {\n\t\t\t\t\treturn code;\n\t\t\t\t}\n\t\t\t}\n\t\t\tthrow new UnsupportedTypeValueCodeGenerationException(value);\n\t\t}\n\t\tcatch (Exception ex) {\n\t\t\tthrow new ValueCodeGenerationException(value, ex);\n\t\t}\n\t}\n\n\t/**\n\t * Return the {@link GeneratedMethods} that represents the scope\n\t * in which code generated by this instance will be added, or\n\t * {@code null} if no specific scope is set.\n\t * @return the generated methods to use for code generation\n\t */\n\tpublic @Nullable GeneratedMethods getGeneratedMethods() {\n\t\treturn this.generatedMethods;\n\t}\n\n\n\t/**\n\t * Strategy interface that can be used to implement code generation for a\n\t * particular value type.\n\t */\n\tpublic interface Delegate {\n\n\t\t/**\n\t\t * Generate the code for the specified non-null {@code value}. If this\n\t\t * instance does not support the value, it should return {@code null} to\n\t\t * indicate so.\n\t\t * @param valueCodeGenerator the code generator to use for embedded values\n\t\t * @param value the value to generate\n\t\t * @return the code that represents the specified value or {@code null} if\n\t\t * the specified value is not supported.\n\t\t */\n\t\t@Nullable CodeBlock generateCode(ValueCodeGenerator valueCodeGenerator, Object value);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#INSTANCE",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#INSTANCE",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ValueCodeGenerator",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#NULL_VALUE_CODE_BLOCK",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#NULL_VALUE_CODE_BLOCK",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "CodeBlock",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#delegates",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#delegates",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<Delegate>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#generatedMethods",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#generatedMethods",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "GeneratedMethods",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#withDefaults()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return an instance that provides support for {@linkplain\r\n * ValueCodeGeneratorDelegates#INSTANCES common value types}.\r\n * @return an instance with support for common value types\r\n */\r\npublic static ValueCodeGenerator withDefaults() {\r\n    return INSTANCE;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#withDefaults()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#with(Delegate)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create an instance with the specified {@link Delegate} implementations.\r\n * @param delegates the delegates to use\r\n * @return an instance with the specified delegates\r\n */\r\npublic static ValueCodeGenerator with(Delegate... delegates) {\r\n    return with(Arrays.asList(delegates));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#with(Delegate)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#with(List<Delegate>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create an instance with the specified {@link Delegate} implementations.\r\n * @param delegates the delegates to use\r\n * @return an instance with the specified delegates\r\n */\r\npublic static ValueCodeGenerator with(List<Delegate> delegates) {\r\n    Assert.notEmpty(delegates, \"Delegates must not be empty\");\r\n    return new ValueCodeGenerator(new ArrayList<>(delegates), null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.ValueCodeGenerator#with(List<Delegate>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.ValueCodeGenerator#add(List<Delegate>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public ValueCodeGenerator add(List<Delegate> additionalDelegates) {\r\n    Assert.notEmpty(additionalDelegates, \"AdditionalDelegates must not be empty\");\r\n    List<Delegate> allDelegates = new ArrayList<>(this.delegates);\r\n    allDelegates.addAll(additionalDelegates);\r\n    return new ValueCodeGenerator(allDelegates, this.generatedMethods);\r\n}",
+    "tailType": "method_code"
+  }
+]

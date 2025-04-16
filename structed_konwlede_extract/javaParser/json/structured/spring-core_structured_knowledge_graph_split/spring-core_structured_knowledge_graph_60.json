@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.type.WithMetaAnnotationAttributes",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.type;\n\nimport java.lang.annotation.Retention;\nimport java.lang.annotation.RetentionPolicy;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.annotation.MergedAnnotation;\nimport org.springframework.core.type.AbstractAnnotationMetadataTests.TestMemberClass.TestMemberClassInnerClass;\nimport org.springframework.core.type.AbstractAnnotationMetadataTests.TestMemberClass.TestMemberClassInnerInterface;\nimport org.springframework.util.MultiValueMap;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.entry;\n\n/**\n * Base class for {@link AnnotationMetadata} tests.\n *\n * @author Phillip Webb\n * @author Sam Brannen\n */\npublic abstract class AbstractAnnotationMetadataTests {\n\n\t@Test\n\tvoid verifyEquals() {\n\t\tAnnotationMetadata testClass1 = get(TestClass.class);\n\t\tAnnotationMetadata testClass2 = get(TestClass.class);\n\t\tAnnotationMetadata testMemberClass1 = get(TestMemberClass.class);\n\t\tAnnotationMetadata testMemberClass2 = get(TestMemberClass.class);\n\n\t\tassertThat(testClass1).isNotEqualTo(null);\n\n\t\tassertThat(testClass1).isEqualTo(testClass1);\n\t\tassertThat(testClass2).isEqualTo(testClass2);\n\t\tassertThat(testClass1).isEqualTo(testClass2);\n\t\tassertThat(testClass2).isEqualTo(testClass1);\n\n\t\tassertThat(testMemberClass1).isEqualTo(testMemberClass1);\n\t\tassertThat(testMemberClass2).isEqualTo(testMemberClass2);\n\t\tassertThat(testMemberClass1).isEqualTo(testMemberClass2);\n\t\tassertThat(testMemberClass2).isEqualTo(testMemberClass1);\n\n\t\tassertThat(testClass1).isNotEqualTo(testMemberClass1);\n\t\tassertThat(testMemberClass1).isNotEqualTo(testClass1);\n\t}\n\n\t@Test\n\tvoid verifyHashCode() {\n\t\tAnnotationMetadata testClass1 = get(TestClass.class);\n\t\tAnnotationMetadata testClass2 = get(TestClass.class);\n\t\tAnnotationMetadata testMemberClass1 = get(TestMemberClass.class);\n\t\tAnnotationMetadata testMemberClass2 = get(TestMemberClass.class);\n\n\t\tassertThat(testClass1).hasSameHashCodeAs(testClass2);\n\t\tassertThat(testMemberClass1).hasSameHashCodeAs(testMemberClass2);\n\n\t\tassertThat(testClass1).doesNotHaveSameHashCodeAs(testMemberClass1);\n\t}\n\n\t@Test\n\tvoid verifyToString() {\n\t\tassertThat(get(TestClass.class).toString()).isEqualTo(TestClass.class.getName());\n\t}\n\n\t@Test\n\tvoid getClassNameReturnsClassName() {\n\t\tassertThat(get(TestClass.class).getClassName()).isEqualTo(TestClass.class.getName());\n\t}\n\n\t@Test\n\tvoid isInterfaceWhenInterfaceReturnsTrue() {\n\t\tassertThat(get(TestInterface.class).isInterface()).isTrue();\n\t\tassertThat(get(TestAnnotation.class).isInterface()).isTrue();\n\t}\n\n\t@Test\n\tvoid isInterfaceWhenNotInterfaceReturnsFalse() {\n\t\tassertThat(get(TestClass.class).isInterface()).isFalse();\n\t}\n\n\t@Test\n\tvoid isAnnotationWhenAnnotationReturnsTrue() {\n\t\tassertThat(get(TestAnnotation.class).isAnnotation()).isTrue();\n\t}\n\n\t@Test\n\tvoid isAnnotationWhenNotAnnotationReturnsFalse() {\n\t\tassertThat(get(TestClass.class).isAnnotation()).isFalse();\n\t\tassertThat(get(TestInterface.class).isAnnotation()).isFalse();\n\t}\n\n\t@Test\n\tvoid isFinalWhenFinalReturnsTrue() {\n\t\tassertThat(get(TestFinalClass.class).isFinal()).isTrue();\n\t}\n\n\t@Test\n\tvoid isFinalWhenNonFinalReturnsFalse() {\n\t\tassertThat(get(TestClass.class).isFinal()).isFalse();\n\t}\n\n\t@Test\n\tvoid isIndependentWhenIndependentReturnsTrue() {\n\t\tassertThat(get(AbstractAnnotationMetadataTests.class).isIndependent()).isTrue();\n\t\tassertThat(get(TestClass.class).isIndependent()).isTrue();\n\t}\n\n\t@Test\n\tvoid isIndependentWhenNotIndependentReturnsFalse() {\n\t\tassertThat(get(TestNonStaticInnerClass.class).isIndependent()).isFalse();\n\t}\n\n\t@Test\n\tvoid getEnclosingClassNameWhenHasEnclosingClassReturnsEnclosingClass() {\n\t\tassertThat(get(TestClass.class).getEnclosingClassName()).isEqualTo(\n\t\t\t\tAbstractAnnotationMetadataTests.class.getName());\n\t}\n\n\t@Test\n\tvoid getEnclosingClassNameWhenHasNoEnclosingClassReturnsNull() {\n\t\tassertThat(get(AbstractAnnotationMetadataTests.class).getEnclosingClassName()).isNull();\n\t}\n\n\t@Test\n\tvoid getSuperClassNameWhenHasSuperClassReturnsName() {\n\t\tassertThat(get(TestSubclass.class).getSuperClassName()).isEqualTo(TestClass.class.getName());\n\t\tassertThat(get(TestClass.class).getSuperClassName()).isEqualTo(Object.class.getName());\n\t}\n\n\t@Test\n\tvoid getSuperClassNameWhenHasNoSuperClassReturnsNull() {\n\t\tassertThat(get(Object.class).getSuperClassName()).isNull();\n\t\tassertThat(get(TestInterface.class).getSuperClassName()).isNull();\n\t\tassertThat(get(TestSubInterface.class).getSuperClassName()).isNull();\n\t}\n\n\t@Test\n\tvoid getInterfaceNamesWhenHasInterfacesReturnsNames() {\n\t\tassertThat(get(TestSubclass.class).getInterfaceNames()).containsExactlyInAnyOrder(TestInterface.class.getName());\n\t\tassertThat(get(TestSubInterface.class).getInterfaceNames()).containsExactlyInAnyOrder(TestInterface.class.getName());\n\t}\n\n\t@Test\n\tvoid getInterfaceNamesWhenHasNoInterfacesReturnsEmptyArray() {\n\t\tassertThat(get(TestClass.class).getInterfaceNames()).isEmpty();\n\t}\n\n\t@Test\n\tvoid getMemberClassNamesWhenHasMemberClassesReturnsNames() {\n\t\tassertThat(get(TestMemberClass.class).getMemberClassNames()).containsExactlyInAnyOrder(\n\t\t\tTestMemberClassInnerClass.class.getName(), TestMemberClassInnerInterface.class.getName());\n\t}\n\n\t@Test\n\tvoid getMemberClassNamesWhenHasNoMemberClassesReturnsEmptyArray() {\n\t\tassertThat(get(TestClass.class).getMemberClassNames()).isEmpty();\n\t}\n\n\t@Test\n\tvoid getAnnotationsReturnsDirectAnnotations() {\n\t\tassertThat(get(WithDirectAnnotations.class).getAnnotations().stream())\n\t\t\t.filteredOn(MergedAnnotation::isDirectlyPresent)\n\t\t\t.extracting(a -> a.getType().getName())\n\t\t\t.containsExactlyInAnyOrder(DirectAnnotation1.class.getName(), DirectAnnotation2.class.getName());\n\t}\n\n\t@Test\n\tvoid isAnnotatedWhenMatchesDirectAnnotationReturnsTrue() {\n\t\tassertThat(get(WithDirectAnnotations.class).isAnnotated(DirectAnnotation1.class.getName())).isTrue();\n\t}\n\n\t@Test\n\tvoid isAnnotatedWhenMatchesMetaAnnotationReturnsTrue() {\n\t\tassertThat(get(WithMetaAnnotations.class).isAnnotated(MetaAnnotation2.class.getName())).isTrue();\n\t}\n\n\t@Test\n\tvoid isAnnotatedWhenDoesNotMatchDirectOrMetaAnnotationReturnsFalse() {\n\t\tassertThat(get(TestClass.class).isAnnotated(DirectAnnotation1.class.getName())).isFalse();\n\t}\n\n\t@Test\n\tvoid getAnnotationAttributesReturnsAttributes() {\n\t\tassertThat(get(WithAnnotationAttributes.class).getAnnotationAttributes(AnnotationAttributes.class.getName()))\n\t\t\t.containsOnly(entry(\"name\", \"test\"), entry(\"size\", 1));\n\t}\n\n\t@Test\n\tvoid getAllAnnotationAttributesReturnsAllAttributes() {\n\t\tMultiValueMap<String, Object> attributes =\n\t\t\t\tget(WithMetaAnnotationAttributes.class).getAllAnnotationAttributes(AnnotationAttributes.class.getName());\n\t\tassertThat(attributes).containsOnlyKeys(\"name\", \"size\");\n\t\tassertThat(attributes.get(\"name\")).containsExactlyInAnyOrder(\"m1\", \"m2\");\n\t\tassertThat(attributes.get(\"size\")).containsExactlyInAnyOrder(1, 2);\n\t}\n\n\t@Test\n\tvoid getAnnotationTypesReturnsDirectAnnotations() {\n\t\tAnnotationMetadata metadata = get(WithDirectAnnotations.class);\n\t\tassertThat(metadata.getAnnotationTypes()).containsExactlyInAnyOrder(\n\t\t\t\tDirectAnnotation1.class.getName(), DirectAnnotation2.class.getName());\n\t}\n\n\t@Test\n\tvoid getMetaAnnotationTypesReturnsMetaAnnotations() {\n\t\tAnnotationMetadata metadata = get(WithMetaAnnotations.class);\n\t\tassertThat(metadata.getMetaAnnotationTypes(MetaAnnotationRoot.class.getName()))\n\t\t\t.containsExactlyInAnyOrder(MetaAnnotation1.class.getName(), MetaAnnotation2.class.getName());\n\t}\n\n\t@Test\n\tvoid hasAnnotationWhenMatchesDirectAnnotationReturnsTrue() {\n\t\tassertThat(get(WithDirectAnnotations.class).hasAnnotation(DirectAnnotation1.class.getName())).isTrue();\n\t}\n\n\t@Test\n\tvoid hasAnnotationWhenMatchesMetaAnnotationReturnsFalse() {\n\t\tassertThat(get(WithMetaAnnotations.class).hasAnnotation(MetaAnnotation1.class.getName())).isFalse();\n\t\tassertThat(get(WithMetaAnnotations.class).hasAnnotation(MetaAnnotation2.class.getName())).isFalse();\n\t}\n\n\t@Test\n\tvoid hasAnnotationWhenDoesNotMatchDirectOrMetaAnnotationReturnsFalse() {\n\t\tassertThat(get(TestClass.class).hasAnnotation(DirectAnnotation1.class.getName())).isFalse();\n\t}\n\n\t@Test\n\tvoid hasMetaAnnotationWhenMatchesDirectReturnsFalse() {\n\t\tassertThat(get(WithDirectAnnotations.class).hasMetaAnnotation(DirectAnnotation1.class.getName())).isFalse();\n\t}\n\n\t@Test\n\tvoid hasMetaAnnotationWhenMatchesMetaAnnotationReturnsTrue() {\n\t\tassertThat(get(WithMetaAnnotations.class).hasMetaAnnotation(MetaAnnotation1.class.getName())).isTrue();\n\t\tassertThat(get(WithMetaAnnotations.class).hasMetaAnnotation(MetaAnnotation2.class.getName())).isTrue();\n\t}\n\n\t@Test\n\tvoid hasMetaAnnotationWhenDoesNotMatchDirectOrMetaAnnotationReturnsFalse() {\n\t\tassertThat(get(TestClass.class).hasMetaAnnotation(MetaAnnotation1.class.getName())).isFalse();\n\t}\n\n\t@Test\n\tvoid hasAnnotatedMethodsWhenMatchesDirectAnnotationReturnsTrue() {\n\t\tassertThat(get(WithAnnotatedMethod.class).hasAnnotatedMethods(DirectAnnotation1.class.getName())).isTrue();\n\t}\n\n\t@Test\n\tvoid hasAnnotatedMethodsWhenMatchesMetaAnnotationReturnsTrue() {\n\t\tassertThat(get(WithMetaAnnotatedMethod.class).hasAnnotatedMethods(MetaAnnotation2.class.getName())).isTrue();\n\t}\n\n\t@Test\n\tvoid hasAnnotatedMethodsWhenDoesNotMatchAnyAnnotationReturnsFalse() {\n\t\tassertThat(get(WithAnnotatedMethod.class).hasAnnotatedMethods(MetaAnnotation2.class.getName())).isFalse();\n\t\tassertThat(get(WithNonAnnotatedMethod.class).hasAnnotatedMethods(DirectAnnotation1.class.getName())).isFalse();\n\t}\n\n\t@Test\n\tvoid getAnnotatedMethodsReturnsMatchingAnnotatedAndMetaAnnotatedMethods() {\n\t\tassertThat(get(WithDirectAndMetaAnnotatedMethods.class).getAnnotatedMethods(MetaAnnotation2.class.getName()))\n\t\t\t.extracting(MethodMetadata::getMethodName)\n\t\t\t.containsExactlyInAnyOrder(\"direct\", \"meta\");\n\t}\n\n\tprotected abstract AnnotationMetadata get(Class<?> source);\n\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\tpublic @interface DirectAnnotation1 {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\tpublic @interface DirectAnnotation2 {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@MetaAnnotation1\n\tpublic @interface MetaAnnotationRoot {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@MetaAnnotation2\n\tpublic @interface MetaAnnotation1 {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\tpublic @interface MetaAnnotation2 {\n\t}\n\n\tpublic static class TestClass {\n\t}\n\n\tpublic interface TestInterface {\n\t}\n\n\tpublic interface TestSubInterface extends TestInterface {\n\t}\n\n\tpublic @interface TestAnnotation {\n\t}\n\n\tpublic static final class TestFinalClass {\n\t}\n\n\tpublic class TestNonStaticInnerClass {\n\t}\n\n\tpublic static class TestSubclass extends TestClass implements TestInterface {\n\t}\n\n\t@DirectAnnotation1\n\t@DirectAnnotation2\n\tpublic static class WithDirectAnnotations {\n\t}\n\n\t@MetaAnnotationRoot\n\tpublic static class WithMetaAnnotations {\n\t}\n\n\tpublic static class TestMemberClass {\n\n\t\tpublic static class TestMemberClassInnerClass {\n\t\t}\n\n\t\tinterface TestMemberClassInnerInterface {\n\t\t}\n\n\t}\n\n\tpublic static class WithAnnotatedMethod {\n\n\t\t@DirectAnnotation1\n\t\tpublic void test() {\n\t\t}\n\n\t}\n\n\tpublic static class WithMetaAnnotatedMethod {\n\n\t\t@MetaAnnotationRoot\n\t\tpublic void test() {\n\t\t}\n\n\t}\n\n\tpublic static class WithNonAnnotatedMethod {\n\n\t\tpublic void test() {\n\t\t}\n\n\t}\n\n\tpublic static class WithDirectAndMetaAnnotatedMethods {\n\n\t\t@MetaAnnotation2\n\t\tpublic void direct() {\n\t\t}\n\n\t\t@MetaAnnotationRoot\n\t\tpublic void meta() {\n\t\t}\n\n\t}\n\n\t@AnnotationAttributes(name = \"test\", size = 1)\n\tpublic static class WithAnnotationAttributes {\n\t}\n\n\t@MetaAnnotationAttributes1\n\t@MetaAnnotationAttributes2\n\tpublic static class WithMetaAnnotationAttributes {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@AnnotationAttributes(name = \"m1\", size = 1)\n\tpublic @interface MetaAnnotationAttributes1 {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\t@AnnotationAttributes(name = \"m2\", size = 2)\n\tpublic @interface MetaAnnotationAttributes2 {\n\t}\n\n\t@Retention(RetentionPolicy.RUNTIME)\n\tpublic @interface AnnotationAttributes {\n\n\t\tString name();\n\n\t\tint size();\n\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.generate",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFiles",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.nio.file.CopyOption;\nimport java.nio.file.FileSystem;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.StandardCopyOption;\nimport java.util.Arrays;\nimport java.util.Objects;\nimport java.util.function.Function;\n\nimport org.springframework.core.io.FileSystemResource;\nimport org.springframework.core.io.InputStreamSource;\nimport org.springframework.util.Assert;\nimport org.springframework.util.function.ThrowingConsumer;\n\n/**\n * {@link GeneratedFiles} implementation that stores generated files using a\n * {@link FileSystem}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n */\npublic class FileSystemGeneratedFiles implements GeneratedFiles {\n\n\tprivate final Function<Kind, Path> roots;\n\n\n\t/**\n\t * Create a new {@link FileSystemGeneratedFiles} instance with all files\n\t * stored under the specific {@code root}. The following subdirectories are\n\t * created for the different file {@link Kind kinds}:\n\t * <ul>\n\t * <li>{@code sources}</li>\n\t * <li>{@code resources}</li>\n\t * <li>{@code classes}</li>\n\t * </ul>\n\t * @param root the root path\n\t * @see #FileSystemGeneratedFiles(Function)\n\t */\n\tpublic FileSystemGeneratedFiles(Path root) {\n\t\tthis(conventionRoots(root));\n\t}\n\n\t/**\n\t * Create a new {@link FileSystemGeneratedFiles} instance with all files\n\t * stored under the root provided by the given {@link Function}.\n\t * @param roots a function that returns the root to use for the given\n\t * {@link Kind}\n\t */\n\tpublic FileSystemGeneratedFiles(Function<Kind, Path> roots) {\n\t\tAssert.notNull(roots, \"'roots' must not be null\");\n\t\tAssert.isTrue(Arrays.stream(Kind.values()).map(roots).noneMatch(Objects::isNull),\n\t\t\t\t\"'roots' must return a value for all file kinds\");\n\t\tthis.roots = roots;\n\t}\n\n\n\tprivate static Function<Kind, Path> conventionRoots(Path root) {\n\t\tAssert.notNull(root, \"'root' must not be null\");\n\t\treturn kind -> switch (kind) {\n\t\t\tcase SOURCE -> root.resolve(\"sources\");\n\t\t\tcase RESOURCE -> root.resolve(\"resources\");\n\t\t\tcase CLASS -> root.resolve(\"classes\");\n\t\t};\n\t}\n\n\t@Override\n\tpublic void handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler) {\n\t\tFileSystemFileHandler fileHandler = new FileSystemFileHandler(toPath(kind, path));\n\t\thandler.accept(fileHandler);\n\t}\n\n\tprivate Path toPath(Kind kind, String path) {\n\t\tAssert.notNull(kind, \"'kind' must not be null\");\n\t\tAssert.hasLength(path, \"'path' must not be empty\");\n\t\tPath root = this.roots.apply(kind).toAbsolutePath().normalize();\n\t\tPath relativePath = root.resolve(path).toAbsolutePath().normalize();\n\t\tAssert.isTrue(relativePath.startsWith(root), \"'path' must be relative\");\n\t\treturn relativePath;\n\t}\n\n\tstatic final class FileSystemFileHandler extends FileHandler {\n\n\t\tprivate final Path path;\n\n\t\tFileSystemFileHandler(Path path) {\n\t\t\tsuper(Files.exists(path), () -> new FileSystemResource(path));\n\t\t\tthis.path = path;\n\t\t}\n\n\t\t@Override\n\t\tprotected void copy(InputStreamSource content, boolean override) {\n\t\t\tif (override) {\n\t\t\t\tcopy(content, StandardCopyOption.REPLACE_EXISTING);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcopy(content);\n\t\t\t}\n\t\t}\n\n\t\tprivate void copy(InputStreamSource content, CopyOption... copyOptions) {\n\t\t\ttry {\n\t\t\t\ttry (InputStream inputStream = content.getInputStream()) {\n\t\t\t\t\tFiles.createDirectories(this.path.getParent());\n\t\t\t\t\tFiles.copy(inputStream, this.path, copyOptions);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcatch (IOException ex) {\n\t\t\t\tthrow new IllegalStateException(ex);\n\t\t\t}\n\t\t}\n\n\t\t@Override\n\t\tpublic String toString() {\n\t\t\treturn this.path.toString();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFiles#roots",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles#roots",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<Kind, Path>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles#conventionRoots(Path)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static Function<Kind, Path> conventionRoots(Path root) {\r\n    Assert.notNull(root, \"'root' must not be null\");\r\n    return kind -> switch(kind) {\r\n        case SOURCE ->\r\n            root.resolve(\"sources\");\r\n        case RESOURCE ->\r\n            root.resolve(\"resources\");\r\n        case CLASS ->\r\n            root.resolve(\"classes\");\r\n    };\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFiles#conventionRoots(Path)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles#handleFile(Kind,String,ThrowingConsumer<FileHandler>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler) {\r\n    FileSystemFileHandler fileHandler = new FileSystemFileHandler(toPath(kind, path));\r\n    handler.accept(fileHandler);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFiles#handleFile(Kind,String,ThrowingConsumer<FileHandler>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles#handleFile(Kind,String,ThrowingConsumer<FileHandler>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles#toPath(Kind,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Path toPath(Kind kind, String path) {\r\n    Assert.notNull(kind, \"'kind' must not be null\");\r\n    Assert.hasLength(path, \"'path' must not be empty\");\r\n    Path root = this.roots.apply(kind).toAbsolutePath().normalize();\r\n    Path relativePath = root.resolve(path).toAbsolutePath().normalize();\r\n    Assert.isTrue(relativePath.startsWith(root), \"'path' must be relative\");\r\n    return relativePath;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemGeneratedFiles",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemGeneratedFiles#toPath(Kind,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.generate.FileSystemFileHandler",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemFileHandler",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.io.IOException;\nimport java.io.InputStream;\nimport java.nio.file.CopyOption;\nimport java.nio.file.FileSystem;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.StandardCopyOption;\nimport java.util.Arrays;\nimport java.util.Objects;\nimport java.util.function.Function;\n\nimport org.springframework.core.io.FileSystemResource;\nimport org.springframework.core.io.InputStreamSource;\nimport org.springframework.util.Assert;\nimport org.springframework.util.function.ThrowingConsumer;\n\n/**\n * {@link GeneratedFiles} implementation that stores generated files using a\n * {@link FileSystem}.\n *\n * @author Phillip Webb\n * @author Stephane Nicoll\n * @since 6.0\n */\npublic class FileSystemGeneratedFiles implements GeneratedFiles {\n\n\tprivate final Function<Kind, Path> roots;\n\n\n\t/**\n\t * Create a new {@link FileSystemGeneratedFiles} instance with all files\n\t * stored under the specific {@code root}. The following subdirectories are\n\t * created for the different file {@link Kind kinds}:\n\t * <ul>\n\t * <li>{@code sources}</li>\n\t * <li>{@code resources}</li>\n\t * <li>{@code classes}</li>\n\t * </ul>\n\t * @param root the root path\n\t * @see #FileSystemGeneratedFiles(Function)\n\t */\n\tpublic FileSystemGeneratedFiles(Path root) {\n\t\tthis(conventionRoots(root));\n\t}\n\n\t/**\n\t * Create a new {@link FileSystemGeneratedFiles} instance with all files\n\t * stored under the root provided by the given {@link Function}.\n\t * @param roots a function that returns the root to use for the given\n\t * {@link Kind}\n\t */\n\tpublic FileSystemGeneratedFiles(Function<Kind, Path> roots) {\n\t\tAssert.notNull(roots, \"'roots' must not be null\");\n\t\tAssert.isTrue(Arrays.stream(Kind.values()).map(roots).noneMatch(Objects::isNull),\n\t\t\t\t\"'roots' must return a value for all file kinds\");\n\t\tthis.roots = roots;\n\t}\n\n\n\tprivate static Function<Kind, Path> conventionRoots(Path root) {\n\t\tAssert.notNull(root, \"'root' must not be null\");\n\t\treturn kind -> switch (kind) {\n\t\t\tcase SOURCE -> root.resolve(\"sources\");\n\t\t\tcase RESOURCE -> root.resolve(\"resources\");\n\t\t\tcase CLASS -> root.resolve(\"classes\");\n\t\t};\n\t}\n\n\t@Override\n\tpublic void handleFile(Kind kind, String path, ThrowingConsumer<FileHandler> handler) {\n\t\tFileSystemFileHandler fileHandler = new FileSystemFileHandler(toPath(kind, path));\n\t\thandler.accept(fileHandler);\n\t}\n\n\tprivate Path toPath(Kind kind, String path) {\n\t\tAssert.notNull(kind, \"'kind' must not be null\");\n\t\tAssert.hasLength(path, \"'path' must not be empty\");\n\t\tPath root = this.roots.apply(kind).toAbsolutePath().normalize();\n\t\tPath relativePath = root.resolve(path).toAbsolutePath().normalize();\n\t\tAssert.isTrue(relativePath.startsWith(root), \"'path' must be relative\");\n\t\treturn relativePath;\n\t}\n\n\tstatic final class FileSystemFileHandler extends FileHandler {\n\n\t\tprivate final Path path;\n\n\t\tFileSystemFileHandler(Path path) {\n\t\t\tsuper(Files.exists(path), () -> new FileSystemResource(path));\n\t\t\tthis.path = path;\n\t\t}\n\n\t\t@Override\n\t\tprotected void copy(InputStreamSource content, boolean override) {\n\t\t\tif (override) {\n\t\t\t\tcopy(content, StandardCopyOption.REPLACE_EXISTING);\n\t\t\t}\n\t\t\telse {\n\t\t\t\tcopy(content);\n\t\t\t}\n\t\t}\n\n\t\tprivate void copy(InputStreamSource content, CopyOption... copyOptions) {\n\t\t\ttry {\n\t\t\t\ttry (InputStream inputStream = content.getInputStream()) {\n\t\t\t\t\tFiles.createDirectories(this.path.getParent());\n\t\t\t\t\tFiles.copy(inputStream, this.path, copyOptions);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcatch (IOException ex) {\n\t\t\t\tthrow new IllegalStateException(ex);\n\t\t\t}\n\t\t}\n\n\t\t@Override\n\t\tpublic String toString() {\n\t\t\treturn this.path.toString();\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemFileHandler",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.FileSystemFileHandler#path",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemFileHandler#path",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Path",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemFileHandler#copy(InputStreamSource,boolean)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void copy(InputStreamSource content, boolean override) {\r\n    if (override) {\r\n        copy(content, StandardCopyOption.REPLACE_EXISTING);\r\n    } else {\r\n        copy(content);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemFileHandler",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.FileSystemFileHandler#copy(InputStreamSource,boolean)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.FileSystemFileHandler#copy(InputStreamSource,boolean)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  }
+]

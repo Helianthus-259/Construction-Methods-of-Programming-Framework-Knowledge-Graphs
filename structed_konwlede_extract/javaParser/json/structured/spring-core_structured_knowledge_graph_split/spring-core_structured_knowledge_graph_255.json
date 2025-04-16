@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.Customer",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Shopper",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.Regular",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.Regular",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n\n/**\n * @author Colin Sampaleanu\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 21.11.2003\n */\nclass MethodInvokerTests {\n\n\t@Test\n\tvoid plainMethodInvoker() throws Exception {\n\t\t// sanity check: singleton, non-static should work\n\t\tTestClass1 tc1 = new TestClass1();\n\t\tMethodInvoker mi = new MethodInvoker();\n\t\tmi.setTargetObject(tc1);\n\t\tmi.setTargetMethod(\"method1\");\n\t\tmi.prepare();\n\t\tInteger i = (Integer) mi.invoke();\n\t\tassertThat(i).isEqualTo(1);\n\n\t\t// defensive check: singleton, non-static should work with null array\n\t\ttc1 = new TestClass1();\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetObject(tc1);\n\t\tmi.setTargetMethod(\"method1\");\n\t\tmi.setArguments((Object[]) null);\n\t\tmi.prepare();\n\t\ti = (Integer) mi.invoke();\n\t\tassertThat(i).isEqualTo(1);\n\n\t\t// sanity check: check that argument count matching works\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetClass(TestClass1.class);\n\t\tmi.setTargetMethod(\"supertypes\");\n\t\tmi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\");\n\t\tmi.prepare();\n\t\tassertThat(mi.invoke()).isEqualTo(\"hello\");\n\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetClass(TestClass1.class);\n\t\tmi.setTargetMethod(\"supertypes2\");\n\t\tmi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", \"bogus\");\n\t\tmi.prepare();\n\t\tassertThat(mi.invoke()).isEqualTo(\"hello\");\n\n\t\t// Sanity check: check that argument conversion doesn't work with plain MethodInvoker\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetClass(TestClass1.class);\n\t\tmi.setTargetMethod(\"supertypes2\");\n\t\tmi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", Boolean.TRUE);\n\n\t\tassertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(\n\t\t\t\tmi::prepare);\n\t}\n\n\t@Test\n\tvoid stringWithMethodInvoker() {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(\"no match\");\n\n\t\tassertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(\n\t\t\t\tmethodInvoker::prepare);\n\t}\n\n\t@Test\n\tvoid purchaserWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Purchaser());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"purchaser: hello\");\n\t}\n\n\t@Test\n\tvoid shopperWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Shopper());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"purchaser: may I help you?\");\n\t}\n\n\t@Test\n\tvoid salesmanWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Salesman());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"greetable: how are sales?\");\n\t}\n\n\t@Test\n\tvoid customerWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Customer());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"customer: good day\");\n\t}\n\n\t@Test\n\tvoid regularWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Regular(\"Kotter\"));\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"regular: welcome back Kotter\");\n\t}\n\n\t@Test\n\tvoid vipWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new VIP(\"Fonzie\"));\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"regular: whassup dude?\");\n\t}\n\n\n\tpublic static class TestClass1 {\n\n\t\tpublic static int _staticField1;\n\n\t\tpublic int _field1 = 0;\n\n\t\tpublic int method1() {\n\t\t\treturn ++_field1;\n\t\t}\n\n\t\tpublic static int staticMethod1() {\n\t\t\treturn ++TestClass1._staticField1;\n\t\t}\n\n\t\tpublic static void voidRetvalMethod() {\n\t\t}\n\n\t\tpublic static void nullArgument(Object arg) {\n\t\t}\n\n\t\tpublic static void intArgument(int arg) {\n\t\t}\n\n\t\tpublic static void intArguments(int[] arg) {\n\t\t}\n\n\t\tpublic static String supertypes(Collection<?> c, Integer i) {\n\t\t\treturn i.toString();\n\t\t}\n\n\t\tpublic static String supertypes(Collection<?> c, List<?> l, String s) {\n\t\t\treturn s;\n\t\t}\n\n\t\tpublic static String supertypes2(Collection<?> c, List<?> l, Integer i) {\n\t\t\treturn i.toString();\n\t\t}\n\n\t\tpublic static String supertypes2(Collection<?> c, List<?> l, String s, Integer i) {\n\t\t\treturn s;\n\t\t}\n\n\t\tpublic static String supertypes2(Collection<?> c, List<?> l, String s, String s2) {\n\t\t\treturn s;\n\t\t}\n\t}\n\n\n\t@SuppressWarnings(\"unused\")\n\tpublic static class Greeter {\n\n\t\t// should handle Salesman (only interface)\n\t\tpublic String greet(Greetable greetable) {\n\t\t\treturn \"greetable: \" + greetable.getGreeting();\n\t\t}\n\n\t\t// should handle Shopper (beats Greetable since it is a class)\n\t\tprotected String greet(Purchaser purchaser) {\n\t\t\treturn \"purchaser: \" + purchaser.getGreeting();\n\t\t}\n\n\t\t// should handle Customer (exact match)\n\t\tString greet(Customer customer) {\n\t\t\treturn \"customer: \" + customer.getGreeting();\n\t\t}\n\n\t\t// should handle Regular (exact) and VIP (closest match)\n\t\tprivate String greet(Regular regular) {\n\t\t\treturn \"regular: \" + regular.getGreeting();\n\t\t}\n\t}\n\n\n\tprivate interface Greetable {\n\n\t\tString getGreeting();\n\t}\n\n\n\tprivate interface Person extends Greetable {\n\t}\n\n\n\tprivate static class Purchaser implements Greetable {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"hello\";\n\t\t}\n\t}\n\n\n\tprivate static class Shopper extends Purchaser implements Person {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"may I help you?\";\n\t\t}\n\t}\n\n\n\tprivate static class Salesman implements Person {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"how are sales?\";\n\t\t}\n\t}\n\n\n\tprivate static class Customer extends Shopper {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"good day\";\n\t\t}\n\t}\n\n\n\tprivate static class Regular extends Customer {\n\n\t\tprivate String name;\n\n\t\tpublic Regular(String name) {\n\t\t\tthis.name = name;\n\t\t}\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"welcome back \" + name ;\n\t\t}\n\t}\n\n\n\tprivate static class VIP extends Regular {\n\n\t\tpublic VIP(String name) {\n\t\t\tsuper(name);\n\t\t}\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"whassup dude?\";\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.Regular",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.Regular#name",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.Regular#name",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.Regular#getGreeting()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String getGreeting() {\r\n    return \"welcome back \" + name;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.Regular",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.Regular#getGreeting()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.Regular#getGreeting()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.Regular",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Customer",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.VIP",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.VIP",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.List;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n\n/**\n * @author Colin Sampaleanu\n * @author Juergen Hoeller\n * @author Sam Brannen\n * @since 21.11.2003\n */\nclass MethodInvokerTests {\n\n\t@Test\n\tvoid plainMethodInvoker() throws Exception {\n\t\t// sanity check: singleton, non-static should work\n\t\tTestClass1 tc1 = new TestClass1();\n\t\tMethodInvoker mi = new MethodInvoker();\n\t\tmi.setTargetObject(tc1);\n\t\tmi.setTargetMethod(\"method1\");\n\t\tmi.prepare();\n\t\tInteger i = (Integer) mi.invoke();\n\t\tassertThat(i).isEqualTo(1);\n\n\t\t// defensive check: singleton, non-static should work with null array\n\t\ttc1 = new TestClass1();\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetObject(tc1);\n\t\tmi.setTargetMethod(\"method1\");\n\t\tmi.setArguments((Object[]) null);\n\t\tmi.prepare();\n\t\ti = (Integer) mi.invoke();\n\t\tassertThat(i).isEqualTo(1);\n\n\t\t// sanity check: check that argument count matching works\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetClass(TestClass1.class);\n\t\tmi.setTargetMethod(\"supertypes\");\n\t\tmi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\");\n\t\tmi.prepare();\n\t\tassertThat(mi.invoke()).isEqualTo(\"hello\");\n\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetClass(TestClass1.class);\n\t\tmi.setTargetMethod(\"supertypes2\");\n\t\tmi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", \"bogus\");\n\t\tmi.prepare();\n\t\tassertThat(mi.invoke()).isEqualTo(\"hello\");\n\n\t\t// Sanity check: check that argument conversion doesn't work with plain MethodInvoker\n\t\tmi = new MethodInvoker();\n\t\tmi.setTargetClass(TestClass1.class);\n\t\tmi.setTargetMethod(\"supertypes2\");\n\t\tmi.setArguments(new ArrayList<>(), new ArrayList<>(), \"hello\", Boolean.TRUE);\n\n\t\tassertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(\n\t\t\t\tmi::prepare);\n\t}\n\n\t@Test\n\tvoid stringWithMethodInvoker() {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(\"no match\");\n\n\t\tassertThatExceptionOfType(NoSuchMethodException.class).isThrownBy(\n\t\t\t\tmethodInvoker::prepare);\n\t}\n\n\t@Test\n\tvoid purchaserWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Purchaser());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"purchaser: hello\");\n\t}\n\n\t@Test\n\tvoid shopperWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Shopper());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"purchaser: may I help you?\");\n\t}\n\n\t@Test\n\tvoid salesmanWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Salesman());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"greetable: how are sales?\");\n\t}\n\n\t@Test\n\tvoid customerWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Customer());\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"customer: good day\");\n\t}\n\n\t@Test\n\tvoid regularWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new Regular(\"Kotter\"));\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"regular: welcome back Kotter\");\n\t}\n\n\t@Test\n\tvoid vipWithMethodInvoker() throws Exception {\n\t\tMethodInvoker methodInvoker = new MethodInvoker();\n\t\tmethodInvoker.setTargetObject(new Greeter());\n\t\tmethodInvoker.setTargetMethod(\"greet\");\n\t\tmethodInvoker.setArguments(new VIP(\"Fonzie\"));\n\t\tmethodInvoker.prepare();\n\t\tString greeting = (String) methodInvoker.invoke();\n\t\tassertThat(greeting).isEqualTo(\"regular: whassup dude?\");\n\t}\n\n\n\tpublic static class TestClass1 {\n\n\t\tpublic static int _staticField1;\n\n\t\tpublic int _field1 = 0;\n\n\t\tpublic int method1() {\n\t\t\treturn ++_field1;\n\t\t}\n\n\t\tpublic static int staticMethod1() {\n\t\t\treturn ++TestClass1._staticField1;\n\t\t}\n\n\t\tpublic static void voidRetvalMethod() {\n\t\t}\n\n\t\tpublic static void nullArgument(Object arg) {\n\t\t}\n\n\t\tpublic static void intArgument(int arg) {\n\t\t}\n\n\t\tpublic static void intArguments(int[] arg) {\n\t\t}\n\n\t\tpublic static String supertypes(Collection<?> c, Integer i) {\n\t\t\treturn i.toString();\n\t\t}\n\n\t\tpublic static String supertypes(Collection<?> c, List<?> l, String s) {\n\t\t\treturn s;\n\t\t}\n\n\t\tpublic static String supertypes2(Collection<?> c, List<?> l, Integer i) {\n\t\t\treturn i.toString();\n\t\t}\n\n\t\tpublic static String supertypes2(Collection<?> c, List<?> l, String s, Integer i) {\n\t\t\treturn s;\n\t\t}\n\n\t\tpublic static String supertypes2(Collection<?> c, List<?> l, String s, String s2) {\n\t\t\treturn s;\n\t\t}\n\t}\n\n\n\t@SuppressWarnings(\"unused\")\n\tpublic static class Greeter {\n\n\t\t// should handle Salesman (only interface)\n\t\tpublic String greet(Greetable greetable) {\n\t\t\treturn \"greetable: \" + greetable.getGreeting();\n\t\t}\n\n\t\t// should handle Shopper (beats Greetable since it is a class)\n\t\tprotected String greet(Purchaser purchaser) {\n\t\t\treturn \"purchaser: \" + purchaser.getGreeting();\n\t\t}\n\n\t\t// should handle Customer (exact match)\n\t\tString greet(Customer customer) {\n\t\t\treturn \"customer: \" + customer.getGreeting();\n\t\t}\n\n\t\t// should handle Regular (exact) and VIP (closest match)\n\t\tprivate String greet(Regular regular) {\n\t\t\treturn \"regular: \" + regular.getGreeting();\n\t\t}\n\t}\n\n\n\tprivate interface Greetable {\n\n\t\tString getGreeting();\n\t}\n\n\n\tprivate interface Person extends Greetable {\n\t}\n\n\n\tprivate static class Purchaser implements Greetable {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"hello\";\n\t\t}\n\t}\n\n\n\tprivate static class Shopper extends Purchaser implements Person {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"may I help you?\";\n\t\t}\n\t}\n\n\n\tprivate static class Salesman implements Person {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"how are sales?\";\n\t\t}\n\t}\n\n\n\tprivate static class Customer extends Shopper {\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"good day\";\n\t\t}\n\t}\n\n\n\tprivate static class Regular extends Customer {\n\n\t\tprivate String name;\n\n\t\tpublic Regular(String name) {\n\t\t\tthis.name = name;\n\t\t}\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"welcome back \" + name ;\n\t\t}\n\t}\n\n\n\tprivate static class VIP extends Regular {\n\n\t\tpublic VIP(String name) {\n\t\t\tsuper(name);\n\t\t}\n\n\t\t@Override\n\t\tpublic String getGreeting() {\n\t\t\treturn \"whassup dude?\";\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.VIP#getGreeting()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String getGreeting() {\r\n    return \"whassup dude?\";\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.VIP",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.VIP#getGreeting()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.VIP#getGreeting()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.VIP",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "Regular",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.nativex",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.nativex",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.nativex.NativeConfigurationWriter",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.nativex;\n\nimport java.util.function.Consumer;\n\nimport org.springframework.aot.hint.RuntimeHints;\n\n/**\n * Write {@link RuntimeHints} as GraalVM native configuration.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Janne Valkealahti\n * @author Brian Clozel\n * @since 6.0\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/overview/BuildConfiguration/\">Native Image Build Configuration</a>\n */\npublic abstract class NativeConfigurationWriter {\n\n\t/**\n\t * Write the GraalVM native configuration from the provided hints.\n\t * @param hints the hints to handle\n\t */\n\tpublic void write(RuntimeHints hints) {\n\t\tif (hasAnyHint(hints)) {\n\t\t\twriteTo(\"reachability-metadata.json\",\n\t\t\t\t\twriter -> new RuntimeHintsWriter().write(writer, hints));\n\t\t}\n\t}\n\n\tprivate boolean hasAnyHint(RuntimeHints hints) {\n\t\treturn (hints.serialization().javaSerializationHints().findAny().isPresent()\n\t\t\t\t|| hints.proxies().jdkProxyHints().findAny().isPresent()\n\t\t\t\t|| hints.reflection().typeHints().findAny().isPresent()\n\t\t\t\t|| hints.resources().resourcePatternHints().findAny().isPresent()\n\t\t\t\t|| hints.resources().resourceBundleHints().findAny().isPresent()\n\t\t\t\t|| hints.jni().typeHints().findAny().isPresent());\n\t}\n\n\t/**\n\t * Write the specified GraalVM native configuration file, using the\n\t * provided {@link BasicJsonWriter}.\n\t * @param fileName the name of the file\n\t * @param writer a consumer for the writer to use\n\t */\n\tprotected abstract void writeTo(String fileName, Consumer<BasicJsonWriter> writer);\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter#write(RuntimeHints)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Write the GraalVM native configuration from the provided hints.\r\n * @param hints the hints to handle\r\n */\r\npublic void write(RuntimeHints hints) {\r\n    if (hasAnyHint(hints)) {\r\n        writeTo(\"reachability-metadata.json\", writer -> new RuntimeHintsWriter().write(writer, hints));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.NativeConfigurationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.NativeConfigurationWriter#write(RuntimeHints)",
+    "tailType": "method"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.MimeTypeTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.MimeTypeTests#serialize()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.MimeTypeTests#serialize()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.nativex",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.nativex",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.nativex;\n\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.Comparator;\nimport java.util.LinkedHashMap;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.aot.hint.ConditionalHint;\nimport org.springframework.aot.hint.ExecutableHint;\nimport org.springframework.aot.hint.ExecutableMode;\nimport org.springframework.aot.hint.FieldHint;\nimport org.springframework.aot.hint.JdkProxyHint;\nimport org.springframework.aot.hint.MemberCategory;\nimport org.springframework.aot.hint.ReflectionHints;\nimport org.springframework.aot.hint.RuntimeHints;\nimport org.springframework.aot.hint.TypeHint;\nimport org.springframework.aot.hint.TypeReference;\n\n/**\n * Collect {@link ReflectionHints} as map attributes ready for JSON serialization for the GraalVM\n * {@code native-image} compiler.\n *\n * @author Sebastien Deleuze\n * @author Stephane Nicoll\n * @author Janne Valkealahti\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/metadata/#reflection\">Reflection Use in Native Images</a>\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/dynamic-features/JNI/\">Java Native Interface (JNI) in Native Image</a>\n * @see <a href=\"https://www.graalvm.org/jdk23/reference-manual/native-image/overview/BuildConfiguration/\">Native Image Build Configuration</a>\n */\nclass ReflectionHintsAttributes {\n\n\tprivate static final Comparator<JdkProxyHint> JDK_PROXY_HINT_COMPARATOR =\n\t\t\t(left, right) -> {\n\t\t\t\tString leftSignature = left.getProxiedInterfaces().stream()\n\t\t\t\t\t\t.map(TypeReference::getCanonicalName).collect(Collectors.joining(\",\"));\n\t\t\t\tString rightSignature = right.getProxiedInterfaces().stream()\n\t\t\t\t\t\t.map(TypeReference::getCanonicalName).collect(Collectors.joining(\",\"));\n\t\t\t\treturn leftSignature.compareTo(rightSignature);\n\t\t\t};\n\n\tpublic List<Map<String, Object>> reflection(RuntimeHints hints) {\n\t\tList<Map<String, Object>> reflectionHints = new ArrayList<>();\n\t\treflectionHints.addAll(hints.reflection().typeHints()\n\t\t\t\t.sorted(Comparator.comparing(TypeHint::getType))\n\t\t\t\t.map(this::toAttributes).toList());\n\t\treflectionHints.addAll(hints.proxies().jdkProxyHints()\n\t\t\t\t.sorted(JDK_PROXY_HINT_COMPARATOR)\n\t\t\t\t.map(this::toAttributes).toList());\n\t\treturn reflectionHints;\n\t}\n\n\tpublic List<Map<String, Object>> jni(RuntimeHints hints) {\n\t\tList<Map<String, Object>> jniHints = new ArrayList<>();\n\t\tjniHints.addAll(hints.jni().typeHints()\n\t\t\t\t.sorted(Comparator.comparing(TypeHint::getType))\n\t\t\t\t.map(this::toAttributes).toList());\n\t\treturn jniHints;\n\t}\n\n\tprivate Map<String, Object> toAttributes(TypeHint hint) {\n\t\tMap<String, Object> attributes = new LinkedHashMap<>();\n\t\tattributes.put(\"type\", hint.getType());\n\t\thandleCondition(attributes, hint);\n\t\thandleCategories(attributes, hint.getMemberCategories());\n\t\thandleFields(attributes, hint.fields());\n\t\thandleExecutables(attributes, Stream.concat(\n\t\t\t\thint.constructors(), hint.methods()).sorted().toList());\n\t\treturn attributes;\n\t}\n\n\tprivate void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\n\t\tif (hint.getReachableType() != null) {\n\t\t\tattributes.put(\"condition\", Map.of(\"typeReached\", hint.getReachableType()));\n\t\t}\n\t}\n\n\tprivate void handleFields(Map<String, Object> attributes, Stream<FieldHint> fields) {\n\t\taddIfNotEmpty(attributes, \"fields\", fields\n\t\t\t\t.sorted(Comparator.comparing(FieldHint::getName, String::compareToIgnoreCase))\n\t\t\t\t.map(fieldHint -> Map.of(\"name\", fieldHint.getName()))\n\t\t\t\t.toList());\n\t}\n\n\tprivate void handleExecutables(Map<String, Object> attributes, List<ExecutableHint> hints) {\n\t\taddIfNotEmpty(attributes, \"methods\", hints.stream()\n\t\t\t\t.filter(h -> h.getMode().equals(ExecutableMode.INVOKE))\n\t\t\t\t.map(this::toAttributes).toList());\n\t}\n\n\tprivate Map<String, Object> toAttributes(ExecutableHint hint) {\n\t\tMap<String, Object> attributes = new LinkedHashMap<>();\n\t\tattributes.put(\"name\", hint.getName());\n\t\tattributes.put(\"parameterTypes\", hint.getParameterTypes());\n\t\treturn attributes;\n\t}\n\n\t@SuppressWarnings(\"removal\")\n\tprivate void handleCategories(Map<String, Object> attributes, Set<MemberCategory> categories) {\n\t\tcategories.stream().sorted().forEach(category -> {\n\t\t\t\t\tswitch (category) {\n\t\t\t\t\t\tcase ACCESS_PUBLIC_FIELDS, PUBLIC_FIELDS -> attributes.put(\"allPublicFields\", true);\n\t\t\t\t\t\tcase ACCESS_DECLARED_FIELDS, DECLARED_FIELDS -> attributes.put(\"allDeclaredFields\", true);\n\t\t\t\t\t\tcase INVOKE_PUBLIC_CONSTRUCTORS ->\n\t\t\t\t\t\t\t\tattributes.put(\"allPublicConstructors\", true);\n\t\t\t\t\t\tcase INVOKE_DECLARED_CONSTRUCTORS ->\n\t\t\t\t\t\t\t\tattributes.put(\"allDeclaredConstructors\", true);\n\t\t\t\t\t\tcase INVOKE_PUBLIC_METHODS -> attributes.put(\"allPublicMethods\", true);\n\t\t\t\t\t\tcase INVOKE_DECLARED_METHODS ->\n\t\t\t\t\t\t\t\tattributes.put(\"allDeclaredMethods\", true);\n\t\t\t\t\t\tcase PUBLIC_CLASSES -> attributes.put(\"allPublicClasses\", true);\n\t\t\t\t\t\tcase DECLARED_CLASSES -> attributes.put(\"allDeclaredClasses\", true);\n\t\t\t\t\t\tcase UNSAFE_ALLOCATED -> attributes.put(\"unsafeAllocated\", true);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t);\n\t}\n\n\tprivate void addIfNotEmpty(Map<String, Object> attributes, String name, @Nullable Object value) {\n\t\tif (value != null && (value instanceof Collection<?> collection && !collection.isEmpty())) {\n\t\t\tattributes.put(name, value);\n\t\t}\n\t}\n\n\tprivate Map<String, Object> toAttributes(JdkProxyHint hint) {\n\t\tMap<String, Object> attributes = new LinkedHashMap<>();\n\t\thandleCondition(attributes, hint);\n\t\tattributes.put(\"type\", Map.of(\"proxy\", hint.getProxiedInterfaces()));\n\t\treturn attributes;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#JDK_PROXY_HINT_COMPARATOR",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#JDK_PROXY_HINT_COMPARATOR",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Comparator<JdkProxyHint>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#reflection(RuntimeHints)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public List<Map<String, Object>> reflection(RuntimeHints hints) {\r\n    List<Map<String, Object>> reflectionHints = new ArrayList<>();\r\n    reflectionHints.addAll(hints.reflection().typeHints().sorted(Comparator.comparing(TypeHint::getType)).map(this::toAttributes).toList());\r\n    reflectionHints.addAll(hints.proxies().jdkProxyHints().sorted(JDK_PROXY_HINT_COMPARATOR).map(this::toAttributes).toList());\r\n    return reflectionHints;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#reflection(RuntimeHints)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#jni(RuntimeHints)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public List<Map<String, Object>> jni(RuntimeHints hints) {\r\n    List<Map<String, Object>> jniHints = new ArrayList<>();\r\n    jniHints.addAll(hints.jni().typeHints().sorted(Comparator.comparing(TypeHint::getType)).map(this::toAttributes).toList());\r\n    return jniHints;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#jni(RuntimeHints)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#toAttributes(TypeHint)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Map<String, Object> toAttributes(TypeHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    attributes.put(\"type\", hint.getType());\r\n    handleCondition(attributes, hint);\r\n    handleCategories(attributes, hint.getMemberCategories());\r\n    handleFields(attributes, hint.fields());\r\n    handleExecutables(attributes, Stream.concat(hint.constructors(), hint.methods()).sorted().toList());\r\n    return attributes;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#toAttributes(TypeHint)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleCondition(Map<String,Object>,ConditionalHint)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void handleCondition(Map<String, Object> attributes, ConditionalHint hint) {\r\n    if (hint.getReachableType() != null) {\r\n        attributes.put(\"condition\", Map.of(\"typeReached\", hint.getReachableType()));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleCondition(Map<String,Object>,ConditionalHint)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleFields(Map<String,Object>,Stream<FieldHint>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void handleFields(Map<String, Object> attributes, Stream<FieldHint> fields) {\r\n    addIfNotEmpty(attributes, \"fields\", fields.sorted(Comparator.comparing(FieldHint::getName, String::compareToIgnoreCase)).map(fieldHint -> Map.of(\"name\", fieldHint.getName())).toList());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleFields(Map<String,Object>,Stream<FieldHint>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleExecutables(Map<String,Object>,List<ExecutableHint>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void handleExecutables(Map<String, Object> attributes, List<ExecutableHint> hints) {\r\n    addIfNotEmpty(attributes, \"methods\", hints.stream().filter(h -> h.getMode().equals(ExecutableMode.INVOKE)).map(this::toAttributes).toList());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.ReflectionHintsAttributes#handleExecutables(Map<String,Object>,List<ExecutableHint>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.ReflectionHintsAttributes#toAttributes(ExecutableHint)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private Map<String, Object> toAttributes(ExecutableHint hint) {\r\n    Map<String, Object> attributes = new LinkedHashMap<>();\r\n    attributes.put(\"name\", hint.getName());\r\n    attributes.put(\"parameterTypes\", hint.getParameterTypes());\r\n    return attributes;\r\n}",
+    "tailType": "method_code"
+  }
+]

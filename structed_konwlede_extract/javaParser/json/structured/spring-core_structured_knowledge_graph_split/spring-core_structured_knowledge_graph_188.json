@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.Collection;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.Map;\nimport java.util.Set;\nimport java.util.concurrent.atomic.AtomicBoolean;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.entry;\n\n/**\n * @author Arjen Poutsma\n */\nclass CompositeMapTests {\n\n\t@Test\n\tvoid size() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\tMap<String, String> second = Map.of(\"quux\", \"corge\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThat(composite).hasSize(3);\n\t}\n\n\t@Test\n\tvoid isEmpty() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\tMap<String, String> second = Map.of(\"quux\", \"corge\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThat(composite).isNotEmpty();\n\n\t\tcomposite = new CompositeMap<>(Collections.emptyMap(), Collections.emptyMap());\n\t\tassertThat(composite).isEmpty();\n\t}\n\n\t@Test\n\tvoid containsKey() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\tMap<String, String> second = Map.of(\"quux\", \"corge\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThat(composite.containsKey(\"foo\")).isTrue();\n\t\tassertThat(composite.containsKey(\"bar\")).isFalse();\n\t\tassertThat(composite.containsKey(\"baz\")).isTrue();\n\t\tassertThat(composite.containsKey(\"qux\")).isFalse();\n\t\tassertThat(composite.containsKey(\"quux\")).isTrue();\n\t\tassertThat(composite.containsKey(\"corge\")).isFalse();\n\t}\n\n\t@Test\n\tvoid containsValue() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\tMap<String, String> second = Map.of(\"quux\", \"corge\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThat(composite.containsValue(\"foo\")).isFalse();\n\t\tassertThat(composite.containsValue(\"bar\")).isTrue();\n\t\tassertThat(composite.containsValue(\"baz\")).isFalse();\n\t\tassertThat(composite.containsValue(\"qux\")).isTrue();\n\t\tassertThat(composite.containsValue(\"quux\")).isFalse();\n\t\tassertThat(composite.containsValue(\"corge\")).isTrue();\n\t}\n\n\t@Test\n\tvoid get() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\tMap<String, String> second = Map.of(\"quux\", \"corge\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThat(composite.get(\"foo\")).isEqualTo(\"bar\");\n\t\tassertThat(composite.get(\"baz\")).isEqualTo(\"qux\");\n\t\tassertThat(composite.get(\"quux\")).isEqualTo(\"corge\");\n\n\t\tassertThat(composite.get(\"grault\")).isNull();\n\t}\n\n\t@Test\n\tvoid putUnsupported() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> composite.put(\"grault\", \"garply\"));\n\t}\n\t@Test\n\tvoid putSupported() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second, (k,v) -> {\n\t\t\tassertThat(k).isEqualTo(\"quux\");\n\t\t\tassertThat(v).isEqualTo(\"corge\");\n\t\t\treturn \"grault\";\n\t\t}, null);\n\n\t\tassertThat(composite.put(\"quux\", \"corge\")).isEqualTo(\"grault\");\n\t}\n\n\t@Test\n\tvoid remove() {\n\t\tMap<String, String> first = new HashMap<>(Map.of(\"foo\", \"bar\", \"baz\", \"qux\"));\n\t\tMap<String, String> second = new HashMap<>(Map.of(\"quux\", \"corge\"));\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThat(composite.remove(\"foo\")).isEqualTo(\"bar\");\n\t\tassertThat(composite.containsKey(\"foo\")).isFalse();\n\t\tassertThat(first).containsExactly(entry(\"baz\", \"qux\"));\n\n\t\tassertThat(composite.remove(\"grault\")).isNull();\n\t}\n\n\t@Test\n\tvoid putAllUnsupported() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tassertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> composite.putAll(Map.of(\"quux\", \"corge\", \"grault\", \"garply\")));\n\t}\n\n\t@Test\n\tvoid putAllPutFunction() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\n\t\tAtomicBoolean functionInvoked = new AtomicBoolean();\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second, (k,v) -> {\n\t\t\tassertThat(k).isEqualTo(\"quux\");\n\t\t\tassertThat(v).isEqualTo(\"corge\");\n\t\t\tfunctionInvoked.set(true);\n\t\t\treturn \"grault\";\n\t\t}, null);\n\n\t\tcomposite.putAll(Map.of(\"quux\", \"corge\"));\n\n\t\tassertThat(functionInvoked).isTrue();\n\t}\n\n\t@Test\n\tvoid putAllPutAllFunction() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\n\t\tAtomicBoolean functionInvoked = new AtomicBoolean();\n\t\tMap<String, String> argument = Map.of(\"quux\", \"corge\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second, null,\n\t\t\t\tm -> {\n\t\t\t\t\tassertThat(m).isSameAs(argument);\n\t\t\t\t\tfunctionInvoked.set(true);\n\t\t\t\t});\n\n\t\tcomposite.putAll(argument);\n\n\t\tassertThat(functionInvoked).isTrue();\n\t}\n\n\t@Test\n\tvoid clear() {\n\t\tMap<String, String> first = new HashMap<>(Map.of(\"foo\", \"bar\", \"baz\", \"qux\"));\n\t\tMap<String, String> second = new HashMap<>(Map.of(\"quux\", \"corge\"));\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tcomposite.clear();\n\n\t\tassertThat(composite).isEmpty();\n\t\tassertThat(first).isEmpty();\n\t\tassertThat(second).isEmpty();\n\t}\n\n\t@Test\n\tvoid keySet() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tSet<String> keySet = composite.keySet();\n\t\tassertThat(keySet).containsExactly(\"foo\", \"baz\");\n\t}\n\n\t@Test\n\tvoid values() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tCollection<String> values = composite.values();\n\t\tassertThat(values).containsExactly(\"bar\", \"qux\");\n\t}\n\n\t@Test\n\tvoid entrySet() {\n\t\tMap<String, String> first = Map.of(\"foo\", \"bar\");\n\t\tMap<String, String> second = Map.of(\"baz\", \"qux\");\n\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\tSet<Map.Entry<String, String>> entries = composite.entrySet();\n\t\tassertThat(entries).containsExactly(entry(\"foo\", \"bar\"), entry(\"baz\", \"qux\"));\n\t}\n\n\t@Nested\n\tclass CollisionTests {\n\n\t\t@Test\n\t\tvoid size() {\n\t\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\t\tMap<String, String> second = Map.of(\"baz\", \"quux\", \"corge\", \"grault\");\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tassertThat(composite).hasSize(3);\n\t\t}\n\n\t\t@Test\n\t\tvoid containsValue() {\n\t\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\t\tMap<String, String> second = Map.of(\"baz\", \"quux\", \"corge\", \"grault\");\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tassertThat(composite.containsValue(\"bar\")).isTrue();\n\t\t\tassertThat(composite.containsValue(\"qux\")).isTrue();\n\t\t\tassertThat(composite.containsValue(\"quux\")).isFalse();\n\t\t\tassertThat(composite.containsValue(\"grault\")).isTrue();\n\t\t}\n\n\t\t@Test\n\t\tvoid get() {\n\t\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\t\tMap<String, String> second = Map.of(\"baz\", \"quux\", \"corge\", \"grault\");\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tassertThat(composite.get(\"foo\")).isEqualTo(\"bar\");\n\t\t\tassertThat(composite.get(\"baz\")).isEqualTo(\"qux\");\n\t\t\tassertThat(composite.get(\"corge\")).isEqualTo(\"grault\");\n\t\t}\n\n\t\t@Test\n\t\tvoid remove() {\n\t\t\tMap<String, String> first = new HashMap<>(Map.of(\"foo\", \"bar\", \"baz\", \"qux\"));\n\t\t\tMap<String, String> second = new HashMap<>(Map.of(\"baz\", \"quux\", \"corge\", \"grault\"));\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tassertThat(composite.remove(\"baz\")).isEqualTo(\"qux\");\n\t\t\tassertThat(composite.containsKey(\"baz\")).isFalse();\n\t\t\tassertThat(first).containsExactly(entry(\"foo\", \"bar\"));\n\t\t\tassertThat(second).containsExactly(entry(\"corge\", \"grault\"));\n\t\t}\n\n\t\t@Test\n\t\tvoid keySet() {\n\t\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\t\tMap<String, String> second = Map.of(\"baz\", \"quux\", \"corge\", \"grault\");\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tSet<String> keySet = composite.keySet();\n\t\t\tassertThat(keySet).containsExactlyInAnyOrder(\"foo\", \"baz\", \"corge\");\n\t\t}\n\n\n\t\t@Test\n\t\tvoid values() {\n\t\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\t\tMap<String, String> second = Map.of(\"baz\", \"quux\", \"corge\", \"grault\");\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tCollection<String> values = composite.values();\n\t\t\tassertThat(values).containsExactlyInAnyOrder(\"bar\", \"qux\", \"grault\");\n\t\t}\n\n\t\t@Test\n\t\tvoid entrySet() {\n\t\t\tMap<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\n\t\t\tMap<String, String> second = Map.of(\"baz\", \"quux\", \"corge\", \"grault\");\n\t\t\tCompositeMap<String, String> composite = new CompositeMap<>(first, second);\n\n\t\t\tSet<Map.Entry<String, String>> entries = composite.entrySet();\n\t\t\tassertThat(entries).containsExactlyInAnyOrder(entry(\"foo\", \"bar\"), entry(\"baz\", \"qux\"), entry(\"corge\", \"grault\"));\n\t\t}\n\n\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#size()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid size() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\r\n    Map<String, String> second = Map.of(\"quux\", \"corge\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second);\r\n    assertThat(composite).hasSize(3);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMapTests#size()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#size()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#isEmpty()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid isEmpty() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\r\n    Map<String, String> second = Map.of(\"quux\", \"corge\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second);\r\n    assertThat(composite).isNotEmpty();\r\n    composite = new CompositeMap<>(Collections.emptyMap(), Collections.emptyMap());\r\n    assertThat(composite).isEmpty();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMapTests#isEmpty()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#isEmpty()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#containsKey()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid containsKey() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\r\n    Map<String, String> second = Map.of(\"quux\", \"corge\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second);\r\n    assertThat(composite.containsKey(\"foo\")).isTrue();\r\n    assertThat(composite.containsKey(\"bar\")).isFalse();\r\n    assertThat(composite.containsKey(\"baz\")).isTrue();\r\n    assertThat(composite.containsKey(\"qux\")).isFalse();\r\n    assertThat(composite.containsKey(\"quux\")).isTrue();\r\n    assertThat(composite.containsKey(\"corge\")).isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMapTests#containsKey()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#containsKey()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#containsValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid containsValue() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\r\n    Map<String, String> second = Map.of(\"quux\", \"corge\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second);\r\n    assertThat(composite.containsValue(\"foo\")).isFalse();\r\n    assertThat(composite.containsValue(\"bar\")).isTrue();\r\n    assertThat(composite.containsValue(\"baz\")).isFalse();\r\n    assertThat(composite.containsValue(\"qux\")).isTrue();\r\n    assertThat(composite.containsValue(\"quux\")).isFalse();\r\n    assertThat(composite.containsValue(\"corge\")).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMapTests#containsValue()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#containsValue()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#get()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid get() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\", \"baz\", \"qux\");\r\n    Map<String, String> second = Map.of(\"quux\", \"corge\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second);\r\n    assertThat(composite.get(\"foo\")).isEqualTo(\"bar\");\r\n    assertThat(composite.get(\"baz\")).isEqualTo(\"qux\");\r\n    assertThat(composite.get(\"quux\")).isEqualTo(\"corge\");\r\n    assertThat(composite.get(\"grault\")).isNull();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMapTests#get()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#get()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#putUnsupported()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid putUnsupported() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\");\r\n    Map<String, String> second = Map.of(\"baz\", \"qux\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second);\r\n    assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> composite.put(\"grault\", \"garply\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.CompositeMapTests#putUnsupported()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#putUnsupported()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.CompositeMapTests#putSupported()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid putSupported() {\r\n    Map<String, String> first = Map.of(\"foo\", \"bar\");\r\n    Map<String, String> second = Map.of(\"baz\", \"qux\");\r\n    CompositeMap<String, String> composite = new CompositeMap<>(first, second, (k, v) -> {\r\n        assertThat(k).isEqualTo(\"quux\");\r\n        assertThat(v).isEqualTo(\"corge\");\r\n        return \"grault\";\r\n    }, null);\r\n    assertThat(composite.put(\"quux\", \"corge\")).isEqualTo(\"grault\");\r\n}",
+    "tailType": "method_code"
+  }
+]

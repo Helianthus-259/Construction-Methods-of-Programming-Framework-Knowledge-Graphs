@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#maxIntervalReachedImmediately()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#executionToStringContent()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid executionToStringContent() {\r\n    ExponentialBackOff backOff = new ExponentialBackOff(2000L, 2.0);\r\n    BackOffExecution execution = backOff.start();\r\n    assertThat(execution.toString()).isEqualTo(\"ExponentialBackOffExecution{currentInterval=n/a, multiplier=2.0, attempts=0}\");\r\n    execution.nextBackOff();\r\n    assertThat(execution.toString()).isEqualTo(\"ExponentialBackOffExecution{currentInterval=2000ms, multiplier=2.0, attempts=1}\");\r\n    execution.nextBackOff();\r\n    assertThat(execution.toString()).isEqualTo(\"ExponentialBackOffExecution{currentInterval=4000ms, multiplier=2.0, attempts=2}\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ExponentialBackOffTests#executionToStringContent()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#executionToStringContent()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#maxAttempts()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid maxAttempts() {\r\n    ExponentialBackOff backOff = new ExponentialBackOff();\r\n    backOff.setInitialInterval(1000L);\r\n    backOff.setMultiplier(2.0);\r\n    backOff.setMaxInterval(10000L);\r\n    backOff.setMaxAttempts(6);\r\n    List<Long> delays = new ArrayList<>();\r\n    BackOffExecution execution = backOff.start();\r\n    IntStream.range(0, 7).forEach(i -> delays.add(execution.nextBackOff()));\r\n    assertThat(delays).containsExactly(1000L, 2000L, 4000L, 8000L, 10000L, 10000L, BackOffExecution.STOP);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ExponentialBackOffTests#maxAttempts()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ExponentialBackOffTests#maxAttempts()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint.support",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint.support",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint.support;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.aot.hint.ResourceHints;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ResourceUtils;\n\n/**\n * Register the necessary resource hints for loading files from the classpath,\n * based on file name prefixes and file extensions with convenience to support\n * multiple classpath locations.\n *\n * <p>Only registers hints for matching classpath locations, which allows for\n * several locations to be provided without contributing unnecessary hints.\n *\n * @author Stephane Nicoll\n * @author Sam Brannen\n * @author Juergen Hoeller\n * @since 6.0\n */\npublic final class FilePatternResourceHintsRegistrar {\n\n\tprivate final List<String> classpathLocations;\n\n\tprivate final List<String> filePrefixes;\n\n\tprivate final List<String> fileExtensions;\n\n\n\tprivate FilePatternResourceHintsRegistrar(List<String> filePrefixes, List<String> classpathLocations,\n\t\t\tList<String> fileExtensions) {\n\n\t\tthis.classpathLocations = validateClassPathLocations(classpathLocations);\n\t\tthis.filePrefixes = validateFilePrefixes(filePrefixes);\n\t\tthis.fileExtensions = validateFileExtensions(fileExtensions);\n\t}\n\n\n\tprivate void registerHints(ResourceHints hints, @Nullable ClassLoader classLoader) {\n\t\tClassLoader classLoaderToUse = (classLoader != null ? classLoader : getClass().getClassLoader());\n\t\tList<String> includes = new ArrayList<>();\n\t\tfor (String location : this.classpathLocations) {\n\t\t\tif (classLoaderToUse.getResource(location) != null) {\n\t\t\t\tfor (String filePrefix : this.filePrefixes) {\n\t\t\t\t\tfor (String fileExtension : this.fileExtensions) {\n\t\t\t\t\t\tincludes.add(location + filePrefix + \"*\" + fileExtension);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tif (!includes.isEmpty()) {\n\t\t\thints.registerPattern(hint -> hint.includes(includes.toArray(String[]::new)));\n\t\t}\n\t}\n\n\n\t/**\n\t * Configure the registrar with the specified\n\t * {@linkplain Builder#withClassPathLocations(String...) classpath locations}.\n\t * @param classpathLocations the classpath locations\n\t * @return a {@link Builder} to further configure the registrar\n\t * @since 6.0.12\n\t * @see #forClassPathLocations(List)\n\t */\n\tpublic static Builder forClassPathLocations(String... classpathLocations) {\n\t\treturn forClassPathLocations(Arrays.asList(classpathLocations));\n\t}\n\n\t/**\n\t * Configure the registrar with the specified\n\t * {@linkplain Builder#withClassPathLocations(List) classpath locations}.\n\t * @param classpathLocations the classpath locations\n\t * @return a {@link Builder} to further configure the registrar\n\t * @since 6.0.12\n\t * @see #forClassPathLocations(String...)\n\t */\n\tpublic static Builder forClassPathLocations(List<String> classpathLocations) {\n\t\treturn new Builder().withClassPathLocations(classpathLocations);\n\t}\n\n\tprivate static List<String> validateClassPathLocations(List<String> classpathLocations) {\n\t\tAssert.notEmpty(classpathLocations, \"At least one classpath location must be specified\");\n\t\tList<String> parsedLocations = new ArrayList<>();\n\t\tfor (String location : classpathLocations) {\n\t\t\tif (location.startsWith(ResourceUtils.CLASSPATH_URL_PREFIX)) {\n\t\t\t\tlocation = location.substring(ResourceUtils.CLASSPATH_URL_PREFIX.length());\n\t\t\t}\n\t\t\tif (location.startsWith(\"/\")) {\n\t\t\t\tlocation = location.substring(1);\n\t\t\t}\n\t\t\tif (!location.isEmpty() && !location.endsWith(\"/\")) {\n\t\t\t\tlocation = location + \"/\";\n\t\t\t}\n\t\t\tparsedLocations.add(location);\n\t\t}\n\t\treturn parsedLocations;\n\t}\n\n\tprivate static List<String> validateFilePrefixes(List<String> filePrefixes) {\n\t\tfor (String filePrefix : filePrefixes) {\n\t\t\tif (filePrefix.contains(\"*\")) {\n\t\t\t\tthrow new IllegalArgumentException(\"File prefix '\" + filePrefix + \"' cannot contain '*'\");\n\t\t\t}\n\t\t}\n\t\treturn filePrefixes;\n\t}\n\n\tprivate static List<String> validateFileExtensions(List<String> fileExtensions) {\n\t\tfor (String fileExtension : fileExtensions) {\n\t\t\tif (!fileExtension.startsWith(\".\")) {\n\t\t\t\tthrow new IllegalArgumentException(\"Extension '\" + fileExtension + \"' must start with '.'\");\n\t\t\t}\n\t\t}\n\t\treturn fileExtensions;\n\t}\n\n\n\t/**\n\t * Builder for {@link FilePatternResourceHintsRegistrar}.\n\t * @since 6.0.12\n\t */\n\tpublic static final class Builder {\n\n\t\tprivate final List<String> classpathLocations = new ArrayList<>();\n\n\t\tprivate final List<String> filePrefixes = new ArrayList<>();\n\n\t\tprivate final List<String> fileExtensions = new ArrayList<>();\n\n\t\tprivate Builder() {\n\t\t\t// no-op\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified classpath locations.\n\t\t * @deprecated in favor of {@link #withClassPathLocations(String...)}\n\t\t */\n\t\t@Deprecated(since = \"7.0\", forRemoval = true)\n\t\tpublic Builder withClasspathLocations(String... classpathLocations) {\n\t\t\treturn withClassPathLocations(Arrays.asList(classpathLocations));\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified classpath locations.\n\t\t * @deprecated in favor of {@link #withClassPathLocations(List)}\n\t\t */\n\t\t@Deprecated(since = \"7.0\", forRemoval = true)\n\t\tpublic Builder withClasspathLocations(List<String> classpathLocations) {\n\t\t\treturn withClassPathLocations(classpathLocations);\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified classpath locations.\n\t\t * <p>A location can either be a special {@value ResourceUtils#CLASSPATH_URL_PREFIX}\n\t\t * pseudo location or a standard location, such as {@code com/example/resources}.\n\t\t * An empty String represents the root of the classpath.\n\t\t * @param classpathLocations the classpath locations to consider\n\t\t * @return this builder\n\t\t * @since 7.0\n\t\t * @see #withClassPathLocations(List)\n\t\t */\n\t\tpublic Builder withClassPathLocations(String... classpathLocations) {\n\t\t\treturn withClassPathLocations(Arrays.asList(classpathLocations));\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified classpath locations.\n\t\t * <p>A location can either be a special {@value ResourceUtils#CLASSPATH_URL_PREFIX}\n\t\t * pseudo location or a standard location, such as {@code com/example/resources}.\n\t\t * An empty String represents the root of the classpath.\n\t\t * @param classpathLocations the classpath locations to consider\n\t\t * @return this builder\n\t\t * @since 7.0\n\t\t * @see #withClassPathLocations(String...)\n\t\t */\n\t\tpublic Builder withClassPathLocations(List<String> classpathLocations) {\n\t\t\tthis.classpathLocations.addAll(validateClassPathLocations(classpathLocations));\n\t\t\treturn this;\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified file prefixes. Any file whose name starts with one\n\t\t * of the specified prefixes is considered. A prefix cannot contain the {@code *}\n\t\t * character.\n\t\t * @param filePrefixes the file prefixes to consider\n\t\t * @return this builder\n\t\t * @see #withFilePrefixes(List)\n\t\t */\n\t\tpublic Builder withFilePrefixes(String... filePrefixes) {\n\t\t\treturn withFilePrefixes(Arrays.asList(filePrefixes));\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified file prefixes. Any file whose name starts with one\n\t\t * of the specified prefixes is considered. A prefix cannot contain the {@code *}\n\t\t * character.\n\t\t * @param filePrefixes the file prefixes to consider\n\t\t * @return this builder\n\t\t * @see #withFilePrefixes(String...)\n\t\t */\n\t\tpublic Builder withFilePrefixes(List<String> filePrefixes) {\n\t\t\tthis.filePrefixes.addAll(validateFilePrefixes(filePrefixes));\n\t\t\treturn this;\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified file extensions. A file extension must start with a\n\t\t * {@code .} character.\n\t\t * @param fileExtensions the file extensions to consider\n\t\t * @return this builder\n\t\t * @see #withFileExtensions(List)\n\t\t */\n\t\tpublic Builder withFileExtensions(String... fileExtensions) {\n\t\t\treturn withFileExtensions(Arrays.asList(fileExtensions));\n\t\t}\n\n\t\t/**\n\t\t * Consider the specified file extensions. A file extension must start with a\n\t\t * {@code .} character.\n\t\t * @param fileExtensions the file extensions to consider\n\t\t * @return this builder\n\t\t * @see #withFileExtensions(String...)\n\t\t */\n\t\tpublic Builder withFileExtensions(List<String> fileExtensions) {\n\t\t\tthis.fileExtensions.addAll(validateFileExtensions(fileExtensions));\n\t\t\treturn this;\n\t\t}\n\n\t\tprivate FilePatternResourceHintsRegistrar build() {\n\t\t\treturn new FilePatternResourceHintsRegistrar(this.filePrefixes,\n\t\t\t\t\tthis.classpathLocations, this.fileExtensions);\n\t\t}\n\n\t\t/**\n\t\t * Register resource hints for the current state of this builder. For each\n\t\t * classpath location that resolves against the {@code ClassLoader}, files\n\t\t * with the configured file prefixes and extensions are registered.\n\t\t * @param hints the hints contributed so far for the deployment unit\n\t\t * @param classLoader the classloader, or {@code null} if even the system\n\t\t * ClassLoader isn't accessible\n\t\t */\n\t\tpublic void registerHints(ResourceHints hints, @Nullable ClassLoader classLoader) {\n\t\t\tbuild().registerHints(hints, classLoader);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#classpathLocations",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#classpathLocations",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#filePrefixes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#filePrefixes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#fileExtensions",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#fileExtensions",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#registerHints(ResourceHints,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void registerHints(ResourceHints hints, @Nullable ClassLoader classLoader) {\r\n    ClassLoader classLoaderToUse = (classLoader != null ? classLoader : getClass().getClassLoader());\r\n    List<String> includes = new ArrayList<>();\r\n    for (String location : this.classpathLocations) {\r\n        if (classLoaderToUse.getResource(location) != null) {\r\n            for (String filePrefix : this.filePrefixes) {\r\n                for (String fileExtension : this.fileExtensions) {\r\n                    includes.add(location + filePrefix + \"*\" + fileExtension);\r\n                }\r\n            }\r\n        }\r\n    }\r\n    if (!includes.isEmpty()) {\r\n        hints.registerPattern(hint -> hint.includes(includes.toArray(String[]::new)));\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#registerHints(ResourceHints,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#forClassPathLocations(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Configure the registrar with the specified\r\n * {@linkplain Builder#withClassPathLocations(String...) classpath locations}.\r\n * @param classpathLocations the classpath locations\r\n * @return a {@link Builder} to further configure the registrar\r\n * @since 6.0.12\r\n * @see #forClassPathLocations(List)\r\n */\r\npublic static Builder forClassPathLocations(String... classpathLocations) {\r\n    return forClassPathLocations(Arrays.asList(classpathLocations));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.support.FilePatternResourceHintsRegistrar#forClassPathLocations(String)",
+    "tailType": "method"
+  }
+]

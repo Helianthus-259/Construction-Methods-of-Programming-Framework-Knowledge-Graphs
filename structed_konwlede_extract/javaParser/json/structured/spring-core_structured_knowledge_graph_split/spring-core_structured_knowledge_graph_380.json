@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.ConstantDynamic#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic String toString() {\r\n    return name + \" : \" + descriptor + ' ' + bootstrapMethod + ' ' + Arrays.toString(bootstrapMethodArguments);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ConstantDynamic",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ConstantDynamic#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ConstantDynamic#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2021 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.io.StringReader;\nimport java.io.StringWriter;\n\nimport javax.xml.parsers.DocumentBuilder;\nimport javax.xml.parsers.DocumentBuilderFactory;\nimport javax.xml.parsers.SAXParser;\nimport javax.xml.parsers.SAXParserFactory;\nimport javax.xml.stream.XMLStreamException;\nimport javax.xml.transform.Result;\nimport javax.xml.transform.dom.DOMResult;\nimport javax.xml.transform.stream.StreamResult;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.w3c.dom.Document;\nimport org.w3c.dom.Node;\nimport org.xml.sax.InputSource;\nimport org.xml.sax.XMLReader;\nimport org.xmlunit.util.Predicate;\n\nimport org.springframework.core.testfixture.xml.XmlContent;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * @author Arjen Poutsma\n * @author Sam Brannen\n */\nabstract class AbstractStaxHandlerTests {\n\n\tprivate static final String COMPLEX_XML =\n\t\t\t\"<?xml version='1.0' encoding='UTF-8'?>\" +\n\t\t\t\t\t\"<!DOCTYPE beans PUBLIC \\\"-//SPRING//DTD BEAN 2.0//EN\\\" \\\"https://www.springframework.org/dtd/spring-beans-2.0.dtd\\\">\" +\n\t\t\t\t\t\"<?pi content?><root xmlns='namespace'><prefix:child xmlns:prefix='namespace2' prefix:attr='value'>characters <![CDATA[cdata]]></prefix:child>\" +\n\t\t\t\t\t\"<!-- comment -->\" +\n\t\t\t\t\t\"</root>\";\n\n\tprivate static final String SIMPLE_XML = \"<?xml version='1.0' encoding='UTF-8'?>\" +\n\t\t\t\t\t\"<?pi content?><root xmlns='namespace'><prefix:child xmlns:prefix='namespace2' prefix:attr='value'>content</prefix:child>\" +\n\t\t\t\t\t\"</root>\";\n\n\tprivate static final Predicate<Node> nodeFilter = (n -> n.getNodeType() != Node.COMMENT_NODE &&\n\t\t\tn.getNodeType() != Node.DOCUMENT_TYPE_NODE && n.getNodeType() != Node.PROCESSING_INSTRUCTION_NODE);\n\n\n\tprivate XMLReader xmlReader;\n\n\n\t@BeforeEach\n\tvoid createXMLReader() throws Exception {\n\t\tSAXParserFactory saxParserFactory = SAXParserFactory.newInstance();\n\t\tsaxParserFactory.setNamespaceAware(true);\n\t\tSAXParser saxParser = saxParserFactory.newSAXParser();\n\t\txmlReader = saxParser.getXMLReader();\n\t\txmlReader.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader(\"\")));\n\t}\n\n\n\t@Test\n\tvoid noNamespacePrefixes() throws Exception {\n\t\tStringWriter stringWriter = new StringWriter();\n\t\tAbstractStaxHandler handler = createStaxHandler(new StreamResult(stringWriter));\n\t\txmlReader.setContentHandler(handler);\n\t\txmlReader.setProperty(\"http://xml.org/sax/properties/lexical-handler\", handler);\n\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespaces\", true);\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespace-prefixes\", false);\n\n\t\txmlReader.parse(new InputSource(new StringReader(COMPLEX_XML)));\n\n\t\tassertThat(XmlContent.from(stringWriter)).isSimilarTo(COMPLEX_XML, nodeFilter);\n\t}\n\n\t@Test\n\tvoid namespacePrefixes() throws Exception {\n\t\tStringWriter stringWriter = new StringWriter();\n\t\tAbstractStaxHandler handler = createStaxHandler(new StreamResult(stringWriter));\n\t\txmlReader.setContentHandler(handler);\n\t\txmlReader.setProperty(\"http://xml.org/sax/properties/lexical-handler\", handler);\n\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespaces\", true);\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespace-prefixes\", true);\n\n\t\txmlReader.parse(new InputSource(new StringReader(COMPLEX_XML)));\n\n\t\tassertThat(XmlContent.from(stringWriter)).isSimilarTo(COMPLEX_XML, nodeFilter);\n\t}\n\n\t@Test\n\tvoid noNamespacePrefixesDom() throws Exception {\n\t\tDocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();\n\t\tdocumentBuilderFactory.setNamespaceAware(true);\n\t\tDocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();\n\n\t\tDocument expected = documentBuilder.parse(new InputSource(new StringReader(SIMPLE_XML)));\n\n\t\tDocument result = documentBuilder.newDocument();\n\t\tAbstractStaxHandler handler = createStaxHandler(new DOMResult(result));\n\t\txmlReader.setContentHandler(handler);\n\t\txmlReader.setProperty(\"http://xml.org/sax/properties/lexical-handler\", handler);\n\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespaces\", true);\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespace-prefixes\", false);\n\n\t\txmlReader.parse(new InputSource(new StringReader(SIMPLE_XML)));\n\n\t\tassertThat(XmlContent.of(result)).isSimilarTo(expected, nodeFilter);\n\t}\n\n\t@Test\n\tvoid namespacePrefixesDom() throws Exception {\n\t\tDocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();\n\t\tdocumentBuilderFactory.setNamespaceAware(true);\n\t\tDocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();\n\n\t\tDocument expected = documentBuilder.parse(new InputSource(new StringReader(SIMPLE_XML)));\n\n\t\tDocument result = documentBuilder.newDocument();\n\t\tAbstractStaxHandler handler = createStaxHandler(new DOMResult(result));\n\t\txmlReader.setContentHandler(handler);\n\t\txmlReader.setProperty(\"http://xml.org/sax/properties/lexical-handler\", handler);\n\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespaces\", true);\n\t\txmlReader.setFeature(\"http://xml.org/sax/features/namespace-prefixes\", true);\n\n\t\txmlReader.parse(new InputSource(new StringReader(SIMPLE_XML)));\n\n\t\tassertThat(XmlContent.of(result)).isSimilarTo(expected, nodeFilter);\n\t}\n\n\tprotected abstract AbstractStaxHandler createStaxHandler(Result result) throws XMLStreamException;\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests#COMPLEX_XML",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#COMPLEX_XML",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests#SIMPLE_XML",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#SIMPLE_XML",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests#nodeFilter",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#nodeFilter",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Predicate<Node>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests#xmlReader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#xmlReader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "XMLReader",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#createXMLReader()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@BeforeEach\r\nvoid createXMLReader() throws Exception {\r\n    SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();\r\n    saxParserFactory.setNamespaceAware(true);\r\n    SAXParser saxParser = saxParserFactory.newSAXParser();\r\n    xmlReader = saxParser.getXMLReader();\r\n    xmlReader.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader(\"\")));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests#createXMLReader()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#createXMLReader()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@BeforeEach",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#noNamespacePrefixes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid noNamespacePrefixes() throws Exception {\r\n    StringWriter stringWriter = new StringWriter();\r\n    AbstractStaxHandler handler = createStaxHandler(new StreamResult(stringWriter));\r\n    xmlReader.setContentHandler(handler);\r\n    xmlReader.setProperty(\"http://xml.org/sax/properties/lexical-handler\", handler);\r\n    xmlReader.setFeature(\"http://xml.org/sax/features/namespaces\", true);\r\n    xmlReader.setFeature(\"http://xml.org/sax/features/namespace-prefixes\", false);\r\n    xmlReader.parse(new InputSource(new StringReader(COMPLEX_XML)));\r\n    assertThat(XmlContent.from(stringWriter)).isSimilarTo(COMPLEX_XML, nodeFilter);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.AbstractStaxHandlerTests#noNamespacePrefixes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.AbstractStaxHandlerTests#noNamespacePrefixes()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

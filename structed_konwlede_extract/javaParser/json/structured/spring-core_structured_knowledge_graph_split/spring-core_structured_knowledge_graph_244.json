@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#provideFieldValue(Field)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// This method is invoked when the field value is written to the image heap or the field is constant folded.\r\nprivate Object provideFieldValue(Field field) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {\r\n    Class<?> throwawayClass = this.throwawayClassLoader.loadClass(field.getDeclaringClass().getName());\r\n    Field throwawayField = throwawayClass.getDeclaredField(field.getName());\r\n    throwawayField.setAccessible(true);\r\n    return throwawayField.get(null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#provideFieldValue(Field)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.Iterator;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link LinkedCaseInsensitiveMap}.\n *\n * @author Juergen Hoeller\n * @author Phillip Webb\n */\nclass LinkedCaseInsensitiveMapTests {\n\n\tprivate final LinkedCaseInsensitiveMap<String> map = new LinkedCaseInsensitiveMap<>();\n\n\n\t@Test\n\tvoid putAndGet() {\n\t\tassertThat(map.put(\"key\", \"value1\")).isNull();\n\t\tassertThat(map.put(\"key\", \"value2\")).isEqualTo(\"value1\");\n\t\tassertThat(map.put(\"key\", \"value3\")).isEqualTo(\"value2\");\n\t\tassertThat(map).hasSize(1);\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"value3\");\n\t\tassertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\n\t\tassertThat(map.get(\"Key\")).isEqualTo(\"value3\");\n\t\tassertThat(map.containsKey(\"key\")).isTrue();\n\t\tassertThat(map.containsKey(\"KEY\")).isTrue();\n\t\tassertThat(map.containsKey(\"Key\")).isTrue();\n\t\tassertThat(map.keySet().contains(\"key\")).isTrue();\n\t\tassertThat(map.keySet().contains(\"KEY\")).isTrue();\n\t\tassertThat(map.keySet().contains(\"Key\")).isTrue();\n\t}\n\n\t@Test\n\tvoid putWithOverlappingKeys() {\n\t\tassertThat(map.put(\"key\", \"value1\")).isNull();\n\t\tassertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\n\t\tassertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\n\t\tassertThat(map).hasSize(1);\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"value3\");\n\t\tassertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\n\t\tassertThat(map.get(\"Key\")).isEqualTo(\"value3\");\n\t\tassertThat(map.containsKey(\"key\")).isTrue();\n\t\tassertThat(map.containsKey(\"KEY\")).isTrue();\n\t\tassertThat(map.containsKey(\"Key\")).isTrue();\n\t\tassertThat(map.keySet().contains(\"key\")).isTrue();\n\t\tassertThat(map.keySet().contains(\"KEY\")).isTrue();\n\t\tassertThat(map.keySet().contains(\"Key\")).isTrue();\n\t}\n\n\t@Test\n\tvoid getOrDefault() {\n\t\tassertThat(map.put(\"key\", \"value1\")).isNull();\n\t\tassertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\n\t\tassertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\n\t\tassertThat(map.getOrDefault(\"key\", \"N\")).isEqualTo(\"value3\");\n\t\tassertThat(map.getOrDefault(\"KEY\", \"N\")).isEqualTo(\"value3\");\n\t\tassertThat(map.getOrDefault(\"Key\", \"N\")).isEqualTo(\"value3\");\n\t\tassertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\n\t\tassertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\n\t}\n\n\t@Test\n\tvoid getOrDefaultWithNullValue() {\n\t\tassertThat(map.put(\"key\", null)).isNull();\n\t\tassertThat(map.put(\"KEY\", null)).isNull();\n\t\tassertThat(map.put(\"Key\", null)).isNull();\n\t\tassertThat(map.getOrDefault(\"key\", \"N\")).isNull();\n\t\tassertThat(map.getOrDefault(\"KEY\", \"N\")).isNull();\n\t\tassertThat(map.getOrDefault(\"Key\", \"N\")).isNull();\n\t\tassertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\n\t\tassertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\n\t}\n\n\t@Test\n\tvoid computeIfAbsentWithExistingValue() {\n\t\tassertThat(map.putIfAbsent(\"key\", \"value1\")).isNull();\n\t\tassertThat(map.putIfAbsent(\"KEY\", \"value2\")).isEqualTo(\"value1\");\n\t\tassertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value1\");\n\t\tassertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value3\");\n\t\tassertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value3\");\n\t\tassertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value3\");\n\n\t\tassertThat(map.put(\"null\", null)).isNull();\n\t\tassertThat(map.putIfAbsent(\"NULL\", \"value\")).isNull();\n\t\tassertThat(map.put(\"null\", null)).isEqualTo(\"value\");\n\t\tassertThat(map.computeIfAbsent(\"NULL\", s -> \"value\")).isEqualTo(\"value\");\n\t\tassertThat(map.get(\"null\")).isEqualTo(\"value\");\n\t}\n\n\t@Test\n\tvoid computeIfAbsentWithComputedValue() {\n\t\tassertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value1\");\n\t\tassertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value1\");\n\t\tassertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value1\");\n\t}\n\n\t@Test\n\tvoid mapClone() {\n\t\tassertThat(map.put(\"key\", \"value1\")).isNull();\n\t\tLinkedCaseInsensitiveMap<String> copy = map.clone();\n\n\t\tassertThat(copy.getLocale()).isEqualTo(map.getLocale());\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"value1\");\n\t\tassertThat(map.get(\"KEY\")).isEqualTo(\"value1\");\n\t\tassertThat(map.get(\"Key\")).isEqualTo(\"value1\");\n\t\tassertThat(copy.get(\"key\")).isEqualTo(\"value1\");\n\t\tassertThat(copy.get(\"KEY\")).isEqualTo(\"value1\");\n\t\tassertThat(copy.get(\"Key\")).isEqualTo(\"value1\");\n\n\t\tcopy.put(\"Key\", \"value2\");\n\t\tassertThat(map).hasSize(1);\n\t\tassertThat(copy).hasSize(1);\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"value1\");\n\t\tassertThat(map.get(\"KEY\")).isEqualTo(\"value1\");\n\t\tassertThat(map.get(\"Key\")).isEqualTo(\"value1\");\n\t\tassertThat(copy.get(\"key\")).isEqualTo(\"value2\");\n\t\tassertThat(copy.get(\"KEY\")).isEqualTo(\"value2\");\n\t\tassertThat(copy.get(\"Key\")).isEqualTo(\"value2\");\n\t}\n\n\n\t@Test\n\tvoid clearFromKeySet() {\n\t\tmap.put(\"key\", \"value\");\n\t\tmap.keySet().clear();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid removeFromKeySet() {\n\t\tmap.put(\"key\", \"value\");\n\t\tmap.keySet().remove(\"key\");\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid removeFromKeySetViaIterator() {\n\t\tmap.put(\"key\", \"value\");\n\t\tnextAndRemove(map.keySet().iterator());\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid clearFromValues() {\n\t\tmap.put(\"key\", \"value\");\n\t\tmap.values().clear();\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid removeFromValues() {\n\t\tmap.put(\"key\", \"value\");\n\t\tmap.values().remove(\"value\");\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid removeFromValuesViaIterator() {\n\t\tmap.put(\"key\", \"value\");\n\t\tnextAndRemove(map.values().iterator());\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid clearFromEntrySet() {\n\t\tmap.put(\"key\", \"value\");\n\t\tmap.entrySet().clear();\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid removeFromEntrySet() {\n\t\tmap.put(\"key\", \"value\");\n\t\tmap.entrySet().remove(map.entrySet().iterator().next());\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\t@Test\n\tvoid removeFromEntrySetViaIterator() {\n\t\tmap.put(\"key\", \"value\");\n\t\tnextAndRemove(map.entrySet().iterator());\n\t\tassertThat(map).isEmpty();\n\t\tmap.computeIfAbsent(\"key\", k -> \"newvalue\");\n\t\tassertThat(map.get(\"key\")).isEqualTo(\"newvalue\");\n\t}\n\n\tprivate void nextAndRemove(Iterator<?> iterator) {\n\t\titerator.next();\n\t\titerator.remove();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.LinkedCaseInsensitiveMapTests#map",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#map",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "LinkedCaseInsensitiveMap<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#putAndGet()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid putAndGet() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"key\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value3\");\r\n    assertThat(map.containsKey(\"key\")).isTrue();\r\n    assertThat(map.containsKey(\"KEY\")).isTrue();\r\n    assertThat(map.containsKey(\"Key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"KEY\")).isTrue();\r\n    assertThat(map.keySet().contains(\"Key\")).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.LinkedCaseInsensitiveMapTests#putAndGet()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#putAndGet()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#putWithOverlappingKeys()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid putWithOverlappingKeys() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map).hasSize(1);\r\n    assertThat(map.get(\"key\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"KEY\")).isEqualTo(\"value3\");\r\n    assertThat(map.get(\"Key\")).isEqualTo(\"value3\");\r\n    assertThat(map.containsKey(\"key\")).isTrue();\r\n    assertThat(map.containsKey(\"KEY\")).isTrue();\r\n    assertThat(map.containsKey(\"Key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"key\")).isTrue();\r\n    assertThat(map.keySet().contains(\"KEY\")).isTrue();\r\n    assertThat(map.keySet().contains(\"Key\")).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.LinkedCaseInsensitiveMapTests#putWithOverlappingKeys()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#putWithOverlappingKeys()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefault()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getOrDefault() {\r\n    assertThat(map.put(\"key\", \"value1\")).isNull();\r\n    assertThat(map.put(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value2\");\r\n    assertThat(map.getOrDefault(\"key\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"KEY\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"Key\", \"N\")).isEqualTo(\"value3\");\r\n    assertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\r\n    assertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefault()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefault()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefaultWithNullValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid getOrDefaultWithNullValue() {\r\n    assertThat(map.put(\"key\", null)).isNull();\r\n    assertThat(map.put(\"KEY\", null)).isNull();\r\n    assertThat(map.put(\"Key\", null)).isNull();\r\n    assertThat(map.getOrDefault(\"key\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"KEY\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"Key\", \"N\")).isNull();\r\n    assertThat(map.getOrDefault(\"keeeey\", \"N\")).isEqualTo(\"N\");\r\n    assertThat(map.getOrDefault(new Object(), \"N\")).isEqualTo(\"N\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefaultWithNullValue()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#getOrDefaultWithNullValue()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.LinkedCaseInsensitiveMapTests#computeIfAbsentWithExistingValue()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid computeIfAbsentWithExistingValue() {\r\n    assertThat(map.putIfAbsent(\"key\", \"value1\")).isNull();\r\n    assertThat(map.putIfAbsent(\"KEY\", \"value2\")).isEqualTo(\"value1\");\r\n    assertThat(map.put(\"Key\", \"value3\")).isEqualTo(\"value1\");\r\n    assertThat(map.computeIfAbsent(\"key\", key2 -> \"value1\")).isEqualTo(\"value3\");\r\n    assertThat(map.computeIfAbsent(\"KEY\", key1 -> \"value2\")).isEqualTo(\"value3\");\r\n    assertThat(map.computeIfAbsent(\"Key\", key -> \"value3\")).isEqualTo(\"value3\");\r\n    assertThat(map.put(\"null\", null)).isNull();\r\n    assertThat(map.putIfAbsent(\"NULL\", \"value\")).isNull();\r\n    assertThat(map.put(\"null\", null)).isEqualTo(\"value\");\r\n    assertThat(map.computeIfAbsent(\"NULL\", s -> \"value\")).isEqualTo(\"value\");\r\n    assertThat(map.get(\"null\")).isEqualTo(\"value\");\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHint#equals(Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic boolean equals(@Nullable Object other) {\r\n    return (this == other || (other instanceof ResourcePatternHint that && this.pattern.equals(that.pattern) && Objects.equals(this.reachableType, that.reachableType)));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourcePatternHint#equals(Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHint#equals(Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHint#hashCode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic int hashCode() {\r\n    return Objects.hash(this.pattern, this.reachableType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourcePatternHint#hashCode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHint#hashCode()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.concurrent",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.concurrent",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.concurrent.FutureUtilsTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.concurrent;\n\nimport java.util.concurrent.CompletableFuture;\nimport java.util.concurrent.CompletionException;\nimport java.util.concurrent.CountDownLatch;\nimport java.util.concurrent.ExecutionException;\n\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.core.task.SimpleAsyncTaskExecutor;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n\n/**\n * @author Arjen Poutsma\n */\nclass FutureUtilsTests {\n\n\t@Test\n\tvoid callAsyncNormal() throws ExecutionException, InterruptedException {\n\t\tString foo = \"Foo\";\n\t\tCompletableFuture<String> future = FutureUtils.callAsync(() -> foo);\n\n\t\tassertThat(future.get()).isEqualTo(foo);\n\t\tassertThat(future.isCancelled()).isFalse();\n\t\tassertThat(future.isDone()).isTrue();\n\n\t\tCountDownLatch latch = new CountDownLatch(1);\n\t\tfuture.whenComplete((s, throwable) -> {\n\t\t\tassertThat(s).isEqualTo(foo);\n\t\t\tassertThat(throwable).isNull();\n\t\t\tlatch.countDown();\n\t\t});\n\t\tlatch.await();\n\t}\n\n\t@Test\n\tvoid callAsyncException() throws InterruptedException {\n\t\tRuntimeException ex = new RuntimeException(\"Foo\");\n\t\tCompletableFuture<String> future = FutureUtils.callAsync(() -> {\n\t\t\tthrow ex;\n\t\t});\n\t\tassertThatExceptionOfType(ExecutionException.class)\n\t\t\t\t.isThrownBy(future::get)\n\t\t\t\t.withCause(ex);\n\t\tassertThat(future.isCancelled()).isFalse();\n\t\tassertThat(future.isDone()).isTrue();\n\n\t\tCountDownLatch latch = new CountDownLatch(1);\n\t\tfuture.whenComplete((s, throwable) -> {\n\t\t\tassertThat(s).isNull();\n\t\t\tassertThat(throwable).isInstanceOf(CompletionException.class)\n\t\t\t\t\t.hasCause(ex);\n\t\t\tlatch.countDown();\n\t\t});\n\t\tlatch.await();\n\t}\n\n\t@Test\n\tvoid callAsyncNormalExecutor() throws ExecutionException, InterruptedException {\n\t\tString foo = \"Foo\";\n\t\tCompletableFuture<String> future = FutureUtils.callAsync(() -> foo, new SimpleAsyncTaskExecutor());\n\n\t\tassertThat(future.get()).isEqualTo(foo);\n\t\tassertThat(future.isCancelled()).isFalse();\n\t\tassertThat(future.isDone()).isTrue();\n\n\t\tCountDownLatch latch = new CountDownLatch(1);\n\t\tfuture.whenComplete((s, throwable) -> {\n\t\t\tassertThat(s).isEqualTo(foo);\n\t\t\tassertThat(throwable).isNull();\n\t\t\tlatch.countDown();\n\t\t});\n\t\tlatch.await();\n\t}\n\n\t@Test\n\tvoid callAsyncExceptionExecutor() throws InterruptedException {\n\t\tRuntimeException ex = new RuntimeException(\"Foo\");\n\t\tCompletableFuture<String> future = FutureUtils.callAsync(() -> {\n\t\t\tthrow ex;\n\t\t}, new SimpleAsyncTaskExecutor());\n\t\tassertThatExceptionOfType(ExecutionException.class)\n\t\t\t\t.isThrownBy(future::get)\n\t\t\t\t.withCause(ex);\n\t\tassertThat(future.isCancelled()).isFalse();\n\t\tassertThat(future.isDone()).isTrue();\n\n\t\tCountDownLatch latch = new CountDownLatch(1);\n\t\tfuture.whenComplete((s, throwable) -> {\n\t\t\tassertThat(s).isNull();\n\t\t\tassertThat(throwable).isInstanceOf(CompletionException.class)\n\t\t\t\t\t.hasCause(ex);\n\t\t\tlatch.countDown();\n\t\t});\n\t\tlatch.await();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncNormal()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid callAsyncNormal() throws ExecutionException, InterruptedException {\r\n    String foo = \"Foo\";\r\n    CompletableFuture<String> future = FutureUtils.callAsync(() -> foo);\r\n    assertThat(future.get()).isEqualTo(foo);\r\n    assertThat(future.isCancelled()).isFalse();\r\n    assertThat(future.isDone()).isTrue();\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    future.whenComplete((s, throwable) -> {\r\n        assertThat(s).isEqualTo(foo);\r\n        assertThat(throwable).isNull();\r\n        latch.countDown();\r\n    });\r\n    latch.await();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncNormal()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncNormal()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncException()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid callAsyncException() throws InterruptedException {\r\n    RuntimeException ex = new RuntimeException(\"Foo\");\r\n    CompletableFuture<String> future = FutureUtils.callAsync(() -> {\r\n        throw ex;\r\n    });\r\n    assertThatExceptionOfType(ExecutionException.class).isThrownBy(future::get).withCause(ex);\r\n    assertThat(future.isCancelled()).isFalse();\r\n    assertThat(future.isDone()).isTrue();\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    future.whenComplete((s, throwable) -> {\r\n        assertThat(s).isNull();\r\n        assertThat(throwable).isInstanceOf(CompletionException.class).hasCause(ex);\r\n        latch.countDown();\r\n    });\r\n    latch.await();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncException()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncException()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncNormalExecutor()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid callAsyncNormalExecutor() throws ExecutionException, InterruptedException {\r\n    String foo = \"Foo\";\r\n    CompletableFuture<String> future = FutureUtils.callAsync(() -> foo, new SimpleAsyncTaskExecutor());\r\n    assertThat(future.get()).isEqualTo(foo);\r\n    assertThat(future.isCancelled()).isFalse();\r\n    assertThat(future.isDone()).isTrue();\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    future.whenComplete((s, throwable) -> {\r\n        assertThat(s).isEqualTo(foo);\r\n        assertThat(throwable).isNull();\r\n        latch.countDown();\r\n    });\r\n    latch.await();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncNormalExecutor()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncNormalExecutor()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncExceptionExecutor()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid callAsyncExceptionExecutor() throws InterruptedException {\r\n    RuntimeException ex = new RuntimeException(\"Foo\");\r\n    CompletableFuture<String> future = FutureUtils.callAsync(() -> {\r\n        throw ex;\r\n    }, new SimpleAsyncTaskExecutor());\r\n    assertThatExceptionOfType(ExecutionException.class).isThrownBy(future::get).withCause(ex);\r\n    assertThat(future.isCancelled()).isFalse();\r\n    assertThat(future.isDone()).isTrue();\r\n    CountDownLatch latch = new CountDownLatch(1);\r\n    future.whenComplete((s, throwable) -> {\r\n        assertThat(s).isNull();\r\n        assertThat(throwable).isInstanceOf(CompletionException.class).hasCause(ex);\r\n        latch.countDown();\r\n    });\r\n    latch.await();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncExceptionExecutor()",
+    "tailType": "method"
+  }
+]

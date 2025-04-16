@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.io.ByteArrayOutputStream;\nimport java.io.IOException;\nimport java.io.StringWriter;\nimport java.nio.charset.StandardCharsets;\nimport java.util.Collections;\nimport java.util.Properties;\n\nimport org.junit.jupiter.api.Test;\n\nimport static java.util.Arrays.stream;\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.entry;\n\n/**\n * Tests for {@link SortedProperties}.\n *\n * @author Sam Brannen\n * @since 5.2\n */\nclass SortedPropertiesTests {\n\n\t@Test\n\tvoid keys() {\n\t\tassertKeys(createSortedProps());\n\t}\n\n\t@Test\n\tvoid keysFromPrototype() {\n\t\tassertKeys(createSortedPropsFromPrototype());\n\t}\n\n\t@Test\n\tvoid keySet() {\n\t\tassertKeySet(createSortedProps());\n\t}\n\n\t@Test\n\tvoid keySetFromPrototype() {\n\t\tassertKeySet(createSortedPropsFromPrototype());\n\t}\n\n\t@Test\n\tvoid entrySet() {\n\t\tassertEntrySet(createSortedProps());\n\t}\n\n\t@Test\n\tvoid entrySetFromPrototype() {\n\t\tassertEntrySet(createSortedPropsFromPrototype());\n\t}\n\n\t@Test\n\tvoid sortsPropertiesUsingOutputStream() throws IOException {\n\t\tSortedProperties sortedProperties = createSortedProps();\n\n\t\tByteArrayOutputStream baos = new ByteArrayOutputStream();\n\t\tsortedProperties.store(baos, \"custom comment\");\n\n\t\tString[] lines = lines(baos);\n\t\tassertThat(lines).hasSize(7);\n\t\tassertThat(lines[0]).isEqualTo(\"#custom comment\");\n\t\tassertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\n\n\t\tassertPropsAreSorted(lines);\n\t}\n\n\t@Test\n\tvoid sortsPropertiesUsingWriter() throws IOException {\n\t\tSortedProperties sortedProperties = createSortedProps();\n\n\t\tStringWriter writer = new StringWriter();\n\t\tsortedProperties.store(writer, \"custom comment\");\n\n\t\tString[] lines = lines(writer);\n\t\tassertThat(lines).hasSize(7);\n\t\tassertThat(lines[0]).isEqualTo(\"#custom comment\");\n\t\tassertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\n\n\t\tassertPropsAreSorted(lines);\n\t}\n\n\t@Test\n\tvoid sortsPropertiesAndOmitsCommentsUsingOutputStream() throws IOException {\n\t\tSortedProperties sortedProperties = createSortedProps(true);\n\n\t\tByteArrayOutputStream baos = new ByteArrayOutputStream();\n\t\tsortedProperties.store(baos, \"custom comment\");\n\n\t\tString[] lines = lines(baos);\n\t\tassertThat(lines).hasSize(5);\n\n\t\tassertPropsAreSorted(lines);\n\t}\n\n\t@Test\n\tvoid sortsPropertiesAndOmitsCommentsUsingWriter() throws IOException {\n\t\tSortedProperties sortedProperties = createSortedProps(true);\n\n\t\tStringWriter writer = new StringWriter();\n\t\tsortedProperties.store(writer, \"custom comment\");\n\n\t\tString[] lines = lines(writer);\n\t\tassertThat(lines).hasSize(5);\n\n\t\tassertPropsAreSorted(lines);\n\t}\n\n\t@Test\n\tvoid storingAsXmlSortsPropertiesAndOmitsComments() throws IOException {\n\t\tSortedProperties sortedProperties = createSortedProps(true);\n\n\t\tByteArrayOutputStream baos = new ByteArrayOutputStream();\n\t\tsortedProperties.storeToXML(baos, \"custom comment\");\n\n\t\tString[] lines = lines(baos);\n\n\t\tassertThat(lines).isNotEmpty();\n\t\t// Leniently match first line due to differences between JDK 8 and JDK 9+.\n\t\tString regex = \"<\\\\?xml .*\\\\?>\";\n\t\tassertThat(lines[0]).matches(regex);\n\t\tassertThat(lines).filteredOn(line -> !line.matches(regex)).containsExactly( //\n\t\t\t\"<!DOCTYPE properties SYSTEM \\\"http://java.sun.com/dtd/properties.dtd\\\">\", //\n\t\t\t\"<properties>\", //\n\t\t\t\"<entry key=\\\"color\\\">blue</entry>\", //\n\t\t\t\"<entry key=\\\"fragrance\\\">sweet</entry>\", //\n\t\t\t\"<entry key=\\\"fruit\\\">apple</entry>\", //\n\t\t\t\"<entry key=\\\"size\\\">medium</entry>\", //\n\t\t\t\"<entry key=\\\"vehicle\\\">car</entry>\", //\n\t\t\t\"</properties>\" //\n\t\t);\n\t}\n\n\tprivate SortedProperties createSortedProps() {\n\t\treturn createSortedProps(false);\n\t}\n\n\tprivate SortedProperties createSortedProps(boolean omitComments) {\n\t\tSortedProperties sortedProperties = new SortedProperties(omitComments);\n\t\tpopulateProperties(sortedProperties);\n\t\treturn sortedProperties;\n\t}\n\n\tprivate SortedProperties createSortedPropsFromPrototype() {\n\t\tProperties properties = new Properties();\n\t\tpopulateProperties(properties);\n\t\treturn new SortedProperties(properties, false);\n\t}\n\n\tprivate void populateProperties(Properties properties) {\n\t\tproperties.setProperty(\"color\", \"blue\");\n\t\tproperties.setProperty(\"fragrance\", \"sweet\");\n\t\tproperties.setProperty(\"fruit\", \"apple\");\n\t\tproperties.setProperty(\"size\", \"medium\");\n\t\tproperties.setProperty(\"vehicle\", \"car\");\n\t}\n\n\tprivate String[] lines(ByteArrayOutputStream baos) {\n\t\treturn lines(new String(baos.toByteArray(), StandardCharsets.ISO_8859_1));\n\t}\n\n\tprivate String[] lines(StringWriter writer) {\n\t\treturn lines(writer.toString());\n\t}\n\n\tprivate String[] lines(String input) {\n\t\treturn input.trim().split(SortedProperties.EOL);\n\t}\n\n\tprivate void assertKeys(Properties properties) {\n\t\tassertThat(Collections.list(properties.keys())) //\n\t\t\t\t.containsExactly(\"color\", \"fragrance\", \"fruit\", \"size\", \"vehicle\");\n\t}\n\n\tprivate void assertKeySet(Properties properties) {\n\t\tassertThat(properties.keySet()).containsExactly(\"color\", \"fragrance\", \"fruit\", \"size\", \"vehicle\");\n\t}\n\n\tprivate void assertEntrySet(Properties properties) {\n\t\tassertThat(properties.entrySet()).containsExactly( //\n\t\t\tentry(\"color\", \"blue\"), //\n\t\t\tentry(\"fragrance\", \"sweet\"), //\n\t\t\tentry(\"fruit\", \"apple\"), //\n\t\t\tentry(\"size\", \"medium\"), //\n\t\t\tentry(\"vehicle\", \"car\") //\n\t\t);\n\t}\n\n\tprivate void assertPropsAreSorted(String[] lines) {\n\t\tassertThat(stream(lines).filter(s -> !s.startsWith(\"#\"))).containsExactly( //\n\t\t\t\"color=blue\", //\n\t\t\t\"fragrance=sweet\", //\n\t\t\t\"fruit=apple\", //\n\t\t\t\"size=medium\", //\n\t\t\t\"vehicle=car\"//\n\t\t);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keys()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid keys() {\r\n    assertKeys(createSortedProps());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedPropertiesTests#keys()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keys()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keysFromPrototype()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid keysFromPrototype() {\r\n    assertKeys(createSortedPropsFromPrototype());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedPropertiesTests#keysFromPrototype()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keysFromPrototype()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keySet()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid keySet() {\r\n    assertKeySet(createSortedProps());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedPropertiesTests#keySet()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keySet()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keySetFromPrototype()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid keySetFromPrototype() {\r\n    assertKeySet(createSortedPropsFromPrototype());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedPropertiesTests#keySetFromPrototype()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#keySetFromPrototype()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#entrySet()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid entrySet() {\r\n    assertEntrySet(createSortedProps());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedPropertiesTests#entrySet()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#entrySet()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#entrySetFromPrototype()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid entrySetFromPrototype() {\r\n    assertEntrySet(createSortedPropsFromPrototype());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SortedPropertiesTests#entrySetFromPrototype()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#entrySetFromPrototype()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SortedPropertiesTests#sortsPropertiesUsingOutputStream()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid sortsPropertiesUsingOutputStream() throws IOException {\r\n    SortedProperties sortedProperties = createSortedProps();\r\n    ByteArrayOutputStream baos = new ByteArrayOutputStream();\r\n    sortedProperties.store(baos, \"custom comment\");\r\n    String[] lines = lines(baos);\r\n    assertThat(lines).hasSize(7);\r\n    assertThat(lines[0]).isEqualTo(\"#custom comment\");\r\n    assertThat(lines[1]).as(\"timestamp\").startsWith(\"#\");\r\n    assertPropsAreSorted(lines);\r\n}",
+    "tailType": "method_code"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData#setup()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.elements = new ArrayList<>(this.capacity);\r\n    this.map = Collections.synchronizedMap(new WeakHashMap<>());\r\n    Random random = new Random();\r\n    random.ints(this.capacity).forEach(value -> {\r\n        String element = String.valueOf(value);\r\n        this.elements.add(element);\r\n        this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n    });\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.SynchronizedMapBenchmarkData#setup()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData#setup()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Setup",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core.style",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core.style",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.style.DefaultValueStylerTests",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.ReflectionUtilsUniqueDeclaredMethodsBenchmark",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.ReflectionUtilsUniqueDeclaredMethodsBenchmark",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@BenchmarkMode",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core.style;\n\nimport java.nio.charset.Charset;\nimport java.util.LinkedHashMap;\nimport java.util.List;\nimport java.util.Map;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link DefaultValueStyler}.\n *\n * @since 5.2\n */\nclass DefaultValueStylerTests {\n\n\tprivate final DefaultValueStyler styler = new DefaultValueStyler();\n\n\n\t@Test\n\tvoid styleBasics() throws NoSuchMethodException {\n\t\tassertThat(styler.style(null)).isEqualTo(\"[null]\");\n\t\tassertThat(styler.style(\"str\")).isEqualTo(\"'str'\");\n\t\tassertThat(styler.style(String.class)).isEqualTo(\"String\");\n\t\tassertThat(styler.style(String.class.getMethod(\"toString\"))).isEqualTo(\"toString@String\");\n\t\tassertThat(styler.style(String.class.getMethod(\"getBytes\", Charset.class))).isEqualTo(\"getBytes@String\");\n\t}\n\n\t@Test\n\tvoid stylePlainObject() {\n\t\tObject obj = new Object();\n\t\tassertThat(styler.style(obj)).isEqualTo(String.valueOf(obj));\n\t}\n\n\t@Test\n\tvoid styleMaps() {\n\t\tassertThat(styler.style(Map.of())).isEqualTo(\"map[[empty]]\");\n\t\tassertThat(styler.style(Map.of(\"key\", 1))).isEqualTo(\"map['key' -> 1]\");\n\n\t\tMap<String, Integer> map = new LinkedHashMap<>() {{\n\t\t\tput(\"key1\", 1);\n\t\t\tput(\"key2\", 2);\n\t\t}};\n\t\tassertThat(styler.style(map)).isEqualTo(\"map['key1' -> 1, 'key2' -> 2]\");\n\t}\n\n\t@Test\n\tvoid styleMapEntries() {\n\t\tMap<String, Integer> map = Map.of(\"key1\", 1, \"key2\", 2);\n\t\tassertThat(map.entrySet()).map(styler::style).containsExactlyInAnyOrder(\"'key1' -> 1\", \"'key2' -> 2\");\n\t}\n\n\t@Test\n\tvoid styleLists() {\n\t\tassertThat(styler.style(List.of())).isEqualTo(\"list[[empty]]\");\n\t\tassertThat(styler.style(List.of(1))).isEqualTo(\"list[1]\");\n\t\tassertThat(styler.style(List.of(1, 2))).isEqualTo(\"list[1, 2]\");\n\t}\n\n\t@Test\n\tvoid stylePrimitiveArrays() {\n\t\tint[] array = new int[0];\n\t\tassertThat(styler.style(array)).isEqualTo(\"array<Object>[[empty]]\");\n\n\t\tarray = new int[] { 1 };\n\t\tassertThat(styler.style(array)).isEqualTo(\"array<Integer>[1]\");\n\n\t\tarray = new int[] { 1, 2 };\n\t\tassertThat(styler.style(array)).isEqualTo(\"array<Integer>[1, 2]\");\n\t}\n\n\t@Test\n\tvoid styleObjectArrays() {\n\t\tString[] array = new String[0];\n\t\tassertThat(styler.style(array)).isEqualTo(\"array<String>[[empty]]\");\n\n\t\tarray = new String[] { \"str1\" };\n\t\tassertThat(styler.style(array)).isEqualTo(\"array<String>['str1']\");\n\n\t\tarray = new String[] { \"str1\", \"str2\" };\n\t\tassertThat(styler.style(array)).isEqualTo(\"array<String>['str1', 'str2']\");\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.core.style.DefaultValueStylerTests#styler",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#styler",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "DefaultValueStyler",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#styleBasics()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid styleBasics() throws NoSuchMethodException {\r\n    assertThat(styler.style(null)).isEqualTo(\"[null]\");\r\n    assertThat(styler.style(\"str\")).isEqualTo(\"'str'\");\r\n    assertThat(styler.style(String.class)).isEqualTo(\"String\");\r\n    assertThat(styler.style(String.class.getMethod(\"toString\"))).isEqualTo(\"toString@String\");\r\n    assertThat(styler.style(String.class.getMethod(\"getBytes\", Charset.class))).isEqualTo(\"getBytes@String\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.DefaultValueStylerTests#styleBasics()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#styleBasics()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#stylePlainObject()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid stylePlainObject() {\r\n    Object obj = new Object();\r\n    assertThat(styler.style(obj)).isEqualTo(String.valueOf(obj));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.DefaultValueStylerTests#stylePlainObject()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#stylePlainObject()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#styleMaps()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid styleMaps() {\r\n    assertThat(styler.style(Map.of())).isEqualTo(\"map[[empty]]\");\r\n    assertThat(styler.style(Map.of(\"key\", 1))).isEqualTo(\"map['key' -> 1]\");\r\n    Map<String, Integer> map = new LinkedHashMap<>() {\r\n\r\n        {\r\n            put(\"key1\", 1);\r\n            put(\"key2\", 2);\r\n        }\r\n    };\r\n    assertThat(styler.style(map)).isEqualTo(\"map['key1' -> 1, 'key2' -> 2]\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.style.DefaultValueStylerTests#styleMaps()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.style.DefaultValueStylerTests#styleMaps()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.InstanceFilterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.InstanceFilterTests#includesAndExcludesFiltersConflict()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.InstanceFilterTests#includesAndExcludesFiltersConflict()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.InstanceFilterTests#match(InstanceFilter<T>,T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private <T> void match(InstanceFilter<T> filter, T candidate) {\r\n    assertThat(filter.match(candidate)).as(\"filter '\" + filter + \"' should match \" + candidate).isTrue();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.InstanceFilterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.InstanceFilterTests#match(InstanceFilter<T>,T)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.InstanceFilterTests#doNotMatch(InstanceFilter<T>,T)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private <T> void doNotMatch(InstanceFilter<T> filter, T candidate) {\r\n    assertThat(filter.match(candidate)).as(\"filter '\" + filter + \"' should not match \" + candidate).isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.InstanceFilterTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.InstanceFilterTests#doNotMatch(InstanceFilter<T>,T)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.nativex.feature",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.nativex.feature;\n\nimport java.lang.reflect.Field;\nimport java.lang.reflect.Modifier;\nimport java.util.regex.Pattern;\n\nimport org.graalvm.nativeimage.hosted.Feature;\n\n/**\n * GraalVM {@link Feature} that substitutes boolean field values that match certain patterns\n * with values pre-computed ahead-of-time without causing class build-time initialization.\n *\n * <p>It is possible to pass <pre style=\"code\">-Dspring.native.precompute.log=verbose</pre> as a\n * <pre style=\"code\">native-image</pre> compiler build argument to display detailed logs\n * about pre-computed fields.</p>\n *\n * @author Sebastien Deleuze\n * @author Phillip Webb\n * @since 6.0\n */\nclass PreComputeFieldFeature implements Feature {\n\n\tprivate static final boolean verbose =\n\t\t\t\"verbose\".equalsIgnoreCase(System.getProperty(\"spring.native.precompute.log\"));\n\n\tprivate static final Pattern[] patterns = {\n\t\t\tPattern.compile(Pattern.quote(\"org.springframework.core.NativeDetector#inNativeImage\")),\n\t\t\tPattern.compile(Pattern.quote(\"org.springframework.cglib.core.AbstractClassGenerator#inNativeImage\")),\n\t\t\tPattern.compile(Pattern.quote(\"org.springframework.aot.AotDetector#inNativeImage\")),\n\t\t\tPattern.compile(Pattern.quote(\"org.springframework.\") + \".*#.*Present\"),\n\t\t\tPattern.compile(Pattern.quote(\"org.springframework.\") + \".*#.*PRESENT\"),\n\t\t\tPattern.compile(Pattern.quote(\"reactor.core.\") + \".*#.*Available\"),\n\t\t\tPattern.compile(Pattern.quote(\"org.apache.commons.logging.LogAdapter\") + \"#.*Present\")\n\t};\n\n\tprivate final ThrowawayClassLoader throwawayClassLoader = new ThrowawayClassLoader(getClass().getClassLoader());\n\n\n\t@Override\n\tpublic void beforeAnalysis(BeforeAnalysisAccess access) {\n\t\taccess.registerSubtypeReachabilityHandler(this::iterateFields, Object.class);\n\t}\n\n\t// This method is invoked for every type that is reachable.\n\tprivate void iterateFields(DuringAnalysisAccess access, Class<?> subtype) {\n\t\ttry {\n\t\t\tfor (Field field : subtype.getDeclaredFields()) {\n\t\t\t\tint modifiers = field.getModifiers();\n\t\t\t\tif (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers) || field.isEnumConstant() ||\n\t\t\t\t\t\t(field.getType() != boolean.class && field.getType() != Boolean.class)) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tString fieldIdentifier = field.getDeclaringClass().getName() + \"#\" + field.getName();\n\t\t\t\tfor (Pattern pattern : patterns) {\n\t\t\t\t\tif (pattern.matcher(fieldIdentifier).matches()) {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tObject fieldValue = provideFieldValue(field);\n\t\t\t\t\t\t\taccess.registerFieldValueTransformer(field, (receiver, originalValue) -> fieldValue);\n\t\t\t\t\t\t\tif (verbose) {\n\t\t\t\t\t\t\t\tSystem.out.println(\n\t\t\t\t\t\t\t\t\t\t\"Field \" + fieldIdentifier + \" set to \" + fieldValue + \" at build time\");\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tcatch (Throwable ex) {\n\t\t\t\t\t\t\tif (verbose) {\n\t\t\t\t\t\t\t\tSystem.out.println(\"Field \" + fieldIdentifier + \" will be evaluated at runtime \" +\n\t\t\t\t\t\t\t\t\t\t\"due to this error during build time evaluation: \" + ex);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tcatch (NoClassDefFoundError ex) {\n\t\t\t// Skip classes that have not all their field types in the classpath\n\t\t}\n\t}\n\n\t// This method is invoked when the field value is written to the image heap or the field is constant folded.\n\tprivate Object provideFieldValue(Field field)\n\t\t\tthrows ClassNotFoundException, NoSuchFieldException, IllegalAccessException {\n\n\t\tClass<?> throwawayClass = this.throwawayClassLoader.loadClass(field.getDeclaringClass().getName());\n\t\tField throwawayField = throwawayClass.getDeclaredField(field.getName());\n\t\tthrowawayField.setAccessible(true);\n\t\treturn throwawayField.get(null);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#verbose",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#verbose",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#patterns",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#patterns",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Pattern",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#throwawayClassLoader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#throwawayClassLoader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ThrowawayClassLoader",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#beforeAnalysis(BeforeAnalysisAccess)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void beforeAnalysis(BeforeAnalysisAccess access) {\r\n    access.registerSubtypeReachabilityHandler(this::iterateFields, Object.class);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#beforeAnalysis(BeforeAnalysisAccess)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#beforeAnalysis(BeforeAnalysisAccess)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#iterateFields(DuringAnalysisAccess,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// This method is invoked for every type that is reachable.\r\nprivate void iterateFields(DuringAnalysisAccess access, Class<?> subtype) {\r\n    try {\r\n        for (Field field : subtype.getDeclaredFields()) {\r\n            int modifiers = field.getModifiers();\r\n            if (!Modifier.isStatic(modifiers) || !Modifier.isFinal(modifiers) || field.isEnumConstant() || (field.getType() != boolean.class && field.getType() != Boolean.class)) {\r\n                continue;\r\n            }\r\n            String fieldIdentifier = field.getDeclaringClass().getName() + \"#\" + field.getName();\r\n            for (Pattern pattern : patterns) {\r\n                if (pattern.matcher(fieldIdentifier).matches()) {\r\n                    try {\r\n                        Object fieldValue = provideFieldValue(field);\r\n                        access.registerFieldValueTransformer(field, (receiver, originalValue) -> fieldValue);\r\n                        if (verbose) {\r\n                            System.out.println(\"Field \" + fieldIdentifier + \" set to \" + fieldValue + \" at build time\");\r\n                        }\r\n                    } catch (Throwable ex) {\r\n                        if (verbose) {\r\n                            System.out.println(\"Field \" + fieldIdentifier + \" will be evaluated at runtime \" + \"due to this error during build time evaluation: \" + ex);\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    } catch (NoClassDefFoundError ex) {\r\n        // Skip classes that have not all their field types in the classpath\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.feature.PreComputeFieldFeature",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.feature.PreComputeFieldFeature#iterateFields(DuringAnalysisAccess,Class<?>)",
+    "tailType": "method"
+  }
+]

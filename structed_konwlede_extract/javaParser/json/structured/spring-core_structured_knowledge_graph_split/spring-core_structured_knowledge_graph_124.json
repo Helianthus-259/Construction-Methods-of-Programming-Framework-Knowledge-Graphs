@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.AntPathMatcherTests#consistentMatchWithWildcardsAndTrailingSlash()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// gh-27506\r\n@Test\r\nvoid consistentMatchWithWildcardsAndTrailingSlash() {\r\n    assertThat(pathMatcher.match(\"/*/foo\", \"/en/foo\")).isTrue();\r\n    assertThat(pathMatcher.match(\"/*/foo\", \"/en/foo/\")).isFalse();\r\n    assertThat(pathMatcher.match(\"/**/foo\", \"/en/foo\")).isTrue();\r\n    assertThat(pathMatcher.match(\"/**/foo\", \"/en/foo/\")).isFalse();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.AntPathMatcherTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.AntPathMatcherTests#consistentMatchWithWildcardsAndTrailingSlash()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.AntPathMatcherTests#consistentMatchWithWildcardsAndTrailingSlash()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.ExecutableHint",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Executable;\nimport java.lang.reflect.Method;\nimport java.util.Comparator;\nimport java.util.List;\nimport java.util.function.Consumer;\nimport java.util.stream.Collectors;\n\nimport org.jspecify.annotations.Nullable;\n\nimport org.springframework.util.Assert;\n\n/**\n * A hint that describes the need for reflection on a {@link Method} or\n * {@link Constructor}.\n *\n * @author Stephane Nicoll\n * @since 6.0\n */\npublic final class ExecutableHint extends MemberHint implements Comparable<ExecutableHint> {\n\n\tprivate final List<TypeReference> parameterTypes;\n\n\tprivate final ExecutableMode mode;\n\n\n\tprivate ExecutableHint(Builder builder) {\n\t\tsuper(builder.name);\n\t\tthis.parameterTypes = List.copyOf(builder.parameterTypes);\n\t\tthis.mode = (builder.mode != null ? builder.mode : ExecutableMode.INVOKE);\n\t}\n\n\t/**\n\t * Initialize a builder with the parameter types of a constructor.\n\t * @param parameterTypes the parameter types of the constructor\n\t * @return a builder\n\t */\n\tstatic Builder ofConstructor(List<TypeReference> parameterTypes) {\n\t\treturn new Builder(\"<init>\", parameterTypes);\n\t}\n\n\t/**\n\t * Initialize a builder with the name and parameter types of a method.\n\t * @param name the name of the method\n\t * @param parameterTypes the parameter types of the method\n\t * @return a builder\n\t */\n\tstatic Builder ofMethod(String name, List<TypeReference> parameterTypes) {\n\t\treturn new Builder(name, parameterTypes);\n\t}\n\n\t/**\n\t * Return the parameter types of the executable.\n\t * @return the parameter types\n\t * @see Executable#getParameterTypes()\n\t */\n\tpublic List<TypeReference> getParameterTypes() {\n\t\treturn this.parameterTypes;\n\t}\n\n\t/**\n\t * Return the {@linkplain ExecutableMode mode} that applies to this hint.\n\t * @return the mode\n\t */\n\tpublic ExecutableMode getMode() {\n\t\treturn this.mode;\n\t}\n\n\t/**\n\t * Return a {@link Consumer} that applies the given {@link ExecutableMode}\n\t * to the accepted {@link Builder}.\n\t * @param mode the mode to apply\n\t * @return a consumer to apply the mode\n\t */\n\tpublic static Consumer<Builder> builtWith(ExecutableMode mode) {\n\t\treturn builder -> builder.withMode(mode);\n\t}\n\n\t@Override\n\tpublic int compareTo(ExecutableHint other) {\n\t\treturn Comparator.comparing(ExecutableHint::getName, String::compareToIgnoreCase)\n\t\t\t\t.thenComparing(ExecutableHint::getParameterTypes, Comparator.comparingInt(List::size))\n\t\t\t\t.thenComparing(ExecutableHint::getParameterTypes, (params1, params2) -> {\n\t\t\t\t\tString left = params1.stream().map(TypeReference::getCanonicalName).collect(Collectors.joining(\",\"));\n\t\t\t\t\tString right = params2.stream().map(TypeReference::getCanonicalName).collect(Collectors.joining(\",\"));\n\t\t\t\t\treturn left.compareTo(right);\n\t\t\t\t}).compare(this, other);\n\t}\n\n\t/**\n\t * Builder for {@link ExecutableHint}.\n\t */\n\tpublic static class Builder {\n\n\t\tprivate final String name;\n\n\t\tprivate final List<TypeReference> parameterTypes;\n\n\t\tprivate @Nullable ExecutableMode mode;\n\n\n\t\tBuilder(String name, List<TypeReference> parameterTypes) {\n\t\t\tthis.name = name;\n\t\t\tthis.parameterTypes = parameterTypes;\n\t\t}\n\n\t\t/**\n\t\t * Specify that the {@linkplain ExecutableMode mode} is required.\n\t\t * @param mode the required mode\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t */\n\t\tpublic Builder withMode(ExecutableMode mode) {\n\t\t\tAssert.notNull(mode, \"'mode' must not be null\");\n\t\t\tif ((this.mode == null) || !this.mode.includes(mode)) {\n\t\t\t\tthis.mode = mode;\n\t\t\t}\n\t\t\treturn this;\n\t\t}\n\n\t\t/**\n\t\t * Create an {@link ExecutableHint} based on the state of this builder.\n\t\t * @return an executable hint\n\t\t */\n\t\tExecutableHint build() {\n\t\t\treturn new ExecutableHint(this);\n\t\t}\n\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.ExecutableHint#parameterTypes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#parameterTypes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<TypeReference>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.ExecutableHint#mode",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#mode",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ExecutableMode",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#ofConstructor(List<TypeReference>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Initialize a builder with the parameter types of a constructor.\r\n * @param parameterTypes the parameter types of the constructor\r\n * @return a builder\r\n */\r\nstatic Builder ofConstructor(List<TypeReference> parameterTypes) {\r\n    return new Builder(\"<init>\", parameterTypes);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ExecutableHint#ofConstructor(List<TypeReference>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#ofMethod(String,List<TypeReference>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Initialize a builder with the name and parameter types of a method.\r\n * @param name the name of the method\r\n * @param parameterTypes the parameter types of the method\r\n * @return a builder\r\n */\r\nstatic Builder ofMethod(String name, List<TypeReference> parameterTypes) {\r\n    return new Builder(name, parameterTypes);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ExecutableHint#ofMethod(String,List<TypeReference>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#getParameterTypes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the parameter types of the executable.\r\n * @return the parameter types\r\n * @see Executable#getParameterTypes()\r\n */\r\npublic List<TypeReference> getParameterTypes() {\r\n    return this.parameterTypes;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ExecutableHint#getParameterTypes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#getMode()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the {@linkplain ExecutableMode mode} that applies to this hint.\r\n * @return the mode\r\n */\r\npublic ExecutableMode getMode() {\r\n    return this.mode;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ExecutableHint#getMode()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint#builtWith(ExecutableMode)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return a {@link Consumer} that applies the given {@link ExecutableMode}\r\n * to the accepted {@link Builder}.\r\n * @param mode the mode to apply\r\n * @return a consumer to apply the mode\r\n */\r\npublic static Consumer<Builder> builtWith(ExecutableMode mode) {\r\n    return builder -> builder.withMode(mode);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ExecutableHint",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ExecutableHint#builtWith(ExecutableMode)",
+    "tailType": "method"
+  }
+]

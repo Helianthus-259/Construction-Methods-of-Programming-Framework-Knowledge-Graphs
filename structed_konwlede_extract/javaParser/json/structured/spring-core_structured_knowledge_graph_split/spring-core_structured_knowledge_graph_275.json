@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.nativex.substitution",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.nativex.substitution.Target_ClassFinder",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_ClassFinder",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@TargetClass",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_ClassFinder",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.nativex.substitution;\n\nimport com.oracle.svm.core.annotate.Alias;\nimport com.oracle.svm.core.annotate.TargetClass;\n\n/**\n * Allow to reference {@code com.sun.beans.finder.ClassFinder} from\n * {@link Target_Introspector}.\n *\n * TODO Remove once Spring Framework requires GraalVM 23.0+, see <a href=\"https://github.com/oracle/graal/pull/5224\">graal#5224</a>.\n *\n * @author Sebastien Deleuze\n * @since 6.0\n */\n@TargetClass(className = \"com.sun.beans.finder.ClassFinder\")\nfinal class Target_ClassFinder {\n\n\t@Alias\n\tpublic static Class<?> findClass(String name, ClassLoader loader) throws ClassNotFoundException {\n\t\treturn null;\n\t}\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_ClassFinder#findClass(String,ClassLoader)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Alias\r\npublic static Class<?> findClass(String name, ClassLoader loader) throws ClassNotFoundException {\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_ClassFinder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.substitution.Target_ClassFinder#findClass(String,ClassLoader)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_ClassFinder#findClass(String,ClassLoader)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Alias",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.nativex.substitution",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.nativex.substitution.Target_Introspector",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_Introspector",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@TargetClass",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_Introspector",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2022 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.nativex.substitution;\n\nimport java.beans.Customizer;\n\nimport com.oracle.svm.core.annotate.Substitute;\nimport com.oracle.svm.core.annotate.TargetClass;\n\n/**\n * {@link java.beans.Introspector} substitution with a refined {@code findCustomizerClass} implementation\n * designed to avoid thousands of AWT classes to be included in the native image.\n *\n * TODO Remove once Spring Framework requires GraalVM 23.0+, see <a href=\"https://github.com/oracle/graal/pull/5224\">graal#5224</a>.\n *\n * @author Sebastien Deleuze\n * @since 6.0\n */\n@TargetClass(className = \"java.beans.Introspector\")\nfinal class Target_Introspector {\n\n\t@Substitute\n\tprivate static Class<?> findCustomizerClass(Class<?> type) {\n\t\tString name = type.getName() + \"Customizer\";\n\t\ttry {\n\t\t\ttype = Target_ClassFinder.findClass(name, type.getClassLoader());\n\t\t\tif (Customizer.class.isAssignableFrom(type)) {\n\t\t\t\tClass<?> c = type;\n\t\t\t\tdo {\n\t\t\t\t\tc = c.getSuperclass();\n\t\t\t\t\tif (c.getName().equals(\"java.awt.Component\")) {\n\t\t\t\t\t\treturn type;\n\t\t\t\t\t}\n\t\t\t\t} while (!c.getName().equals(\"java.lang.Object\"));\n\t\t\t}\n\t\t}\n\t\tcatch (Exception exception) {\n\t\t}\n\t\treturn null;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_Introspector#findCustomizerClass(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Substitute\r\nprivate static Class<?> findCustomizerClass(Class<?> type) {\r\n    String name = type.getName() + \"Customizer\";\r\n    try {\r\n        type = Target_ClassFinder.findClass(name, type.getClassLoader());\r\n        if (Customizer.class.isAssignableFrom(type)) {\r\n            Class<?> c = type;\r\n            do {\r\n                c = c.getSuperclass();\r\n                if (c.getName().equals(\"java.awt.Component\")) {\r\n                    return type;\r\n                }\r\n            } while (!c.getName().equals(\"java.lang.Object\"));\r\n        }\r\n    } catch (Exception exception) ;\r\n    return null;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_Introspector",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.nativex.substitution.Target_Introspector#findCustomizerClass(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.nativex.substitution.Target_Introspector#findCustomizerClass(Class<?>)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Substitute",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot",
+    "tailType": "package"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.asm",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.asm",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.asm.AnnotationVisitor",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationVisitor",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "// ASM: a very small and fast Java bytecode manipulation framework\n// Copyright (c) 2000-2011 INRIA, France Telecom\n// All rights reserved.\n//\n// Redistribution and use in source and binary forms, with or without\n// modification, are permitted provided that the following conditions\n// are met:\n// 1. Redistributions of source code must retain the above copyright\n//    notice, this list of conditions and the following disclaimer.\n// 2. Redistributions in binary form must reproduce the above copyright\n//    notice, this list of conditions and the following disclaimer in the\n//    documentation and/or other materials provided with the distribution.\n// 3. Neither the name of the copyright holders nor the names of its\n//    contributors may be used to endorse or promote products derived from\n//    this software without specific prior written permission.\n//\n// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\n// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\n// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE\n// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE\n// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR\n// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF\n// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS\n// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN\n// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)\n// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF\n// THE POSSIBILITY OF SUCH DAMAGE.\npackage org.springframework.asm;\n\n/**\n * A visitor to visit a Java annotation. The methods of this class must be called in the following\n * order: ( {@code visit} | {@code visitEnum} | {@code visitAnnotation} | {@code visitArray} )*\n * {@code visitEnd}.\n *\n * @author Eric Bruneton\n * @author Eugene Kuleshov\n */\npublic abstract class AnnotationVisitor {\n\n  /**\n   * The ASM API version implemented by this visitor. The value of this field must be one of the\n   * {@code ASM}<i>x</i> values in {@link Opcodes}.\n   */\n  protected final int api;\n\n  /**\n   * The annotation visitor to which this visitor must delegate method calls. May be {@literal\n   * null}.\n   */\n  protected AnnotationVisitor av;\n\n  /**\n   * Constructs a new {@link AnnotationVisitor}.\n   *\n   * @param api the ASM API version implemented by this visitor. Must be one of the {@code\n   *     ASM}<i>x</i> values in {@link Opcodes}.\n   */\n  protected AnnotationVisitor(final int api) {\n    this(api, null);\n  }\n\n  /**\n   * Constructs a new {@link AnnotationVisitor}.\n   *\n   * @param api the ASM API version implemented by this visitor. Must be one of the {@code\n   *     ASM}<i>x</i> values in {@link Opcodes}.\n   * @param annotationVisitor the annotation visitor to which this visitor must delegate method\n   *     calls. May be {@literal null}.\n   */\n  protected AnnotationVisitor(final int api, final AnnotationVisitor annotationVisitor) {\n    if (api != Opcodes.ASM9\n        && api != Opcodes.ASM8\n        && api != Opcodes.ASM7\n        && api != Opcodes.ASM6\n        && api != Opcodes.ASM5\n        && api != Opcodes.ASM4\n        && api != Opcodes.ASM10_EXPERIMENTAL) {\n      throw new IllegalArgumentException(\"Unsupported api \" + api);\n    }\n    // SPRING PATCH: no preview mode check for ASM experimental\n    this.api = api;\n    this.av = annotationVisitor;\n  }\n\n  /**\n   * The annotation visitor to which this visitor must delegate method calls. May be {@literal\n   * null}.\n   *\n   * @return the annotation visitor to which this visitor must delegate method calls, or {@literal\n   *     null}.\n   */\n  public AnnotationVisitor getDelegate() {\n    return av;\n  }\n\n  /**\n   * Visits a primitive value of the annotation.\n   *\n   * @param name the value name.\n   * @param value the actual value, whose type must be {@link Byte}, {@link Boolean}, {@link\n   *     Character}, {@link Short}, {@link Integer} , {@link Long}, {@link Float}, {@link Double},\n   *     {@link String} or {@link Type} of {@link Type#OBJECT} or {@link Type#ARRAY} sort. This\n   *     value can also be an array of byte, boolean, short, char, int, long, float or double values\n   *     (this is equivalent to using {@link #visitArray} and visiting each array element in turn,\n   *     but is more convenient).\n   */\n  public void visit(final String name, final Object value) {\n    if (av != null) {\n      av.visit(name, value);\n    }\n  }\n\n  /**\n   * Visits an enumeration value of the annotation.\n   *\n   * @param name the value name.\n   * @param descriptor the class descriptor of the enumeration class.\n   * @param value the actual enumeration value.\n   */\n  public void visitEnum(final String name, final String descriptor, final String value) {\n    if (av != null) {\n      av.visitEnum(name, descriptor, value);\n    }\n  }\n\n  /**\n   * Visits a nested annotation value of the annotation.\n   *\n   * @param name the value name.\n   * @param descriptor the class descriptor of the nested annotation class.\n   * @return a visitor to visit the actual nested annotation value, or {@literal null} if this\n   *     visitor is not interested in visiting this nested annotation. <i>The nested annotation\n   *     value must be fully visited before calling other methods on this annotation visitor</i>.\n   */\n  public AnnotationVisitor visitAnnotation(final String name, final String descriptor) {\n    if (av != null) {\n      return av.visitAnnotation(name, descriptor);\n    }\n    return null;\n  }\n\n  /**\n   * Visits an array value of the annotation. Note that arrays of primitive values (such as byte,\n   * boolean, short, char, int, long, float or double) can be passed as value to {@link #visit\n   * visit}. This is what {@link ClassReader} does for non empty arrays of primitive values.\n   *\n   * @param name the value name.\n   * @return a visitor to visit the actual array value elements, or {@literal null} if this visitor\n   *     is not interested in visiting these values. The 'name' parameters passed to the methods of\n   *     this visitor are ignored. <i>All the array values must be visited before calling other\n   *     methods on this annotation visitor</i>.\n   */\n  public AnnotationVisitor visitArray(final String name) {\n    if (av != null) {\n      return av.visitArray(name);\n    }\n    return null;\n  }\n\n  /** Visits the end of the annotation. */\n  public void visitEnd() {\n    if (av != null) {\n      av.visitEnd();\n    }\n  }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationVisitor",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.AnnotationVisitor#api",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationVisitor#api",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationVisitor",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.AnnotationVisitor#av",
+    "tailType": "field"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.Frame#accept(MethodWriter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Frame output methods, to generate StackMapFrame attributes\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Makes the given {@link MethodWriter} visit the input frame of this {@link Frame}. The visit is\r\n * done with the {@link MethodWriter#visitFrameStart}, {@link MethodWriter#visitAbstractType} and\r\n * {@link MethodWriter#visitFrameEnd} methods.\r\n *\r\n * @param methodWriter the {@link MethodWriter} that should visit the input frame of this {@link\r\n *     Frame}.\r\n */\r\nfinal void accept(final MethodWriter methodWriter) {\r\n    // Compute the number of locals, ignoring TOP types that are just after a LONG or a DOUBLE, and\r\n    // all trailing TOP types.\r\n    int[] localTypes = inputLocals;\r\n    int numLocal = 0;\r\n    int numTrailingTop = 0;\r\n    int i = 0;\r\n    while (i < localTypes.length) {\r\n        int localType = localTypes[i];\r\n        i += (localType == LONG || localType == DOUBLE) ? 2 : 1;\r\n        if (localType == TOP) {\r\n            numTrailingTop++;\r\n        } else {\r\n            numLocal += numTrailingTop + 1;\r\n            numTrailingTop = 0;\r\n        }\r\n    }\r\n    // Compute the stack size, ignoring TOP types that are just after a LONG or a DOUBLE.\r\n    int[] stackTypes = inputStack;\r\n    int numStack = 0;\r\n    i = 0;\r\n    while (i < stackTypes.length) {\r\n        int stackType = stackTypes[i];\r\n        i += (stackType == LONG || stackType == DOUBLE) ? 2 : 1;\r\n        numStack++;\r\n    }\r\n    // Visit the frame and its content.\r\n    int frameIndex = methodWriter.visitFrameStart(owner.bytecodeOffset, numLocal, numStack);\r\n    i = 0;\r\n    while (numLocal-- > 0) {\r\n        int localType = localTypes[i];\r\n        i += (localType == LONG || localType == DOUBLE) ? 2 : 1;\r\n        methodWriter.visitAbstractType(frameIndex++, localType);\r\n    }\r\n    i = 0;\r\n    while (numStack-- > 0) {\r\n        int stackType = stackTypes[i];\r\n        i += (stackType == LONG || stackType == DOUBLE) ? 2 : 1;\r\n        methodWriter.visitAbstractType(frameIndex++, stackType);\r\n    }\r\n    methodWriter.visitFrameEnd();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#accept(MethodWriter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Frame#putAbstractType(SymbolTable,int,ByteVector)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Put the given abstract type in the given ByteVector, using the JVMS verification_type_info\r\n * format used in StackMapTable attributes.\r\n *\r\n * @param symbolTable the type table to use to lookup and store type {@link Symbol}.\r\n * @param abstractType an abstract type, restricted to {@link Frame#CONSTANT_KIND}, {@link\r\n *     Frame#REFERENCE_KIND}, {@link Frame#UNINITIALIZED_KIND} or {@link\r\n *     Frame#FORWARD_UNINITIALIZED_KIND} types.\r\n * @param output where the abstract type must be put.\r\n * @see <a href=\"https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.4\">JVMS\r\n *     4.7.4</a>\r\n */\r\nstatic void putAbstractType(final SymbolTable symbolTable, final int abstractType, final ByteVector output) {\r\n    int arrayDimensions = (abstractType & Frame.DIM_MASK) >> DIM_SHIFT;\r\n    if (arrayDimensions == 0) {\r\n        int typeValue = abstractType & VALUE_MASK;\r\n        switch(abstractType & KIND_MASK) {\r\n            case CONSTANT_KIND:\r\n                output.putByte(typeValue);\r\n                break;\r\n            case REFERENCE_KIND:\r\n                output.putByte(ITEM_OBJECT).putShort(symbolTable.addConstantClass(symbolTable.getType(typeValue).value).index);\r\n                break;\r\n            case UNINITIALIZED_KIND:\r\n                output.putByte(ITEM_UNINITIALIZED).putShort((int) symbolTable.getType(typeValue).data);\r\n                break;\r\n            case FORWARD_UNINITIALIZED_KIND:\r\n                output.putByte(ITEM_UNINITIALIZED);\r\n                symbolTable.getForwardUninitializedLabel(typeValue).put(output);\r\n                break;\r\n            default:\r\n                throw new AssertionError();\r\n        }\r\n    } else {\r\n        // Case of an array type, we need to build its descriptor first.\r\n        // SPRING PATCH: larger initial size\r\n        StringBuilder typeDescriptor = new StringBuilder(32);\r\n        while (arrayDimensions-- > 0) {\r\n            typeDescriptor.append('[');\r\n        }\r\n        if ((abstractType & KIND_MASK) == REFERENCE_KIND) {\r\n            typeDescriptor.append('L').append(symbolTable.getType(abstractType & VALUE_MASK).value).append(';');\r\n        } else {\r\n            switch(abstractType & VALUE_MASK) {\r\n                case Frame.ITEM_ASM_BOOLEAN:\r\n                    typeDescriptor.append('Z');\r\n                    break;\r\n                case Frame.ITEM_ASM_BYTE:\r\n                    typeDescriptor.append('B');\r\n                    break;\r\n                case Frame.ITEM_ASM_CHAR:\r\n                    typeDescriptor.append('C');\r\n                    break;\r\n                case Frame.ITEM_ASM_SHORT:\r\n                    typeDescriptor.append('S');\r\n                    break;\r\n                case Frame.ITEM_INTEGER:\r\n                    typeDescriptor.append('I');\r\n                    break;\r\n                case Frame.ITEM_FLOAT:\r\n                    typeDescriptor.append('F');\r\n                    break;\r\n                case Frame.ITEM_LONG:\r\n                    typeDescriptor.append('J');\r\n                    break;\r\n                case Frame.ITEM_DOUBLE:\r\n                    typeDescriptor.append('D');\r\n                    break;\r\n                default:\r\n                    throw new AssertionError();\r\n            }\r\n        }\r\n        output.putByte(ITEM_OBJECT).putShort(symbolTable.addConstantClass(typeDescriptor.toString()).index);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Frame",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Frame#putAbstractType(SymbolTable,int,ByteVector)",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.StaxStreamHandlerTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandlerTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2016 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport javax.xml.stream.XMLOutputFactory;\nimport javax.xml.stream.XMLStreamException;\nimport javax.xml.stream.XMLStreamWriter;\nimport javax.xml.transform.Result;\n\n/**\n * @author Arjen Poutsma\n */\nclass StaxStreamHandlerTests extends AbstractStaxHandlerTests {\n\n\t@Override\n\tprotected AbstractStaxHandler createStaxHandler(Result result) throws XMLStreamException {\n\t\tXMLOutputFactory outputFactory = XMLOutputFactory.newFactory();\n\t\tXMLStreamWriter streamWriter = outputFactory.createXMLStreamWriter(result);\n\t\treturn new StaxStreamHandler(streamWriter);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandlerTests#createStaxHandler(Result)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected AbstractStaxHandler createStaxHandler(Result result) throws XMLStreamException {\r\n    XMLOutputFactory outputFactory = XMLOutputFactory.newFactory();\r\n    XMLStreamWriter streamWriter = outputFactory.createXMLStreamWriter(result);\r\n    return new StaxStreamHandler(streamWriter);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandlerTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.xml.StaxStreamHandlerTests#createStaxHandler(Result)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandlerTests#createStaxHandler(Result)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.xml.StaxStreamHandlerTests",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractStaxHandlerTests",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.asm",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.asm",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.asm.Handle",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.asm.Handle",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "// ASM: a very small and fast Java bytecode manipulation framework\n// Copyright (c) 2000-2011 INRIA, France Telecom\n// All rights reserved.\n//\n// Redistribution and use in source and binary forms, with or without\n// modification, are permitted provided that the following conditions\n// are met:\n// 1. Redistributions of source code must retain the above copyright\n//    notice, this list of conditions and the following disclaimer.\n// 2. Redistributions in binary form must reproduce the above copyright\n//    notice, this list of conditions and the following disclaimer in the\n//    documentation and/or other materials provided with the distribution.\n// 3. Neither the name of the copyright holders nor the names of its\n//    contributors may be used to endorse or promote products derived from\n//    this software without specific prior written permission.\n//\n// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\n// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\n// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE\n// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE\n// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR\n// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF\n// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS\n// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN\n// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)\n// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF\n// THE POSSIBILITY OF SUCH DAMAGE.\n\npackage org.springframework.asm;\n\n/**\n * A reference to a field or a method.\n *\n * @author Remi Forax\n * @author Eric Bruneton\n */\npublic final class Handle {\n\n  /**\n   * The kind of field or method designated by this Handle. Should be {@link Opcodes#H_GETFIELD},\n   * {@link Opcodes#H_GETSTATIC}, {@link Opcodes#H_PUTFIELD}, {@link Opcodes#H_PUTSTATIC}, {@link\n   * Opcodes#H_INVOKEVIRTUAL}, {@link Opcodes#H_INVOKESTATIC}, {@link Opcodes#H_INVOKESPECIAL},\n   * {@link Opcodes#H_NEWINVOKESPECIAL} or {@link Opcodes#H_INVOKEINTERFACE}.\n   */\n  private final int tag;\n\n  /** The internal name of the class that owns the field or method designated by this handle. */\n  private final String owner;\n\n  /** The name of the field or method designated by this handle. */\n  private final String name;\n\n  /** The descriptor of the field or method designated by this handle. */\n  private final String descriptor;\n\n  /** Whether the owner is an interface or not. */\n  private final boolean isInterface;\n\n  /**\n   * Constructs a new field or method handle.\n   *\n   * @param tag the kind of field or method designated by this Handle. Must be {@link\n   *     Opcodes#H_GETFIELD}, {@link Opcodes#H_GETSTATIC}, {@link Opcodes#H_PUTFIELD}, {@link\n   *     Opcodes#H_PUTSTATIC}, {@link Opcodes#H_INVOKEVIRTUAL}, {@link Opcodes#H_INVOKESTATIC},\n   *     {@link Opcodes#H_INVOKESPECIAL}, {@link Opcodes#H_NEWINVOKESPECIAL} or {@link\n   *     Opcodes#H_INVOKEINTERFACE}.\n   * @param owner the internal name of the class that owns the field or method designated by this\n   *     handle (see {@link Type#getInternalName()}).\n   * @param name the name of the field or method designated by this handle.\n   * @param descriptor the descriptor of the field or method designated by this handle.\n   * @deprecated this constructor has been superseded by {@link #Handle(int, String, String, String,\n   *     boolean)}.\n   */\n  @Deprecated\n  public Handle(final int tag, final String owner, final String name, final String descriptor) {\n    this(tag, owner, name, descriptor, tag == Opcodes.H_INVOKEINTERFACE);\n  }\n\n  /**\n   * Constructs a new field or method handle.\n   *\n   * @param tag the kind of field or method designated by this Handle. Must be {@link\n   *     Opcodes#H_GETFIELD}, {@link Opcodes#H_GETSTATIC}, {@link Opcodes#H_PUTFIELD}, {@link\n   *     Opcodes#H_PUTSTATIC}, {@link Opcodes#H_INVOKEVIRTUAL}, {@link Opcodes#H_INVOKESTATIC},\n   *     {@link Opcodes#H_INVOKESPECIAL}, {@link Opcodes#H_NEWINVOKESPECIAL} or {@link\n   *     Opcodes#H_INVOKEINTERFACE}.\n   * @param owner the internal name of the class that owns the field or method designated by this\n   *     handle (see {@link Type#getInternalName()}).\n   * @param name the name of the field or method designated by this handle.\n   * @param descriptor the descriptor of the field or method designated by this handle.\n   * @param isInterface whether the owner is an interface or not.\n   */\n  public Handle(\n      final int tag,\n      final String owner,\n      final String name,\n      final String descriptor,\n      final boolean isInterface) {\n    this.tag = tag;\n    this.owner = owner;\n    this.name = name;\n    this.descriptor = descriptor;\n    this.isInterface = isInterface;\n  }\n\n  /**\n   * Returns the kind of field or method designated by this handle.\n   *\n   * @return {@link Opcodes#H_GETFIELD}, {@link Opcodes#H_GETSTATIC}, {@link Opcodes#H_PUTFIELD},\n   *     {@link Opcodes#H_PUTSTATIC}, {@link Opcodes#H_INVOKEVIRTUAL}, {@link\n   *     Opcodes#H_INVOKESTATIC}, {@link Opcodes#H_INVOKESPECIAL}, {@link\n   *     Opcodes#H_NEWINVOKESPECIAL} or {@link Opcodes#H_INVOKEINTERFACE}.\n   */\n  public int getTag() {\n    return tag;\n  }\n\n  /**\n   * Returns the internal name of the class that owns the field or method designated by this handle.\n   *\n   * @return the internal name of the class that owns the field or method designated by this handle\n   *     (see {@link Type#getInternalName()}).\n   */\n  public String getOwner() {\n    return owner;\n  }\n\n  /**\n   * Returns the name of the field or method designated by this handle.\n   *\n   * @return the name of the field or method designated by this handle.\n   */\n  public String getName() {\n    return name;\n  }\n\n  /**\n   * Returns the descriptor of the field or method designated by this handle.\n   *\n   * @return the descriptor of the field or method designated by this handle.\n   */\n  public String getDesc() {\n    return descriptor;\n  }\n\n  /**\n   * Returns true if the owner of the field or method designated by this handle is an interface.\n   *\n   * @return true if the owner of the field or method designated by this handle is an interface.\n   */\n  public boolean isInterface() {\n    return isInterface;\n  }\n\n  @Override\n  public boolean equals(final Object object) {\n    if (object == this) {\n      return true;\n    }\n    if (!(object instanceof Handle)) {\n      return false;\n    }\n    Handle handle = (Handle) object;\n    return tag == handle.tag\n        && isInterface == handle.isInterface\n        && owner.equals(handle.owner)\n        && name.equals(handle.name)\n        && descriptor.equals(handle.descriptor);\n  }\n\n  @Override\n  public int hashCode() {\n    return tag\n        + (isInterface ? 64 : 0)\n        + owner.hashCode() * name.hashCode() * descriptor.hashCode();\n  }\n\n  /**\n   * Returns the textual representation of this handle. The textual representation is:\n   *\n   * <ul>\n   *   <li>for a reference to a class: owner \".\" name descriptor \" (\" tag \")\",\n   *   <li>for a reference to an interface: owner \".\" name descriptor \" (\" tag \" itf)\".\n   * </ul>\n   */\n  @Override\n  public String toString() {\n    return owner + '.' + name + descriptor + \" (\" + tag + (isInterface ? \" itf\" : \"\") + ')';\n  }\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.asm.Handle",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Handle#tag",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Handle#tag",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Handle",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Handle#owner",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Handle#owner",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.Handle",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.Handle#name",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.Handle#name",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  }
+]

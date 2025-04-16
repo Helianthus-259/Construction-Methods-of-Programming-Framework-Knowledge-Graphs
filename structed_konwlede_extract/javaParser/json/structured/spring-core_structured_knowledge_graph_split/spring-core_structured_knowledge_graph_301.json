@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.AnnotationWriter#numElementValuePairs",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#numElementValuePairs",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.AnnotationWriter#previousAnnotation",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#previousAnnotation",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AnnotationWriter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.asm.AnnotationWriter#nextAnnotation",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#nextAnnotation",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "AnnotationWriter",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#create(SymbolTable,String,AnnotationWriter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Creates a new {@link AnnotationWriter} using named values.\r\n *\r\n * @param symbolTable where the constants used in this AnnotationWriter must be stored.\r\n * @param descriptor the class descriptor of the annotation class.\r\n * @param previousAnnotation the previously visited annotation of the\r\n *     Runtime[In]Visible[Type]Annotations attribute to which this annotation belongs, or\r\n *     {@literal null} in other cases (for example, nested or array annotations).\r\n * @return a new {@link AnnotationWriter} for the given annotation descriptor.\r\n */\r\nstatic AnnotationWriter create(final SymbolTable symbolTable, final String descriptor, final AnnotationWriter previousAnnotation) {\r\n    // Create a ByteVector to hold an 'annotation' JVMS structure.\r\n    // See https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.16.\r\n    ByteVector annotation = new ByteVector();\r\n    // Write type_index and reserve space for num_element_value_pairs.\r\n    annotation.putShort(symbolTable.addConstantUtf8(descriptor)).putShort(0);\r\n    return new AnnotationWriter(symbolTable, /* useNamedValues= */\r\n    true, annotation, previousAnnotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.AnnotationWriter#create(SymbolTable,String,AnnotationWriter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#create(SymbolTable,int,TypePath,String,AnnotationWriter)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Creates a new {@link AnnotationWriter} using named values.\r\n *\r\n * @param symbolTable where the constants used in this AnnotationWriter must be stored.\r\n * @param typeRef a reference to the annotated type. The sort of this type reference must be\r\n *     {@link TypeReference#CLASS_TYPE_PARAMETER}, {@link\r\n *     TypeReference#CLASS_TYPE_PARAMETER_BOUND} or {@link TypeReference#CLASS_EXTENDS}. See\r\n *     {@link TypeReference}.\r\n * @param typePath the path to the annotated type argument, wildcard bound, array element type, or\r\n *     static inner type within 'typeRef'. May be {@literal null} if the annotation targets\r\n *     'typeRef' as a whole.\r\n * @param descriptor the class descriptor of the annotation class.\r\n * @param previousAnnotation the previously visited annotation of the\r\n *     Runtime[In]Visible[Type]Annotations attribute to which this annotation belongs, or\r\n *     {@literal null} in other cases (for example, nested or array annotations).\r\n * @return a new {@link AnnotationWriter} for the given type annotation reference and descriptor.\r\n */\r\nstatic AnnotationWriter create(final SymbolTable symbolTable, final int typeRef, final TypePath typePath, final String descriptor, final AnnotationWriter previousAnnotation) {\r\n    // Create a ByteVector to hold a 'type_annotation' JVMS structure.\r\n    // See https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.20.\r\n    ByteVector typeAnnotation = new ByteVector();\r\n    // Write target_type, target_info, and target_path.\r\n    TypeReference.putTarget(typeRef, typeAnnotation);\r\n    TypePath.put(typePath, typeAnnotation);\r\n    // Write type_index and reserve space for num_element_value_pairs.\r\n    typeAnnotation.putShort(symbolTable.addConstantUtf8(descriptor)).putShort(0);\r\n    return new AnnotationWriter(symbolTable, /* useNamedValues= */\r\n    true, typeAnnotation, previousAnnotation);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.AnnotationWriter#create(SymbolTable,int,TypePath,String,AnnotationWriter)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visit(String,Object)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Implementation of the AnnotationVisitor abstract class\r\n// -----------------------------------------------------------------------------------------------\r\n@Override\r\npublic void visit(final String name, final Object value) {\r\n    // Case of an element_value with a const_value_index, class_info_index or array_index field.\r\n    // See https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.16.1.\r\n    ++numElementValuePairs;\r\n    if (useNamedValues) {\r\n        annotation.putShort(symbolTable.addConstantUtf8(name));\r\n    }\r\n    if (value instanceof String) {\r\n        annotation.put12('s', symbolTable.addConstantUtf8((String) value));\r\n    } else if (value instanceof Byte) {\r\n        annotation.put12('B', symbolTable.addConstantInteger(((Byte) value).byteValue()).index);\r\n    } else if (value instanceof Boolean) {\r\n        int booleanValue = ((Boolean) value).booleanValue() ? 1 : 0;\r\n        annotation.put12('Z', symbolTable.addConstantInteger(booleanValue).index);\r\n    } else if (value instanceof Character) {\r\n        annotation.put12('C', symbolTable.addConstantInteger(((Character) value).charValue()).index);\r\n    } else if (value instanceof Short) {\r\n        annotation.put12('S', symbolTable.addConstantInteger(((Short) value).shortValue()).index);\r\n    } else if (value instanceof Type) {\r\n        annotation.put12('c', symbolTable.addConstantUtf8(((Type) value).getDescriptor()));\r\n    } else if (value instanceof byte[]) {\r\n        byte[] byteArray = (byte[]) value;\r\n        annotation.put12('[', byteArray.length);\r\n        for (byte byteValue : byteArray) {\r\n            annotation.put12('B', symbolTable.addConstantInteger(byteValue).index);\r\n        }\r\n    } else if (value instanceof boolean[]) {\r\n        boolean[] booleanArray = (boolean[]) value;\r\n        annotation.put12('[', booleanArray.length);\r\n        for (boolean booleanValue : booleanArray) {\r\n            annotation.put12('Z', symbolTable.addConstantInteger(booleanValue ? 1 : 0).index);\r\n        }\r\n    } else if (value instanceof short[]) {\r\n        short[] shortArray = (short[]) value;\r\n        annotation.put12('[', shortArray.length);\r\n        for (short shortValue : shortArray) {\r\n            annotation.put12('S', symbolTable.addConstantInteger(shortValue).index);\r\n        }\r\n    } else if (value instanceof char[]) {\r\n        char[] charArray = (char[]) value;\r\n        annotation.put12('[', charArray.length);\r\n        for (char charValue : charArray) {\r\n            annotation.put12('C', symbolTable.addConstantInteger(charValue).index);\r\n        }\r\n    } else if (value instanceof int[]) {\r\n        int[] intArray = (int[]) value;\r\n        annotation.put12('[', intArray.length);\r\n        for (int intValue : intArray) {\r\n            annotation.put12('I', symbolTable.addConstantInteger(intValue).index);\r\n        }\r\n    } else if (value instanceof long[]) {\r\n        long[] longArray = (long[]) value;\r\n        annotation.put12('[', longArray.length);\r\n        for (long longValue : longArray) {\r\n            annotation.put12('J', symbolTable.addConstantLong(longValue).index);\r\n        }\r\n    } else if (value instanceof float[]) {\r\n        float[] floatArray = (float[]) value;\r\n        annotation.put12('[', floatArray.length);\r\n        for (float floatValue : floatArray) {\r\n            annotation.put12('F', symbolTable.addConstantFloat(floatValue).index);\r\n        }\r\n    } else if (value instanceof double[]) {\r\n        double[] doubleArray = (double[]) value;\r\n        annotation.put12('[', doubleArray.length);\r\n        for (double doubleValue : doubleArray) {\r\n            annotation.put12('D', symbolTable.addConstantDouble(doubleValue).index);\r\n        }\r\n    } else {\r\n        Symbol symbol = symbolTable.addConstant(value);\r\n        annotation.put12(\".s.IFJDCS\".charAt(symbol.tag), symbol.index);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.AnnotationWriter#visit(String,Object)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visit(String,Object)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visitEnum(String,String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic void visitEnum(final String name, final String descriptor, final String value) {\r\n    // Case of an element_value with an enum_const_value field.\r\n    // See https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.16.1.\r\n    ++numElementValuePairs;\r\n    if (useNamedValues) {\r\n        annotation.putShort(symbolTable.addConstantUtf8(name));\r\n    }\r\n    annotation.put12('e', symbolTable.addConstantUtf8(descriptor)).putShort(symbolTable.addConstantUtf8(value));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.AnnotationWriter#visitEnum(String,String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visitEnum(String,String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visitAnnotation(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic AnnotationVisitor visitAnnotation(final String name, final String descriptor) {\r\n    // Case of an element_value with an annotation_value field.\r\n    // See https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.16.1.\r\n    ++numElementValuePairs;\r\n    if (useNamedValues) {\r\n        annotation.putShort(symbolTable.addConstantUtf8(name));\r\n    }\r\n    // Write tag and type_index, and reserve 2 bytes for num_element_value_pairs.\r\n    annotation.put12('@', symbolTable.addConstantUtf8(descriptor)).putShort(0);\r\n    return new AnnotationWriter(symbolTable, /* useNamedValues= */\r\n    true, annotation, null);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.AnnotationWriter#visitAnnotation(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visitAnnotation(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.asm.AnnotationWriter#visitArray(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\npublic AnnotationVisitor visitArray(final String name) {\r\n    // Case of an element_value with an array_value field.\r\n    // https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html#jvms-4.7.16.1\r\n    ++numElementValuePairs;\r\n    if (useNamedValues) {\r\n        annotation.putShort(symbolTable.addConstantUtf8(name));\r\n    }\r\n    // Write tag, and reserve 2 bytes for num_values. Here we take advantage of the fact that the\r\n    // end of an element_value of array type is similar to the end of an 'annotation' structure: an\r\n    // unsigned short num_values followed by num_values element_value, versus an unsigned short\r\n    // num_element_value_pairs, followed by num_element_value_pairs { element_name_index,\r\n    // element_value } tuples. This allows us to use an AnnotationWriter with unnamed values to\r\n    // visit the array elements. Its num_element_value_pairs will correspond to the number of array\r\n    // elements and will be stored in what is in fact num_values.\r\n    annotation.put12('[', 0);\r\n    return new AnnotationWriter(symbolTable, /* useNamedValues= */\r\n    false, annotation, null);\r\n}",
+    "tailType": "method_code"
+  }
+]

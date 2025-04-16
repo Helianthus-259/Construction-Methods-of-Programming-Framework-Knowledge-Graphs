@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester#threadName",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester#getThreadName()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "public String getThreadName() {\r\n    return this.threadName;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.ThreadNameHarvester#getThreadName()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester#doRun()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Override\r\nprotected void doRun() {\r\n    this.threadName = Thread.currentThread().getName();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.task.ThreadNameHarvester#doRun()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester#doRun()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.task.ThreadNameHarvester",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "AbstractNotifyingRunnable",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.generate;\n\nimport java.lang.reflect.Constructor;\nimport java.lang.reflect.Executable;\nimport java.lang.reflect.Field;\nimport java.lang.reflect.Member;\nimport java.lang.reflect.Method;\nimport java.lang.reflect.Modifier;\nimport java.util.Arrays;\nimport java.util.HashSet;\nimport java.util.Set;\nimport java.util.function.IntFunction;\n\nimport org.springframework.core.ResolvableType;\nimport org.springframework.javapoet.ClassName;\nimport org.springframework.util.Assert;\nimport org.springframework.util.ClassUtils;\n\n/**\n * Determine the access control of a {@link Member} or type signature.\n *\n * @author Stephane Nicoll\n * @author Phillip Webb\n * @since 6.0\n */\npublic final class AccessControl {\n\n\tprivate final Class<?> target;\n\n\tprivate final Visibility visibility;\n\n\n\tAccessControl(Class<?> target, Visibility visibility) {\n\t\tthis.target = target;\n\t\tthis.visibility = visibility;\n\t}\n\n\n\t/**\n\t * Create an {@link AccessControl} for the given member. This considers the\n\t * member modifier, parameter types, return types and any enclosing classes.\n\t * The lowest overall {@link Visibility} is used.\n\t * @param member the source member\n\t * @return the {@link AccessControl} for the member\n\t */\n\tpublic static AccessControl forMember(Member member) {\n\t\treturn new AccessControl(member.getDeclaringClass(), Visibility.forMember(member));\n\t}\n\n\t/**\n\t * Create an {@link AccessControl} for the given {@link ResolvableType}.\n\t * This considers the type itself as well as any generics.\n\t * @param resolvableType the source resolvable type\n\t * @return the {@link AccessControl} for the type\n\t */\n\tpublic static AccessControl forResolvableType(ResolvableType resolvableType) {\n\t\treturn new AccessControl(resolvableType.toClass(), Visibility.forResolvableType(resolvableType));\n\t}\n\n\t/**\n\t * Create an {@link AccessControl} for the given {@link Class}.\n\t * @param type the source class\n\t * @return the {@link AccessControl} for the class\n\t */\n\tpublic static AccessControl forClass(Class<?> type) {\n\t\treturn new AccessControl(type, Visibility.forClass(type));\n\t}\n\n\t/**\n\t * Returns the lowest {@link AccessControl} from the given candidates.\n\t * @param candidates the candidates to check\n\t * @return the lowest {@link AccessControl} from the candidates\n\t */\n\tpublic static AccessControl lowest(AccessControl... candidates) {\n\t\tint index = Visibility.lowestIndex(\n\t\t\t\tArrays.stream(candidates).map(AccessControl::getVisibility).toArray(Visibility[]::new));\n\t\treturn candidates[index];\n\t}\n\n\t/**\n\t * Return the lowest {@link Visibility} of this instance.\n\t * @return the visibility\n\t */\n\tpublic Visibility getVisibility() {\n\t\treturn this.visibility;\n\t}\n\n\t/**\n\t * Return whether the member or type signature backed by ths instance is\n\t * accessible from any package.\n\t * @return {@code true} if it is public\n\t */\n\tpublic boolean isPublic() {\n\t\treturn this.visibility == Visibility.PUBLIC;\n\t}\n\n\t/**\n\t * Specify whether the member or type signature backed by this instance is\n\t * accessible from the specified {@link ClassName}.\n\t * @param type the type to check\n\t * @return {@code true} if it is accessible\n\t */\n\tpublic boolean isAccessibleFrom(ClassName type) {\n\t\tif (this.visibility == Visibility.PRIVATE) {\n\t\t\treturn false;\n\t\t}\n\t\tif (this.visibility == Visibility.PUBLIC) {\n\t\t\treturn true;\n\t\t}\n\t\treturn this.target.getPackageName().equals(type.packageName());\n\t}\n\n\n\t/**\n\t * Access visibility types as determined by the <a href=\n\t * \"https://docs.oracle.com/javase/tutorial/java/javaOO/accesscontrol.html\">modifiers</a>\n\t * on a {@link Member} or {@link ResolvableType}.\n\t */\n\tpublic enum Visibility {\n\n\t\t/**\n\t\t * Public visibility. The member or type is visible to all classes.\n\t\t */\n\t\tPUBLIC,\n\n\t\t/**\n\t\t * Protected visibility. The member or type is only visible to classes\n\t\t * in the same package or subclasses.\n\t\t */\n\t\tPROTECTED,\n\n\t\t/**\n\t\t * Package-private visibility. The member or type is only visible to classes\n\t\t * in the same package.\n\t\t */\n\t\tPACKAGE_PRIVATE,\n\n\t\t/**\n\t\t * Private visibility. The member or type is not visible to other classes.\n\t\t */\n\t\tPRIVATE;\n\n\n\t\tprivate static Visibility forMember(Member member) {\n\t\t\tAssert.notNull(member, \"'member' must not be null\");\n\t\t\tVisibility visibility = forModifiers(member.getModifiers());\n\t\t\tVisibility declaringClassVisibility = forClass(member.getDeclaringClass());\n\t\t\tvisibility = lowest(visibility, declaringClassVisibility);\n\t\t\tif (visibility != PRIVATE) {\n\t\t\t\tif (member instanceof Field field) {\n\t\t\t\t\tVisibility fieldVisibility = forResolvableType(\n\t\t\t\t\t\t\tResolvableType.forField(field));\n\t\t\t\t\treturn lowest(visibility, fieldVisibility);\n\t\t\t\t}\n\t\t\t\tif (member instanceof Constructor<?> constructor) {\n\t\t\t\t\tVisibility parameterVisibility = forParameterTypes(constructor,\n\t\t\t\t\t\t\ti -> ResolvableType.forConstructorParameter(constructor, i));\n\t\t\t\t\treturn lowest(visibility, parameterVisibility);\n\t\t\t\t}\n\t\t\t\tif (member instanceof Method method) {\n\t\t\t\t\tVisibility parameterVisibility = forParameterTypes(method,\n\t\t\t\t\t\t\ti -> ResolvableType.forMethodParameter(method, i));\n\t\t\t\t\tVisibility returnTypeVisibility = forResolvableType(\n\t\t\t\t\t\t\tResolvableType.forMethodReturnType(method));\n\t\t\t\t\treturn lowest(visibility, parameterVisibility, returnTypeVisibility);\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn PRIVATE;\n\t\t}\n\n\t\tprivate static Visibility forResolvableType(ResolvableType resolvableType) {\n\t\t\treturn forResolvableType(resolvableType, new HashSet<>());\n\t\t}\n\n\t\tprivate static Visibility forResolvableType(ResolvableType resolvableType,\n\t\t\t\tSet<ResolvableType> seen) {\n\t\t\tif (!seen.add(resolvableType)) {\n\t\t\t\treturn Visibility.PUBLIC;\n\t\t\t}\n\t\t\tClass<?> userClass = ClassUtils.getUserClass(resolvableType.toClass());\n\t\t\tResolvableType userType = resolvableType.as(userClass);\n\t\t\tVisibility visibility = forClass(userType.toClass());\n\t\t\tfor (ResolvableType generic : userType.getGenerics()) {\n\t\t\t\tvisibility = lowest(visibility, forResolvableType(generic, seen));\n\t\t\t}\n\t\t\treturn visibility;\n\t\t}\n\n\t\tprivate static Visibility forParameterTypes(Executable executable,\n\t\t\t\tIntFunction<ResolvableType> resolvableTypeFactory) {\n\t\t\tVisibility visibility = Visibility.PUBLIC;\n\t\t\tClass<?>[] parameterTypes = executable.getParameterTypes();\n\t\t\tfor (int i = 0; i < parameterTypes.length; i++) {\n\t\t\t\tResolvableType type = resolvableTypeFactory.apply(i);\n\t\t\t\tvisibility = lowest(visibility, forResolvableType(type));\n\t\t\t}\n\t\t\treturn visibility;\n\t\t}\n\n\t\tprivate static Visibility forClass(Class<?> clazz) {\n\t\t\tclazz = ClassUtils.getUserClass(clazz);\n\t\t\tVisibility visibility = forModifiers(clazz.getModifiers());\n\t\t\tif (clazz.isArray()) {\n\t\t\t\tvisibility = lowest(visibility, forClass(clazz.componentType()));\n\t\t\t}\n\t\t\tClass<?> enclosingClass = clazz.getEnclosingClass();\n\t\t\tif (enclosingClass != null) {\n\t\t\t\tvisibility = lowest(visibility, forClass(clazz.getEnclosingClass()));\n\t\t\t}\n\t\t\treturn visibility;\n\t\t}\n\n\t\tprivate static Visibility forModifiers(int modifiers) {\n\t\t\tif (Modifier.isPublic(modifiers)) {\n\t\t\t\treturn PUBLIC;\n\t\t\t}\n\t\t\tif (Modifier.isProtected(modifiers)) {\n\t\t\t\treturn PROTECTED;\n\t\t\t}\n\t\t\tif (Modifier.isPrivate(modifiers)) {\n\t\t\t\treturn PRIVATE;\n\t\t\t}\n\t\t\treturn PACKAGE_PRIVATE;\n\t\t}\n\n\t\t/**\n\t\t * Returns the lowest {@link Visibility} from the given candidates.\n\t\t * @param candidates the candidates to check\n\t\t * @return the lowest {@link Visibility} from the candidates\n\t\t */\n\t\tstatic Visibility lowest(Visibility... candidates) {\n\t\t\tVisibility visibility = PUBLIC;\n\t\t\tfor (Visibility candidate : candidates) {\n\t\t\t\tif (candidate.ordinal() > visibility.ordinal()) {\n\t\t\t\t\tvisibility = candidate;\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn visibility;\n\t\t}\n\n\t\t/**\n\t\t * Returns the index of the lowest {@link Visibility} from the given\n\t\t * candidates.\n\t\t * @param candidates the candidates to check\n\t\t * @return the index of the lowest {@link Visibility} from the candidates\n\t\t */\n\t\tstatic int lowestIndex(Visibility... candidates) {\n\t\t\tVisibility visibility = PUBLIC;\n\t\t\tint index = 0;\n\t\t\tfor (int i = 0; i < candidates.length; i++) {\n\t\t\t\tVisibility candidate = candidates[i];\n\t\t\t\tif (candidate.ordinal() > visibility.ordinal()) {\n\t\t\t\t\tvisibility = candidate;\n\t\t\t\t\tindex = i;\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn index;\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.AccessControl#target",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#target",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Class<?>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.generate.AccessControl#visibility",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#visibility",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Visibility",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#forMember(Member)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create an {@link AccessControl} for the given member. This considers the\r\n * member modifier, parameter types, return types and any enclosing classes.\r\n * The lowest overall {@link Visibility} is used.\r\n * @param member the source member\r\n * @return the {@link AccessControl} for the member\r\n */\r\npublic static AccessControl forMember(Member member) {\r\n    return new AccessControl(member.getDeclaringClass(), Visibility.forMember(member));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#forMember(Member)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#forResolvableType(ResolvableType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create an {@link AccessControl} for the given {@link ResolvableType}.\r\n * This considers the type itself as well as any generics.\r\n * @param resolvableType the source resolvable type\r\n * @return the {@link AccessControl} for the type\r\n */\r\npublic static AccessControl forResolvableType(ResolvableType resolvableType) {\r\n    return new AccessControl(resolvableType.toClass(), Visibility.forResolvableType(resolvableType));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#forResolvableType(ResolvableType)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#forClass(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Create an {@link AccessControl} for the given {@link Class}.\r\n * @param type the source class\r\n * @return the {@link AccessControl} for the class\r\n */\r\npublic static AccessControl forClass(Class<?> type) {\r\n    return new AccessControl(type, Visibility.forClass(type));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#forClass(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl#lowest(AccessControl)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the lowest {@link AccessControl} from the given candidates.\r\n * @param candidates the candidates to check\r\n * @return the lowest {@link AccessControl} from the candidates\r\n */\r\npublic static AccessControl lowest(AccessControl... candidates) {\r\n    int index = Visibility.lowestIndex(Arrays.stream(candidates).map(AccessControl::getVisibility).toArray(Visibility[]::new));\r\n    return candidates[index];\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.generate.AccessControl",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.generate.AccessControl#lowest(AccessControl)",
+    "tailType": "method"
+  }
+]

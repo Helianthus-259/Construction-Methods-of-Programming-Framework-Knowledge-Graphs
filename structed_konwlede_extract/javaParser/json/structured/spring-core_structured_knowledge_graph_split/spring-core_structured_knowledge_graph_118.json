@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#jacksonAnnotationPresent",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "boolean",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerReflectionHints(ReflectionHints,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Register the necessary reflection hints to bind the specified types.\r\n * @param hints the hints instance to use\r\n * @param types the types to register\r\n */\r\npublic void registerReflectionHints(ReflectionHints hints, Type... types) {\r\n    Set<Type> seen = new HashSet<>();\r\n    for (Type type : types) {\r\n        registerReflectionHints(hints, seen, type);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerReflectionHints(ReflectionHints,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#shouldSkipType(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private boolean shouldSkipType(Class<?> type) {\r\n    return type.isPrimitive() || type == Object.class;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#shouldSkipType(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#shouldSkipMembers(Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private boolean shouldSkipMembers(Class<?> type) {\r\n    return type.getCanonicalName().startsWith(\"java.\") || type.isArray();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#shouldSkipMembers(Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerReflectionHints(ReflectionHints,Set<Type>,Type)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void registerReflectionHints(ReflectionHints hints, Set<Type> seen, Type type) {\r\n    if (seen.contains(type)) {\r\n        return;\r\n    }\r\n    seen.add(type);\r\n    if (type instanceof Class<?> clazz) {\r\n        if (shouldSkipType(clazz)) {\r\n            return;\r\n        }\r\n        hints.registerType(clazz, typeHint -> {\r\n            if (!shouldSkipMembers(clazz)) {\r\n                if (clazz.isRecord()) {\r\n                    typeHint.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n                    for (RecordComponent recordComponent : clazz.getRecordComponents()) {\r\n                        registerRecordHints(hints, seen, recordComponent.getAccessor());\r\n                    }\r\n                }\r\n                if (clazz.isEnum()) {\r\n                    typeHint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS);\r\n                }\r\n                typeHint.withMembers(MemberCategory.ACCESS_DECLARED_FIELDS, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);\r\n                for (Method method : clazz.getMethods()) {\r\n                    String methodName = method.getName();\r\n                    if (methodName.startsWith(\"set\") && method.getParameterCount() == 1) {\r\n                        registerPropertyHints(hints, seen, method, 0);\r\n                    } else if ((methodName.startsWith(\"get\") && method.getParameterCount() == 0 && method.getReturnType() != void.class) || (methodName.startsWith(\"is\") && method.getParameterCount() == 0 && ClassUtils.resolvePrimitiveIfNecessary(method.getReturnType()) == Boolean.class)) {\r\n                        registerPropertyHints(hints, seen, method, -1);\r\n                    }\r\n                }\r\n                if (jacksonAnnotationPresent) {\r\n                    registerJacksonHints(hints, clazz);\r\n                }\r\n            }\r\n            if (KotlinDetector.isKotlinType(clazz)) {\r\n                KotlinDelegate.registerComponentHints(hints, clazz);\r\n                registerKotlinSerializationHints(hints, clazz);\r\n            }\r\n        });\r\n    }\r\n    Set<Class<?>> referencedTypes = new LinkedHashSet<>();\r\n    collectReferencedTypes(referencedTypes, ResolvableType.forType(type));\r\n    referencedTypes.forEach(referencedType -> registerReflectionHints(hints, seen, referencedType));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerReflectionHints(ReflectionHints,Set<Type>,Type)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerRecordHints(ReflectionHints,Set<Type>,Method)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void registerRecordHints(ReflectionHints hints, Set<Type> seen, Method method) {\r\n    hints.registerMethod(method, ExecutableMode.INVOKE);\r\n    MethodParameter methodParameter = MethodParameter.forExecutable(method, -1);\r\n    Type methodParameterType = methodParameter.getGenericParameterType();\r\n    registerReflectionHints(hints, seen, methodParameterType);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerRecordHints(ReflectionHints,Set<Type>,Method)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerPropertyHints(ReflectionHints,Set<Type>,Method,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void registerPropertyHints(ReflectionHints hints, Set<Type> seen, @Nullable Method method, int parameterIndex) {\r\n    if (method != null && method.getDeclaringClass() != Object.class && method.getDeclaringClass() != Enum.class) {\r\n        hints.registerMethod(method, ExecutableMode.INVOKE);\r\n        MethodParameter methodParameter = MethodParameter.forExecutable(method, parameterIndex);\r\n        Type methodParameterType = methodParameter.getGenericParameterType();\r\n        registerReflectionHints(hints, seen, methodParameterType);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerPropertyHints(ReflectionHints,Set<Type>,Method,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerKotlinSerializationHints(ReflectionHints,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void registerKotlinSerializationHints(ReflectionHints hints, Class<?> clazz) {\r\n    String companionClassName = clazz.getCanonicalName() + KOTLIN_COMPANION_SUFFIX;\r\n    if (ClassUtils.isPresent(companionClassName, null)) {\r\n        Class<?> companionClass = ClassUtils.resolveClassName(companionClassName, null);\r\n        Method serializerMethod = ClassUtils.getMethodIfAvailable(companionClass, \"serializer\");\r\n        if (serializerMethod != null) {\r\n            hints.registerMethod(serializerMethod, ExecutableMode.INVOKE);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerKotlinSerializationHints(ReflectionHints,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#collectReferencedTypes(Set<Class<?>>,ResolvableType)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void collectReferencedTypes(Set<Class<?>> types, ResolvableType resolvableType) {\r\n    Class<?> clazz = resolvableType.resolve();\r\n    if (clazz != null && !types.contains(clazz)) {\r\n        types.add(clazz);\r\n        for (ResolvableType genericResolvableType : resolvableType.getGenerics()) {\r\n            collectReferencedTypes(types, genericResolvableType);\r\n        }\r\n        Class<?> superClass = clazz.getSuperclass();\r\n        if (superClass != null && superClass != Object.class && superClass != Record.class && superClass != Enum.class) {\r\n            types.add(superClass);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#collectReferencedTypes(Set<Class<?>>,ResolvableType)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerJacksonHints(ReflectionHints,Class<?>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void registerJacksonHints(ReflectionHints hints, Class<?> clazz) {\r\n    ReflectionUtils.doWithFields(clazz, field -> forEachJacksonAnnotation(field, annotation -> {\r\n        Field sourceField = (Field) annotation.getSource();\r\n        if (sourceField != null) {\r\n            hints.registerField(sourceField);\r\n        }\r\n        registerHintsForClassAttributes(hints, annotation);\r\n    }));\r\n    ReflectionUtils.doWithMethods(clazz, method -> forEachJacksonAnnotation(method, annotation -> {\r\n        Method sourceMethod = (Method) annotation.getSource();\r\n        if (sourceMethod != null) {\r\n            hints.registerMethod(sourceMethod, ExecutableMode.INVOKE);\r\n        }\r\n        registerHintsForClassAttributes(hints, annotation);\r\n    }));\r\n    forEachJacksonAnnotation(clazz, annotation -> registerHintsForClassAttributes(hints, annotation));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#registerJacksonHints(ReflectionHints,Class<?>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint.BindingReflectionHintsRegistrar#forEachJacksonAnnotation(AnnotatedElement,Consumer<MergedAnnotation<Annotation>>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void forEachJacksonAnnotation(AnnotatedElement element, Consumer<MergedAnnotation<Annotation>> action) {\r\n    MergedAnnotations.from(element, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY).stream(JACKSON_ANNOTATION).filter(MergedAnnotation::isMetaPresent).forEach(action);\r\n}",
+    "tailType": "method_code"
+  }
+]

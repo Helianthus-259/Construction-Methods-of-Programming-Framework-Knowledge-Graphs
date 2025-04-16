@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.ClassWriter#getClassLoader()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Returns the {@link ClassLoader} to be used by the default implementation of {@link\r\n * #getCommonSuperClass(String, String)}, that of this {@link ClassWriter}'s runtime type by\r\n * default.\r\n *\r\n * @return ClassLoader\r\n */\r\nprotected ClassLoader getClassLoader() {\r\n    // SPRING PATCH: prefer thread context ClassLoader for application classes\r\n    ClassLoader classLoader = null;\r\n    try {\r\n        classLoader = Thread.currentThread().getContextClassLoader();\r\n    } catch (Throwable ex) {\r\n        // Cannot access thread context ClassLoader - falling back...\r\n    }\r\n    return (classLoader != null ? classLoader : getClass().getClassLoader());\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.ClassWriter#getClassLoader()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.ClassWriter",
+    "headType": "class",
+    "relation": "extend",
+    "tail": "ClassVisitor",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.UnmodifiableMultiValueMapTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2024 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.ArrayList;\nimport java.util.Collection;\nimport java.util.Iterator;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\n\nimport org.assertj.core.api.ThrowableTypeAssert;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.assertj.core.api.Assertions.entry;\nimport static org.mockito.BDDMockito.given;\nimport static org.mockito.Mockito.mock;\n\n/**\n * Tests for {@link UnmodifiableMultiValueMap}.\n *\n * @author Arjen Poutsma\n * @since 6.0\n */\nclass UnmodifiableMultiValueMapTests {\n\n\t@Test\n\tvoid delegation() {\n\t\tMultiValueMap<String, String> mock = mock();\n\t\tUnmodifiableMultiValueMap<String, String> map = new UnmodifiableMultiValueMap<>(mock);\n\n\t\tgiven(mock.size()).willReturn(1);\n\t\tassertThat(map).hasSize(1);\n\n\t\tgiven(mock.isEmpty()).willReturn(false);\n\t\tassertThat(map).isNotEmpty();\n\n\t\tgiven(mock.containsKey(\"foo\")).willReturn(true);\n\t\tassertThat(map.containsKey(\"foo\")).isTrue();\n\n\t\tgiven(mock.containsValue(List.of(\"bar\"))).willReturn(true);\n\t\tassertThat(map.containsValue(List.of(\"bar\"))).isTrue();\n\n\t\tList<String> list = new ArrayList<>();\n\t\tlist.add(\"bar\");\n\t\tgiven(mock.get(\"foo\")).willReturn(list);\n\t\tList<String> result = map.get(\"foo\");\n\t\tassertThat(result).containsExactly(\"bar\");\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> result.add(\"baz\"));\n\n\t\tgiven(mock.getOrDefault(\"foo\", List.of(\"bar\"))).willReturn(List.of(\"baz\"));\n\t\tassertThat(map.getOrDefault(\"foo\", List.of(\"bar\"))).containsExactly(\"baz\");\n\n\t\tgiven(mock.toSingleValueMap()).willReturn(Map.of(\"foo\", \"bar\"));\n\t\tassertThat(map.toSingleValueMap()).containsExactly(entry(\"foo\", \"bar\"));\n\t}\n\n\t@Test\n\tvoid unsupported() {\n\t\tUnmodifiableMultiValueMap<String, String> map = new UnmodifiableMultiValueMap<>(new LinkedMultiValueMap<>());\n\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.put(\"foo\", List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.putIfAbsent(\"foo\", List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.putAll(Map.of(\"foo\", List.of(\"bar\"))));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.remove(\"foo\"));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.add(\"foo\", \"bar\"));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.addAll(\"foo\", List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.addAll(new LinkedMultiValueMap<>()));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.addIfAbsent(\"foo\", \"baz\"));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.set(\"foo\", \"baz\"));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.setAll(Map.of(\"foo\", \"baz\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.replaceAll((s, strings) -> strings));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.remove(\"foo\", List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.replace(\"foo\", List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.replace(\"foo\", List.of(\"bar\"), List.of(\"baz\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.computeIfAbsent(\"foo\", s -> List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(\n\t\t\t\t() -> map.computeIfPresent(\"foo\", (s1, s2) -> List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.compute(\"foo\", (s1, s2) -> List.of(\"bar\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> map.merge(\"foo\", List.of(\"bar\"), (s1, s2) -> s1));\n\t\tassertThatUnsupportedOperationException().isThrownBy(map::clear);\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid entrySetDelegation() {\n\t\tMultiValueMap<String, String> mockMap = mock();\n\t\tSet<Map.Entry<String, List<String>>> mockSet = mock();\n\t\tgiven(mockMap.entrySet()).willReturn(mockSet);\n\t\tSet<Map.Entry<String, List<String>>> set = new UnmodifiableMultiValueMap<>(mockMap).entrySet();\n\n\t\tgiven(mockSet.size()).willReturn(1);\n\t\tassertThat(set).hasSize(1);\n\n\t\tgiven(mockSet.isEmpty()).willReturn(false);\n\t\tassertThat(set.isEmpty()).isFalse();\n\n\t\tMap.Entry<String, List<String>> mockedEntry = mock();\n\t\tgiven(mockSet.contains(mockedEntry)).willReturn(true);\n\t\tassertThat(set.contains(mockedEntry)).isTrue();\n\n\t\tList<Map.Entry<String, List<String>>> mockEntries = List.of(mock(Map.Entry.class));\n\t\tgiven(mockSet.containsAll(mockEntries)).willReturn(true);\n\t\tassertThat(set.containsAll(mockEntries)).isTrue();\n\n\t\tIterator<Map.Entry<String, List<String>>> mockIterator = mock();\n\t\tgiven(mockSet.iterator()).willReturn(mockIterator);\n\t\tgiven(mockIterator.hasNext()).willReturn(false);\n\t\tassertThat(set.iterator()).isExhausted();\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid entrySetUnsupported() {\n\t\tSet<Map.Entry<String, List<String>>> set = new UnmodifiableMultiValueMap<String, String>(new LinkedMultiValueMap<>()).entrySet();\n\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> set.add(mock(Map.Entry.class)));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> set.remove(mock(Map.Entry.class)));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> set.removeIf(e -> true));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> set.addAll(mock(List.class)));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> set.retainAll(mock(List.class)));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> set.removeAll(mock(List.class)));\n\t\tassertThatUnsupportedOperationException().isThrownBy(set::clear);\n\t}\n\n\t@Test\n\t@SuppressWarnings(\"unchecked\")\n\tvoid valuesDelegation() {\n\t\tMultiValueMap<String, String> mockMap = mock();\n\t\tCollection<List<String>> mockValues = mock();\n\t\tgiven(mockMap.values()).willReturn(mockValues);\n\t\tCollection<List<String>> values = new UnmodifiableMultiValueMap<>(mockMap).values();\n\n\t\tgiven(mockValues.size()).willReturn(1);\n\t\tassertThat(values).hasSize(1);\n\n\t\tgiven(mockValues.isEmpty()).willReturn(false);\n\t\tassertThat(values.isEmpty()).isFalse();\n\n\t\tgiven(mockValues.contains(List.of(\"foo\"))).willReturn(true);\n\t\tassertThat(mockValues.contains(List.of(\"foo\"))).isTrue();\n\n\t\tgiven(mockValues.containsAll(List.of(List.of(\"foo\")))).willReturn(true);\n\t\tassertThat(mockValues.containsAll(List.of(List.of(\"foo\")))).isTrue();\n\n\t\tIterator<List<String>> mockIterator = mock(Iterator.class);\n\t\tgiven(mockValues.iterator()).willReturn(mockIterator);\n\t\tgiven(mockIterator.hasNext()).willReturn(false);\n\t\tassertThat(values.iterator()).isExhausted();\n\t}\n\n\t@Test\n\tvoid valuesUnsupported() {\n\t\tCollection<List<String>> values =\n\t\t\t\tnew UnmodifiableMultiValueMap<String, String>(new LinkedMultiValueMap<>()).values();\n\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> values.add(List.of(\"foo\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> values.remove(List.of(\"foo\")));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> values.addAll(List.of(List.of(\"foo\"))));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> values.removeAll(List.of(List.of(\"foo\"))));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> values.retainAll(List.of(List.of(\"foo\"))));\n\t\tassertThatUnsupportedOperationException().isThrownBy(() -> values.removeIf(s -> true));\n\t\tassertThatUnsupportedOperationException().isThrownBy(values::clear);\n\t}\n\n\tprivate static ThrowableTypeAssert<UnsupportedOperationException> assertThatUnsupportedOperationException() {\n\t\treturn assertThatExceptionOfType(UnsupportedOperationException.class);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#delegation()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid delegation() {\r\n    MultiValueMap<String, String> mock = mock();\r\n    UnmodifiableMultiValueMap<String, String> map = new UnmodifiableMultiValueMap<>(mock);\r\n    given(mock.size()).willReturn(1);\r\n    assertThat(map).hasSize(1);\r\n    given(mock.isEmpty()).willReturn(false);\r\n    assertThat(map).isNotEmpty();\r\n    given(mock.containsKey(\"foo\")).willReturn(true);\r\n    assertThat(map.containsKey(\"foo\")).isTrue();\r\n    given(mock.containsValue(List.of(\"bar\"))).willReturn(true);\r\n    assertThat(map.containsValue(List.of(\"bar\"))).isTrue();\r\n    List<String> list = new ArrayList<>();\r\n    list.add(\"bar\");\r\n    given(mock.get(\"foo\")).willReturn(list);\r\n    List<String> result = map.get(\"foo\");\r\n    assertThat(result).containsExactly(\"bar\");\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> result.add(\"baz\"));\r\n    given(mock.getOrDefault(\"foo\", List.of(\"bar\"))).willReturn(List.of(\"baz\"));\r\n    assertThat(map.getOrDefault(\"foo\", List.of(\"bar\"))).containsExactly(\"baz\");\r\n    given(mock.toSingleValueMap()).willReturn(Map.of(\"foo\", \"bar\"));\r\n    assertThat(map.toSingleValueMap()).containsExactly(entry(\"foo\", \"bar\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.UnmodifiableMultiValueMapTests#delegation()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#delegation()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#unsupported()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid unsupported() {\r\n    UnmodifiableMultiValueMap<String, String> map = new UnmodifiableMultiValueMap<>(new LinkedMultiValueMap<>());\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.put(\"foo\", List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.putIfAbsent(\"foo\", List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.putAll(Map.of(\"foo\", List.of(\"bar\"))));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.remove(\"foo\"));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.add(\"foo\", \"bar\"));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.addAll(\"foo\", List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.addAll(new LinkedMultiValueMap<>()));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.addIfAbsent(\"foo\", \"baz\"));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.set(\"foo\", \"baz\"));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.setAll(Map.of(\"foo\", \"baz\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.replaceAll((s, strings) -> strings));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.remove(\"foo\", List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.replace(\"foo\", List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.replace(\"foo\", List.of(\"bar\"), List.of(\"baz\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.computeIfAbsent(\"foo\", s -> List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.computeIfPresent(\"foo\", (s1, s2) -> List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.compute(\"foo\", (s1, s2) -> List.of(\"bar\")));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> map.merge(\"foo\", List.of(\"bar\"), (s1, s2) -> s1));\r\n    assertThatUnsupportedOperationException().isThrownBy(map::clear);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.UnmodifiableMultiValueMapTests#unsupported()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#unsupported()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetDelegation()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid entrySetDelegation() {\r\n    MultiValueMap<String, String> mockMap = mock();\r\n    Set<Map.Entry<String, List<String>>> mockSet = mock();\r\n    given(mockMap.entrySet()).willReturn(mockSet);\r\n    Set<Map.Entry<String, List<String>>> set = new UnmodifiableMultiValueMap<>(mockMap).entrySet();\r\n    given(mockSet.size()).willReturn(1);\r\n    assertThat(set).hasSize(1);\r\n    given(mockSet.isEmpty()).willReturn(false);\r\n    assertThat(set.isEmpty()).isFalse();\r\n    Map.Entry<String, List<String>> mockedEntry = mock();\r\n    given(mockSet.contains(mockedEntry)).willReturn(true);\r\n    assertThat(set.contains(mockedEntry)).isTrue();\r\n    List<Map.Entry<String, List<String>>> mockEntries = List.of(mock(Map.Entry.class));\r\n    given(mockSet.containsAll(mockEntries)).willReturn(true);\r\n    assertThat(set.containsAll(mockEntries)).isTrue();\r\n    Iterator<Map.Entry<String, List<String>>> mockIterator = mock();\r\n    given(mockSet.iterator()).willReturn(mockIterator);\r\n    given(mockIterator.hasNext()).willReturn(false);\r\n    assertThat(set.iterator()).isExhausted();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetDelegation()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetDelegation()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetDelegation()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetUnsupported()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\n@SuppressWarnings(\"unchecked\")\r\nvoid entrySetUnsupported() {\r\n    Set<Map.Entry<String, List<String>>> set = new UnmodifiableMultiValueMap<String, String>(new LinkedMultiValueMap<>()).entrySet();\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> set.add(mock(Map.Entry.class)));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> set.remove(mock(Map.Entry.class)));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> set.removeIf(e -> true));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> set.addAll(mock(List.class)));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> set.retainAll(mock(List.class)));\r\n    assertThatUnsupportedOperationException().isThrownBy(() -> set.removeAll(mock(List.class)));\r\n    assertThatUnsupportedOperationException().isThrownBy(set::clear);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetUnsupported()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetUnsupported()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.UnmodifiableMultiValueMapTests#entrySetUnsupported()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@SuppressWarnings",
+    "tailType": "annotation"
+  }
+]

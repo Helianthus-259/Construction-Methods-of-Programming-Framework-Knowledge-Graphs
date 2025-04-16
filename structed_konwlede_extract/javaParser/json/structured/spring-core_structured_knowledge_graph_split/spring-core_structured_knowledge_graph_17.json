@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentMapBenchmarkData#generator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData#generator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentMapBenchmarkData#elements",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData#elements",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentMapBenchmarkData#map",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData#map",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, WeakReference<String>>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData#setup()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Setup(Level.Iteration)\r\npublic void setup() {\r\n    this.elements = new ArrayList<>(this.capacity);\r\n    this.map = new ConcurrentReferenceHashMap<>();\r\n    Random random = new Random();\r\n    random.ints(this.capacity).forEach(value -> {\r\n        String element = String.valueOf(value);\r\n        this.elements.add(element);\r\n        this.map.put(element, new WeakReference<>(this.generator.apply(element)));\r\n    });\r\n    this.elements.sort(String::compareTo);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrentMapBenchmarkData#setup()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentMapBenchmarkData#setup()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Setup",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@State",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\n\nimport java.lang.ref.WeakReference;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Random;\nimport java.util.WeakHashMap;\nimport java.util.function.Function;\n\nimport org.openjdk.jmh.annotations.Benchmark;\nimport org.openjdk.jmh.annotations.BenchmarkMode;\nimport org.openjdk.jmh.annotations.Level;\nimport org.openjdk.jmh.annotations.Mode;\nimport org.openjdk.jmh.annotations.Param;\nimport org.openjdk.jmh.annotations.Scope;\nimport org.openjdk.jmh.annotations.Setup;\nimport org.openjdk.jmh.annotations.State;\nimport org.openjdk.jmh.infra.Blackhole;\n\n/**\n * Benchmarks for {@link ConcurrentReferenceHashMap}.\n * <p>This benchmark ensures that {@link ConcurrentReferenceHashMap} performs\n * better than {@link java.util.Collections#synchronizedMap(Map)} with\n * concurrent read operations.\n * <p>Typically this can be run with {@code \"java -jar spring-core-jmh.jar -t 30 -f 2 ConcurrentReferenceHashMapBenchmark\"}.\n * @author Brian Clozel\n */\n@BenchmarkMode(Mode.Throughput)\npublic class ConcurrentReferenceHashMapBenchmark {\n\n\t@Benchmark\n\tpublic void concurrentMap(ConcurrentMapBenchmarkData data, Blackhole bh) {\n\t\tfor (String element : data.elements) {\n\t\t\tWeakReference<String> value = data.map.get(element);\n\t\t\tbh.consume(value);\n\t\t}\n\t}\n\n\t@State(Scope.Benchmark)\n\tpublic static class ConcurrentMapBenchmarkData {\n\n\t\t@Param({\"500\"})\n\t\tpublic int capacity;\n\t\tprivate final Function<String, String> generator = key -> key + \"value\";\n\n\t\tpublic List<String> elements;\n\n\t\tpublic Map<String, WeakReference<String>> map;\n\n\t\t@Setup(Level.Iteration)\n\t\tpublic void setup() {\n\t\t\tthis.elements = new ArrayList<>(this.capacity);\n\t\t\tthis.map = new ConcurrentReferenceHashMap<>();\n\t\t\tRandom random = new Random();\n\t\t\trandom.ints(this.capacity).forEach(value -> {\n\t\t\t\tString element = String.valueOf(value);\n\t\t\t\tthis.elements.add(element);\n\t\t\t\tthis.map.put(element, new WeakReference<>(this.generator.apply(element)));\n\t\t\t});\n\t\t\tthis.elements.sort(String::compareTo);\n\t\t}\n\t}\n\n\t@Benchmark\n\tpublic void synchronizedMap(SynchronizedMapBenchmarkData data, Blackhole bh) {\n\t\tfor (String element : data.elements) {\n\t\t\tWeakReference<String> value = data.map.get(element);\n\t\t\tbh.consume(value);\n\t\t}\n\t}\n\n\t@State(Scope.Benchmark)\n\tpublic static class SynchronizedMapBenchmarkData {\n\n\t\t@Param({\"500\"})\n\t\tpublic int capacity;\n\n\t\tprivate Function<String, String> generator = key -> key + \"value\";\n\n\t\tpublic List<String> elements;\n\n\t\tpublic Map<String, WeakReference<String>> map;\n\n\n\t\t@Setup(Level.Iteration)\n\t\tpublic void setup() {\n\t\t\tthis.elements = new ArrayList<>(this.capacity);\n\t\t\tthis.map = Collections.synchronizedMap(new WeakHashMap<>());\n\t\t\tRandom random = new Random();\n\t\t\trandom.ints(this.capacity).forEach(value -> {\n\t\t\t\tString element = String.valueOf(value);\n\t\t\t\tthis.elements.add(element);\n\t\t\t\tthis.map.put(element, new WeakReference<>(this.generator.apply(element)));\n\t\t\t});\n\t\t\tthis.elements.sort(String::compareTo);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.SynchronizedMapBenchmarkData#capacity",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData#capacity",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "int",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.SynchronizedMapBenchmarkData#generator",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData#generator",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Function<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.SynchronizedMapBenchmarkData#elements",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData#elements",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.SynchronizedMapBenchmarkData#map",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.SynchronizedMapBenchmarkData#map",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Map<String, WeakReference<String>>",
+    "tailType": "type"
+  }
+]

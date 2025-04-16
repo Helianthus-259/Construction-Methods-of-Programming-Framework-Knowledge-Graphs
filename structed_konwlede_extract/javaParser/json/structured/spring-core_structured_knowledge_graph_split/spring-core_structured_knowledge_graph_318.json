@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.PropertyPlaceholderHelperTests#unresolvedPlaceholderIsIgnored()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.PropertyPlaceholderHelperTests#unresolvedPlaceholderAsError()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid unresolvedPlaceholderAsError() {\r\n    String text = \"foo=${foo},bar=${bar}\";\r\n    Properties props = new Properties();\r\n    props.setProperty(\"foo\", \"bar\");\r\n    PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper(\"${\", \"}\", null, null, false);\r\n    assertThatExceptionOfType(PlaceholderResolutionException.class).isThrownBy(() -> helper.replacePlaceholders(text, props));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.PropertyPlaceholderHelperTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.PropertyPlaceholderHelperTests#unresolvedPlaceholderAsError()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.PropertyPlaceholderHelperTests#unresolvedPlaceholderAsError()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.PropertyPlaceholderHelperTests#mockPlaceholderResolver(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private static PlaceholderResolver mockPlaceholderResolver(String... pairs) {\r\n    if (pairs.length % 2 == 1) {\r\n        throw new IllegalArgumentException(\"size must be even, it is a set of key=value pairs\");\r\n    }\r\n    PlaceholderResolver resolver = mock();\r\n    for (int i = 0; i < pairs.length; i += 2) {\r\n        String key = pairs[i];\r\n        String value = pairs[i + 1];\r\n        given(resolver.resolvePlaceholder(key)).willReturn(value);\r\n    }\r\n    return resolver;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.PropertyPlaceholderHelperTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.PropertyPlaceholderHelperTests#mockPlaceholderResolver(String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.DefaultValueTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@Nested",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2025 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport java.util.Properties;\nimport java.util.stream.Stream;\n\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.Arguments;\nimport org.junit.jupiter.params.provider.MethodSource;\n\nimport org.springframework.util.PropertyPlaceholderHelper.PlaceholderResolver;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatExceptionOfType;\nimport static org.mockito.BDDMockito.given;\nimport static org.mockito.Mockito.mock;\nimport static org.mockito.Mockito.never;\nimport static org.mockito.Mockito.verify;\n\n/**\n * Tests for {@link PropertyPlaceholderHelper}.\n *\n * @author Rob Harrop\n * @author Stephane Nicoll\n */\nclass PropertyPlaceholderHelperTests {\n\n\tprivate final PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper(\"${\", \"}\");\n\n\n\t@Test\n\tvoid withProperties() {\n\t\tString text = \"foo=${foo}\";\n\t\tProperties props = new Properties();\n\t\tprops.setProperty(\"foo\", \"bar\");\n\n\t\tassertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar\");\n\t}\n\n\t@Test\n\tvoid withMultipleProperties() {\n\t\tString text = \"foo=${foo},bar=${bar}\";\n\t\tProperties props = new Properties();\n\t\tprops.setProperty(\"foo\", \"bar\");\n\t\tprops.setProperty(\"bar\", \"baz\");\n\n\t\tassertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar,bar=baz\");\n\t}\n\n\t@Test\n\tvoid recurseInProperty() {\n\t\tString text = \"foo=${bar}\";\n\t\tProperties props = new Properties();\n\t\tprops.setProperty(\"bar\", \"${baz}\");\n\t\tprops.setProperty(\"baz\", \"bar\");\n\n\t\tassertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar\");\n\t}\n\n\t@Test\n\tvoid recurseInPlaceholder() {\n\t\tString text = \"foo=${b${inner}}\";\n\t\tProperties props = new Properties();\n\t\tprops.setProperty(\"bar\", \"bar\");\n\t\tprops.setProperty(\"inner\", \"ar\");\n\n\t\tassertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar\");\n\n\t\ttext = \"${top}\";\n\t\tprops = new Properties();\n\t\tprops.setProperty(\"top\", \"${child}+${child}\");\n\t\tprops.setProperty(\"child\", \"${${differentiator}.grandchild}\");\n\t\tprops.setProperty(\"differentiator\", \"first\");\n\t\tprops.setProperty(\"first.grandchild\", \"actualValue\");\n\n\t\tassertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"actualValue+actualValue\");\n\t}\n\n\t@Test\n\tvoid withResolver() {\n\t\tString text = \"foo=${foo}\";\n\t\tPlaceholderResolver resolver = placeholderName -> \"foo\".equals(placeholderName) ? \"bar\" : null;\n\n\t\tassertThat(this.helper.replacePlaceholders(text, resolver)).isEqualTo(\"foo=bar\");\n\t}\n\n\t@Test\n\tvoid unresolvedPlaceholderIsIgnored() {\n\t\tString text = \"foo=${foo},bar=${bar}\";\n\t\tProperties props = new Properties();\n\t\tprops.setProperty(\"foo\", \"bar\");\n\n\t\tassertThat(this.helper.replacePlaceholders(text, props)).isEqualTo(\"foo=bar,bar=${bar}\");\n\t}\n\n\t@Test\n\tvoid unresolvedPlaceholderAsError() {\n\t\tString text = \"foo=${foo},bar=${bar}\";\n\t\tProperties props = new Properties();\n\t\tprops.setProperty(\"foo\", \"bar\");\n\n\t\tPropertyPlaceholderHelper helper = new PropertyPlaceholderHelper(\"${\", \"}\", null, null, false);\n\t\tassertThatExceptionOfType(PlaceholderResolutionException.class)\n\t\t\t\t.isThrownBy(() -> helper.replacePlaceholders(text, props));\n\t}\n\n\t@Nested\n\tclass DefaultValueTests {\n\n\t\tprivate final PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper(\"${\", \"}\", \":\", null, true);\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"defaultValues\")\n\t\tvoid defaultValueIsApplied(String text, String value) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"one\", \"1\");\n\t\t\tproperties.setProperty(\"two\", \"2\");\n\t\t\tassertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(value);\n\t\t}\n\n\t\t@Test\n\t\tvoid defaultValueIsNotEvaluatedEarly() {\n\t\t\tPlaceholderResolver resolver = mockPlaceholderResolver(\"one\", \"1\");\n\t\t\tassertThat(this.helper.replacePlaceholders(\"This is ${one:or${two}}\", resolver)).isEqualTo(\"This is 1\");\n\t\t\tverify(resolver).resolvePlaceholder(\"one\");\n\t\t\tverify(resolver, never()).resolvePlaceholder(\"two\");\n\t\t}\n\n\t\tstatic Stream<Arguments> defaultValues() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${invalid:test}\", \"test\"),\n\t\t\t\t\tArguments.of(\"${invalid:${one}}\", \"1\"),\n\t\t\t\t\tArguments.of(\"${invalid:${one}${two}}\", \"12\"),\n\t\t\t\t\tArguments.of(\"${invalid:${one}:${two}}\", \"1:2\"),\n\t\t\t\t\tArguments.of(\"${invalid:${also_invalid:test}}\", \"test\"),\n\t\t\t\t\tArguments.of(\"${invalid:${also_invalid:${one}}}\", \"1\")\n\t\t\t);\n\t\t}\n\n\t\t@ParameterizedTest(name = \"{0} -> {1}\")\n\t\t@MethodSource(\"exactMatchPlaceholders\")\n\t\tvoid placeholdersWithExactMatchAreConsidered(String text, String expected) {\n\t\t\tProperties properties = new Properties();\n\t\t\tproperties.setProperty(\"prefix://my-service\", \"example-service\");\n\t\t\tproperties.setProperty(\"px\", \"prefix\");\n\t\t\tproperties.setProperty(\"p1\", \"${prefix://my-service}\");\n\t\t\tassertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(expected);\n\t\t}\n\n\t\tstatic Stream<Arguments> exactMatchPlaceholders() {\n\t\t\treturn Stream.of(\n\t\t\t\t\tArguments.of(\"${prefix://my-service}\", \"example-service\"),\n\t\t\t\t\tArguments.of(\"${p1}\", \"example-service\")\n\t\t\t);\n\t\t}\n\t}\n\n\n\tprivate static PlaceholderResolver mockPlaceholderResolver(String... pairs) {\n\t\tif (pairs.length % 2 == 1) {\n\t\t\tthrow new IllegalArgumentException(\"size must be even, it is a set of key=value pairs\");\n\t\t}\n\t\tPlaceholderResolver resolver = mock();\n\t\tfor (int i = 0; i < pairs.length; i += 2) {\n\t\t\tString key = pairs[i];\n\t\t\tString value = pairs[i + 1];\n\t\t\tgiven(resolver.resolvePlaceholder(key)).willReturn(value);\n\t\t}\n\t\treturn resolver;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.DefaultValueTests#helper",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#helper",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "PropertyPlaceholderHelper",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#defaultValueIsApplied(String,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@ParameterizedTest(name = \"{0} -> {1}\")\r\n@MethodSource(\"defaultValues\")\r\nvoid defaultValueIsApplied(String text, String value) {\r\n    Properties properties = new Properties();\r\n    properties.setProperty(\"one\", \"1\");\r\n    properties.setProperty(\"two\", \"2\");\r\n    assertThat(this.helper.replacePlaceholders(text, properties)).isEqualTo(value);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#defaultValueIsApplied(String,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#defaultValueIsApplied(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@ParameterizedTest",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#defaultValueIsApplied(String,String)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@MethodSource",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#defaultValueIsNotEvaluatedEarly()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Test\r\nvoid defaultValueIsNotEvaluatedEarly() {\r\n    PlaceholderResolver resolver = mockPlaceholderResolver(\"one\", \"1\");\r\n    assertThat(this.helper.replacePlaceholders(\"This is ${one:or${two}}\", resolver)).isEqualTo(\"This is 1\");\r\n    verify(resolver).resolvePlaceholder(\"one\");\r\n    verify(resolver, never()).resolvePlaceholder(\"two\");\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#defaultValueIsNotEvaluatedEarly()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#defaultValueIsNotEvaluatedEarly()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests#defaultValues()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "static Stream<Arguments> defaultValues() {\r\n    return Stream.of(Arguments.of(\"${invalid:test}\", \"test\"), Arguments.of(\"${invalid:${one}}\", \"1\"), Arguments.of(\"${invalid:${one}${two}}\", \"12\"), Arguments.of(\"${invalid:${one}:${two}}\", \"1:2\"), Arguments.of(\"${invalid:${also_invalid:test}}\", \"test\"), Arguments.of(\"${invalid:${also_invalid:${one}}}\", \"1\"));\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.DefaultValueTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.DefaultValueTests#defaultValues()",
+    "tailType": "method"
+  }
+]

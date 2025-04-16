@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.util.concurrent.FutureUtilsTests#callAsyncExceptionExecutor()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.aot.hint",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.aot.hint",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.ResourcePatternHints",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHints",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.LinkedHashSet;\nimport java.util.List;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * A collection of {@link ResourcePatternHint} describing whether resources should\n * be made available at runtime using a matching algorithm based on include/exclude\n * patterns.\n *\n * @author Stephane Nicoll\n * @author Brian Clozel\n * @author Sam Brannen\n * @since 6.0\n */\npublic final class ResourcePatternHints {\n\n\tprivate final List<ResourcePatternHint> includes;\n\n\n\tprivate ResourcePatternHints(Builder builder) {\n\t\tthis.includes = new ArrayList<>(builder.includes);\n\t}\n\n\t/**\n\t * Return the include patterns to use to identify the resources to match.\n\t * @return the include patterns\n\t */\n\tpublic List<ResourcePatternHint> getIncludes() {\n\t\treturn this.includes;\n\t}\n\n\n\t/**\n\t * Builder for {@link ResourcePatternHints}.\n\t */\n\tpublic static class Builder {\n\n\t\tprivate final Set<ResourcePatternHint> includes = new LinkedHashSet<>();\n\n\t\tBuilder() {\n\t\t}\n\n\t\t/**\n\t\t * Include resources matching the specified glob patterns.\n\t\t * @param reachableType the type that should be reachable for this hint to apply\n\t\t * @param includes the include patterns (see {@link ResourcePatternHint} documentation)\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t */\n\t\tpublic Builder includes(@Nullable TypeReference reachableType, String... includes) {\n\t\t\tArrays.stream(includes)\n\t\t\t\t\t.map(this::expandToIncludeDirectories)\n\t\t\t\t\t.flatMap(List::stream)\n\t\t\t\t\t.map(include -> new ResourcePatternHint(include, reachableType))\n\t\t\t\t\t.forEach(this.includes::add);\n\t\t\treturn this;\n\t\t}\n\n\t\t/**\n\t\t * Expand the supplied include pattern into multiple patterns that include\n\t\t * all parent directories for the ultimate resource or resources.\n\t\t * <p>This is necessary to support classpath scanning within a GraalVM\n\t\t * native image.\n\t\t * @see <a href=\"https://github.com/spring-projects/spring-framework/issues/29403\">gh-29403</a>\n\t\t */\n\t\tprivate List<String> expandToIncludeDirectories(String includePattern) {\n\t\t\t// Resource in root or no explicit subdirectories?\n\t\t\tif (!includePattern.contains(\"/\")) {\n\t\t\t\t// Include the root directory as well as the pattern\n\t\t\t\treturn List.of(\"/\", includePattern);\n\t\t\t}\n\n\t\t\tList<String> includePatterns = new ArrayList<>();\n\t\t\t// Ensure the root directory and original pattern are always included\n\t\t\tincludePatterns.add(\"/\");\n\t\t\tincludePatterns.add(includePattern);\n\t\t\tStringBuilder path = new StringBuilder();\n\t\t\tfor (String pathElement : includePattern.split(\"/\")) {\n\t\t\t\tif (pathElement.isEmpty()) {\n\t\t\t\t\t// Skip empty path elements\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tif (pathElement.contains(\"*\")) {\n\t\t\t\t\t// Stop at the first encountered wildcard, since we cannot reliably reason\n\t\t\t\t\t// any further about the directory structure below this path element.\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tif (!path.isEmpty()) {\n\t\t\t\t\tpath.append(\"/\");\n\t\t\t\t}\n\t\t\t\tpath.append(pathElement);\n\t\t\t\tincludePatterns.add(path.toString());\n\t\t\t}\n\t\t\treturn includePatterns;\n\t\t}\n\n\t\t/**\n\t\t * Include resources matching the specified glob patterns.\n\t\t * @param includes the include patterns (see {@link ResourcePatternHint} documentation)\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t */\n\t\tpublic Builder includes(String... includes) {\n\t\t\treturn includes(null, includes);\n\t\t}\n\n\t\t/**\n\t\t * Create {@link ResourcePatternHints} based on the state of this\n\t\t * builder.\n\t\t * @return resource pattern hints\n\t\t */\n\t\tResourcePatternHints build() {\n\t\t\treturn new ResourcePatternHints(this);\n\t\t}\n\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHints",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.ResourcePatternHints#includes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHints#includes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "List<ResourcePatternHint>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHints#getIncludes()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Return the include patterns to use to identify the resources to match.\r\n * @return the include patterns\r\n */\r\npublic List<ResourcePatternHint> getIncludes() {\r\n    return this.includes;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.ResourcePatternHints",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.ResourcePatternHints#getIncludes()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.aot.hint",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.aot.hint.Builder",
+    "tailType": "class"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.ConcurrentLruCacheTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.aot.hint.Builder",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.aot.hint;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.LinkedHashSet;\nimport java.util.List;\nimport java.util.Set;\n\nimport org.jspecify.annotations.Nullable;\n\n/**\n * A collection of {@link ResourcePatternHint} describing whether resources should\n * be made available at runtime using a matching algorithm based on include/exclude\n * patterns.\n *\n * @author Stephane Nicoll\n * @author Brian Clozel\n * @author Sam Brannen\n * @since 6.0\n */\npublic final class ResourcePatternHints {\n\n\tprivate final List<ResourcePatternHint> includes;\n\n\n\tprivate ResourcePatternHints(Builder builder) {\n\t\tthis.includes = new ArrayList<>(builder.includes);\n\t}\n\n\t/**\n\t * Return the include patterns to use to identify the resources to match.\n\t * @return the include patterns\n\t */\n\tpublic List<ResourcePatternHint> getIncludes() {\n\t\treturn this.includes;\n\t}\n\n\n\t/**\n\t * Builder for {@link ResourcePatternHints}.\n\t */\n\tpublic static class Builder {\n\n\t\tprivate final Set<ResourcePatternHint> includes = new LinkedHashSet<>();\n\n\t\tBuilder() {\n\t\t}\n\n\t\t/**\n\t\t * Include resources matching the specified glob patterns.\n\t\t * @param reachableType the type that should be reachable for this hint to apply\n\t\t * @param includes the include patterns (see {@link ResourcePatternHint} documentation)\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t */\n\t\tpublic Builder includes(@Nullable TypeReference reachableType, String... includes) {\n\t\t\tArrays.stream(includes)\n\t\t\t\t\t.map(this::expandToIncludeDirectories)\n\t\t\t\t\t.flatMap(List::stream)\n\t\t\t\t\t.map(include -> new ResourcePatternHint(include, reachableType))\n\t\t\t\t\t.forEach(this.includes::add);\n\t\t\treturn this;\n\t\t}\n\n\t\t/**\n\t\t * Expand the supplied include pattern into multiple patterns that include\n\t\t * all parent directories for the ultimate resource or resources.\n\t\t * <p>This is necessary to support classpath scanning within a GraalVM\n\t\t * native image.\n\t\t * @see <a href=\"https://github.com/spring-projects/spring-framework/issues/29403\">gh-29403</a>\n\t\t */\n\t\tprivate List<String> expandToIncludeDirectories(String includePattern) {\n\t\t\t// Resource in root or no explicit subdirectories?\n\t\t\tif (!includePattern.contains(\"/\")) {\n\t\t\t\t// Include the root directory as well as the pattern\n\t\t\t\treturn List.of(\"/\", includePattern);\n\t\t\t}\n\n\t\t\tList<String> includePatterns = new ArrayList<>();\n\t\t\t// Ensure the root directory and original pattern are always included\n\t\t\tincludePatterns.add(\"/\");\n\t\t\tincludePatterns.add(includePattern);\n\t\t\tStringBuilder path = new StringBuilder();\n\t\t\tfor (String pathElement : includePattern.split(\"/\")) {\n\t\t\t\tif (pathElement.isEmpty()) {\n\t\t\t\t\t// Skip empty path elements\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tif (pathElement.contains(\"*\")) {\n\t\t\t\t\t// Stop at the first encountered wildcard, since we cannot reliably reason\n\t\t\t\t\t// any further about the directory structure below this path element.\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tif (!path.isEmpty()) {\n\t\t\t\t\tpath.append(\"/\");\n\t\t\t\t}\n\t\t\t\tpath.append(pathElement);\n\t\t\t\tincludePatterns.add(path.toString());\n\t\t\t}\n\t\t\treturn includePatterns;\n\t\t}\n\n\t\t/**\n\t\t * Include resources matching the specified glob patterns.\n\t\t * @param includes the include patterns (see {@link ResourcePatternHint} documentation)\n\t\t * @return {@code this}, to facilitate method chaining\n\t\t */\n\t\tpublic Builder includes(String... includes) {\n\t\t\treturn includes(null, includes);\n\t\t}\n\n\t\t/**\n\t\t * Create {@link ResourcePatternHints} based on the state of this\n\t\t * builder.\n\t\t * @return resource pattern hints\n\t\t */\n\t\tResourcePatternHints build() {\n\t\t\treturn new ResourcePatternHints(this);\n\t\t}\n\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.Builder",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.aot.hint.Builder#includes",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.aot.hint.Builder#includes",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "Set<ResourcePatternHint>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.Builder#includes(TypeReference,String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Include resources matching the specified glob patterns.\r\n * @param reachableType the type that should be reachable for this hint to apply\r\n * @param includes the include patterns (see {@link ResourcePatternHint} documentation)\r\n * @return {@code this}, to facilitate method chaining\r\n */\r\npublic Builder includes(@Nullable TypeReference reachableType, String... includes) {\r\n    Arrays.stream(includes).map(this::expandToIncludeDirectories).flatMap(List::stream).map(include -> new ResourcePatternHint(include, reachableType)).forEach(this.includes::add);\r\n    return this;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.aot.hint.Builder",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.aot.hint.Builder#includes(TypeReference,String)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCacheTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for {@link ConcurrentLruCache}.\n *\n * @author Juergen Hoeller\n * @author Sam Brannen\n */\nclass ConcurrentLruCacheTests {\n\n\tprivate final ConcurrentLruCache<String, String> cache = new ConcurrentLruCache<>(2, key -> key + \"value\");\n\n\n\t@Test\n\tvoid zeroCapacity() {\n\t\tConcurrentLruCache<String, String> cache = new ConcurrentLruCache<>(0, key -> key + \"value\");\n\n\t\tassertThat(cache.capacity()).isZero();\n\t\tassertThat(cache.size()).isZero();\n\n\t\tassertThat(cache.get(\"k1\")).isEqualTo(\"k1value\");\n\t\tassertThat(cache.size()).isZero();\n\t\tassertThat(cache.contains(\"k1\")).isFalse();\n\n\t\tassertThat(cache.get(\"k2\")).isEqualTo(\"k2value\");\n\t\tassertThat(cache.size()).isZero();\n\t\tassertThat(cache.contains(\"k1\")).isFalse();\n\t\tassertThat(cache.contains(\"k2\")).isFalse();\n\n\t\tassertThat(cache.get(\"k3\")).isEqualTo(\"k3value\");\n\t\tassertThat(cache.size()).isZero();\n\t\tassertThat(cache.contains(\"k1\")).isFalse();\n\t\tassertThat(cache.contains(\"k2\")).isFalse();\n\t\tassertThat(cache.contains(\"k3\")).isFalse();\n\t}\n\n\t@Test\n\tvoid getAndSize() {\n\t\tassertThat(this.cache.capacity()).isEqualTo(2);\n\t\tassertThat(this.cache.size()).isEqualTo(0);\n\t\tassertThat(this.cache.get(\"k1\")).isEqualTo(\"k1value\");\n\t\tassertThat(this.cache.size()).isEqualTo(1);\n\t\tassertThat(this.cache.contains(\"k1\")).isTrue();\n\t\tassertThat(this.cache.get(\"k2\")).isEqualTo(\"k2value\");\n\t\tassertThat(this.cache.size()).isEqualTo(2);\n\t\tassertThat(this.cache.contains(\"k1\")).isTrue();\n\t\tassertThat(this.cache.contains(\"k2\")).isTrue();\n\t\tassertThat(this.cache.get(\"k3\")).isEqualTo(\"k3value\");\n\t\tassertThat(this.cache.size()).isEqualTo(2);\n\t\tassertThat(this.cache.contains(\"k1\")).isFalse();\n\t\tassertThat(this.cache.contains(\"k2\")).isTrue();\n\t\tassertThat(this.cache.contains(\"k3\")).isTrue();\n\t}\n\n\t@Test\n\tvoid removeAndSize() {\n\t\tassertThat(this.cache.get(\"k1\")).isEqualTo(\"k1value\");\n\t\tassertThat(this.cache.get(\"k2\")).isEqualTo(\"k2value\");\n\t\tassertThat(this.cache.size()).isEqualTo(2);\n\t\tassertThat(this.cache.contains(\"k1\")).isTrue();\n\t\tassertThat(this.cache.contains(\"k2\")).isTrue();\n\t\tthis.cache.remove(\"k2\");\n\t\tassertThat(this.cache.size()).isEqualTo(1);\n\t\tassertThat(this.cache.contains(\"k1\")).isTrue();\n\t\tassertThat(this.cache.contains(\"k2\")).isFalse();\n\t\tassertThat(this.cache.get(\"k3\")).isEqualTo(\"k3value\");\n\t\tassertThat(this.cache.size()).isEqualTo(2);\n\t\tassertThat(this.cache.contains(\"k1\")).isTrue();\n\t\tassertThat(this.cache.contains(\"k2\")).isFalse();\n\t\tassertThat(this.cache.contains(\"k3\")).isTrue();\n\t}\n\n\t@Test\n\tvoid clearAndSize() {\n\t\tassertThat(this.cache.get(\"k1\")).isEqualTo(\"k1value\");\n\t\tassertThat(this.cache.get(\"k2\")).isEqualTo(\"k2value\");\n\t\tassertThat(this.cache.size()).isEqualTo(2);\n\t\tassertThat(this.cache.contains(\"k1\")).isTrue();\n\t\tassertThat(this.cache.contains(\"k2\")).isTrue();\n\t\tthis.cache.clear();\n\t\tassertThat(this.cache.size()).isEqualTo(0);\n\t\tassertThat(this.cache.contains(\"k1\")).isFalse();\n\t\tassertThat(this.cache.contains(\"k2\")).isFalse();\n\t\tassertThat(this.cache.get(\"k3\")).isEqualTo(\"k3value\");\n\t\tassertThat(this.cache.size()).isEqualTo(1);\n\t\tassertThat(this.cache.contains(\"k1\")).isFalse();\n\t\tassertThat(this.cache.contains(\"k2\")).isFalse();\n\t\tassertThat(this.cache.contains(\"k3\")).isTrue();\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCacheTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.ConcurrentLruCacheTests#cache",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentLruCacheTests#cache",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "ConcurrentLruCache<String, String>",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.aot.hint.Builder#expandToIncludeDirectories(String)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Expand the supplied include pattern into multiple patterns that include\r\n * all parent directories for the ultimate resource or resources.\r\n * <p>This is necessary to support classpath scanning within a GraalVM\r\n * native image.\r\n * @see <a href=\"https://github.com/spring-projects/spring-framework/issues/29403\">gh-29403</a>\r\n */\r\nprivate List<String> expandToIncludeDirectories(String includePattern) {\r\n    // Resource in root or no explicit subdirectories?\r\n    if (!includePattern.contains(\"/\")) {\r\n        // Include the root directory as well as the pattern\r\n        return List.of(\"/\", includePattern);\r\n    }\r\n    List<String> includePatterns = new ArrayList<>();\r\n    // Ensure the root directory and original pattern are always included\r\n    includePatterns.add(\"/\");\r\n    includePatterns.add(includePattern);\r\n    StringBuilder path = new StringBuilder();\r\n    for (String pathElement : includePattern.split(\"/\")) {\r\n        if (pathElement.isEmpty()) {\r\n            // Skip empty path elements\r\n            continue;\r\n        }\r\n        if (pathElement.contains(\"*\")) {\r\n            // Stop at the first encountered wildcard, since we cannot reliably reason\r\n            // any further about the directory structure below this path element.\r\n            break;\r\n        }\r\n        if (!path.isEmpty()) {\r\n            path.append(\"/\");\r\n        }\r\n        path.append(pathElement);\r\n        includePatterns.add(path.toString());\r\n    }\r\n    return includePatterns;\r\n}",
+    "tailType": "method_code"
+  }
+]

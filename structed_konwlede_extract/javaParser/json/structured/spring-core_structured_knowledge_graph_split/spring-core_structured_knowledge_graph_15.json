@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#concurrentReferenceHashMapSegmentClear()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Test",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#testNonBlockingTask(NonBlockingTask)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void testNonBlockingTask(NonBlockingTask task) {\r\n    CompletableFuture<Object> future = new CompletableFuture<>();\r\n    testNonBlockingTask(task, future);\r\n    future.join();\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SpringCoreBlockHoundIntegrationTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#testNonBlockingTask(NonBlockingTask)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#testNonBlockingTask(NonBlockingTask,CompletableFuture<Object>)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "private void testNonBlockingTask(NonBlockingTask task, CompletableFuture<Object> future) {\r\n    Schedulers.parallel().schedule(() -> {\r\n        try {\r\n            task.run();\r\n            future.complete(null);\r\n        } catch (Throwable ex) {\r\n            future.completeExceptionally(ex);\r\n        }\r\n    });\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.SpringCoreBlockHoundIntegrationTests",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.SpringCoreBlockHoundIntegrationTests#testNonBlockingTask(NonBlockingTask,CompletableFuture<Object>)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.NonBlockingTask",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.core.NonBlockingTask",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@FunctionalInterface",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.NonBlockingTask",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.util.Map;\nimport java.util.concurrent.CompletableFuture;\n\nimport org.junit.jupiter.api.BeforeAll;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.condition.DisabledForJreRange;\nimport reactor.blockhound.BlockHound;\nimport reactor.core.scheduler.ReactorBlockHoundIntegration;\nimport reactor.core.scheduler.Schedulers;\n\nimport org.springframework.util.ConcurrentReferenceHashMap;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatNoException;\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\nimport static org.junit.jupiter.api.condition.JRE.JAVA_18;\n\n/**\n * Tests to verify the spring-core BlockHound integration rules.\n *\n * <p>NOTE: to run this test class in the IDE, you need to specify the following\n * JVM argument. For details, see\n * <a href=\"https://github.com/reactor/BlockHound/issues/33\">BlockHound issue 33</a>.\n *\n * <pre style=\"code\">\n * -XX:+AllowRedefinitionToAddDeleteMethods\n * </pre>\n *\n * @author Rossen Stoyanchev\n * @author Sam Brannen\n * @since 5.2.4\n */\n@DisabledForJreRange(min = JAVA_18, disabledReason = \"BlockHound is not compatible with Java 18+\")\nclass SpringCoreBlockHoundIntegrationTests {\n\n\t@BeforeAll\n\tstatic void setup() {\n\t\tBlockHound.builder()\n\t\t\t\t.with(new ReactorBlockHoundIntegration())  // Reactor non-blocking thread predicate\n\t\t\t\t.with(new ReactiveAdapterRegistry.SpringCoreBlockHoundIntegration())\n\t\t\t\t.install();\n\t}\n\n\n\t@Test\n\tvoid blockHoundIsInstalled() {\n\t\tassertThatThrownBy(() -> testNonBlockingTask(() -> Thread.sleep(10)))\n\t\t\t\t.hasMessageContaining(\"Blocking call!\");\n\t}\n\n\t@Test\n\tvoid concurrentReferenceHashMapSegmentDoTask() {\n\t\tint size = 10000;\n\t\tMap<String, String> map = new ConcurrentReferenceHashMap<>(size);\n\n\t\tCompletableFuture<Object> future1 = new CompletableFuture<>();\n\t\ttestNonBlockingTask(() -> {\n\t\t\tfor (int i = 0; i < size / 2; i++) {\n\t\t\t\tmap.put(\"a\" + i, \"bar\");\n\t\t\t}\n\t\t}, future1);\n\n\t\tCompletableFuture<Object> future2 = new CompletableFuture<>();\n\t\ttestNonBlockingTask(() -> {\n\t\t\tfor (int i = 0; i < size / 2; i++) {\n\t\t\t\tmap.put(\"b\" + i, \"bar\");\n\t\t\t}\n\t\t}, future2);\n\n\t\tCompletableFuture.allOf(future1, future2).join();\n\t\tassertThat(map).hasSize(size);\n\t}\n\n\t@Test\n\tvoid concurrentReferenceHashMapSegmentClear() {\n\t\tint size = 10000;\n\t\tMap<String, String> map = new ConcurrentReferenceHashMap<>(size);\n\n\t\tCompletableFuture<Object> future1 = new CompletableFuture<>();\n\t\ttestNonBlockingTask(() -> {\n\t\t\tfor (int i = 0; i < size / 2; i++) {\n\t\t\t\tmap.put(\"a\" + i, \"bar\");\n\t\t\t}\n\t\t}, future1);\n\n\t\tCompletableFuture<Object> future2 = new CompletableFuture<>();\n\t\ttestNonBlockingTask(() -> {\n\t\t\tfor (int i = 0; i < size; i++) {\n\t\t\t\tmap.clear();\n\t\t\t}\n\t\t}, future2);\n\n\t\t//ensure blockhound doesn't trigger\n\t\tfinal CompletableFuture<Void> allOf = CompletableFuture.allOf(future1, future2);\n\t\tassertThatNoException().isThrownBy(allOf::join);\n\t}\n\n\tprivate void testNonBlockingTask(NonBlockingTask task) {\n\t\tCompletableFuture<Object> future = new CompletableFuture<>();\n\t\ttestNonBlockingTask(task, future);\n\t\tfuture.join();\n\t}\n\n\tprivate void testNonBlockingTask(NonBlockingTask task, CompletableFuture<Object> future) {\n\t\tSchedulers.parallel().schedule(() -> {\n\t\t\ttry {\n\t\t\t\ttask.run();\n\t\t\t\tfuture.complete(null);\n\t\t\t}\n\t\t\tcatch (Throwable ex) {\n\t\t\t\tfuture.completeExceptionally(ex);\n\t\t\t}\n\t\t});\n\t}\n\n\n\t@FunctionalInterface\n\tprivate interface NonBlockingTask {\n\n\t\tvoid run() throws Exception;\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.core.NonBlockingTask#run()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "void run() throws Exception;",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.core.NonBlockingTask",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.core.NonBlockingTask#run()",
+    "tailType": "method"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.ConcurrentReferenceHashMapBenchmark",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentReferenceHashMapBenchmark",
+    "headType": "class",
+    "relation": "use",
+    "tail": "@BenchmarkMode",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.core",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.core",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.core.StandardReflectionParameterNameDiscoverTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentReferenceHashMapBenchmark",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2023 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util;\n\n\nimport java.lang.ref.WeakReference;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Random;\nimport java.util.WeakHashMap;\nimport java.util.function.Function;\n\nimport org.openjdk.jmh.annotations.Benchmark;\nimport org.openjdk.jmh.annotations.BenchmarkMode;\nimport org.openjdk.jmh.annotations.Level;\nimport org.openjdk.jmh.annotations.Mode;\nimport org.openjdk.jmh.annotations.Param;\nimport org.openjdk.jmh.annotations.Scope;\nimport org.openjdk.jmh.annotations.Setup;\nimport org.openjdk.jmh.annotations.State;\nimport org.openjdk.jmh.infra.Blackhole;\n\n/**\n * Benchmarks for {@link ConcurrentReferenceHashMap}.\n * <p>This benchmark ensures that {@link ConcurrentReferenceHashMap} performs\n * better than {@link java.util.Collections#synchronizedMap(Map)} with\n * concurrent read operations.\n * <p>Typically this can be run with {@code \"java -jar spring-core-jmh.jar -t 30 -f 2 ConcurrentReferenceHashMapBenchmark\"}.\n * @author Brian Clozel\n */\n@BenchmarkMode(Mode.Throughput)\npublic class ConcurrentReferenceHashMapBenchmark {\n\n\t@Benchmark\n\tpublic void concurrentMap(ConcurrentMapBenchmarkData data, Blackhole bh) {\n\t\tfor (String element : data.elements) {\n\t\t\tWeakReference<String> value = data.map.get(element);\n\t\t\tbh.consume(value);\n\t\t}\n\t}\n\n\t@State(Scope.Benchmark)\n\tpublic static class ConcurrentMapBenchmarkData {\n\n\t\t@Param({\"500\"})\n\t\tpublic int capacity;\n\t\tprivate final Function<String, String> generator = key -> key + \"value\";\n\n\t\tpublic List<String> elements;\n\n\t\tpublic Map<String, WeakReference<String>> map;\n\n\t\t@Setup(Level.Iteration)\n\t\tpublic void setup() {\n\t\t\tthis.elements = new ArrayList<>(this.capacity);\n\t\t\tthis.map = new ConcurrentReferenceHashMap<>();\n\t\t\tRandom random = new Random();\n\t\t\trandom.ints(this.capacity).forEach(value -> {\n\t\t\t\tString element = String.valueOf(value);\n\t\t\t\tthis.elements.add(element);\n\t\t\t\tthis.map.put(element, new WeakReference<>(this.generator.apply(element)));\n\t\t\t});\n\t\t\tthis.elements.sort(String::compareTo);\n\t\t}\n\t}\n\n\t@Benchmark\n\tpublic void synchronizedMap(SynchronizedMapBenchmarkData data, Blackhole bh) {\n\t\tfor (String element : data.elements) {\n\t\t\tWeakReference<String> value = data.map.get(element);\n\t\t\tbh.consume(value);\n\t\t}\n\t}\n\n\t@State(Scope.Benchmark)\n\tpublic static class SynchronizedMapBenchmarkData {\n\n\t\t@Param({\"500\"})\n\t\tpublic int capacity;\n\n\t\tprivate Function<String, String> generator = key -> key + \"value\";\n\n\t\tpublic List<String> elements;\n\n\t\tpublic Map<String, WeakReference<String>> map;\n\n\n\t\t@Setup(Level.Iteration)\n\t\tpublic void setup() {\n\t\t\tthis.elements = new ArrayList<>(this.capacity);\n\t\t\tthis.map = Collections.synchronizedMap(new WeakHashMap<>());\n\t\t\tRandom random = new Random();\n\t\t\trandom.ints(this.capacity).forEach(value -> {\n\t\t\t\tString element = String.valueOf(value);\n\t\t\t\tthis.elements.add(element);\n\t\t\t\tthis.map.put(element, new WeakReference<>(this.generator.apply(element)));\n\t\t\t});\n\t\t\tthis.elements.sort(String::compareTo);\n\t\t}\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentReferenceHashMapBenchmark#concurrentMap(ConcurrentMapBenchmarkData,Blackhole)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@Benchmark\r\npublic void concurrentMap(ConcurrentMapBenchmarkData data, Blackhole bh) {\r\n    for (String element : data.elements) {\r\n        WeakReference<String> value = data.map.get(element);\r\n        bh.consume(value);\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentReferenceHashMapBenchmark",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.util.ConcurrentReferenceHashMapBenchmark#concurrentMap(ConcurrentMapBenchmarkData,Blackhole)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.util.ConcurrentReferenceHashMapBenchmark#concurrentMap(ConcurrentMapBenchmarkData,Blackhole)",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Benchmark",
+    "tailType": "annotation"
+  },
+  {
+    "head": "org.springframework.core.StandardReflectionParameterNameDiscoverTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.core;\n\nimport java.lang.reflect.Method;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\n\nimport org.springframework.util.ReflectionUtils;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\n/**\n * Tests for StandardReflectionParameterNameDiscoverer\n *\n * @author Rob Winch\n */\nclass StandardReflectionParameterNameDiscoverTests {\n\n\tprivate ParameterNameDiscoverer parameterNameDiscoverer;\n\n\t@BeforeEach\n\tvoid setup() {\n\t\tparameterNameDiscoverer = new StandardReflectionParameterNameDiscoverer();\n\t}\n\n\t@Test\n\tvoid getParameterNamesOnInterface() {\n\t\tMethod method = ReflectionUtils.findMethod(MessageService.class,\"sendMessage\", String.class);\n\t\tString[] actualParams = parameterNameDiscoverer.getParameterNames(method);\n\t\tassertThat(actualParams).isEqualTo(new String[]{\"message\"});\n\t}\n\n\tpublic interface MessageService {\n\t\tvoid sendMessage(String message);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  }
+]

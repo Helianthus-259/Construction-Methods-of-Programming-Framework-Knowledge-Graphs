@@ -1,0 +1,142 @@
+[
+  {
+    "head": "org.springframework.asm.Label",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Label#addForwardReference(int,int,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Label#resolve(byte[],ByteVector,int)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Sets the bytecode offset of this label to the given value and resolves the forward references\r\n * to this label, if any. This method must be called when this label is added to the bytecode of\r\n * the method, i.e. when its bytecode offset becomes known. This method fills in the blanks that\r\n * where left in the bytecode (and optionally in the stack map table) by each forward reference\r\n * previously added to this label.\r\n *\r\n * @param code the bytecode of the method.\r\n * @param stackMapTableEntries the 'entries' array of the StackMapTable code attribute of the\r\n *     method. Maybe {@literal null}.\r\n * @param bytecodeOffset the bytecode offset of this label.\r\n * @return {@literal true} if a blank that was left for this label was too small to store the\r\n *     offset. In such a case the corresponding jump instruction is replaced with an equivalent\r\n *     ASM specific instruction using an unsigned two bytes offset. These ASM specific\r\n *     instructions are later replaced with standard bytecode instructions with wider offsets (4\r\n *     bytes instead of 2), in ClassReader.\r\n */\r\nfinal boolean resolve(final byte[] code, final ByteVector stackMapTableEntries, final int bytecodeOffset) {\r\n    this.flags |= FLAG_RESOLVED;\r\n    this.bytecodeOffset = bytecodeOffset;\r\n    if (forwardReferences == null) {\r\n        return false;\r\n    }\r\n    boolean hasAsmInstructions = false;\r\n    for (int i = forwardReferences[0]; i > 0; i -= 2) {\r\n        final int sourceInsnBytecodeOffset = forwardReferences[i - 1];\r\n        final int reference = forwardReferences[i];\r\n        final int relativeOffset = bytecodeOffset - sourceInsnBytecodeOffset;\r\n        int handle = reference & FORWARD_REFERENCE_HANDLE_MASK;\r\n        if ((reference & FORWARD_REFERENCE_TYPE_MASK) == FORWARD_REFERENCE_TYPE_SHORT) {\r\n            if (relativeOffset < Short.MIN_VALUE || relativeOffset > Short.MAX_VALUE) {\r\n                // Change the opcode of the jump instruction, in order to be able to find it later in\r\n                // ClassReader. These ASM specific opcodes are similar to jump instruction opcodes, except\r\n                // that the 2 bytes offset is unsigned (and can therefore represent values from 0 to\r\n                // 65535, which is sufficient since the size of a method is limited to 65535 bytes).\r\n                int opcode = code[sourceInsnBytecodeOffset] & 0xFF;\r\n                if (opcode < Opcodes.IFNULL) {\r\n                    // Change IFEQ ... JSR to ASM_IFEQ ... ASM_JSR.\r\n                    code[sourceInsnBytecodeOffset] = (byte) (opcode + Constants.ASM_OPCODE_DELTA);\r\n                } else {\r\n                    // Change IFNULL and IFNONNULL to ASM_IFNULL and ASM_IFNONNULL.\r\n                    code[sourceInsnBytecodeOffset] = (byte) (opcode + Constants.ASM_IFNULL_OPCODE_DELTA);\r\n                }\r\n                hasAsmInstructions = true;\r\n            }\r\n            code[handle++] = (byte) (relativeOffset >>> 8);\r\n            code[handle] = (byte) relativeOffset;\r\n        } else if ((reference & FORWARD_REFERENCE_TYPE_MASK) == FORWARD_REFERENCE_TYPE_WIDE) {\r\n            code[handle++] = (byte) (relativeOffset >>> 24);\r\n            code[handle++] = (byte) (relativeOffset >>> 16);\r\n            code[handle++] = (byte) (relativeOffset >>> 8);\r\n            code[handle] = (byte) relativeOffset;\r\n        } else {\r\n            stackMapTableEntries.data[handle++] = (byte) (bytecodeOffset >>> 8);\r\n            stackMapTableEntries.data[handle] = (byte) bytecodeOffset;\r\n        }\r\n    }\r\n    return hasAsmInstructions;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Label",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Label#resolve(byte[],ByteVector,int)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Label#markSubroutine(short)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Methods related to subroutines\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Finds the basic blocks that belong to the subroutine starting with the basic block\r\n * corresponding to this label, and marks these blocks as belonging to this subroutine. This\r\n * method follows the control flow graph to find all the blocks that are reachable from the\r\n * current basic block WITHOUT following any jsr target.\r\n *\r\n * <p>Note: a precondition and postcondition of this method is that all labels must have a null\r\n * {@link #nextListElement}.\r\n *\r\n * @param subroutineId the id of the subroutine starting with the basic block corresponding to\r\n *     this label.\r\n */\r\nfinal void markSubroutine(final short subroutineId) {\r\n    // Data flow algorithm: put this basic block in a list of blocks to process (which are blocks\r\n    // belonging to subroutine subroutineId) and, while there are blocks to process, remove one from\r\n    // the list, mark it as belonging to the subroutine, and add its successor basic blocks in the\r\n    // control flow graph to the list of blocks to process (if not already done).\r\n    Label listOfBlocksToProcess = this;\r\n    listOfBlocksToProcess.nextListElement = EMPTY_LIST;\r\n    while (listOfBlocksToProcess != EMPTY_LIST) {\r\n        // Remove a basic block from the list of blocks to process.\r\n        Label basicBlock = listOfBlocksToProcess;\r\n        listOfBlocksToProcess = listOfBlocksToProcess.nextListElement;\r\n        basicBlock.nextListElement = null;\r\n        // If it is not already marked as belonging to a subroutine, mark it as belonging to\r\n        // subroutineId and add its successors to the list of blocks to process (unless already done).\r\n        if (basicBlock.subroutineId == 0) {\r\n            basicBlock.subroutineId = subroutineId;\r\n            listOfBlocksToProcess = basicBlock.pushSuccessors(listOfBlocksToProcess);\r\n        }\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Label",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Label#markSubroutine(short)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Label#addSubroutineRetSuccessors(Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Finds the basic blocks that end a subroutine starting with the basic block corresponding to\r\n * this label and, for each one of them, adds an outgoing edge to the basic block following the\r\n * given subroutine call. In other words, completes the control flow graph by adding the edges\r\n * corresponding to the return from this subroutine, when called from the given caller basic\r\n * block.\r\n *\r\n * <p>Note: a precondition and postcondition of this method is that all labels must have a null\r\n * {@link #nextListElement}.\r\n *\r\n * @param subroutineCaller a basic block that ends with a jsr to the basic block corresponding to\r\n *     this label. This label is supposed to correspond to the start of a subroutine.\r\n */\r\nfinal void addSubroutineRetSuccessors(final Label subroutineCaller) {\r\n    // Data flow algorithm: put this basic block in a list blocks to process (which are blocks\r\n    // belonging to a subroutine starting with this label) and, while there are blocks to process,\r\n    // remove one from the list, put it in a list of blocks that have been processed, add a return\r\n    // edge to the successor of subroutineCaller if applicable, and add its successor basic blocks\r\n    // in the control flow graph to the list of blocks to process (if not already done).\r\n    Label listOfProcessedBlocks = EMPTY_LIST;\r\n    Label listOfBlocksToProcess = this;\r\n    listOfBlocksToProcess.nextListElement = EMPTY_LIST;\r\n    while (listOfBlocksToProcess != EMPTY_LIST) {\r\n        // Move a basic block from the list of blocks to process to the list of processed blocks.\r\n        Label basicBlock = listOfBlocksToProcess;\r\n        listOfBlocksToProcess = basicBlock.nextListElement;\r\n        basicBlock.nextListElement = listOfProcessedBlocks;\r\n        listOfProcessedBlocks = basicBlock;\r\n        // Add an edge from this block to the successor of the caller basic block, if this block is\r\n        // the end of a subroutine and if this block and subroutineCaller do not belong to the same\r\n        // subroutine.\r\n        if ((basicBlock.flags & FLAG_SUBROUTINE_END) != 0 && basicBlock.subroutineId != subroutineCaller.subroutineId) {\r\n            basicBlock.outgoingEdges = new Edge(basicBlock.outputStackSize, // By construction, the first outgoing edge of a basic block that ends with a jsr\r\n            // instruction leads to the jsr continuation block, i.e. where execution continues\r\n            // when ret is called (see {@link #FLAG_SUBROUTINE_CALLER}).\r\n            subroutineCaller.outgoingEdges.successor, basicBlock.outgoingEdges);\r\n        }\r\n        // Add its successors to the list of blocks to process. Note that {@link #pushSuccessors} does\r\n        // not push basic blocks which are already in a list. Here this means either in the list of\r\n        // blocks to process, or in the list of already processed blocks. This second list is\r\n        // important to make sure we don't reprocess an already processed block.\r\n        listOfBlocksToProcess = basicBlock.pushSuccessors(listOfBlocksToProcess);\r\n    }\r\n    // Reset the {@link #nextListElement} of all the basic blocks that have been processed to null,\r\n    // so that this method can be called again with a different subroutine or subroutine caller.\r\n    while (listOfProcessedBlocks != EMPTY_LIST) {\r\n        Label newListOfProcessedBlocks = listOfProcessedBlocks.nextListElement;\r\n        listOfProcessedBlocks.nextListElement = null;\r\n        listOfProcessedBlocks = newListOfProcessedBlocks;\r\n    }\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Label",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Label#addSubroutineRetSuccessors(Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Label#pushSuccessors(Label)",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "/**\r\n * Adds the successors of this label in the method's control flow graph (except those\r\n * corresponding to a jsr target, and those already in a list of labels) to the given list of\r\n * blocks to process, and returns the new list.\r\n *\r\n * @param listOfLabelsToProcess a list of basic blocks to process, linked together with their\r\n *     {@link #nextListElement} field.\r\n * @return the new list of blocks to process.\r\n */\r\nprivate Label pushSuccessors(final Label listOfLabelsToProcess) {\r\n    Label newListOfLabelsToProcess = listOfLabelsToProcess;\r\n    Edge outgoingEdge = outgoingEdges;\r\n    while (outgoingEdge != null) {\r\n        // By construction, the second outgoing edge of a basic block that ends with a jsr instruction\r\n        // leads to the jsr target (see {@link #FLAG_SUBROUTINE_CALLER}).\r\n        boolean isJsrTarget = (flags & Label.FLAG_SUBROUTINE_CALLER) != 0 && outgoingEdge == outgoingEdges.nextEdge;\r\n        if (!isJsrTarget && outgoingEdge.successor.nextListElement == null) {\r\n            // Add this successor to the list of blocks to process, if it does not already belong to a\r\n            // list of labels.\r\n            outgoingEdge.successor.nextListElement = newListOfLabelsToProcess;\r\n            newListOfLabelsToProcess = outgoingEdge.successor;\r\n        }\r\n        outgoingEdge = outgoingEdge.nextEdge;\r\n    }\r\n    return newListOfLabelsToProcess;\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Label",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Label#pushSuccessors(Label)",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Label#toString()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "// -----------------------------------------------------------------------------------------------\r\n// Overridden Object methods\r\n// -----------------------------------------------------------------------------------------------\r\n/**\r\n * Returns a string representation of this label.\r\n *\r\n * @return a string representation of this label.\r\n */\r\n@Override\r\npublic String toString() {\r\n    return \"L\" + System.identityHashCode(this);\r\n}",
+    "tailType": "method_code"
+  },
+  {
+    "head": "org.springframework.asm.Label",
+    "headType": "class",
+    "relation": "haveMethod",
+    "tail": "org.springframework.asm.Label#toString()",
+    "tailType": "method"
+  },
+  {
+    "head": "org.springframework.asm.Label#toString()",
+    "headType": "method",
+    "relation": "use",
+    "tail": "@Override",
+    "tailType": "annotation"
+  },
+  {
+    "head": "spring-core",
+    "headType": "module",
+    "relation": "has",
+    "tail": "org.springframework.util.xml",
+    "tailType": "package"
+  },
+  {
+    "head": "org.springframework.util.xml",
+    "headType": "package",
+    "relation": "haveClass",
+    "tail": "org.springframework.util.xml.XMLEventStreamReaderTests",
+    "tailType": "class"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReaderTests",
+    "headType": "class",
+    "relation": "provide",
+    "tail": "/*\n * Copyright 2002-2019 the original author or authors.\n *\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *      https://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\npackage org.springframework.util.xml;\n\nimport java.io.StringReader;\nimport java.io.StringWriter;\n\nimport javax.xml.stream.XMLEventReader;\nimport javax.xml.stream.XMLInputFactory;\nimport javax.xml.transform.Transformer;\nimport javax.xml.transform.TransformerFactory;\nimport javax.xml.transform.stax.StAXSource;\nimport javax.xml.transform.stream.StreamResult;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.w3c.dom.Node;\nimport org.xmlunit.util.Predicate;\n\nimport org.springframework.core.testfixture.xml.XmlContent;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nclass XMLEventStreamReaderTests {\n\n\tprivate static final String XML =\n\t\t\t\"<?pi content?><root xmlns='namespace'><prefix:child xmlns:prefix='namespace2'>content</prefix:child></root>\"\n\t\t\t;\n\n\tprivate XMLEventStreamReader streamReader;\n\n\t@BeforeEach\n\tvoid createStreamReader() throws Exception {\n\t\tXMLInputFactory inputFactory = XMLInputFactory.newInstance();\n\t\tXMLEventReader eventReader = inputFactory.createXMLEventReader(new StringReader(XML));\n\t\tstreamReader = new XMLEventStreamReader(eventReader);\n\t}\n\n\t@Test\n\tvoid readAll() throws Exception {\n\t\twhile (streamReader.hasNext()) {\n\t\t\tstreamReader.next();\n\t\t}\n\t}\n\n\t@Test\n\tvoid readCorrect() throws Exception {\n\t\tTransformer transformer = TransformerFactory.newInstance().newTransformer();\n\t\tStAXSource source = new StAXSource(streamReader);\n\t\tStringWriter writer = new StringWriter();\n\t\ttransformer.transform(source, new StreamResult(writer));\n\t\tPredicate<Node> nodeFilter = n ->\n\t\t\t\tn.getNodeType() != Node.DOCUMENT_TYPE_NODE && n.getNodeType() != Node.PROCESSING_INSTRUCTION_NODE;\n\t\tassertThat(XmlContent.from(writer)).isSimilarTo(XML, nodeFilter);\n\t}\n\n}\n",
+    "tailType": "class_code"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReaderTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XMLEventStreamReaderTests#XML",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReaderTests#XML",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "String",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReaderTests",
+    "headType": "class",
+    "relation": "haveField",
+    "tail": "org.springframework.util.xml.XMLEventStreamReaderTests#streamReader",
+    "tailType": "field"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReaderTests#streamReader",
+    "headType": "field",
+    "relation": "haveType",
+    "tail": "XMLEventStreamReader",
+    "tailType": "type"
+  },
+  {
+    "head": "org.springframework.util.xml.XMLEventStreamReaderTests#createStreamReader()",
+    "headType": "method",
+    "relation": "provide",
+    "tail": "@BeforeEach\r\nvoid createStreamReader() throws Exception {\r\n    XMLInputFactory inputFactory = XMLInputFactory.newInstance();\r\n    XMLEventReader eventReader = inputFactory.createXMLEventReader(new StringReader(XML));\r\n    streamReader = new XMLEventStreamReader(eventReader);\r\n}",
+    "tailType": "method_code"
+  }
+]
